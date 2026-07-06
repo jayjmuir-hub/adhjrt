@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abu Dhabi Harlequins Junior Rugby Tournament</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red: #CE1126;
+    --green: #007A3D;
+    --black: #0B0B0B;
+    --white: #FFFFFF;
+    --sand: #EFE8D8;
+    --sand-dark:#E2D8C2;
+    --ink: #17150F;
+    --line: rgba(11,11,11,0.12);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  h1,h2,h3, .display{
+    font-family:'Anton', sans-serif;
+    font-weight:400;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+  .mono{ font-family:'Space Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:3px solid var(--green); outline-offset:2px;
+  }
+
+  /* ---------- HARLEQUIN DIAMOND PATTERN (signature) ---------- */
+  .harlequin-strip{
+    height:14px;
+    background:
+      linear-gradient(135deg, var(--red) 25%, transparent 25%) 0 0/28px 28px,
+      linear-gradient(225deg, var(--green) 25%, transparent 25%) 0 0/28px 28px,
+      linear-gradient(315deg, var(--black) 25%, transparent 25%) 0 0/28px 28px,
+      linear-gradient(45deg, var(--white) 25%, transparent 25%) 0 0/28px 28px,
+      var(--black);
+  }
+  .diamond-bg{
+    background-image:
+      linear-gradient(45deg, var(--red) 25%, transparent 25.5%, transparent 75%, var(--red) 75.5%, var(--red)),
+      linear-gradient(45deg, var(--red) 25%, transparent 25.5%, transparent 75%, var(--red) 75.5%, var(--red)),
+      linear-gradient(45deg, var(--green) 25%, transparent 25.5%, transparent 75%, var(--green) 75.5%, var(--green)),
+      linear-gradient(45deg, var(--green) 25%, transparent 25.5%, transparent 75%, var(--green) 75.5%, var(--green));
+    background-position:0 0, 60px 60px, 60px 0, 0 60px;
+    background-size:120px 120px;
+    background-color:var(--black);
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav{
+    position:sticky; top:0; z-index:100;
+    background:var(--black);
+  }
+  .nav-inner{
+    max-width:1180px; margin:0 auto; padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand{
+    color:var(--white); font-family:'Anton',sans-serif; font-size:1.05rem;
+    letter-spacing:0.5px; display:flex; align-items:center; gap:10px;
+  }
+  .bat-mark{ width:26px; height:26px; flex-shrink:0; }
+  nav.links{ display:flex; gap:26px; align-items:center; }
+  nav.links a{
+    color:var(--white); font-size:0.82rem; font-weight:600; letter-spacing:0.06em;
+    text-transform:uppercase; position:relative; padding:4px 0;
+  }
+  nav.links a::after{
+    content:''; position:absolute; left:0; bottom:-2px; width:0; height:2px;
+    background:var(--red); transition:width 0.25s ease;
+  }
+  nav.links a:hover::after{ width:100%; }
+  .nav-cta{
+    background:var(--red); color:var(--white); padding:9px 18px;
+    border-radius:2px; font-weight:800; font-size:0.78rem; letter-spacing:0.05em; text-transform:uppercase;
+  }
+  .burger{ display:none; background:none; border:none; color:var(--white); font-size:1.5rem; cursor:pointer; }
+
+  @media (max-width:860px){
+    nav.links{
+      position:absolute; top:100%; left:0; right:0;
+      background:var(--black); flex-direction:column; align-items:flex-start; gap:0;
+      max-height:0; overflow:hidden; transition:max-height 0.3s ease;
+    }
+    nav.links.open{ max-height:420px; }
+    nav.links a{ padding:16px 24px; border-top:1px solid rgba(255,255,255,0.1); width:100%; }
+    .nav-cta{ margin:16px 24px; text-align:center; }
+    .burger{ display:block; }
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    background:linear-gradient(160deg, var(--black) 0%, #1c1a14 100%);
+    color:var(--white);
+    padding:90px 24px 0;
+    overflow:hidden;
+  }
+  .hero-inner{
+    max-width:1180px; margin:0 auto; position:relative; z-index:2;
+    display:grid; grid-template-columns:1.3fr 1fr; gap:48px; align-items:end;
+    padding-bottom:60px;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    color:var(--red); font-family:'Space Mono',monospace; font-size:0.78rem;
+    letter-spacing:0.15em; text-transform:uppercase; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:24px; height:2px; background:var(--red); }
+  h1.hero-title{
+    font-size:clamp(2.3rem, 6vw, 4.6rem);
+    line-height:0.96;
+    color:var(--white);
+  }
+  h1.hero-title span{ color:var(--green); }
+  .hero-sub{
+    margin-top:20px; font-size:1.02rem; color:rgba(255,255,255,0.75);
+    max-width:48ch;
+  }
+  .hero-ctas{ margin-top:32px; display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    display:inline-block; padding:15px 26px; font-weight:800; font-size:0.84rem;
+    letter-spacing:0.06em; text-transform:uppercase; border-radius:2px; cursor:pointer;
+    border:2px solid transparent; transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .btn-primary{ background:var(--red); color:var(--white); }
+  .btn-primary:hover{ background:#e4152d; }
+  .btn-outline{ border-color:var(--white); color:var(--white); }
+  .btn-outline:hover{ background:var(--white); color:var(--black); }
+
+  .scoreboard{
+    background:rgba(255,255,255,0.04); border:2px solid var(--green);
+    padding:22px; border-radius:4px;
+  }
+  .scoreboard-title{
+    font-family:'Space Mono',monospace; color:var(--green); font-size:0.73rem;
+    letter-spacing:0.15em; text-transform:uppercase; margin-bottom:14px;
+    display:flex; justify-content:space-between;
+  }
+  .countdown{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .cd-cell{ text-align:center; }
+  .cd-num{
+    font-family:'Space Mono',monospace; font-weight:700; font-size:1.7rem; color:var(--white);
+    background:rgba(0,0,0,0.4); border-radius:3px; padding:8px 0;
+  }
+  .cd-label{ font-size:0.63rem; color:rgba(255,255,255,0.55); margin-top:6px; letter-spacing:0.1em; text-transform:uppercase; }
+  .scoreboard-meta{ margin-top:16px; font-family:'Space Mono',monospace; font-size:0.78rem; color:rgba(255,255,255,0.7); display:flex; flex-direction:column; gap:6px; }
+
+  @media (max-width:900px){ .hero-inner{ grid-template-columns:1fr; } }
+
+  /* stat strip */
+  .stat-strip{
+    position:relative; z-index:2; border-top:1px solid rgba(255,255,255,0.12);
+    display:grid; grid-template-columns:repeat(3,1fr);
+  }
+  .stat-cell{ padding:22px 24px; text-align:center; border-right:1px solid rgba(255,255,255,0.12); }
+  .stat-cell:last-child{ border-right:none; }
+  .stat-num{ font-family:'Anton',sans-serif; font-size:2rem; color:var(--white); }
+  .stat-label{ font-family:'Space Mono',monospace; font-size:0.68rem; color:rgba(255,255,255,0.55); letter-spacing:0.1em; text-transform:uppercase; margin-top:4px; }
+  @media (max-width:700px){ .stat-strip{ grid-template-columns:1fr; } .stat-cell{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.12); } }
+
+  /* ---------- SECTIONS ---------- */
+  .section{ padding:80px 0; }
+  .section-alt{ background:var(--black); color:var(--white); }
+  .section-eyebrow{
+    font-family:'Space Mono',monospace; color:var(--red); font-size:0.78rem;
+    letter-spacing:0.15em; text-transform:uppercase; display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .section-alt .section-eyebrow{ color:var(--green); }
+  .section-eyebrow::before{ content:''; width:20px; height:2px; background:currentColor; }
+  .section-title{ font-size:clamp(1.8rem,4vw,2.6rem); margin-bottom:14px; }
+  .section-lead{ max-width:62ch; color:#3b382c; font-size:1.02rem; }
+  .section-alt .section-lead{ color:rgba(255,255,255,0.72); }
+
+  /* ---------- DIVISIONS (Minis/Midis/Youth/Girls — real ADH structure) ---------- */
+  .divisions{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px; margin-top:40px;
+  }
+  .division-card{
+    position:relative; border-radius:4px; padding:26px 22px; overflow:hidden;
+    background:var(--white); border:1px solid var(--line); transition:transform 0.2s ease;
+  }
+  .division-card:hover{ transform:translateY(-4px); }
+  .division-card .corner{
+    position:absolute; top:0; right:0; width:36px; height:36px;
+  }
+  .div-name{ font-family:'Anton',sans-serif; font-size:1.5rem; margin-bottom:6px; }
+  .div-age{ font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--red); font-weight:700; margin-bottom:10px; }
+  .div-desc{ font-size:0.88rem; color:#3b382c; }
+
+  .about-grid{ display:grid; grid-template-columns:1fr 1fr; gap:50px; align-items:start; margin-top:20px; }
+  .info-list{ list-style:none; }
+  .info-list li{
+    display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--line);
+    font-size:0.95rem;
+  }
+  .info-list li b{ font-family:'Space Mono',monospace; color:var(--red); font-weight:700; }
+  @media (max-width:800px){ .about-grid{ grid-template-columns:1fr; } }
+
+  /* ---------- SCHEDULE ---------- */
+  .filter-row{ display:flex; gap:10px; flex-wrap:wrap; margin:30px 0; }
+  .chip{
+    background:transparent; border:2px solid var(--black); color:var(--black);
+    padding:8px 18px; border-radius:20px; font-family:'Space Mono',monospace; font-size:0.78rem;
+    font-weight:700; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;
+  }
+  .chip.active, .chip:hover{ background:var(--black); color:var(--white); }
+
+  .match-table{ width:100%; border-collapse:collapse; margin-top:10px; }
+  .match-table th{
+    font-family:'Space Mono',monospace; text-transform:uppercase; font-size:0.72rem;
+    letter-spacing:0.08em; text-align:left; padding:12px 14px; color:#5c5847; border-bottom:2px solid var(--black);
+  }
+  .match-table td{
+    padding:16px 14px; border-bottom:1px solid var(--line); font-size:0.9rem;
+  }
+  .match-table tr:hover td{ background:rgba(11,11,11,0.03); }
+  .div-tag{
+    display:inline-block; color:var(--white); font-family:'Space Mono',monospace;
+    font-size:0.7rem; padding:3px 9px; border-radius:3px; font-weight:700;
+  }
+  .div-tag.minis{ background:var(--green); }
+  .div-tag.midis{ background:var(--red); }
+  .div-tag.youth{ background:var(--black); }
+  .div-tag.girls{ background:#8a1c2e; }
+  .field-tag{ font-family:'Space Mono',monospace; color:#5c5847; font-weight:700; font-size:0.8rem; }
+  .time-tag{ font-family:'Space Mono',monospace; font-weight:700; }
+  .score-tag{ font-family:'Space Mono',monospace; font-weight:700; }
+  .score-tag.pending{ color:#8a8368; font-weight:400; font-style:italic; }
+
+  .standings-block{ margin-bottom:34px; }
+  .standings-heading{
+    font-family:'Space Mono',monospace; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em;
+    padding:8px 14px; color:var(--white); display:inline-block; border-radius:3px; margin-bottom:10px;
+  }
+  .standings-heading.minis{ background:var(--green); }
+  .standings-heading.midis{ background:var(--red); }
+  .standings-heading.youth{ background:var(--black); }
+  .standings-heading.girls{ background:#8a1c2e; }
+  .standings-table{ width:100%; border-collapse:collapse; margin-bottom:8px; }
+  .standings-table th{
+    font-family:'Space Mono',monospace; text-transform:uppercase; font-size:0.68rem;
+    letter-spacing:0.06em; text-align:center; padding:10px 8px; color:#5c5847; border-bottom:2px solid var(--black);
+  }
+  .standings-table th:first-child{ text-align:left; }
+  .standings-table td{ padding:11px 8px; text-align:center; border-bottom:1px solid var(--line); font-size:0.88rem; }
+  .standings-table td:first-child{ text-align:left; font-weight:600; }
+  .standings-table tr:first-child td:first-child::before{ content:'🏆 '; }
+  @media (max-width:700px){
+    .match-table thead{ display:none; }
+    .match-table, .match-table tbody, .match-table tr, .match-table td{ display:block; width:100%; }
+    .match-table tr{ border:1px solid var(--line); border-radius:4px; margin-bottom:14px; padding:10px 14px; background:var(--white); }
+    .match-table td{ border-bottom:none; padding:6px 0; display:flex; justify-content:space-between; }
+    .match-table td::before{ content:attr(data-label); font-family:'Space Mono',monospace; font-size:0.7rem; color:#888; }
+  }
+
+  /* ---------- REGISTRATION ---------- */
+  .reg-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:50px; margin-top:30px; }
+  .roster-sheet{
+    background:var(--white); color:var(--ink); border:3px solid var(--red); border-radius:6px;
+    padding:36px; position:relative;
+  }
+  .roster-sheet.player{ border-color:var(--green); }
+  .roster-sheet{ position:relative; }
+  .roster-sheet.team::before{
+    content:'TEAM ROSTER'; position:absolute; top:-14px; left:24px; background:var(--red);
+    color:var(--white); font-family:'Space Mono',monospace; font-weight:700; font-size:0.7rem;
+    padding:4px 12px; letter-spacing:0.1em;
+  }
+  .roster-sheet.player::before{
+    content:'PLAYER SIGN-UP'; position:absolute; top:-14px; left:24px; background:var(--green);
+    color:var(--white); font-family:'Space Mono',monospace; font-weight:700; font-size:0.7rem;
+    padding:4px 12px; letter-spacing:0.1em;
+  }
+  .field-group{ margin-bottom:20px; }
+  label{
+    display:block; font-family:'Space Mono',monospace; font-size:0.72rem; text-transform:uppercase;
+    letter-spacing:0.08em; margin-bottom:7px; color:#5c5847;
+  }
+  input, select, textarea{
+    width:100%; padding:12px 14px; border:2px solid #ccc4ac; border-radius:3px; font-family:'Inter',sans-serif;
+    font-size:0.92rem; background:#fff; color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--black); outline:none; }
+  .checkbox-row{ display:flex; align-items:flex-start; gap:10px; }
+  .checkbox-row input{ width:auto; margin-top:4px; }
+  .checkbox-row label{ margin:0; font-family:'Inter',sans-serif; font-size:0.85rem; text-transform:none; letter-spacing:0; color:#3b382c; }
+  .submit-btn{
+    width:100%; background:var(--green); color:var(--white); border:none; padding:16px;
+    font-family:'Anton',sans-serif; font-size:1rem; letter-spacing:0.05em; text-transform:uppercase;
+    border-radius:3px; cursor:pointer; transition:background 0.2s ease;
+  }
+  .submit-btn:hover{ background:#00602f; }
+  .confirm-msg{
+    display:none; margin-top:16px; background:#e6f2ea; border:2px solid var(--green);
+    padding:14px 18px; border-radius:4px; font-size:0.88rem; color:var(--green);
+  }
+  .confirm-msg.show{ display:block; }
+
+  .why-list{ display:flex; flex-direction:column; gap:24px; }
+  .why-item{ display:flex; gap:16px; align-items:flex-start; }
+  .why-num{ font-family:'Anton',sans-serif; font-size:2rem; color:var(--red); min-width:50px; }
+  .why-item h3{ font-size:1.05rem; margin-bottom:4px; }
+  .why-item p{ font-size:0.9rem; color:rgba(255,255,255,0.7); }
+
+  @media (max-width:820px){ .reg-wrap{ grid-template-columns:1fr; } }
+
+  /* ---------- SPONSORS ---------- */
+  .sponsor-tier{ margin-bottom:36px; }
+  .tier-label{
+    font-family:'Space Mono',monospace; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.12em;
+    color:var(--red); margin-bottom:16px; display:flex; align-items:center; gap:10px;
+  }
+  .tier-label::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .sponsor-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; }
+  .sponsor-box{
+    border:2px dashed #b8ae8f; border-radius:4px; padding:26px 10px; text-align:center;
+    font-family:'Space Mono',monospace; font-size:0.78rem; color:#8a8368; text-transform:uppercase;
+    letter-spacing:0.05em; background:var(--white);
+  }
+  .sponsor-tier.title .sponsor-box{ min-height:90px; display:flex; align-items:center; justify-content:center; }
+  .sponsor-tier.club .sponsor-box, .sponsor-tier.community .sponsor-box{ min-height:64px; display:flex; align-items:center; justify-content:center; font-size:0.72rem; }
+
+  /* ---------- FOOTER ---------- */
+  footer{ background:var(--black); color:rgba(255,255,255,0.75); padding:60px 0 0; }
+  .footer-grid{ display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:40px; padding-bottom:40px; }
+  .footer-brand{ color:var(--white); font-family:'Anton',sans-serif; font-size:1.15rem; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .footer-col h4{
+    font-family:'Space Mono',monospace; color:var(--green); font-size:0.75rem; text-transform:uppercase;
+    letter-spacing:0.1em; margin-bottom:14px;
+  }
+  .footer-col p, .footer-col a{ display:block; font-size:0.88rem; margin-bottom:8px; color:rgba(255,255,255,0.7); }
+  .footer-col a:hover{ color:var(--red); }
+  .footer-bottom{
+    padding:20px 24px; border-top:1px solid rgba(255,255,255,0.12);
+    font-size:0.78rem; color:rgba(255,255,255,0.45); font-family:'Space Mono',monospace;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; max-width:1180px; margin:0 auto;
+  }
+
+  @media (max-width:700px){ .footer-grid{ grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; scroll-behavior:auto !important; } }
+</style>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+
+<div class="harlequin-strip"></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand">
+      <svg class="bat-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M50 20 L58 38 L78 30 L66 46 L92 50 L66 54 L78 70 L58 62 L50 80 L42 62 L22 70 L34 54 L8 50 L34 46 L22 30 L42 38 Z" fill="#CE1126"/>
+      </svg>
+      Abu Dhabi Harlequins <span style="color:#CE1126; margin-left:4px;">JRT</span>
+    </a>
+    <nav class="links" id="navLinks">
+      <a href="#about">About</a>
+      <a href="#divisions">Divisions</a>
+      <a href="#schedule">Schedule</a>
+      <a href="#register">Register</a>
+      <a href="#sponsors">Sponsors</a>
+      <a href="#contact">Contact</a>
+      <a href="#" id="loginLink" class="nav-cta" style="background:transparent; border:2px solid var(--white); color:var(--white);">Organizer Login</a>
+      <a href="#" id="logoutLink" class="nav-cta" style="display:none;">Log Out</a>
+      <a href="#register" class="nav-cta">Register a Team</a>
+    </nav>
+    <button class="burger" id="burgerBtn" aria-label="Toggle menu">&#9776;</button>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">Zayed Sports City &middot; Abu Dhabi</div>
+      <h1 class="hero-title">Abu Dhabi<br>Harlequins<br><span>Junior Rugby Tournament</span></h1>
+      <p class="hero-sub">Two days of grassroots rugby hosted by the Quins &mdash; one of the UAE's oldest clubs, founded in 1970. Minis, Midis, Youth and Girls divisions, all welcome.</p>
+      <div class="hero-ctas">
+        <a href="#register" class="btn btn-primary">Register a Team</a>
+        <a href="#schedule" class="btn btn-outline">View Schedule</a>
+      </div>
+    </div>
+    <div class="scoreboard">
+      <div class="scoreboard-title"><span>Kickoff In</span><span>Day 1</span></div>
+      <div class="countdown">
+        <div class="cd-cell"><div class="cd-num" id="cd-days">--</div><div class="cd-label">Days</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-hours">--</div><div class="cd-label">Hrs</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-mins">--</div><div class="cd-label">Min</div></div>
+        <div class="cd-cell"><div class="cd-num" id="cd-secs">--</div><div class="cd-label">Sec</div></div>
+      </div>
+      <div class="scoreboard-meta">
+        <span>📍 Zayed Sports City, Abu Dhabi</span>
+        <span>📅 Sat&ndash;Sun, dates TBD</span>
+        <span>🏉 Minis &middot; Midis &middot; Youth &middot; Girls</span>
+      </div>
+    </div>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-cell"><div class="stat-num">2,800+</div><div class="stat-label">Players</div></div>
+    <div class="stat-cell"><div class="stat-num">200+</div><div class="stat-label">Teams</div></div>
+    <div class="stat-cell"><div class="stat-num">12</div><div class="stat-label">UAE Clubs</div></div>
+  </div>
+</section>
+
+<div class="harlequin-strip"></div>
+
+<section class="section" id="about">
+  <div class="wrap">
+    <div class="section-eyebrow">Since 1970</div>
+    <h2 class="section-title">A grassroots festival, run by the community</h2>
+    <p class="section-lead">Founded as the Abu Dhabi Bats and renamed Harlequins in 2008, the Quins are a not-for-profit, volunteer-run club. This tournament is organised the same way &mdash; coaches, pitch marshals and medics are almost entirely parent volunteers giving up their weekend for the kids.</p>
+
+    <div class="about-grid">
+      <div>
+        <h3 style="margin-bottom:16px; font-size:1.2rem;">Tournament Format</h3>
+        <p style="color:#3b382c; font-size:0.95rem;">Pool play on Saturday determines Sunday's bracket seeding across every division. Every team is guaranteed a minimum of four matches across the weekend, with finals played on the main pitch Sunday afternoon.</p>
+      </div>
+      <ul class="info-list">
+        <li><span>Venue</span><b>Zayed Sports City</b></li>
+        <li><span>Match length</span><b>2 x 15 min</b></li>
+        <li><span>Squad size</span><b>Up to 17</b></li>
+        <li><span>Registration closes</span><b>2 weeks prior</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="harlequin-strip"></div>
+
+<section class="section" id="divisions">
+  <div class="wrap">
+    <div class="section-eyebrow">Who Plays</div>
+    <h2 class="section-title">Divisions</h2>
+    <p class="section-lead">Following the Quins' own junior pathway &mdash; from first touches of the ball to full-contact youth rugby.</p>
+
+    <div class="divisions">
+      <div class="division-card" style="border-top:4px solid var(--green);">
+        <div class="div-name">Minis</div>
+        <div class="div-age">U6 &ndash; U8 &middot; Tag Rugby</div>
+        <div class="div-desc">Non-contact, small-sided games focused on ball skills and having fun.</div>
+      </div>
+      <div class="division-card" style="border-top:4px solid var(--red);">
+        <div class="div-name">Midis</div>
+        <div class="div-age">U9 &ndash; U11 &middot; Contact</div>
+        <div class="div-desc">First introduction to contact rugby, with modified laws and pitch sizes.</div>
+      </div>
+      <div class="division-card" style="border-top:4px solid var(--black);">
+        <div class="div-name">Youth</div>
+        <div class="div-age">U12 &ndash; U14 &middot; Full Contact</div>
+        <div class="div-desc">Full-format matches building toward the club's senior pathway.</div>
+      </div>
+      <div class="division-card" style="border-top:4px solid #8a1c2e;">
+        <div class="div-name">Girls</div>
+        <div class="div-age">U12 &ndash; U18 &middot; Mixed Format</div>
+        <div class="div-desc">Dedicated girls' divisions across age groups, contact and non-contact.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="harlequin-strip"></div>
+
+<section class="section" id="schedule">
+  <div class="wrap">
+    <div class="section-eyebrow">Game Day</div>
+    <h2 class="section-title">Schedule, Scores &amp; Standings</h2>
+    <p class="section-lead">Age-group organizers log in below to enter scores as matches finish. This page checks for updates automatically and refreshes results and standings &mdash; no need to reload.</p>
+    <p class="mono" id="lastUpdated" style="font-size:0.72rem; color:#8a8368; margin-top:6px;">Loading latest scores&hellip;</p>
+
+    <div class="filter-row" id="filterRow">
+      <button class="chip active" data-div="all">All Divisions</button>
+      <button class="chip" data-div="Minis">Minis</button>
+      <button class="chip" data-div="Midis">Midis</button>
+      <button class="chip" data-div="Youth">Youth</button>
+      <button class="chip" data-div="Girls">Girls</button>
+    </div>
+
+    <h3 style="font-size:1.1rem; margin:36px 0 4px;">Matches</h3>
+    <table class="match-table" id="matchTable">
+      <thead>
+        <tr><th>Time</th><th>Division</th><th>Match</th><th>Score</th><th>Field</th></tr>
+      </thead>
+      <tbody id="matchTableBody">
+        <tr><td colspan="5" style="text-align:center; color:#8a8368;">Loading matches&hellip;</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-size:1.1rem; margin:48px 0 4px;">Standings</h3>
+    <p style="font-size:0.85rem; color:#3b382c; margin-bottom:10px;">Calculated from final scores only &mdash; 3 points for a win, 1 for a draw. Updates automatically as scores come in.</p>
+    <div id="standingsWrap"></div>
+
+    <div id="organizerPanel" style="display:none; margin-top:56px;">
+      <div class="roster-sheet player" style="max-width:520px;">
+        <h3 style="font-size:1rem; margin-bottom:4px;">Enter a Score</h3>
+        <p style="font-size:0.82rem; color:#3b382c; margin-bottom:20px;">Logged in as <b id="organizerEmail">&mdash;</b></p>
+        <form id="scoreForm">
+          <div class="field-group">
+            <label for="matchSelect">Match</label>
+            <select id="matchSelect" required>
+              <option value="">Loading matches&hellip;</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="scoreAInput">Score &mdash; Team A</label>
+            <input type="number" id="scoreAInput" min="0" required>
+          </div>
+          <div class="field-group">
+            <label for="scoreBInput">Score &mdash; Team B</label>
+            <input type="number" id="scoreBInput" min="0" required>
+          </div>
+          <button type="submit" class="submit-btn">Save Score</button>
+          <div class="confirm-msg" id="scoreConfirmMsg">✅ Score saved &mdash; standings will update shortly.</div>
+          <div class="confirm-msg" id="scoreErrorMsg" style="background:#f7e6e6; border-color:var(--red); color:var(--red);"></div>
+        </form>
+      </div>
+    </div>
+
+    <div id="loggedOutNotice" style="margin-top:56px; padding:24px; border:1px dashed #b8ae8f; border-radius:4px; max-width:520px;">
+      <p style="font-size:0.88rem; color:#5c5847;">Running an age group? <a href="#" id="loginLink2" style="color:var(--red); font-weight:700;">Log in</a> to enter scores directly on this page.</p>
+    </div>
+  </div>
+</section>
+
+<div class="harlequin-strip"></div>
+
+
+<section class="section section-alt" id="register">
+  <div class="wrap">
+    <div class="section-eyebrow">Get In The Game</div>
+    <h2 class="section-title">Register</h2>
+    <p class="section-lead">Spots are limited per division. Coaches can register a whole team at once, or a parent can register one player and pick their team below. We'll confirm by email within 3 business days.</p>
+
+    <div class="filter-row" id="regTabs">
+      <button class="chip active" data-tab="team">Register a Team</button>
+      <button class="chip" data-tab="player">Register a Player</button>
+    </div>
+
+    <div class="reg-wrap">
+      <div id="teamFormWrap">
+      <div class="roster-sheet team">
+        <form id="regForm" name="team-registration" method="POST" data-netlify="true" netlify-honeypot="team-bot-field" onsubmit="return false;">
+          <input type="hidden" name="form-name" value="team-registration">
+          <p style="display:none;"><label>Don't fill this out: <input name="team-bot-field"></label></p>
+          <div class="field-group">
+            <label for="teamName">Team / Club Name</label>
+            <input type="text" id="teamName" name="teamName" required placeholder="e.g. Dubai Exiles U11">
+          </div>
+          <div class="field-group">
+            <label for="division">Division</label>
+            <select id="division" name="division" required>
+              <option value="">Select a division</option>
+              <option>Minis &mdash; U6&ndash;U8</option>
+              <option>Midis &mdash; U9&ndash;U11</option>
+              <option>Youth &mdash; U12&ndash;U14</option>
+              <option>Girls &mdash; U12&ndash;U18</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="coachName">Head Coach / Team Manager</label>
+            <input type="text" id="coachName" name="coachName" required placeholder="Full name">
+          </div>
+          <div class="field-group">
+            <label for="coachEmail">Contact Email</label>
+            <input type="email" id="coachEmail" name="coachEmail" required placeholder="you@example.com">
+          </div>
+          <div class="field-group">
+            <label for="rosterSize">Roster Size</label>
+            <input type="number" id="rosterSize" name="rosterSize" min="10" max="25" required placeholder="e.g. 17">
+          </div>
+          <div class="field-group checkbox-row">
+            <input type="checkbox" id="waiver" name="waiver" required>
+            <label for="waiver">I confirm all players have a signed medical waiver on file and I'll bring copies on game day.</label>
+          </div>
+          <button type="submit" class="submit-btn">Submit Team Registration</button>
+          <div class="confirm-msg" id="confirmMsg">✅ Registration received! A confirmation has been sent to your email.</div>
+        </form>
+      </div>
+      </div>
+
+      <div id="playerFormWrap" style="display:none;">
+      <div class="roster-sheet player">
+        <form id="playerForm" name="player-registration" method="POST" data-netlify="true" netlify-honeypot="player-bot-field" onsubmit="return false;">
+          <input type="hidden" name="form-name" value="player-registration">
+          <p style="display:none;"><label>Don't fill this out: <input name="player-bot-field"></label></p>
+          <div class="field-group">
+            <label for="playerName">Player Full Name</label>
+            <input type="text" id="playerName" name="playerName" required placeholder="e.g. Sam Osbourne">
+          </div>
+          <div class="field-group">
+            <label for="playerDob">Date of Birth</label>
+            <input type="date" id="playerDob" name="playerDob" required>
+          </div>
+          <div class="field-group">
+            <label for="playerDivision">Division</label>
+            <select id="playerDivision" name="playerDivision" required>
+              <option value="">Select a division</option>
+              <option>Minis &mdash; U6&ndash;U8</option>
+              <option>Midis &mdash; U9&ndash;U11</option>
+              <option>Youth &mdash; U12&ndash;U14</option>
+              <option>Girls &mdash; U12&ndash;U18</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="playerClub">Team / Club</label>
+            <select id="playerClub" name="playerClub" required>
+              <option value="">Select a team</option>
+              <option>Abu Dhabi Harlequins</option>
+              <option>Dubai Exiles</option>
+              <option>Dubai Hurricanes</option>
+              <option>Jebel Ali Dragons</option>
+              <option>Al Ain Amblers</option>
+              <option>Other / Not sure yet</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="parentName">Parent / Guardian Name</label>
+            <input type="text" id="parentName" name="parentName" required placeholder="Full name">
+          </div>
+          <div class="field-group">
+            <label for="parentEmail">Parent / Guardian Email</label>
+            <input type="email" id="parentEmail" name="parentEmail" required placeholder="you@example.com">
+          </div>
+          <div class="field-group">
+            <label for="parentPhone">Emergency Contact Number</label>
+            <input type="tel" id="parentPhone" name="parentPhone" required placeholder="+971 5X XXX XXXX">
+          </div>
+          <div class="field-group">
+            <label for="medicalNotes">Medical Notes / Allergies (optional)</label>
+            <textarea id="medicalNotes" name="medicalNotes" rows="3" placeholder="Anything coaches and medics should know"></textarea>
+          </div>
+          <div class="field-group checkbox-row">
+            <input type="checkbox" id="playerWaiver" name="playerWaiver" required>
+            <label for="playerWaiver">I confirm I'll bring a signed medical waiver for my child on game day.</label>
+          </div>
+          <button type="submit" class="submit-btn">Submit Player Registration</button>
+          <div class="confirm-msg" id="playerConfirmMsg">✅ Registration received! A confirmation has been sent to your email.</div>
+        </form>
+      </div>
+      </div>
+
+      <div class="why-list">
+        <div class="why-item">
+          <div class="why-num">01</div>
+          <div><h3>A Founding Club</h3><p>Hosted by one of the UAE's oldest rugby clubs, running grassroots festivals since long before the sport had a national league.</p></div>
+        </div>
+        <div class="why-item">
+          <div class="why-num">02</div>
+          <div><h3>On-Site Medical Team</h3><p>Athletic trainers are stationed pitch-side across all fields for the full weekend.</p></div>
+        </div>
+        <div class="why-item">
+          <div class="why-num">03</div>
+          <div><h3>Guaranteed Match Minutes</h3><p>Every registered team plays a minimum of four matches, rain or shine.</p></div>
+        </div>
+        <div class="why-item">
+          <div class="why-num">04</div>
+          <div><h3>A True Community Event</h3><p>Run almost entirely by parent volunteers &mdash; coaches, pitch marshals, and team managers alike.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="harlequin-strip"></div>
+
+<section class="section" id="sponsors">
+  <div class="wrap">
+    <div class="section-eyebrow">Backed By</div>
+    <h2 class="section-title">Our Sponsors</h2>
+    <p class="section-lead">This tournament runs because of the businesses and clubs who back it. Interested in sponsoring? Reach out below.</p>
+
+    <div class="sponsor-tier title">
+      <div class="tier-label">Title Sponsor</div>
+      <div class="sponsor-grid">
+        <div class="sponsor-box">Sponsor Logo</div>
+      </div>
+    </div>
+    <div class="sponsor-tier club">
+      <div class="tier-label">Club Partners</div>
+      <div class="sponsor-grid">
+        <div class="sponsor-box">Sponsor Logo</div>
+        <div class="sponsor-box">Sponsor Logo</div>
+        <div class="sponsor-box">Sponsor Logo</div>
+      </div>
+    </div>
+    <div class="sponsor-tier community">
+      <div class="tier-label">Community Supporters</div>
+      <div class="sponsor-grid">
+        <div class="sponsor-box">Sponsor Logo</div>
+        <div class="sponsor-box">Sponsor Logo</div>
+        <div class="sponsor-box">Sponsor Logo</div>
+        <div class="sponsor-box">Sponsor Logo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer id="contact">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <svg width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M50 20 L58 38 L78 30 L66 46 L92 50 L66 54 L78 70 L58 62 L50 80 L42 62 L22 70 L34 54 L8 50 L34 46 L22 30 L42 38 Z" fill="#CE1126"/>
+          </svg>
+          Abu Dhabi Harlequins JRT
+        </div>
+        <p style="max-width:34ch;">Two days of youth rugby at Zayed Sports City, hosted by a club that's been part of the community since 1970.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:juniors@abudhabiquins.com">juniors@abudhabiquins.com</a>
+        <p>Zayed Sports City<br>Abu Dhabi, UAE</p>
+      </div>
+      <div class="footer-col">
+        <h4>Follow Along</h4>
+        <a href="https://www.facebook.com/abudhabiquins/" target="_blank" rel="noopener">Facebook</a>
+        <a href="https://x.com/wildapricot" target="_blank" rel="noopener">X / Twitter</a>
+        <a href="https://abudhabiquins.com/" target="_blank" rel="noopener">Club Website</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Abu Dhabi Harlequins Junior Rugby Tournament.</span>
+      <span>Est. 1970 &middot; Zayed Sports City, Abu Dhabi</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('burgerBtn').addEventListener('click', function(){
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  document.querySelectorAll('.links a').forEach(function(a){
+    a.addEventListener('click', function(){
+      document.getElementById('navLinks').classList.remove('open');
+    });
+  });
+
+  var target = new Date();
+  target.setDate(target.getDate() + 30);
+  function updateCountdown(){
+    var now = new Date();
+    var diff = target - now;
+    if(diff < 0) diff = 0;
+    var d = Math.floor(diff / (1000*60*60*24));
+    var h = Math.floor((diff / (1000*60*60)) % 24);
+    var m = Math.floor((diff / (1000*60)) % 60);
+    var s = Math.floor((diff / 1000) % 60);
+    document.getElementById('cd-days').textContent = String(d).padStart(2,'0');
+    document.getElementById('cd-hours').textContent = String(h).padStart(2,'0');
+    document.getElementById('cd-mins').textContent = String(m).padStart(2,'0');
+    document.getElementById('cd-secs').textContent = String(s).padStart(2,'0');
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  // ---------- LIVE SCORES & STANDINGS ----------
+  // 1. In Google Sheets, create a sheet with these EXACT column headers in row 1:
+  //    Division | Time | Field | TeamA | TeamB | ScoreA | ScoreB
+  //    Leave ScoreA/ScoreB blank until a match finishes.
+  // 2. File > Share > Publish to web > select the sheet > CSV format > Publish.
+  // 3. Paste that published CSV link below, replacing SHEET_CSV_URL.
+  var SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_GOOGLE_SHEET_CSV_LINK_HERE";
+
+  var DIV_ORDER = ["Minis", "Midis", "Youth", "Girls"];
+  var DIV_CLASS = { Minis:"minis", Midis:"midis", Youth:"youth", Girls:"girls" };
+
+  // Sample data shown until a real sheet is connected, so the page never looks broken.
+  var SAMPLE_ROWS = [
+    { _sheetRow:2, Division:"Minis", Time:"9:00 AM", Field:"Field 1", TeamA:"Quins", TeamB:"Dubai Exiles", ScoreA:"", ScoreB:"" },
+    { _sheetRow:3, Division:"Midis", Time:"9:00 AM", Field:"Field 2", TeamA:"Jebel Ali Dragons", TeamB:"Al Ain Amblers", ScoreA:"", ScoreB:"" },
+    { _sheetRow:4, Division:"Youth", Time:"9:45 AM", Field:"Field 3", TeamA:"Quins", TeamB:"Dubai Hurricanes", ScoreA:"", ScoreB:"" },
+    { _sheetRow:5, Division:"Girls", Time:"9:45 AM", Field:"Field 4", TeamA:"Quins", TeamB:"Dubai Exiles", ScoreA:"", ScoreB:"" },
+    { _sheetRow:6, Division:"Minis", Time:"10:30 AM", Field:"Field 1", TeamA:"Al Ain Amblers", TeamB:"Jebel Ali Dragons", ScoreA:"", ScoreB:"" },
+    { _sheetRow:7, Division:"Midis", Time:"10:30 AM", Field:"Field 2", TeamA:"Dubai Hurricanes", TeamB:"Quins", ScoreA:"", ScoreB:"" },
+    { _sheetRow:8, Division:"Youth", Time:"11:15 AM", Field:"Field 3", TeamA:"Dubai Exiles", TeamB:"Al Ain Amblers", ScoreA:"", ScoreB:"" },
+    { _sheetRow:9, Division:"Girls", Time:"11:15 AM", Field:"Field 4", TeamA:"Jebel Ali Dragons", TeamB:"Dubai Hurricanes", ScoreA:"", ScoreB:"" },
+    { _sheetRow:10, Division:"Minis", Time:"1:00 PM", Field:"Field 1", TeamA:"Quins", TeamB:"Al Ain Amblers", ScoreA:"", ScoreB:"" },
+    { _sheetRow:11, Division:"Youth", Time:"1:00 PM", Field:"Field 2", TeamA:"Dubai Hurricanes", TeamB:"Jebel Ali Dragons", ScoreA:"", ScoreB:"" }
+  ];
+
+  function parseCSV(text){
+    var lines = text.trim().split(/\r?\n/);
+    var headers = lines[0].split(",").map(function(h){ return h.trim(); });
+    return lines.slice(1).filter(Boolean).map(function(line, i){
+      var cells = line.split(",").map(function(c){ return c.trim(); });
+      var row = {};
+      headers.forEach(function(h, i){ row[h] = cells[i] || ""; });
+      row._sheetRow = i + 2; // +2: header is row 1, data starts row 2
+      return row;
+    });
+  }
+
+  function renderMatches(rows){
+    var body = document.getElementById('matchTableBody');
+    body.innerHTML = "";
+    rows.forEach(function(row){
+      var divClass = DIV_CLASS[row.Division] || "";
+      var hasScore = row.ScoreA !== "" && row.ScoreB !== "";
+      var scoreHtml = hasScore
+        ? '<span class="score-tag">' + row.ScoreA + ' &ndash; ' + row.ScoreB + '</span>'
+        : '<span class="score-tag pending">Not yet played</span>';
+      var tr = document.createElement('tr');
+      tr.setAttribute('data-div', row.Division);
+      tr.innerHTML =
+        '<td data-label="Time" class="time-tag">' + row.Time + '</td>' +
+        '<td data-label="Division"><span class="div-tag ' + divClass + '">' + row.Division + '</span></td>' +
+        '<td data-label="Match">' + row.TeamA + ' vs. ' + row.TeamB + '</td>' +
+        '<td data-label="Score">' + scoreHtml + '</td>' +
+        '<td data-label="Field" class="field-tag">' + row.Field + '</td>';
+      body.appendChild(tr);
+    });
+    applyDivisionFilter(currentFilter);
+  }
+
+  function computeStandings(rows){
+    var byDivision = {};
+    rows.forEach(function(row){
+      if(row.ScoreA === "" || row.ScoreB === "") return; // only count finished matches
+      var div = row.Division;
+      byDivision[div] = byDivision[div] || {};
+      var table = byDivision[div];
+      [row.TeamA, row.TeamB].forEach(function(team){
+        if(!table[team]) table[team] = { team:team, P:0, W:0, D:0, L:0, PF:0, PA:0, Pts:0 };
+      });
+      var a = table[row.TeamA], b = table[row.TeamB];
+      var sa = parseInt(row.ScoreA, 10), sb = parseInt(row.ScoreB, 10);
+      a.P++; b.P++;
+      a.PF += sa; a.PA += sb;
+      b.PF += sb; b.PA += sa;
+      if(sa > sb){ a.W++; a.Pts += 3; b.L++; }
+      else if(sb > sa){ b.W++; b.Pts += 3; a.L++; }
+      else { a.D++; b.D++; a.Pts += 1; b.Pts += 1; }
+    });
+    return byDivision;
+  }
+
+  function renderStandings(byDivision){
+    var wrap = document.getElementById('standingsWrap');
+    wrap.innerHTML = "";
+    var any = false;
+    DIV_ORDER.forEach(function(div){
+      var table = byDivision[div];
+      if(!table) return;
+      any = true;
+      var teams = Object.values(table).sort(function(x, y){
+        if(y.Pts !== x.Pts) return y.Pts - x.Pts;
+        return (y.PF - y.PA) - (x.PF - x.PA);
+      });
+      var block = document.createElement('div');
+      block.className = 'standings-block';
+      var rowsHtml = teams.map(function(t){
+        return '<tr><td>' + t.team + '</td><td>' + t.P + '</td><td>' + t.W + '</td><td>' + t.D + '</td><td>' + t.L +
+          '</td><td>' + t.PF + '</td><td>' + t.PA + '</td><td>' + (t.PF - t.PA) + '</td><td><b>' + t.Pts + '</b></td></tr>';
+      }).join("");
+      block.innerHTML =
+        '<div class="standings-heading ' + DIV_CLASS[div] + '">' + div + '</div>' +
+        '<table class="standings-table"><thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th><th>Pts</th></tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody></table>';
+      wrap.appendChild(block);
+    });
+    if(!any){
+      wrap.innerHTML = '<p style="color:#8a8368; font-size:0.9rem;">No completed matches yet &mdash; standings will appear here as scores come in.</p>';
+    }
+  }
+
+  var currentRows = [];
+
+  function populateMatchSelect(rows){
+    var select = document.getElementById('matchSelect');
+    if(!select) return;
+    var previousValue = select.value;
+    select.innerHTML = '<option value="">Select a match&hellip;</option>';
+    rows.forEach(function(row){
+      var opt = document.createElement('option');
+      opt.value = row._sheetRow;
+      var status = (row.ScoreA !== "" && row.ScoreB !== "") ? " (played: " + row.ScoreA + "-" + row.ScoreB + ")" : "";
+      opt.textContent = row.Division + " \u2014 " + row.Time + " \u2014 " + row.TeamA + " vs. " + row.TeamB + status;
+      select.appendChild(opt);
+    });
+    if(previousValue) select.value = previousValue;
+  }
+
+  function loadScores(){
+    var stamp = document.getElementById('lastUpdated');
+    var isPlaceholder = SHEET_CSV_URL.indexOf("PASTE_YOUR") === 0;
+    if(isPlaceholder){
+      currentRows = SAMPLE_ROWS;
+      renderMatches(SAMPLE_ROWS);
+      renderStandings(computeStandings(SAMPLE_ROWS));
+      populateMatchSelect(SAMPLE_ROWS);
+      stamp.textContent = "Showing sample data — connect a Google Sheet to go live (see comment in the page source).";
+      return;
+    }
+    fetch(SHEET_CSV_URL)
+      .then(function(res){ return res.text(); })
+      .then(function(text){
+        var rows = parseCSV(text);
+        currentRows = rows;
+        renderMatches(rows);
+        renderStandings(computeStandings(rows));
+        populateMatchSelect(rows);
+        stamp.textContent = "Last updated " + new Date().toLocaleTimeString();
+      })
+      .catch(function(){
+        stamp.textContent = "Couldn't reach the scores sheet — showing the last known schedule.";
+        currentRows = SAMPLE_ROWS;
+        renderMatches(SAMPLE_ROWS);
+        renderStandings(computeStandings(SAMPLE_ROWS));
+        populateMatchSelect(SAMPLE_ROWS);
+      });
+  }
+
+  var currentFilter = "all";
+  function applyDivisionFilter(div){
+    currentFilter = div;
+    document.querySelectorAll('#matchTableBody tr').forEach(function(row){
+      row.style.display = (div === 'all' || row.getAttribute('data-div') === div) ? '' : 'none';
+    });
+  }
+
+  var chips = document.querySelectorAll('#filterRow .chip');
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      applyDivisionFilter(chip.getAttribute('data-div'));
+    });
+  });
+
+  loadScores();
+  setInterval(loadScores, 60000); // refresh every 60 seconds
+
+  // ---------- ORGANIZER LOGIN (Netlify Identity) ----------
+  function setLoggedInUI(user){
+    document.getElementById('loginLink').style.display = 'none';
+    document.getElementById('logoutLink').style.display = '';
+    document.getElementById('organizerPanel').style.display = '';
+    document.getElementById('loggedOutNotice').style.display = 'none';
+    document.getElementById('organizerEmail').textContent = user.email;
+  }
+  function setLoggedOutUI(){
+    document.getElementById('loginLink').style.display = '';
+    document.getElementById('logoutLink').style.display = 'none';
+    document.getElementById('organizerPanel').style.display = 'none';
+    document.getElementById('loggedOutNotice').style.display = '';
+  }
+
+  if(window.netlifyIdentity){
+    netlifyIdentity.on('init', function(user){
+      if(user) setLoggedInUI(user); else setLoggedOutUI();
+    });
+    netlifyIdentity.on('login', function(user){
+      setLoggedInUI(user);
+      netlifyIdentity.close();
+    });
+    netlifyIdentity.on('logout', function(){
+      setLoggedOutUI();
+    });
+    netlifyIdentity.init();
+  }
+
+  ['loginLink', 'loginLink2'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('click', function(e){
+      e.preventDefault();
+      if(window.netlifyIdentity) netlifyIdentity.open('login');
+    });
+  });
+  var logoutEl = document.getElementById('logoutLink');
+  if(logoutEl) logoutEl.addEventListener('click', function(e){
+    e.preventDefault();
+    if(window.netlifyIdentity) netlifyIdentity.logout();
+  });
+
+  // ---------- SCORE SUBMISSION (via Netlify Function, gated by Identity) ----------
+  var scoreForm = document.getElementById('scoreForm');
+  if(scoreForm){
+    scoreForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      var errorEl = document.getElementById('scoreErrorMsg');
+      var confirmEl = document.getElementById('scoreConfirmMsg');
+      errorEl.classList.remove('show');
+      confirmEl.classList.remove('show');
+
+      var user = window.netlifyIdentity && netlifyIdentity.currentUser();
+      if(!user){
+        errorEl.textContent = "You've been logged out — please log in again.";
+        errorEl.classList.add('show');
+        return;
+      }
+
+      var row = document.getElementById('matchSelect').value;
+      var scoreA = document.getElementById('scoreAInput').value;
+      var scoreB = document.getElementById('scoreBInput').value;
+      if(!row){
+        errorEl.textContent = "Please select a match.";
+        errorEl.classList.add('show');
+        return;
+      }
+
+      user.jwt().then(function(token){
+        return fetch('/.netlify/functions/update-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ row: Number(row), scoreA: scoreA, scoreB: scoreB })
+        });
+      }).then(function(res){
+        if(!res.ok) return res.json().then(function(data){ throw new Error(data.error || 'Save failed'); });
+        return res.json();
+      }).then(function(){
+        confirmEl.classList.add('show');
+        scoreForm.reset();
+        loadScores(); // refresh matches/standings immediately after a successful save
+      }).catch(function(err){
+        errorEl.textContent = "Couldn't save that score: " + err.message + ". Ask an admin to update it directly in the sheet if this keeps happening.";
+        errorEl.classList.add('show');
+      });
+    });
+  }
+
+  // Registration tab switching
+  var regTabs = document.querySelectorAll('#regTabs .chip');
+  var teamWrap = document.getElementById('teamFormWrap');
+  var playerWrap = document.getElementById('playerFormWrap');
+  regTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      regTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      var which = tab.getAttribute('data-tab');
+      teamWrap.style.display = (which === 'team') ? '' : 'none';
+      playerWrap.style.display = (which === 'player') ? '' : 'none';
+    });
+  });
+
+  // Netlify Forms submission helper (works once deployed on Netlify;
+  // locally/in preview it will just show the confirmation without a real network save)
+  function submitToNetlify(form, confirmEl){
+    var data = new FormData(form);
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data).toString()
+    }).catch(function(){ /* swallow network errors so the confirmation still shows */ })
+      .finally(function(){
+        confirmEl.classList.add('show');
+        form.reset();
+      });
+  }
+
+  document.getElementById('regForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    submitToNetlify(this, document.getElementById('confirmMsg'));
+  });
+
+  document.getElementById('playerForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    submitToNetlify(this, document.getElementById('playerConfirmMsg'));
+  });
+</script>
+
+</body>
+</html>

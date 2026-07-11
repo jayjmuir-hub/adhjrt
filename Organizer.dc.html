@@ -71,8 +71,10 @@
           <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
           <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">ROLE / TITLE</label>
           <input value="{{ signupTitle }}" onInput="{{ onSignupTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">USERNAME</label>
-          <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Your login username will be</div>
+            <div style="font-size:22px;font-weight:800;color:#F5C518;margin-top:2px">{{ signupUserPreview }}</div>
+          </div>
           <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
           <div style="position:relative;margin:6px 0 16px">
             <input type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
@@ -359,10 +361,26 @@ class Component extends DCLogic {
 
   doLogout() { this.state.api.logout(); this.setState({ session: null, teams: [], players: [] }); }
 
+  usernameFromName(name) {
+    const parts = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s'-]/g, '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0];
+    return parts[0] + '.' + parts[parts.length - 1];
+  }
+
   async doSignup() {
-    const { api, signupName, signupTitle, signupUser, signupPass, signupCode } = this.state;
+    const { api, signupName, signupTitle, signupPass, signupCode } = this.state;
+    const base = this.usernameFromName(signupName);
+    if (!base) { this.setState({ signupError: 'Please enter your name.' }); return; }
     this.setState({ signupBusy: true, signupError: '' });
-    const res = await api.signup({ name: signupName, title: signupTitle, username: signupUser, password: signupPass, inviteCode: signupCode });
+    let username = base, attempt = 0, res;
+    while (attempt < 30) {
+      res = await api.signup({ name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });
+      if (res.ok || res.error !== 'That username is already taken.') break;
+      attempt += 1;
+      username = base + (attempt + 1);
+    }
+    this.setState({ signupUser: username });
     if (res.ok && res.pending) {
       this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
     } else if (res.ok) {
@@ -466,11 +484,10 @@ class Component extends DCLogic {
       isSignupPendingView: s.authMode === 'signup' && s.signupPending,
       isSignupFormView: s.authMode === 'signup' && !s.signupPending,
       signupPendingMessage: s.signupPendingMessage,
-      signupName: s.signupName, signupTitle: s.signupTitle, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
+      signupName: s.signupName, signupTitle: s.signupTitle, signupUserPreview: this.usernameFromName(s.signupName) || '—', signupPass: s.signupPass, signupCode: s.signupCode,
       signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       onSignupName: (e) => this.setState({ signupName: e.target.value }),
       onSignupTitle: (e) => this.setState({ signupTitle: e.target.value }),
-      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
       onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
       onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
       onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },

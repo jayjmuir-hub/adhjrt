@@ -261,8 +261,10 @@
             <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Requires the invite code for your age group.</p>
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">YOUR NAME</label>
             <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
-            <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Your login username will be</div>
+              <div style="font-size:22px;font-weight:800;color:#F5C518;margin-top:2px">{{ signupUserPreview }}</div>
+            </div>
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
             <div style="position:relative;margin:6px 0 16px">
               <input type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
@@ -530,7 +532,8 @@
 
               <div style="display:flex;align-items:center;gap:14px;margin-top:20px">
                 <button onClick="{{ onSaveDraw }}" disabled="{{ editorBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save changes</button>
-                <button onClick="{{ onResetDraw }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset to auto-generated</button>
+                <button onClick="{{ onDiscardDraw }}" disabled="{{ editorBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#cdd2da;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Discard changes</button>
+                <button onClick="{{ onResetDraw }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Regenerate times &amp; bracket</button>
                 <sc-if value="{{ editorMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ editorMsg }}</span></sc-if>
               </div>
             </sc-if>
@@ -828,13 +831,23 @@ class Component extends DCLogic {
       this.setState({ editorBusy: false, editorMsg: res.error || 'Could not save.' });
     }
   }
-  async onResetDraw() {
-    this.confirmModal('Reset this age group to the auto-generated draw? Your custom pools, slots, and times will be discarded.', async () => {
-      const { editorAgeId, session } = this.state;
-      this.setState({ editorBusy: true });
-      await this.state.api.resetDraw(editorAgeId, session);
+  async onDiscardDraw() {
+    this.confirmModal('Discard unsaved changes to this fixture editor? This reloads the last saved version.', async () => {
+      const { editorAgeId } = this.state;
+      this.setState({ editorBusy: true, editorMsg: '' });
       await this.loadEditor(editorAgeId);
-      this.setState({ editorBusy: false, editorMsg: 'Reset to auto-generated draw.' });
+      this.setState({ editorBusy: false, editorMsg: 'Unsaved changes discarded.' });
+    });
+  }
+  async onResetDraw() {
+    this.confirmModal("Regenerate match times and the knockout bracket from the current teams and pools? Your teams and pool assignments are kept — only match pairings, times, and the bracket are rebuilt.", async () => {
+      const { api, editorDraw, editorAgeId, session } = this.state;
+      this.setState({ editorBusy: true });
+      const freshSlots = editorDraw.pools.flatMap((p) => api.regeneratePoolSlots(editorAgeId, p.id, p.teams));
+      const freshKnockout = await api.autoKnockoutSlots(editorAgeId);
+      const nextDraw = { ...editorDraw, slots: freshSlots, knockout: freshKnockout };
+      const res = await api.saveDraw(editorAgeId, nextDraw, session);
+      this.setState({ editorDraw: nextDraw, editorBusy: false, editorMsg: res.ok ? 'Match times and bracket regenerated — your teams were kept.' : (res.error || 'Could not save.') });
       this.loadAdmin(editorAgeId);
       if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
     });
@@ -887,10 +900,26 @@ class Component extends DCLogic {
     }
   }
 
+  usernameFromName(name) {
+    const parts = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s'-]/g, '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0];
+    return parts[0] + '.' + parts[parts.length - 1];
+  }
+
   async doSignup() {
-    const { api, signupName, signupUser, signupPass, signupCode } = this.state;
+    const { api, signupName, signupPass, signupCode } = this.state;
+    const base = this.usernameFromName(signupName);
+    if (!base) { this.setState({ signupError: 'Please enter your name.' }); return; }
     this.setState({ signupBusy: true, signupError: '' });
-    const res = await api.signup({ name: signupName, username: signupUser, password: signupPass, inviteCode: signupCode });
+    let username = base, attempt = 0, res;
+    while (attempt < 30) {
+      res = await api.signup({ name: signupName, username, password: signupPass, inviteCode: signupCode });
+      if (res.ok || res.error !== 'That username is already taken.') break;
+      attempt += 1;
+      username = base + (attempt + 1);
+    }
+    this.setState({ signupUser: username });
     if (res.ok && res.pending) {
       this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
     } else if (res.ok) {
@@ -1189,10 +1218,9 @@ class Component extends DCLogic {
       signupPendingMessage: s.signupPendingMessage,
       onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
       onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
-      signupName: s.signupName, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
+      signupName: s.signupName, signupUserPreview: this.usernameFromName(s.signupName) || '—', signupPass: s.signupPass, signupCode: s.signupCode,
       signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       onSignupName: (e) => this.setState({ signupName: e.target.value }),
-      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
       onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
       onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
       onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
@@ -1227,6 +1255,7 @@ class Component extends DCLogic {
       subTabFixturesStyle: s.subTab === 'fixtures' ? tabOn : tabOff,
 
       editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,
+      onDiscardDraw: () => this.onDiscardDraw(),
       poolCards, knockoutRosterGroups,
       knockoutRosterDragOver: (e) => e.preventDefault(),
       onSaveDraw: () => this.onSaveDraw(),

@@ -1,1768 +1,1205 @@
-// GENERATED from dc-runtime/src/*.ts — do not edit. Rebuild with `cd dc-runtime && bun run build`.
-"use strict";
-(() => {
-  var __defProp = Object.defineProperty;
-  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<template id="__bundler_thumbnail" data-bg-color="#0C0C0E">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#0C0C0E"/>
+    <polygon points="100,60 140,80 100,100 60,80" fill="#E11B22"/>
+    <polygon points="100,100 140,120 100,140 60,120" fill="#17A34A"/>
+    <rect x="70" y="60" width="8" height="80" fill="#fff" transform="rotate(20 100 100)"/>
+  </svg>
+</template>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  input,button{font-family:inherit}
+  input[type=number]::-webkit-inner-spin-button{opacity:.5}
+  input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer}
+  input[type=time]::-webkit-datetime-edit-ampm-field{color:#fff}
+</style>
+</helmet>
 
-  // src/react.ts
-  function getReact() {
-    const R = window.React;
-    if (!R) throw new Error("dc-runtime: window.React is not available yet");
-    return R;
-  }
-  function getReactDOM() {
-    const RD = window.ReactDOM;
-    if (!RD) throw new Error("dc-runtime: window.ReactDOM is not available yet");
-    return RD;
-  }
-  var h = ((...args) => getReact().createElement(
-    ...args
-  ));
+<div style="min-height:100vh;max-width:1100px;margin:0 auto;padding:28px 24px 80px">
 
-  // src/parse.ts
-  function parseDcDocument(doc) {
-    const dc = doc.querySelector("x-dc");
-    if (!dc) return null;
-    const scriptEl = doc.querySelector("script[data-dc-script]");
-    const { props, preview } = parseDataProps(
-      scriptEl?.getAttribute("data-props") ?? null
-    );
-    return {
-      template: dc.innerHTML,
-      js: scriptEl ? scriptEl.textContent || "" : "",
-      props,
-      preview
-    };
+  <!-- header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+        <div style="position:absolute;top:-8px;left:50%;width:6px;height:150%;background:#fff;transform:translateX(-50%) rotate(26deg)"></div>
+      </div>
+      <div style="line-height:1">
+        <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · LIVE</div>
+        <div style="font-size:11px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">SCORES &amp; STANDINGS</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px">
+      <button onClick="{{ showPublic }}" style="{{ tabPublicStyle }}">Standings</button>
+      <button onClick="{{ showAdmin }}" style="{{ tabAdminStyle }}">Manager area</button>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="">
+    <div style="margin-top:16px;background:rgba(23,163,74,0.15);border:1px solid rgba(23,163,74,0.5);color:#8ff0b0;font-weight:700;padding:10px 16px;border-radius:10px">{{ toast }}</div>
+  </sc-if>
+
+  <!-- ===================== PUBLIC ===================== -->
+  <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
+    <div style="margin-top:26px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
+        <sc-for list="{{ ageTabs }}" as="a" hint-placeholder-count="4">
+          <button onClick="{{ a.onSelect }}" style="{{ a.style }}">{{ a.name }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ selectedFestival }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:40px;text-align:center;color:#aeb4bf">
+          <div style="font-family:'Anton';font-size:30px;color:#fff">Festival age group</div>
+          <p style="margin-top:8px">{{ selectedName }} is a non-competitive festival — no standings are kept.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <sc-for list="{{ pools }}" as="pool" hint-placeholder-count="1">
+            <div style="margin-bottom:34px">
+              <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:12px">{{ pool.name }}</div>
+              <div style="overflow:hidden;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+                <div style="display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;background:#151517;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794">
+                  <div>POS</div><div>TEAM</div><div style="text-align:center">P</div><div style="text-align:center">W</div><div style="text-align:center">D</div><div style="text-align:center">L</div><div style="text-align:center">PF</div><div style="text-align:center">PA</div><div style="text-align:center">+/−</div><div style="text-align:center">T</div><div style="text-align:center">PTS</div>
+                </div>
+                <sc-for list="{{ pool.rows }}" as="r" hint-placeholder-count="3">
+                  <div style="{{ r.rowStyle }}">
+                    <div style="text-align:center;font-weight:800;color:{{ r.rankColor }}">{{ r.rank }}</div>
+                    <div style="font-weight:700;display:flex;align-items:center;gap:8px">{{ r.team }}<sc-if value="{{ r.coinToss }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:#0C0C0E;background:#f5c518;padding:2px 6px;border-radius:100px">COIN TOSS</span></sc-if></div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.P }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.W }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.D }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.L }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.PF }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.PA }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.marginText }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.tries }}</div>
+                    <div style="text-align:center;font-family:'Anton';font-size:18px">{{ r.pts }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:12px;color:#7f8794;margin-top:8px;line-height:1.6">Green = qualifies for knockouts &nbsp;·&nbsp; P = played &nbsp;·&nbsp; W/D/L = won/drawn/lost &nbsp;·&nbsp; PF = points for &nbsp;·&nbsp; PA = points against &nbsp;·&nbsp; +/− = points difference &nbsp;·&nbsp; T = tries &nbsp;·&nbsp; PTS = league points</div>
+            </div>
+          </sc-for>
+
+          <!-- Awards ceremony summary: winner + runner-up per tier, at a glance (every competitive age group) -->
+          <sc-if value="{{ awardsReady }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:44px">
+              <div style="text-align:center;margin-bottom:20px">
+                <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);padding:8px 20px;border-radius:100px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#f5c518;box-shadow:0 0 10px #f5c518"></span>
+                  <span style="font-weight:800;letter-spacing:2px;color:#f5c518;font-size:13px;text-transform:uppercase;white-space:nowrap">Presentation order</span>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+                <sc-for list="{{ awardsSummary }}" as="a" hint-placeholder-count="4">
+                  <div style="background:#151517;border:1.5px solid {{ a.color }}55;border-top:4px solid {{ a.color }};border-radius:16px;padding:22px 20px;text-align:center">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:14px">
+                      <sc-if value="{{ a.isCup }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4a5 5 0 0 1-10 0V3z"></path><path d="M7 4H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4"></path><path d="M17 4h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"></path><path d="M12 12v4"></path><path d="M9 20h6"></path><path d="M9 20l1-4h4l1 4"></path></svg></sc-if>
+                      <sc-if value="{{ a.isBowl }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9ced6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="9" ry="2.4"></ellipse><path d="M3 7c0 5 3 10 9 10s9-5 9-10"></path></svg></sc-if>
+                      <sc-if value="{{ a.isPlate }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17A34A" stroke-width="1.7"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle></svg></sc-if>
+                      <sc-if value="{{ a.isShield }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff5a3c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"></path></svg></sc-if>
+                      <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;color:{{ a.color }};letter-spacing:.5px">{{ a.tier }}</div>
+                    </div>
+                    <sc-if value="{{ a.ready }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Winner</div>
+                      <div style="font-weight:800;font-size:18px;color:#fff;line-height:1.2;margin-bottom:16px">{{ a.winner }}</div>
+                      <div style="height:1px;background:rgba(255,255,255,0.1);margin:0 0 16px"></div>
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Runner-up</div>
+                      <div style="font-weight:600;font-size:15px;color:#aeb4bf;line-height:1.2">{{ a.runnerUp }}</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- U16B special double-bracket -->
+          <sc-if value="{{ isU16BSpecial }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:8px">
+
+              <!-- Knockout seeding: which pool finish feeds which bracket -->
+              <sc-if value="{{ seedsReady }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-bottom:44px">
+                  <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;text-align:center;margin-bottom:6px">Knockout Seeding</div>
+                  <p style="text-align:center;color:#7f8794;font-size:14px;max-width:520px;margin:0 auto 22px">Top 8 finishers across both pools advance. Seeds 1&ndash;4 contest the Cup &amp; Bowl, seeds 5&ndash;8 contest the Plate &amp; Shield.</p>
+                  <div style="max-width:640px;margin:0 auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+                    <sc-for list="{{ knockoutSeeds }}" as="s" hint-placeholder-count="8">
+                      <div style="display:grid;grid-template-columns:44px 1fr 110px 140px;gap:12px;align-items:center;padding:13px 18px;border-top:1px solid rgba(255,255,255,0.06)">
+                        <div style="font-family:'Anton';font-size:19px;color:#7f8794">{{ s.seed }}</div>
+                        <div style="font-weight:700;font-size:15px;color:#fff">{{ s.team }}</div>
+                        <div style="font-size:12px;font-weight:700;color:#7f8794">{{ s.poolLabel }} &middot; {{ s.rankLabel }}</div>
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:{{ s.bracketColor }};text-transform:uppercase;text-align:right">{{ s.bracket }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <div style="font-family:'Anton';font-size:30px;text-transform:uppercase;text-align:center;margin-bottom:32px">Knockout Brackets</div>
+              <div style="display:flex;flex-direction:column;gap:48px;align-items:center">
+                <sc-for list="{{ doubleBrackets }}" as="br" hint-placeholder-count="2">
+                  <div style="width:100%;max-width:860px;background:linear-gradient(180deg,#18191c,#111113);border:1px solid rgba(255,255,255,0.09);border-radius:22px;padding:36px 40px;box-shadow:0 24px 60px rgba(0,0,0,.4)">
+                    <div style="text-align:center;margin-bottom:34px">
+                      <div style="display:inline-flex;align-items:center;gap:10px;background:{{ br.badgeBg }};border:1px solid {{ br.titleColor }}55;padding:9px 22px;border-radius:100px">
+                        <span style="width:9px;height:9px;border-radius:50%;background:{{ br.titleColor }};box-shadow:0 0 10px {{ br.titleColor }}"></span>
+                        <span style="font-weight:800;letter-spacing:2px;color:{{ br.titleColor }};font-size:14px;text-transform:uppercase;white-space:nowrap">{{ br.title }}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:stretch;justify-content:center;gap:0;overflow-x:auto">
+                      <div style="display:flex;flex-direction:column;gap:40px;justify-content:center;width:270px;flex:none">
+                        <sc-for list="{{ br.leftCol }}" as="c" hint-placeholder-count="2">
+                          <div>
+                            <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#7f8794;text-transform:uppercase;margin-bottom:9px;text-align:center">{{ c.label }}</div>
+                            <div style="background:#1c1d20;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px 22px;box-shadow:0 10px 24px rgba(0,0,0,.3)">
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="width:96px;position:relative;flex:none">
+                        <div style="position:absolute;left:47px;top:14%;bottom:14%;border-left:3px solid rgba(255,255,255,0.16)"></div>
+                        <div style="position:absolute;left:4px;top:17%;font-size:11px;font-weight:800;letter-spacing:1px;color:#3bd070;background:#111113;padding:5px 10px;border-radius:100px;border:1px solid rgba(59,208,112,.35);white-space:nowrap">WIN &#9656;</div>
+                        <div style="position:absolute;left:4px;bottom:17%;font-size:11px;font-weight:800;letter-spacing:1px;color:#8b93a3;background:#111113;padding:5px 10px;border-radius:100px;border:1px solid rgba(255,255,255,.12);white-space:nowrap">LOSE &#9656;</div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:40px;justify-content:center;width:270px;flex:none">
+                        <sc-for list="{{ br.rightCol }}" as="c" hint-placeholder-count="2">
+                          <div>
+                            <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:9px">
+                              <sc-if value="{{ c.isCup }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f5c518" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4a5 5 0 0 1-10 0V3z"></path><path d="M7 4H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4"></path><path d="M17 4h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"></path><path d="M12 12v4"></path><path d="M9 20h6"></path><path d="M9 20l1-4h4l1 4"></path></svg></sc-if>
+                              <sc-if value="{{ c.isBowl }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7f8794" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="9" ry="2.4"></ellipse><path d="M3 7c0 5 3 10 9 10s9-5 9-10"></path></svg></sc-if>
+                              <sc-if value="{{ c.isPlate }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17A34A" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle></svg></sc-if>
+                              <sc-if value="{{ c.isShield }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7f8794" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"></path></svg></sc-if>
+                              <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:{{ c.labelColor }};text-transform:uppercase">{{ c.label }}</div>
+                            </div>
+                            <div style="background:{{ c.cardBg }};border:1.5px solid {{ c.borderColor }};border-radius:16px;padding:20px 22px;box-shadow:{{ c.cardShadow }}">
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- bracket -->
+          <sc-if value="{{ hasBracket }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:20px">
+              <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:14px">Cup, Bowl, Plate &amp; Shield Finals</div>
+              <div style="display:flex;gap:20px;flex-wrap:wrap">
+                <sc-for list="{{ bracket }}" as="round" hint-placeholder-count="2">
+                  <div style="flex:1;min-width:240px">
+                    <div style="font-weight:800;letter-spacing:1px;color:#3bd070;font-size:12px;text-transform:uppercase;margin-bottom:10px">{{ round.round }}</div>
+                    <sc-for list="{{ round.games }}" as="g" hint-placeholder-count="2">
+                      <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.homeColor }};font-weight:{{ g.homeWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.home }}</span><span style="flex:none">{{ g.homeScore }}</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.08);margin:8px 0"></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.awayColor }};font-weight:{{ g.awayWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.away }}</span><span style="flex:none">{{ g.awayScore }}</span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===================== ADMIN ===================== -->
+  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:26px">
+
+      <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:400px;margin:40px auto;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px">
+          <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;margin-bottom:6px">Manager sign in</div>
+            <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Enter scores for your age group.</p>
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
+            <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
+            <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
+            <button onClick="{{ onLogin }}" style="width:100%;background:#E11B22;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Sign in</button>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New manager? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+          </sc-if>
+          <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:6px">Account created</div>
+            <div style="margin:14px 0;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#8ff0b0;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794"><a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+          </sc-if>
+          <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;margin-bottom:6px">Create manager account</div>
+            <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Requires the invite code for your age group.</p>
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">YOUR NAME</label>
+            <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
+            <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
+            <input type="password" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">INVITE CODE (for your age group)</label>
+            <input type="password" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
+            <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+            <div>
+              <div style="font-family:'Anton';font-size:26px;text-transform:uppercase">{{ adminAgeName }}</div>
+              <div style="color:#aeb4bf;font-size:14px">Signed in as {{ sessionName }}</div>
+            </div>
+            <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+          </div>
+
+          <sc-if value="{{ isAdminAll }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:18px">
+              <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-bottom:6px">WORKING ON AGE GROUP</label>
+              <select value="{{ adminSelectedAgeId }}" onChange="{{ onAdminAgeChange }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 14px;color:#fff;font-size:14px">
+                <sc-for list="{{ adminAgeOptions }}" as="a" hint-placeholder-count="8">
+                  <option value="{{ a.id }}">{{ a.name }}</option>
+                </sc-for>
+              </select>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;gap:8px;margin-bottom:22px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
+            <sc-if value="{{ showScoresTabButton }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ showScoresSubTab }}" style="{{ subTabScoresStyle }}">Enter scores</button>
+            </sc-if>
+            <button onClick="{{ showFixturesSubTab }}" style="{{ subTabFixturesStyle }}">Edit fixtures</button>
+          </div>
+          <sc-if value="{{ isFestivalAdminGroup }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">This is a non-competitive festival age group — no scores or standings are kept, so only fixture times, pitches, and team assignments are editable.</p>
+          </sc-if>
+
+          <sc-if value="{{ isScoresSubTab }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ showSpiritInput }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#151517;border:1px solid rgba(59,208,112,0.35);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+                  <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:#3bd070">Spirit of Rugby Award</div>
+                  <div style="font-size:12px;color:#7f8794;font-weight:700">{{ spiritProgressText }}</div>
+                </div>
+                <sc-if value="{{ spiritComplete }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:12px">🏆 Winner: <span style="color:#3bd070">{{ spiritWinnersText }}</span></div>
+                </sc-if>
+                <sc-if value="{{ hasSpiritTally }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ spiritTally }}" as="t" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:8px;background:{{ t.chipBg }};border:1px solid {{ t.chipBorder }};border-radius:100px;padding:6px 14px;white-space:nowrap;flex:none">
+                        <span style="font-weight:700;font-size:13px;color:#fff;white-space:nowrap">{{ t.name }}</span>
+                        <span style="font-weight:600;font-size:11px;color:#8b93a3;white-space:nowrap">{{ t.team }}</span>
+                        <span style="font-weight:800;font-size:12px;color:{{ t.countColor }}">{{ t.count }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noSpiritTally }}" hint-placeholder-val="{{ true }}">
+                  <div style="color:#7f8794;font-size:13px">No nominations entered yet — nominate a player for each match below.</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-for list="{{ adminRows }}" as="m" hint-placeholder-count="3">
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+                  <div style="font-weight:800;font-size:17px">{{ m.home }} <span style="color:#7f8794">v</span> {{ m.away }}</div>
+                  <div style="display:flex;align-items:center;gap:14px">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#3bd070;text-transform:uppercase">{{ m.label }}</div>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PITCH
+                      <input value="{{ m.pitchDraft }}" onInput="{{ m.h.pitch }}" style="width:56px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:5px 6px;color:#fff;font-size:12px;text-align:center">
+                    </label>
+                  </div>
+                </div>
+                <sc-if value="{{ m.canEdit }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                      <div>
+                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.home }}</div>
+                        <div style="display:flex;gap:8px">
+                          <input type="number" min="0" value="{{ m.draft.homeScore }}" onInput="{{ m.h.hs }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.homeTries }}" onInput="{{ m.h.ht }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.homeCards }}" onInput="{{ m.h.hc }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.away }}</div>
+                        <div style="display:flex;gap:8px">
+                          <input type="number" min="0" value="{{ m.draft.awayScore }}" onInput="{{ m.h.as }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.awayTries }}" onInput="{{ m.h.at }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.awayCards }}" onInput="{{ m.h.ac }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
+                      <span style="font-size:12px;color:#7f8794;font-weight:700">WALK-OVER:</span>
+                      <button onClick="{{ m.h.woNone }}" style="{{ m.woNoneStyle }}">None</button>
+                      <button onClick="{{ m.h.woHome }}" style="{{ m.woHomeStyle }}">{{ m.home }} 20–0</button>
+                      <button onClick="{{ m.h.woAway }}" style="{{ m.woAwayStyle }}">{{ m.away }} 20–0</button>
+                    </div>
+                    <sc-if value="{{ m.showSpirit }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:14px">
+                        <label style="display:block;font-size:11px;color:#7f8794;font-weight:700;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY — ONE NOMINATION FROM EACH TEAM</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                          <div>
+                            <div style="font-size:11px;color:#aeb4bf;font-weight:700;margin-bottom:5px">{{ m.home }}</div>
+                            <input value="{{ m.spiritDraftHome }}" onInput="{{ m.h.spiritHome }}" placeholder="Player name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                          </div>
+                          <div>
+                            <div style="font-size:11px;color:#aeb4bf;font-weight:700;margin-bottom:5px">{{ m.away }}</div>
+                            <input value="{{ m.spiritDraftAway }}" onInput="{{ m.h.spiritAway }}" placeholder="Player name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <div style="display:flex;align-items:center;margin-top:16px">
+                      <button onClick="{{ m.h.save }}" style="margin-left:auto;background:#17A34A;color:#fff;font-weight:800;padding:10px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save</button>
+                    </div>
+                    <sc-if value="{{ m.savedNote }}" hint-placeholder-val=""><div style="font-size:12px;color:#3bd070;font-weight:700;margin-top:10px">{{ m.savedNote }}</div></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.awaiting }}" hint-placeholder-val="{{ false }}">
+                  <div style="color:#7f8794;font-size:14px">Awaiting earlier-round results before this can be scored.</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </sc-if>
+
+          <sc-if value="{{ isFixturesSubTab }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ editorLoaded }}" hint-placeholder-val="{{ false }}">
+              <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Drag a team from a pool's roster onto another pool to move it, or onto a match slot's Home/Away box to assign it there. Edit kickoff time directly — the list re-sorts by time automatically.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-width:0">
+                <sc-for list="{{ poolCards }}" as="pool" hint-placeholder-count="2">
+                  <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;min-width:0;overflow:hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="font-family:'Anton';font-size:19px;text-transform:uppercase">{{ pool.name }}</div>
+                        <button onClick="{{ pool.onRenamePool }}" aria-label="Rename pool" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:14px;padding:2px 4px">&#9998;</button>
+                      </div>
+                      <button onClick="{{ pool.onRemovePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:11px;padding:5px 10px;border-radius:7px;cursor:pointer">Delete pool</button>
+                    </div>
+                    <div onDragOver="{{ pool.onDragOverZone }}" onDrop="{{ pool.onDropZone }}" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:10px;margin-bottom:10px;min-height:44px">
+                      <sc-for list="{{ pool.teamChips }}" as="chip" hint-placeholder-count="5">
+                        <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 6px 6px 14px;font-size:13px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">
+                          <span style="white-space:nowrap">{{ chip.name }}</span>
+                          <button onClick="{{ chip.onRename }}" aria-label="Rename team" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px 4px">&#9998;</button>
+                          <button onClick="{{ chip.onRemove }}" aria-label="Remove team" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:14px;padding:2px 5px">&times;</button>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-bottom:16px">
+                      <input value="{{ pool.newTeamValue }}" onInput="{{ pool.onNewTeamInput }}" onKeyDown="{{ pool.onNewTeamKey }}" placeholder="New team name" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                      <button onClick="{{ pool.onAddTeamClick }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">+ Add team</button>
+                    </div>
+                    <sc-if value="{{ pool.slotRows.length }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:nowrap">
+                        <div style="width:96px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Time</div>
+                        <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
+                        <span style="width:8px;flex:none"></span>
+                        <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
+                        <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                        <span style="width:16px;flex:none"></span>
+                      </div>
+                    </sc-if>
+                    <sc-for list="{{ pool.slotRows }}" as="row" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap">
+                        <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
+                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                        <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
+                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                        <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                        <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
+                      </div>
+                    </sc-for>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                      <button onClick="{{ pool.onAddSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add match slot</button>
+                      <button onClick="{{ pool.onRegenerate }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Regenerate from pool</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <button onClick="{{ onAddPool }}" style="margin-top:16px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:10px 18px;border-radius:9px;cursor:pointer">+ Add pool</button>
+
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;margin-top:24px">
+                <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:6px">Knockout stage</div>
+                <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.6">Drag a team below onto a Home/Away box to assign it. Times auto-seed once pool play ends, but you can edit them (and the matchup) directly here.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+                  <sc-for list="{{ knockoutRosterGroups }}" as="grp" hint-placeholder-count="2">
+                    <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;flex:1;min-width:220px">
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase;margin-bottom:8px">{{ grp.name }}</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px">
+                        <sc-for list="{{ grp.chips }}" as="chip" hint-placeholder-count="5">
+                          <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">{{ chip.name }}</div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ knockoutRows.length }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:nowrap">
+                    <div style="width:160px;flex:none;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Match</div>
+                    <div style="width:96px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Time</div>
+                    <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
+                    <span style="width:8px;flex:none"></span>
+                    <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
+                    <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                    <span style="width:16px;flex:none"></span>
+                  </div>
+                </sc-if>
+                <sc-for list="{{ knockoutRows }}" as="row" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap">
+                    <div style="display:flex;align-items:center;gap:2px;width:190px;flex:none">
+                      <span style="font-size:11.5px;font-weight:700;color:#aeb4bf;line-height:1.25;overflow-wrap:break-word;min-width:0;flex:1">{{ row.round }}</span>
+                      <button onClick="{{ row.onRename }}" aria-label="Rename match" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px;flex:none">&#9998;</button>
+                    </div>
+                    <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
+                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                    <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
+                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                    <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                    <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
+                  </div>
+                </sc-for>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button onClick="{{ onAddKnockoutSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add knockout match</button>
+                  <button onClick="{{ onRegenerateKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Regenerate from standings</button>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:14px;margin-top:20px">
+                <button onClick="{{ onSaveDraw }}" disabled="{{ editorBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save changes</button>
+                <button onClick="{{ onResetDraw }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset to auto-generated</button>
+                <sc-if value="{{ editorMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ editorMsg }}</span></sc-if>
+              </div>
+            </sc-if>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
+      <div style="background:#151517;border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+        <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4">{{ modalTitle }}</div>
+        <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
+          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.18);border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;margin-bottom:18px">
+        </sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">OK</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
+class Component extends DCLogic {
+  state = {
+    view: 'public', api: null, ageGroups: [], selectedAgeId: null,
+    standings: null, fixtures: null, session: null,
+    loginUser: '', loginPass: '', loginError: '', toast: '',
+    authMode: 'login',
+    signupName: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
+    signupPending: false, signupPendingMessage: '',
+    drafts: {}, savedIds: {},
+    subTab: 'scores', adminSelectedAgeId: null,
+    editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
+    newTeamInputs: {},
+    modal: null, modalValue: '',
+  };
+
+  // ---- Generic in-app modal (replaces window.prompt/window.confirm,
+  // which are silently blocked inside this preview's sandboxed iframe —
+  // they return null/false immediately instead of showing a real dialog,
+  // so any code relying on them looks like it "does nothing"). ----
+  promptModal(title, defaultValue, onConfirm) {
+    this.setState({ modal: { kind: 'prompt', title, onConfirm }, modalValue: defaultValue || '' });
   }
-  function parseDcText(src) {
-    const openMatch = /<x-dc(?:\s[^>]*)?>/.exec(src);
-    if (!openMatch) return null;
-    const close = src.lastIndexOf("</x-dc>");
-    if (close === -1 || close < openMatch.index) return null;
-    const template = src.slice(openMatch.index + openMatch[0].length, close);
-    const doc = new DOMParser().parseFromString(src, "text/html");
-    const scriptEl = doc.querySelector("script[data-dc-script]");
-    const { props, preview } = parseDataProps(
-      scriptEl?.getAttribute("data-props") ?? null
-    );
-    return {
-      template,
-      js: scriptEl ? scriptEl.textContent || "" : "",
-      props,
-      preview
-    };
+  confirmModal(message, onConfirm) {
+    this.setState({ modal: { kind: 'confirm', title: message, onConfirm } });
   }
-  function parseDataProps(raw) {
-    if (!raw) return { props: null, preview: null };
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return { props: null, preview: null };
+  closeModal() { this.setState({ modal: null, modalValue: '' }); }
+  submitModal() {
+    const { modal, modalValue } = this.state;
+    if (!modal) return;
+    if (modal.kind === 'prompt') {
+      const trimmed = (modalValue || '').trim();
+      this.closeModal();
+      if (trimmed) modal.onConfirm(trimmed);
+    } else {
+      this.closeModal();
+      modal.onConfirm();
     }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { props: null, preview: null };
-    }
-    const obj = parsed;
-    const preview = obj.$preview && typeof obj.$preview === "object" ? obj.$preview : null;
-    const rest = {};
-    for (const k of Object.keys(obj)) {
-      if (k[0] !== "$") rest[k] = obj[k];
-    }
-    return { props: Object.keys(rest).length ? rest : null, preview };
-  }
-  function dcNameFromPath(pathname) {
-    let p = pathname || "";
-    try {
-      p = decodeURIComponent(p);
-    } catch {
-    }
-    const base = p.split("/").pop() || "Root";
-    return base.replace(/\.dc\.html$/, "").replace(/\.html?$/, "") || "Root";
   }
 
-  // src/boot.ts
-  var BASE_CSS = `
-    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
-      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
-      border-radius:2px;box-sizing:border-box;overflow:hidden}
-    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
-    html.sc-dc-streaming .sc-placeholder,
-    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
-      background:color-mix(in srgb,currentColor 5%,transparent);
-      border-color:transparent}
-    html.sc-dc-streaming .sc-placeholder::before,
-    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
-      position:absolute;inset:0;pointer-events:none;
-      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
-      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
-    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
-    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
-      background:color-mix(in srgb,currentColor 8%,transparent)}
-    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
-      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
-    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
-      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
-      border-radius:2px;box-sizing:border-box;color:transparent;
-      user-select:none}
-    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
-      color:color-mix(in srgb,currentColor 50%,transparent);
-      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
-      padding:0 3px}
-    .sc-host.sc-has-error{position:relative}
-    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
-      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
-      border-radius:4px;white-space:pre-wrap;pointer-events:none}
-    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts \u2014 keep both
-       in sync until dc-runtime regains a build step. */
-    @media print {
-      @page { margin: 0.5cm; }
-      figure, table { break-inside: avoid; }
-      #dc-root, #dc-root > .sc-host { height: auto; }
-      *, *::before, *::after {
-        print-color-adjust: exact; -webkit-print-color-adjust: exact;
-        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-        animation-delay: -99s !important; animation-duration: .001s !important;
-        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
-        animation-play-state: running !important; transition-duration: 0s !important;
-      }
-    }
-  `;
-  var FULL_PAGE_CSS = "html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}";
-  function rootNameForDocument(doc, loc) {
-    let bootPath = loc.pathname || "";
-    if (!/\.dc\.html?$/i.test(safeDecode(bootPath))) {
-      try {
-        bootPath = new URL(doc.baseURI || "/").pathname;
-      } catch {
-      }
-    }
-    return dcNameFromPath(bootPath);
+  async componentDidMount() {
+    const api = await import(new URL('scores-data.js', document.baseURI).href);
+    const ageGroups = await api.getAgeGroups();
+    const firstComp = ageGroups.find((a) => a.hasStandings) || ageGroups[0];
+    this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: firstComp && firstComp.id }, () => {
+      this.loadPublic();
+    });
   }
-  function safeDecode(s) {
-    try {
-      return decodeURIComponent(s);
-    } catch {
-      return s;
-    }
+
+  async loadPublic() {
+    const { api, selectedAgeId } = this.state;
+    if (!api || !selectedAgeId) return;
+    const standings = await api.getStandings(selectedAgeId);
+    this.setState({ standings });
   }
-  function boot(runtime, doc = document) {
-    const parsed = parseDcDocument(doc);
-    if (!parsed) return null;
-    const React = getReact();
-    const rootName = rootNameForDocument(doc, location);
-    runtime.markFetched(rootName);
-    runtime.setRootName(rootName);
-    runtime.adoptParsed(rootName, parsed);
-    if (!window.__resources) {
-      fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
-        const raw = t ? parseDcText(t) : null;
-        if (raw?.template) runtime.updateHtml(rootName, raw.template);
-      }).catch(() => {
+
+  async loadAdmin(ageIdOverride) {
+    const { api, session } = this.state;
+    if (!api || !session) return;
+    let ageId = session.ageGroupId === '*' ? (ageIdOverride || this.state.adminSelectedAgeId) : session.ageGroupId;
+    if (session.ageGroupId === '*' && !ageId) {
+      const first = this.state.ageGroups.find((a) => a.hasStandings);
+      ageId = first && first.id;
+    }
+    if (!ageId) { this.setState({ fixtures: null }); return; }
+    const fixtures = await api.getFixtures(ageId);
+    const drafts = { ...this.state.drafts };
+    [...fixtures.pool, ...fixtures.knockout].forEach((fx) => {
+      const r = fx.result || {};
+      if (!drafts[fx.id]) drafts[fx.id] = {
+        homeScore: r.homeScore != null ? String(r.homeScore) : '', awayScore: r.awayScore != null ? String(r.awayScore) : '',
+        homeTries: r.homeTries != null ? String(r.homeTries) : '', awayTries: r.awayTries != null ? String(r.awayTries) : '',
+        homeCards: r.homeCards != null ? String(r.homeCards) : '', awayCards: r.awayCards != null ? String(r.awayCards) : '',
+        walkover: r.walkover || null,
+        spiritNomineeHome: r.spiritNomineeHome || '', spiritNomineeAway: r.spiritNomineeAway || '',
+      };
+    });
+    this.setState({ fixtures, drafts, adminSelectedAgeId: ageId });
+    this.loadEditor(ageId);
+    this.loadSpiritAward(ageId);
+  }
+
+  async loadSpiritAward(agId) {
+    const { api } = this.state;
+    if (!api || !api.supportsSpiritAward(agId)) { this.setState({ spiritAward: null }); return; }
+    const spiritAward = await api.getSpiritAward(agId);
+    this.setState({ spiritAward });
+  }
+
+  async loadEditor(agId) {
+    const { api } = this.state;
+    if (!api || !agId) return;
+    const draw = await api.getDraw(agId);
+    this.setState({ editorDraw: draw, editorAgeId: agId, editorMsg: '' });
+  }
+
+  onTeamDragStart(team, e) {
+    this._dragTeam = team;
+    if (e && e.dataTransfer) { try { e.dataTransfer.setData('text/plain', team); } catch (err) {} }
+  }
+  onPoolDropTeam(poolId) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => {
+      if (!s.editorDraw) return {};
+      const pools = s.editorDraw.pools.map((p) => ({ ...p, teams: p.teams.filter((t) => t !== team) }));
+      const target = pools.find((p) => p.id === poolId);
+      if (target && !target.teams.includes(team)) target.teams.push(team);
+      return { editorDraw: { ...s.editorDraw, pools } };
+    });
+    this._dragTeam = null;
+  }
+  onSlotSideDrop(slotId, side) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
+    this._dragTeam = null;
+  }
+  onSlotTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
+  }
+  // Live pitch edit from the "Enter scores" tab (a quicker path than the
+  // full Fixture Editor for just re-assigning a pitch on matchday). Saves
+  // straight into the underlying draw via saveDraw, same store as the
+  // Fixture Editor, so both stay in sync.
+  setPitchDraft(fxId, stage, val) {
+    this.setState((s) => ({ pitchDrafts: { ...(s.pitchDrafts || {}), [fxId]: val } }));
+    clearTimeout(this._pitchSaveTimer);
+    this._pitchSaveTimer = setTimeout(() => this.commitPitch(fxId, stage, val), 600);
+  }
+  async commitPitch(fxId, stage, val) {
+    const { api, session, editorDraw, editorAgeId } = this.state;
+    if (!session) return;
+    const ag = this.state.adminSelectedAgeId;
+    let draw = editorDraw && editorAgeId === ag ? editorDraw : await api.getDraw(ag);
+    if (stage === 'knockout') {
+      draw = { ...draw, knockout: draw.knockout.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
+    } else {
+      draw = { ...draw, slots: draw.slots.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
+    }
+    await api.saveDraw(ag, draw, session);
+    if (this.state.editorAgeId === ag) this.setState({ editorDraw: draw });
+    if (this.state.selectedAgeId === ag) this.loadPublic();
+  }
+  onSlotPitchChange(slotId, val) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) } }));
+  }
+  onAddSlot(poolId) {
+    this.setState((s) => {
+      const poolSlotsList = s.editorDraw.slots.filter((sl) => sl.poolId === poolId);
+      const lastMins = poolSlotsList.length ? Math.max(...poolSlotsList.map((sl) => sl.startMins)) : 8 * 60 - 20;
+      const newSlot = { id: `${s.editorAgeId}:${poolId}:new${Date.now()}`, poolId, home: '', away: '', startMins: lastMins + 20, pitch: 'TBD' };
+      return { editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots, newSlot] } };
+    });
+  }
+  onRemoveSlot(slotId) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.filter((sl) => sl.id !== slotId) } }));
+  }
+  onRenameTeam(poolId, oldName) {
+    this.promptModal('Rename team', oldName, (trimmed) => {
+      if (trimmed === oldName) return;
+      this.setState((s) => {
+        const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.map((t) => (t === oldName ? trimmed : t)) } : p));
+        const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === oldName ? trimmed : sl.home, away: sl.away === oldName ? trimmed : sl.away }));
+        return { editorDraw: { ...s.editorDraw, pools, slots } };
       });
+    });
+  }
+  onRemoveTeam(poolId, team) {
+    this.confirmModal(`Remove ${team} from this pool? Any match slots featuring them will show "Drop team here" until reassigned.`, () => {
+      this.setState((s) => {
+        const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.filter((t) => t !== team) } : p));
+        const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === team ? '' : sl.home, away: sl.away === team ? '' : sl.away }));
+        return { editorDraw: { ...s.editorDraw, pools, slots } };
+      });
+    });
+  }
+  onNewTeamInputChange(poolId, val) {
+    this.setState((s) => ({ newTeamInputs: { ...s.newTeamInputs, [poolId]: val } }));
+  }
+  onAddTeam(poolId) {
+    const val = (this.state.newTeamInputs[poolId] || '').trim();
+    if (!val) return;
+    this.setState((s) => {
+      const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.includes(val) ? p.teams : [...p.teams, val] } : p));
+      return { editorDraw: { ...s.editorDraw, pools }, newTeamInputs: { ...s.newTeamInputs, [poolId]: '' } };
+    });
+  }
+  onAddPool() {
+    this.setState((s) => {
+      const existingIds = s.editorDraw.pools.map((p) => p.id);
+      let nextChar = 'A';
+      for (let i = 0; i < 26; i++) { const c = String.fromCharCode(65 + i); if (!existingIds.includes(c)) { nextChar = c; break; } }
+      const newPool = { id: nextChar, name: `Pool ${nextChar}`, teams: [] };
+      return { editorDraw: { ...s.editorDraw, pools: [...s.editorDraw.pools, newPool] } };
+    });
+  }
+  onRenamePool(poolId, oldName) {
+    this.promptModal('Rename pool', oldName, (trimmed) => {
+      if (trimmed === oldName) return;
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, pools: s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, name: trimmed } : p)) } }));
+    });
+  }
+  onRemovePool(poolId) {
+    this.confirmModal('Delete this pool? This removes all its teams and match slots.', () => {
+      this.setState((s) => ({
+        editorDraw: {
+          ...s.editorDraw,
+          pools: s.editorDraw.pools.filter((p) => p.id !== poolId),
+          slots: s.editorDraw.slots.filter((sl) => sl.poolId !== poolId),
+        },
+      }));
+    });
+  }
+  onRegeneratePool(poolId) {
+    this.confirmModal("Regenerate this pool's match schedule from its current team list? This replaces all of this pool's match slots, and any scores already entered for them.", () => {
+      const { api, editorDraw, editorAgeId } = this.state;
+      const pool = editorDraw.pools.find((p) => p.id === poolId);
+      const fresh = api.regeneratePoolSlots(editorAgeId, poolId, pool.teams);
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots.filter((sl) => sl.poolId !== poolId), ...fresh] } }));
+    });
+  }
+
+  onKnockoutSideDrop(slotId, side) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
+    this._dragTeam = null;
+  }
+  onKnockoutTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
+  }
+  onKnockoutPitchChange(slotId, val) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) } }));
+  }
+  onRenameKnockoutRound(slotId, oldRound) {
+    this.promptModal('Rename this knockout match label', oldRound, (trimmed) => {
+      if (trimmed === oldRound) return;
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, round: trimmed } : sl)) } }));
+    });
+  }
+  onAddKnockoutSlot() {
+    this.setState((s) => {
+      const list = s.editorDraw.knockout || [];
+      const lastMins = list.length ? Math.max(...list.map((sl) => sl.startMins)) : 8 * 60;
+      const newSlot = { id: `${s.editorAgeId}:knockout:new${Date.now()}`, round: 'New knockout match', home: '', away: '', startMins: lastMins + 20, pitch: 'TBD' };
+      return { editorDraw: { ...s.editorDraw, knockout: [...list, newSlot] } };
+    });
+  }
+  onRemoveKnockoutSlot(slotId) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: (s.editorDraw.knockout || []).filter((sl) => sl.id !== slotId) } }));
+  }
+  async onRegenerateKnockout() {
+    this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
+      const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId);
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: fresh } }));
+    });
+  }
+  async onSaveDraw() {
+    const { api, editorDraw, editorAgeId, session } = this.state;
+    this.setState({ editorBusy: true, editorMsg: '' });
+    const res = await api.saveDraw(editorAgeId, editorDraw, session);
+    if (res.ok) {
+      this.setState({ editorBusy: false, editorMsg: 'Saved — live on the public schedule now.' });
+      this.loadAdmin(editorAgeId);
+      if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+    } else {
+      this.setState({ editorBusy: false, editorMsg: res.error || 'Could not save.' });
     }
-    const dc = doc.querySelector("x-dc");
-    const hostEl = doc.createElement("div");
-    hostEl.id = "dc-root";
-    dc.replaceWith(hostEl);
-    if (!parsed.preview) {
-      const s = doc.createElement("style");
-      s.textContent = FULL_PAGE_CSS;
-      doc.head.appendChild(s);
+  }
+  async onResetDraw() {
+    this.confirmModal('Reset this age group to the auto-generated draw? Your custom pools, slots, and times will be discarded.', async () => {
+      const { editorAgeId, session } = this.state;
+      this.setState({ editorBusy: true });
+      await this.state.api.resetDraw(editorAgeId, session);
+      await this.loadEditor(editorAgeId);
+      this.setState({ editorBusy: false, editorMsg: 'Reset to auto-generated draw.' });
+      this.loadAdmin(editorAgeId);
+      if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+    });
+  }
+
+  setDraft(id, field, val) {
+    this.setState((s) => ({ drafts: { ...s.drafts, [id]: { ...(s.drafts[id] || {}), [field]: val } } }));
+  }
+  setWalkover(id, val) {
+    this.setState((s) => {
+      const d = { ...(s.drafts[id] || {}), walkover: val };
+      if (val === 'home') { d.homeScore = '20'; d.awayScore = '0'; d.homeTries = '4'; d.awayTries = '0'; }
+      else if (val === 'away') { d.homeScore = '0'; d.awayScore = '20'; d.homeTries = '0'; d.awayTries = '4'; }
+      return { drafts: { ...s.drafts, [id]: d } };
+    });
+  }
+
+  async save(id) {
+    const { api, session, drafts } = this.state;
+    const res = await api.submitResult(id, drafts[id] || {}, session);
+    if (res.ok) {
+      this.setState((s) => ({ savedIds: { ...s.savedIds, [id]: 'Saved ✓ ' + new Date().toLocaleTimeString() }, toast: 'Score saved.' }));
+      await this.loadAdmin();
+      setTimeout(() => this.setState({ toast: '' }), 2500);
+    } else {
+      this.setState({ toast: res.error || 'Could not save.' });
     }
-    const Root = runtime.getDC(rootName);
-    const entry = runtime.registry.get(rootName);
-    function StandaloneRoot() {
-      const [, setTick] = React.useState(0);
-      React.useEffect(() => {
-        const sub = () => setTick((n) => n + 1);
-        entry.subs.add(sub);
-        return () => {
-          entry.subs.delete(sub);
+  }
+
+  async doLogin() {
+    const { api, loginUser, loginPass } = this.state;
+    const res = await api.login(loginUser, loginPass);
+    if (res.ok) this.setState({ session: res.session, loginError: '', loginPass: '', drafts: {} }, () => this.loadAdmin());
+    else this.setState({ loginError: res.error });
+  }
+  doLogout() { this.state.api.logout(); this.setState({ session: null, fixtures: null }); }
+
+  async doSignup() {
+    const { api, signupName, signupUser, signupPass, signupCode } = this.state;
+    this.setState({ signupBusy: true, signupError: '' });
+    const res = await api.signup({ name: signupName, username: signupUser, password: signupPass, inviteCode: signupCode });
+    if (res.ok && res.pending) {
+      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
+    } else if (res.ok) {
+      this.setState({ session: res.session, signupBusy: false, signupPass: '', signupCode: '', drafts: {} }, () => this.loadAdmin());
+    } else {
+      this.setState({ signupError: res.error, signupBusy: false });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
+    const tabOn = tabBase + 'background:#E11B22;color:#fff;';
+    const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
+
+    // ---- public age tabs ----
+    const ageTabs = s.ageGroups.map((a) => ({
+      name: a.name, hasStandings: a.hasStandings,
+      onSelect: () => this.setState({ selectedAgeId: a.id }, () => this.loadPublic()),
+      style: 'font-weight:700;font-size:13px;padding:8px 14px;border-radius:100px;cursor:pointer;white-space:nowrap;border:1px solid ' +
+        (a.id === s.selectedAgeId ? '#E11B22;background:#E11B22;color:#fff' : 'rgba(255,255,255,0.15);background:#151517;color:#cdd2da'),
+    }));
+
+    const st = s.standings;
+    const selName = st ? st.ageGroup.name : '';
+    const festival = st ? !st.ageGroup.hasStandings : false;
+    const advance = st && st.pools[0] ? (this._advanceFor(st) ) : 0;
+
+    // ---- pools ----
+    const pools = st && st.ageGroup.hasStandings ? st.pools.map((p) => {
+      const rows = (st.tables[p.id] || []).map((r) => {
+        const q = r.rank <= this._advance(st);
+        return {
+          ...r,
+          marginText: (r.margin > 0 ? '+' : '') + r.margin,
+          rankColor: q ? '#3bd070' : '#7f8794',
+          rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
+            (q ? 'background:rgba(23,163,74,0.08);border-left:3px solid #17A34A' : ''),
         };
-      }, []);
-      const defaults = React.useMemo(() => {
-        const d = {};
-        for (const k in entry.propsMeta || {}) {
-          const v = entry.propsMeta?.[k]?.default;
-          if (v !== void 0) d[k] = v;
-        }
-        return d;
-      }, [entry.propsMeta]);
-      return h(Root, { ...defaults, ...entry.propOverrides || {} });
-    }
-    const ReactDOM = getReactDOM();
-    if (ReactDOM.createRoot)
-      ReactDOM.createRoot(hostEl).render(h(StandaloneRoot));
-    else ReactDOM.render(h(StandaloneRoot), hostEl);
-    return rootName;
-  }
+      });
+      return { name: p.name, rows };
+    }) : [];
 
-  // src/expr.ts
-  var IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*/;
-  var NUMBER_RE = /^-?\d+(\.\d+)?$/;
-  function resolve(vals, src) {
-    const expr = String(src).trim();
-    if (!expr) return void 0;
-    if (expr[0] === "(" && expr[expr.length - 1] === ")" && parensWrapWhole(expr)) {
-      return resolve(vals, expr.slice(1, -1));
-    }
-    const eq = findTopLevelEquality(expr);
-    if (eq) {
-      const lv = resolve(vals, expr.slice(0, eq.index));
-      const rv = resolve(vals, expr.slice(eq.index + eq.op.length));
-      switch (eq.op) {
-        case "===":
-          return lv === rv;
-        case "!==":
-          return lv !== rv;
-        case "==":
-          return lv == rv;
-        default:
-          return lv != rv;
-      }
-    }
-    if (expr[0] === "!") return !resolve(vals, expr.slice(1));
-    if (expr === "true") return true;
-    if (expr === "false") return false;
-    if (expr === "null") return null;
-    if (expr === "undefined") return void 0;
-    if (NUMBER_RE.test(expr)) return Number(expr);
-    if (expr.length >= 2 && (expr[0] === '"' || expr[0] === "'") && expr[expr.length - 1] === expr[0]) {
-      return expr.slice(1, -1);
-    }
-    return resolvePath(vals, expr);
-  }
-  function parensWrapWhole(expr) {
-    let depth = 0;
-    for (let i = 0; i < expr.length - 1; i++) {
-      if (expr[i] === "(") depth++;
-      else if (expr[i] === ")") {
-        depth--;
-        if (depth === 0) return false;
-      }
-    }
-    return true;
-  }
-  function findTopLevelEquality(expr) {
-    let depth = 0;
-    for (let i = 0; i < expr.length; i++) {
-      const c = expr[i];
-      if (c === "[" || c === "(") depth++;
-      else if (c === "]" || c === ")") depth--;
-      else if (depth === 0 && (c === "=" || c === "!") && expr[i + 1] === "=") {
-        if (i > 0 && (expr[i - 1] === "=" || expr[i - 1] === "!")) continue;
-        if (!expr.slice(0, i).trim()) continue;
-        const op = expr[i + 2] === "=" ? c + "==" : c + "=";
-        return { index: i, op };
-      }
-    }
-    return null;
-  }
-  function resolvePath(vals, expr) {
-    const head = expr.match(IDENT_RE);
-    if (!head) return void 0;
-    let cur = vals == null ? void 0 : vals[head[0]];
-    let i = head[0].length;
-    while (i < expr.length) {
-      if (expr[i] === ".") {
-        const m = expr.slice(i + 1).match(IDENT_RE) || expr.slice(i + 1).match(/^\d+/);
-        if (!m) return void 0;
-        cur = cur == null ? void 0 : cur[m[0]];
-        i += 1 + m[0].length;
-      } else if (expr[i] === "[") {
-        let depth = 1;
-        let j = i + 1;
-        while (j < expr.length && depth > 0) {
-          if (expr[j] === "[") depth++;
-          else if (expr[j] === "]") {
-            depth--;
-            if (depth === 0) break;
-          }
-          j++;
-        }
-        if (depth !== 0) return void 0;
-        const key = resolve(vals, expr.slice(i + 1, j));
-        cur = cur == null ? void 0 : cur[key];
-        i = j + 1;
-      } else {
-        return void 0;
-      }
-    }
-    return cur;
-  }
+    // ---- bracket ----
+    const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
+    const bracket = st && st.bracket ? st.bracket.map((rnd) => ({
+      round: rnd.round,
+      games: rnd.games.map((g) => {
+        const r = g.result || {};
+        const hasScore = r.homeScore != null;
+        return {
+          home: g.home || 'TBD', away: g.away || 'TBD',
+          homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
+          awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
+          homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
+          awayColor: !g.away ? colorMute : (g.winner === g.away ? colorWin : colorNorm),
+          homeWeight: g.winner === g.home ? '800' : '600',
+          awayWeight: g.winner === g.away ? '800' : '600',
+        };
+      }),
+    })) : [];
+    const hasBracket = bracket.some((r) => r.games.length);
 
-  // src/encode.ts
-  var CAMEL_ATTR = "sc-camel-";
-  var INLINE_TEXT_TAGS = new Set(
-    "a abbr b bdi bdo br cite code del dfn em i ins kbd mark q s samp small span strike strong sub sup u var wbr".split(
-      " "
-    )
-  );
-  var RAW_WRAP = {
-    select: "sc-raw-select",
-    table: "sc-raw-table",
-    tbody: "sc-raw-tbody",
-    thead: "sc-raw-thead",
-    tfoot: "sc-raw-tfoot",
-    tr: "sc-raw-tr",
-    td: "sc-raw-td",
-    th: "sc-raw-th",
-    caption: "sc-raw-caption"
-  };
-  var RAW_UNWRAP = Object.fromEntries(
-    Object.entries(RAW_WRAP).map(([k, v]) => [v, k])
-  );
-  var EVENT_MAP = {
-    onclick: "onClick",
-    onchange: "onChange",
-    oninput: "onInput",
-    onsubmit: "onSubmit",
-    onkeydown: "onKeyDown",
-    onkeyup: "onKeyUp",
-    onkeypress: "onKeyPress",
-    onmousedown: "onMouseDown",
-    onmouseup: "onMouseUp",
-    onmouseenter: "onMouseEnter",
-    onmouseleave: "onMouseLeave",
-    onfocus: "onFocus",
-    onblur: "onBlur",
-    ondoubleclick: "onDoubleClick",
-    oncontextmenu: "onContextMenu",
-    onmousemove: "onMouseMove",
-    onmouseover: "onMouseOver",
-    onmouseout: "onMouseOut",
-    onpointerdown: "onPointerDown",
-    onpointerup: "onPointerUp",
-    onpointermove: "onPointerMove",
-    onpointerenter: "onPointerEnter",
-    onpointerleave: "onPointerLeave",
-    onpointercancel: "onPointerCancel",
-    onpointerover: "onPointerOver",
-    onpointerout: "onPointerOut",
-    ongotpointercapture: "onGotPointerCapture",
-    onlostpointercapture: "onLostPointerCapture",
-    ontouchstart: "onTouchStart",
-    ontouchend: "onTouchEnd",
-    ontouchmove: "onTouchMove",
-    ontouchcancel: "onTouchCancel",
-    ondragstart: "onDragStart",
-    ondragend: "onDragEnd",
-    ondragenter: "onDragEnter",
-    ondragleave: "onDragLeave",
-    ondragover: "onDragOver",
-    onanimationstart: "onAnimationStart",
-    onanimationend: "onAnimationEnd",
-    onanimationiteration: "onAnimationIteration",
-    ontransitionend: "onTransitionEnd"
-  };
-  var ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')*`;
-  var IMPORT_SELF_CLOSE_RE = new RegExp(
-    "<(x-import|dc-import)(" + ATTRS + ")/>",
-    "gi"
-  );
-  var CAMEL_ATTR_RE = /(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g;
-  function encodeCamelAttrs(html) {
-    return html.replace(
-      CAMEL_ATTR_RE,
-      (_, sp, name, eq) => sp + CAMEL_ATTR + name.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + eq
-    );
-  }
-  function encodeCase(html) {
-    html = html.replace(
-      IMPORT_SELF_CLOSE_RE,
-      (_, t, a) => "<" + t + a + "></" + t + ">"
-    );
-    html = html.replace(/<helmet(\s|>)/gi, "<sc-helmet$1");
-    html = html.replace(/<\/helmet\s*>/gi, "</sc-helmet>");
-    html = encodeCamelAttrs(html);
-    for (const [real, alias] of Object.entries(RAW_WRAP)) {
-      html = html.replace(
-        new RegExp("(</?)" + real + "(?=[\\s>])", "gi"),
-        "$1" + alias
-      );
-    }
-    return html;
-  }
-  function kebabToCamel(s) {
-    return s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-  }
-  function cssToObj(css) {
-    const o = {};
-    for (const decl of css.split(";")) {
-      const i = decl.indexOf(":");
-      if (i < 0) continue;
-      const prop = decl.slice(0, i).trim();
-      o[prop.startsWith("--") ? prop : kebabToCamel(prop)] = decl.slice(i + 1).trim();
-    }
-    return o;
-  }
-  function compileAttr(raw) {
-    const whole = raw.match(/^\s*\{\{([\s\S]+?)\}\}\s*$/);
-    if (whole) {
-      const path = whole[1];
-      return (vals) => resolve(vals, path);
-    }
-    if (raw.includes("{{")) {
-      const parts = raw.split(/\{\{([\s\S]+?)\}\}/g);
-      return (vals) => parts.map((s, i) => i & 1 ? resolve(vals, s) ?? "" : s).join("");
-    }
-    return () => raw;
-  }
+    // ---- U16B special double-bracket (top 2 of each pool → Cup/Bowl, next 2 → Plate/Shield) ----
+    const isU16BSpecial = !!(st && st.doubleBracket);
+    let doubleBrackets = [];
+    let awardsSummary = [];
+    let knockoutSeeds = [];
+    let seedsReadyFlag = false;
+    if (isU16BSpecial) {
+      const db = st.doubleBracket;
+      const awardRow = (g, tier, color) => {
+        const ready = !!(g.winner && g.home && g.away);
+        return { tier, color, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+      };
+      awardsSummary = [
+        awardRow(db.top.cup, 'Cup', '#f5c518'),
+        awardRow(db.top.bowl, 'Bowl', '#c9ced6'),
+        awardRow(db.bottom.plate, 'Plate', '#17A34A'),
+        awardRow(db.bottom.shield, 'Shield', '#ff5a3c'),
+      ].map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
+      doubleBrackets = [
+        {
+          title: 'Top Bracket · Cup & Bowl', titleColor: '#3bd070', badgeBg: 'rgba(59,208,112,0.12)',
+          leftCol: [
+            { label: 'Semi-Final 1', ...this._fmtMatch(db.top.sf1) },
+            { label: 'Semi-Final 2', ...this._fmtMatch(db.top.sf2) },
+          ],
+          rightCol: [
+            { label: 'Cup Final', labelColor: '#f5c518', borderColor: '#f5c518', cardBg: 'linear-gradient(160deg,#241f0f,#1c1d20)', cardShadow: '0 10px 30px rgba(245,197,24,0.18)', isCup: true, ...this._fmtMatch(db.top.cup) },
+            { label: 'Bowl Final', labelColor: '#7f8794', borderColor: 'rgba(255,255,255,0.1)', cardBg: '#1c1d20', cardShadow: '0 10px 24px rgba(0,0,0,.3)', isBowl: true, ...this._fmtMatch(db.top.bowl) },
+          ],
+        },
+        {
+          title: 'Bottom Bracket · Plate & Shield', titleColor: '#E11B22', badgeBg: 'rgba(225,27,34,0.12)',
+          leftCol: [
+            { label: 'Semi-Final 1', ...this._fmtMatch(db.bottom.sf1) },
+            { label: 'Semi-Final 2', ...this._fmtMatch(db.bottom.sf2) },
+          ],
+          rightCol: [
+            { label: 'Plate Final', labelColor: '#17A34A', borderColor: '#17A34A', cardBg: 'linear-gradient(160deg,#0f2116,#1c1d20)', cardShadow: '0 10px 30px rgba(23,163,74,0.18)', isPlate: true, ...this._fmtMatch(db.bottom.plate) },
+            { label: 'Shield Final', labelColor: '#7f8794', borderColor: 'rgba(255,255,255,0.1)', cardBg: '#1c1d20', cardShadow: '0 10px 24px rgba(0,0,0,.3)', isShield: true, ...this._fmtMatch(db.bottom.shield) },
+          ],
+        },
+      ];
 
-  // src/compile.ts
-  function collectProps(node, kind, host) {
-    const propGetters = [];
-    const pseudoClasses = [];
-    let hintSize = null;
-    for (const { name, value } of [...node.attributes]) {
-      if (name === "sc-name" || name === "data-dc-tpl") continue;
-      let key = name;
-      if (key.startsWith(CAMEL_ATTR))
-        key = kebabToCamel(key.slice(CAMEL_ATTR.length));
-      if (key === "hint-size") {
-        hintSize = value;
-        continue;
+      seedsReadyFlag = !!db.poolsComplete;
+      if (seedsReadyFlag) {
+        const A = st.tables[st.pools[0].id] || [];
+        const B = st.tables[st.pools[1].id] || [];
+        const ordinal = (n) => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
+        const mk = (seed, row, poolLabel, bracket) => (!row ? null : {
+          seed, team: row.team, poolLabel, rankLabel: ordinal(row.rank), bracket,
+          bracketColor: bracket === 'Top Bracket' ? '#3bd070' : '#E11B22',
+        });
+        knockoutSeeds = [
+          mk(1, A[0], 'Pool A', 'Top Bracket'), mk(2, B[0], 'Pool B', 'Top Bracket'),
+          mk(3, A[1], 'Pool A', 'Top Bracket'), mk(4, B[1], 'Pool B', 'Top Bracket'),
+          mk(5, A[2], 'Pool A', 'Bottom Bracket'), mk(6, B[2], 'Pool B', 'Bottom Bracket'),
+          mk(7, A[3], 'Pool A', 'Bottom Bracket'), mk(8, B[3], 'Pool B', 'Bottom Bracket'),
+        ].filter(Boolean);
       }
-      if (key.startsWith("style-")) {
-        pseudoClasses.push(host.pseudoClass(key.slice(6), value));
-        continue;
-      }
-      if (kind !== "dom") {
-        if (key.includes("-") && !(kind === "x-import" && (key.startsWith("aria-") || key.startsWith("data-"))))
-          key = kebabToCamel(key);
-      } else {
-        if (key === "class") key = "className";
-        else if (key === "for") key = "htmlFor";
-        else if (key.startsWith("on"))
-          key = EVENT_MAP[key] || "on" + key[2].toUpperCase() + key.slice(3);
-      }
-      propGetters.push([key, compileAttr(value)]);
-    }
-    return { propGetters, pseudoClasses, hintSize };
-  }
-  var HOST_STYLE_PROPS = /* @__PURE__ */ new Set([
-    "position",
-    "left",
-    "right",
-    "top",
-    "bottom",
-    "inset",
-    "width",
-    "height",
-    "z-index",
-    "transform"
-  ]);
-  function hostPositionStyle(style) {
-    const all = typeof style === "string" ? cssToObj(style) : style != null && typeof style === "object" ? style : null;
-    if (!all) return void 0;
-    const out = {};
-    for (const [k, v] of Object.entries(all)) {
-      const kebab = k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
-      if (HOST_STYLE_PROPS.has(kebab)) out[k] = v;
-    }
-    return Object.keys(out).length ? out : void 0;
-  }
-  function compileTemplate(html, host) {
-    const tpl = document.createElement("template");
-    //! nosemgrep: direct-inner-html-assignment
-    tpl.innerHTML = encodeCase(html);
-    let tplN = 0;
-    (function stamp(node) {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        node.setAttribute("data-dc-tpl", String(tplN++));
-      }
-      for (const c of node.childNodes) stamp(c);
-    })(tpl.content);
-    const builders = walkChildren(tpl.content, host);
-    const render = ((vals, ctx) => builders.map((b, i) => b(vals || {}, ctx, i)));
-    render.__annotated = tpl.innerHTML;
-    return render;
-  }
-  function walkChildren(node, host) {
-    return [...node.childNodes].map((c) => walk(c, host)).filter((b) => b != null);
-  }
-  function walk(node, host) {
-    if (node.nodeType === Node.TEXT_NODE) return walkText(node);
-    if (node.nodeType !== Node.ELEMENT_NODE) return null;
-    const el = node;
-    const tag = el.tagName.toLowerCase();
-    if (tag === "sc-for") return walkFor(el, host);
-    if (tag === "sc-if") return walkIf(el, host);
-    if (tag === "x-import") return walkXImport(el, host);
-    if (tag === "sc-helmet") return host.helmet(el);
-    if (tag === "dc-import") return walkComponent(el, host);
-    return walkElement(el, host);
-  }
-  var warnedHoles = /* @__PURE__ */ new Set();
-  function warnUnresolved(ctx, what) {
-    const key = (ctx?.__name || "?") + "\0" + what;
-    if (warnedHoles.has(key)) return;
-    warnedHoles.add(key);
-    console.warn("[dc-runtime] " + (ctx?.__name || "template") + ": " + what);
-  }
-  function walkText(node) {
-    const txt = node.nodeValue ?? "";
-    if (!txt.includes("{{")) {
-      if (!txt.trim() && !txt.includes(" ")) return null;
-      return () => txt;
-    }
-    const parts = txt.split(/\{\{([\s\S]+?)\}\}/g);
-    return (vals, ctx, key) => h(
-      getReact().Fragment,
-      { key },
-      ...parts.map((p, i) => {
-        if (!(i & 1)) return p;
-        const v = resolve(vals, p);
-        if (v === void 0) {
-          if (!ctx?.__streamingNow) {
-            if (document.body?.hasAttribute("data-dc-editor-on")) {
-              return h(
-                "span",
-                { key: i, className: "sc-interp sc-unresolved" },
-                "{{ " + p.trim() + " }}"
-              );
-            }
-            warnUnresolved(
-              ctx,
-              "{{ " + p.trim() + " }} never resolved \u2014 rendered as empty"
-            );
-            return null;
-          }
-          return h(
-            "span",
-            { key: i, className: "sc-interp sc-missing" },
-            p.trim()
-          );
-        }
-        if (getReact().isValidElement(v) || Array.isArray(v)) {
-          return h(getReact().Fragment, { key: i }, v);
-        }
-        if (v === null || typeof v === "boolean") return null;
-        return h("span", { key: i, className: "sc-interp" }, String(v));
-      })
-    );
-  }
-  function walkFor(el, host) {
-    const listGet = compileAttr(el.getAttribute("list") || "");
-    const asName = el.getAttribute("as") || "item";
-    const hintN = parseInt(el.getAttribute("hint-placeholder-count") || "0", 10);
-    const kids = walkChildren(el, host);
-    const listSrc = el.getAttribute("list") || "";
-    return (vals, ctx, key) => {
-      let list = listGet(vals);
-      if (!Array.isArray(list)) {
-        if (!ctx?.__streamingNow) {
-          if (list !== void 0 && list !== null) {
-            warnUnresolved(
-              ctx,
-              'sc-for list="' + listSrc + '" is not an array (' + typeof list + ")"
-            );
-          }
-          list = [];
-        } else {
-          list = hintN > 0 ? Array(hintN).fill(void 0) : [];
-        }
-      }
-      return h(
-        getReact().Fragment,
-        { key },
-        list.map((item, i) => {
-          const sub = { ...vals, [asName]: item, $index: i };
-          return h(
-            getReact().Fragment,
-            { key: i },
-            kids.map((b, j) => b(sub, ctx, j))
-          );
+    } else if (hasBracket) {
+      // ---- Regular waterfall groups (everyone except U16B/U16G): each
+      // knockout round IS a single Cup/Bowl/Plate/Shield final already —
+      // pull winner + runner-up straight from it for the same
+      // presentation-ready summary the double-bracket groups get. ----
+      const tierMeta = {
+        'Cup Final': { tier: 'Cup', color: '#f5c518' },
+        'Bowl Final': { tier: 'Bowl', color: '#c9ced6' },
+        'Plate Final': { tier: 'Plate', color: '#17A34A' },
+        'Shield Final': { tier: 'Shield', color: '#ff5a3c' },
+      };
+      awardsSummary = st.bracket
+        .filter((rnd) => tierMeta[rnd.round])
+        .map((rnd) => {
+          const g = rnd.games[0] || {};
+          const meta = tierMeta[rnd.round];
+          const ready = !!(g.winner && g.home && g.away);
+          return { ...meta, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
         })
-      );
-    };
-  }
-  function walkIf(el, host) {
-    const valGet = compileAttr(el.getAttribute("value") || "");
-    const hintRaw = el.getAttribute("hint-placeholder-val");
-    const hintGet = hintRaw != null ? compileAttr(hintRaw) : null;
-    const kids = walkChildren(el, host);
-    return (vals, ctx, key) => {
-      let v = valGet(vals);
-      if (v === void 0 && hintGet && ctx?.__streamingNow) v = hintGet(vals);
-      return v ? h(
-        getReact().Fragment,
-        { key },
-        kids.map((b, j) => b(vals, ctx, j))
-      ) : null;
-    };
-  }
-  function walkComponent(el, host) {
-    const name = el.getAttribute("name") || el.getAttribute("component") || "";
-    el.removeAttribute("name");
-    el.removeAttribute("component");
-    const tplId = el.getAttribute("data-dc-tpl");
-    const styleRaw = el.getAttribute("style");
-    el.removeAttribute("style");
-    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
-    const { propGetters, hintSize } = collectProps(el, "dc-import", host);
-    const kids = walkChildren(el, host);
-    return (vals, ctx, key) => {
-      const props = {
-        key,
-        __hintSize: hintSize,
-        __tplId: tplId,
-        __hostStyle: styleGet ? hostPositionStyle(styleGet(vals)) : void 0
-      };
-      for (const [k, g] of propGetters) {
-        const v = g(vals);
-        if (k === "dcProps") {
-          if (v && typeof v === "object") Object.assign(props, v);
-          continue;
-        }
-        props[k] = v;
-      }
-      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
-      return h(host.component(name), props);
-    };
-  }
-  function walkXImport(el, host) {
-    const globalNameGet = compileAttr(
-      el.getAttribute("component-from-global-scope") || ""
-    );
-    const exportNameGet = compileAttr(
-      el.getAttribute("component") || el.getAttribute("name") || ""
-    );
-    const fromRaw = el.getAttribute("from") || (el.getAttribute("component-from-global-scope") ? "" : el.getAttribute("src") || el.getAttribute("import") || "");
-    const urls = fromRaw.trim() ? fromRaw.trim().split(/\s+/) : [];
-    const url = urls.length ? urls[urls.length - 1] : "";
-    const kindOf = (u) => /\.(jsx|tsx)(\?|#|$)/i.test(u) ? "jsx" : "js";
-    const tplId = el.getAttribute("data-dc-tpl");
-    const styleRaw = el.getAttribute("style");
-    el.removeAttribute("style");
-    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
-    const wrap = tplId != null || styleGet != null;
-    const { propGetters, hintSize } = collectProps(el, "x-import", host);
-    const hasContent = el.children.length > 0 || !!(el.textContent || "").trim();
-    const kids = hasContent ? walkChildren(el, host) : [];
-    const urlBindable = fromRaw.includes("{{");
-    if (urls.length && !urlBindable) {
-      let prev;
-      for (const u of urls) prev = host.loadExternal(kindOf(u), u, prev);
+        .map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
     }
-    const evalName = (g, vals) => {
-      const v = g(vals);
-      const s = v == null ? "" : String(v);
-      return s.includes("{{") ? "" : s;
-    };
-    return (vals, ctx, key) => {
-      const globalName = evalName(globalNameGet, vals);
-      const name = globalName || evalName(exportNameGet, vals);
-      const C = !name || urlBindable ? null : globalName ? host.resolveExternalGlobal(url, globalName) : host.resolveExternal(url, name);
-      const hostStyle = styleGet ? hostPositionStyle(styleGet(vals)) : void 0;
-      const wrapper = wrap ? {
-        key,
-        className: "sc-host-x",
-        "data-dc-tpl": tplId,
-        style: hostStyle || { display: "contents" }
-      } : null;
-      if (!C) {
-        const error = urlBindable ? "x-import `from` cannot contain {{ \u2026 }} \u2014 module URLs are resolved at parse time; use a literal URL" : host.resolveExternalError(url, name);
-        const ph = host.placeholder({
-          key: wrapper ? void 0 : key,
-          name,
-          hintSize,
-          error
-        });
-        return wrapper ? h("div", wrapper, ph) : ph;
-      }
-      const props = wrapper ? {} : { key };
-      let unresolvedHole = false;
-      for (const [k, g] of propGetters) {
-        if (k === "component" || k === "componentFromGlobalScope" || k === "from") {
-          continue;
-        }
-        const v = g(vals);
-        if (v === void 0) unresolvedHole = true;
-        if (k === "dcProps") {
-          if (v && typeof v === "object") Object.assign(props, v);
-          continue;
-        }
-        props[k] = v;
-      }
-      if (unresolvedHole && ctx?.__htmlStreamingNow) {
-        const ph = host.placeholder({
-          key: wrapper ? void 0 : key,
-          name,
-          hintSize,
-          error: null
-        });
-        return wrapper ? h("div", wrapper, ph) : ph;
-      }
-      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
-      return wrapper ? h("div", wrapper, h(C, props)) : h(C, props);
-    };
-  }
-  function contentKey(el) {
-    const clone = el.cloneNode(true);
-    for (const d of clone.querySelectorAll("*")) {
-      while (d.attributes.length) d.removeAttribute(d.attributes[0].name);
-    }
-    const s = clone.innerHTML;
-    let h2 = 5381;
-    for (let i = 0; i < s.length; i++) h2 = (h2 << 5) + h2 + s.charCodeAt(i) | 0;
-    return s.length + "." + (h2 >>> 0).toString(36);
-  }
-  var NEVER_CONTENT_KEYED = new Set(
-    "script style textarea option title select canvas iframe video audio".split(
-      " "
-    )
-  );
-  var NOT_INLINE_SELECTOR = ":not(" + [...INLINE_TEXT_TAGS].join(",") + ")";
-  function walkElement(el, host) {
-    const realTag = RAW_UNWRAP[el.localName] || el.localName;
-    const tplId = el.getAttribute("data-dc-tpl");
-    const inlineOnly = el.childNodes.length > 0 && !NEVER_CONTENT_KEYED.has(realTag) && el.querySelector(NOT_INLINE_SELECTOR) === null;
-    const keySuffix = inlineOnly ? "|" + contentKey(el) : "";
-    const { propGetters, pseudoClasses } = collectProps(el, "dom", host);
-    const kids = walkChildren(el, host);
-    return (vals, ctx, key) => {
-      const props = {
-        key: key + keySuffix,
-        "data-dc-tpl": tplId
-      };
-      for (const [k, g] of propGetters) {
-        let v = g(vals);
-        if (k === "style" && typeof v === "string") v = cssToObj(v);
-        if ((k === "value" || k === "checked") && v === void 0) {
-          v = k === "checked" ? false : "";
-        }
-        props[k] = v;
-      }
-      if (pseudoClasses.length) {
-        props.className = [props.className, ...pseudoClasses].filter(Boolean).join(" ");
-      }
-      return h(realTag, props, ...kids.map((b, j) => b(vals, ctx, j)));
-    };
-  }
 
-  // src/logic.ts
-  var StreamableLogic = class {
-    constructor(props) {
-      __publicField(this, "props");
-      __publicField(this, "state", {});
-      /** Back-pointer to the wrapper component, installed after construction. */
-      __publicField(this, "__host");
-      this.props = props || {};
-    }
-    setState(update, cb) {
-      this.__host && this.__host.__setLogicState(update, cb);
-    }
-    forceUpdate() {
-      this.__host && this.__host.forceUpdate();
-    }
-    componentDidMount() {
-    }
-    componentDidUpdate(_prevProps) {
-    }
-    componentWillUnmount() {
-    }
-    /** The flat object the template renders against (merged over props). */
-    renderVals() {
-      return {};
-    }
-  };
-  function evalDcLogic(src) {
-    //! nosemgrep: eval-and-function-constructor
-    const fn = new Function(
-      "DCLogic",
-      "StreamableLogic",
-      "React",
-      src + '\n;return (typeof Component!=="undefined"&&Component)||undefined;'
-    );
-    return fn(StreamableLogic, StreamableLogic, getReact());
-  }
-
-  // src/component.ts
-  function shallowEqual(a, b) {
-    if (!b) return false;
-    const ak = Object.keys(a).filter((k) => k !== "children");
-    const bk = Object.keys(b).filter((k) => k !== "children");
-    if (ak.length !== bk.length) return false;
-    for (const k of ak) if (a[k] !== b[k]) return false;
-    return true;
-  }
-  function Placeholder({
-    name,
-    hintSize,
-    streaming,
-    error
-  }) {
-    const [w, hgt] = (hintSize || "100%,60px").split(",");
-    return h(
-      "div",
-      {
-        className: "sc-placeholder" + (streaming ? " sc-streaming" : ""),
-        style: { width: w.trim(), height: hgt && hgt.trim() },
-        title: name
-      },
-      error ? h(
-        "div",
-        { className: "sc-placeholder-error" },
-        (name ? name + ": " : "") + error
-      ) : null
-    );
-  }
-  function hintToMin(hint) {
-    if (!hint) return void 0;
-    const [w, hgt] = hint.split(",");
-    return { minWidth: w.trim(), minHeight: hgt && hgt.trim() };
-  }
-  function createComponentFactory(registry, ensureFetched) {
-    const React = getReact();
-    const AncestorContext = React.createContext([]);
-    class StreamableComponent extends React.Component {
-      constructor(props) {
-        super(props);
-        __publicField(this, "__name");
-        __publicField(this, "__sub");
-        __publicField(this, "__needsDidMount", false);
-        /** Snapshot of the registry's streaming flags taken at render time —
-         *  builders read it off the RenderCtx (this) to pick placeholder vs
-         *  render-nothing for unresolved values. */
-        __publicField(this, "__streamingNow", false);
-        __publicField(this, "__htmlStreamingNow", false);
-        /** When a construct throws, remember the (class, registry.ver, props)
-         *  triple so render-time reconcile doesn't re-attempt it on every parent
-         *  re-render. A registry bump (new class, template, external module
-         *  resolving via bumpAll) changes `ver` and breaks the memo so an
-         *  env-dependent constructor can self-heal. */
-        __publicField(this, "__failedLogic", null);
-        __publicField(this, "__failedUserProps", null);
-        __publicField(this, "__failedVer", -1);
-        /** Per-instance constructor error — kept here (not on the registry entry)
-         *  so one instance's successful construct can't hide a sibling's failure,
-         *  and a construct can never wipe an eval error `updateJs` recorded on
-         *  `r.logicError`. */
-        __publicField(this, "__ctorError", null);
-        __publicField(this, "logic");
-        this.__name = props.__name;
-        this.state = { __v: 0, __err: null };
-        this.__sub = () => {
-          if (this.state.__err) this.setState({ __err: null });
-          this.forceUpdate();
-        };
-        this.__makeLogic(registry.get(this.__name).Logic, null);
-        ensureFetched(this.__name);
-      }
-      /** Error-boundary hook: a render crash anywhere in this DC's subtree
-       *  (its own template, an x-import'd component, a child DC without its
-       *  own deeper boundary) lands here instead of unmounting the page. */
-      static getDerivedStateFromError(e) {
-        return { __err: e instanceof Error && e.message ? e.message : String(e) };
-      }
-      componentDidCatch(e, info) {
-        console.error(
-          "[dc-runtime] render error in <" + this.__name + ">:",
-          e,
-          info?.componentStack || ""
-        );
-      }
-      /** Instantiate the logic class (or the no-op base) and adopt `prevState`
-       *  over its initial state — used both at mount and on hot-swap. */
-      __makeLogic(Logic, prevState) {
-        const L = Logic || StreamableLogic;
-        try {
-          this.logic = new L(this.__userProps());
-          this.__failedLogic = null;
-          this.__failedUserProps = null;
-          this.__ctorError = null;
-        } catch (e) {
-          console.error(e);
-          this.__failedLogic = Logic;
-          this.__failedUserProps = this.__userProps();
-          this.__failedVer = registry.get(this.__name).ver;
-          this.__ctorError = this.__name + ": " + (e instanceof Error && e.message ? e.message : String(e));
-          this.logic = new StreamableLogic(
-            this.__userProps()
-          );
-        }
-        this.logic.__host = this;
-        if (prevState)
-          this.logic.state = { ...this.logic.state || {}, ...prevState };
-      }
-      /** The props the author's logic + template see — internal __-prefixed
-       *  wiring stripped. */
-      __userProps() {
-        const { __name, __hintSize, __tplId, __hostStyle, ...rest } = this.props;
-        return rest;
-      }
-      __setLogicState(update, cb) {
-        const prev = this.logic.state;
-        const patch = typeof update === "function" ? update(prev) : update;
-        this.logic.state = { ...prev, ...patch };
-        this.setState((s) => ({ __v: s.__v + 1 }), cb);
-      }
-      /** Swap the logic instance when the registry's Logic class changed
-       *  (streaming completion, hot reload). State carries over; didMount
-       *  re-fires after the swap commits so refs exist. */
-      __reconcileLogic() {
-        const r = registry.get(this.__name);
-        const Next = r.Logic;
-        const Cur = this.logic.constructor;
-        if (Next === Cur || !Next && Cur === StreamableLogic || Next === this.__failedLogic && r.ver === this.__failedVer && shallowEqual(this.__userProps(), this.__failedUserProps)) {
-          return;
-        }
-        if (!this.__needsDidMount) {
-          try {
-            this.logic.componentWillUnmount();
-          } catch (e) {
-            console.error(e);
-          }
-        }
-        this.__makeLogic(Next, this.logic.state);
-        this.__needsDidMount = true;
-      }
-      componentDidMount() {
-        registry.get(this.__name).subs.add(this.__sub);
-        try {
-          this.logic.componentDidMount();
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      componentDidUpdate(prevProps) {
-        this.logic.props = this.__userProps();
-        if (this.__needsDidMount) {
-          if (this.state.__err || !registry.get(this.__name).tpl) return;
-          this.__needsDidMount = false;
-          try {
-            this.logic.componentDidMount();
-          } catch (e) {
-            console.error(e);
-          }
-        } else {
-          try {
-            this.logic.componentDidUpdate(prevProps);
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-      componentWillUnmount() {
-        registry.get(this.__name).subs.delete(this.__sub);
-        if (!this.__needsDidMount) {
-          try {
-            this.logic.componentWillUnmount();
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-      render() {
-        const r = registry.get(this.__name);
-        const cls = "sc-host" + (r.htmlStreaming ? " sc-streaming-html" : "") + (r.jsStreaming ? " sc-streaming-js" : "");
-        const hintStyle = r.htmlStreaming ? hintToMin(this.props.__hintSize) : void 0;
-        const hostStyle = this.props.__hostStyle || hintStyle ? { ...hintStyle || {}, ...this.props.__hostStyle || {} } : void 0;
-        const hostBase = {
-          className: cls,
-          style: hostStyle,
-          "data-sc-name": this.__name,
-          "data-dc-tpl": this.props.__tplId
-        };
-        const chain = Array.isArray(this.context) ? this.context : [];
-        if (chain.includes(this.__name)) {
-          const cycle = [
-            ...chain.slice(chain.indexOf(this.__name)),
-            this.__name
-          ].join(" \u2192 ");
-          return h(
-            "div",
-            { ...hostBase, className: cls + " sc-has-error" },
-            h(Placeholder, {
-              name: this.__name,
-              hintSize: this.props.__hintSize,
-              error: "circular import: " + cycle
-            })
-          );
-        }
-        if (this.state.__err) {
-          return h(
-            "div",
-            { ...hostBase, className: cls + " sc-has-error" },
-            h(
-              "div",
-              { className: "sc-logic-error", "data-omelette-chrome": "" },
-              this.__name + ": " + this.state.__err
-            ),
-            h(Placeholder, {
-              name: this.__name,
-              hintSize: this.props.__hintSize,
-              error: this.state.__err
-            })
-          );
-        }
-        this.__reconcileLogic();
-        if (!r.tpl) {
-          return h(
-            "div",
-            hostBase,
-            h(Placeholder, { name: this.__name, hintSize: this.props.__hintSize })
-          );
-        }
-        const userProps = this.__userProps();
-        this.logic.props = userProps;
-        let vals = userProps;
-        let renderErr = r.logicError || this.__ctorError;
-        try {
-          vals = { ...userProps, ...this.logic.renderVals() || {} };
-        } catch (e) {
-          console.error(e);
-          renderErr = this.__name + ".renderVals(): " + (e instanceof Error && e.message ? e.message : String(e));
-        }
-        this.__streamingNow = !!(r.htmlStreaming || r.jsStreaming);
-        this.__htmlStreamingNow = !!r.htmlStreaming;
-        return h(
-          "div",
-          { ...hostBase, className: cls + (renderErr ? " sc-has-error" : "") },
-          renderErr && h(
-            "div",
-            { className: "sc-logic-error", "data-omelette-chrome": "" },
-            renderErr
-          ),
-          h(
-            AncestorContext.Provider,
-            { value: [...chain, this.__name] },
-            r.tpl(vals, this)
-          )
-        );
-      }
-    }
-    __publicField(StreamableComponent, "contextType", AncestorContext);
-    const named = /* @__PURE__ */ new Map();
-    function getDC(name) {
-      const hit = named.get(name);
-      if (hit) return hit;
-      function Dispatcher(p) {
-        const [, setTick] = React.useState(0);
-        React.useEffect(() => {
-          const sub = () => setTick((n) => n + 1);
-          registry.get(name).subs.add(sub);
-          return () => {
-            registry.get(name).subs.delete(sub);
-          };
-        }, []);
-        ensureFetched(name);
-        return h(StreamableComponent, { ...p, __name: name });
-      }
-      Dispatcher.displayName = name;
-      named.set(name, Dispatcher);
-      return Dispatcher;
-    }
-    return {
-      getDC,
-      StreamableComponent
-    };
-  }
-
-  // src/bundled.ts
-  function bundledBlob(url) {
-    const blobs = window.__resourceBlobs;
-    const b = blobs ? blobs[url.split("#")[0]] : void 0;
-    return b instanceof Blob ? b : null;
-  }
-
-  // src/cdn.ts
-  var REACT_URL = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
-  var REACT_SRI = "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z";
-  var REACT_DOM_URL = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
-  var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
-  var BABEL_URL = "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js";
-  var BABEL_SRI = "sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y";
-  function cdnScriptFor(url, sri) {
-    const res = window.__resources;
-    const v = res ? res[url] : void 0;
-    return typeof v === "string" && v ? { src: v } : { src: url, integrity: sri };
-  }
-
-  // src/external.ts
-  var isCustomElementName = (n) => !n.includes(".") && n.includes("-");
-  function isRenderableType(g) {
-    if (typeof g === "function") return !isElementClass(g);
-    return typeof g === "object" && g !== null && typeof g.$$typeof === "symbol";
-  }
-  function resolveDottedPath(root, name) {
-    let cur = root;
-    for (const seg of name.split(".")) {
-      if (cur == null) return void 0;
-      cur = cur[seg];
-    }
-    return cur;
-  }
-  var GLOBAL_POLL_INTERVAL_MS = 50;
-  var GLOBAL_POLL_TIMEOUT_MS = 3e4;
-  function createExternalModules(onResolved) {
-    const cache = /* @__PURE__ */ new Map();
-    let babelLoading = null;
-    const reportedMissing = /* @__PURE__ */ new Map();
-    const polling = /* @__PURE__ */ new Set();
-    function ensureBabel() {
-      if (window.Babel) return Promise.resolve();
-      if (babelLoading) return babelLoading;
-      const babel = cdnScriptFor(BABEL_URL, BABEL_SRI);
-      babelLoading = new Promise((res, rej) => {
-        const s = document.createElement("script");
-        s.src = babel.src;
-        if (babel.integrity) {
-          s.integrity = babel.integrity;
-          s.crossOrigin = "anonymous";
-        }
-        s.onload = () => res();
-        s.onerror = rej;
-        document.head.appendChild(s);
-      });
-      return babelLoading;
-    }
-    const pending = /* @__PURE__ */ new Map();
-    function load(kind, url, after) {
-      const existing = pending.get(url);
-      if (existing) return existing;
-      cache.set(url, null);
-      console.info("[dc-runtime] x-import: loading", url, "(" + kind + ")");
-      const ready = Promise.all([
-        kind === "jsx" ? ensureBabel() : Promise.resolve(),
-        after ?? Promise.resolve()
-      ]);
-      const p = ready.then(() => {
-        const pre = bundledBlob(url);
-        if (pre) return pre.text();
-        return fetch(url).then((r) => {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          return r.text();
-        });
-      }).then((src) => {
-        const code = kind === "jsx" ? window.Babel.transform(src, {
-          filename: url,
-          presets: ["react", "typescript"]
-        }).code : src;
-        const module = { exports: {} };
-        const before = new Set(Object.keys(window));
-        //! nosemgrep: eval-and-function-constructor
-        new Function("React", "module", "exports", "require", code)(
-          getReact(),
-          module,
-          module.exports,
-          () => ({})
-        );
-        const globals = {};
-        for (const k of Object.keys(window)) {
-          if (!before.has(k) && typeof window[k] === "function") {
-            globals[k] = window[k];
-          }
-        }
-        cache.set(url, { mod: module.exports, globals });
-        console.info(
-          "[dc-runtime] x-import: loaded",
-          url,
-          "\u2014 exports:",
-          Object.keys(module.exports),
-          "window globals:",
-          Object.keys(globals)
-        );
-        onResolved();
-      }).catch((e) => {
-        cache.set(url, {
-          mod: {},
-          globals: {},
-          error: "failed to load: " + (e instanceof Error && e.message ? e.message : String(e))
-        });
-        console.error(
-          "[dc-runtime] x-import: FAILED to load",
-          url,
-          "(" + kind + ")",
-          e
-        );
-        onResolved();
-      });
-      pending.set(url, p);
-      return p;
-    }
-    function resolve2(url, name) {
-      const entry = cache.get(url);
-      if (!entry) return null;
-      const { mod, globals } = entry;
-      const C = mod && mod[name] || globals && globals[name] || typeof window !== "undefined" && window[name] || mod && mod.default;
-      if (typeof C === "function") return C;
-      const key = url + "\0" + name;
-      if (!reportedMissing.has(key)) {
-        reportedMissing.set(
-          key,
-          entry.error || 'no export named "' + name + '" (has: ' + Object.keys(mod).join(", ") + ")"
-        );
-        console.error(
-          "[dc-runtime] x-import: module",
-          url,
-          "loaded but has no component named",
-          JSON.stringify(name),
-          "\u2014 available exports:",
-          Object.keys(mod),
-          "window globals:",
-          Object.keys(globals),
-          ". The module must `module.exports = {" + name + "}` or set `window." + name + "`."
-        );
-      }
-      return null;
-    }
-    function waitForGlobal(name) {
-      if (polling.has(name)) return;
-      polling.add(name);
-      const started = Date.now();
-      const isCE = isCustomElementName(name);
-      const tick = () => {
-        const found = isCE ? customElements.get(name) : isRenderableType(resolveDottedPath(window, name));
-        if (found) {
-          polling.delete(name);
-          onResolved();
-          return;
-        }
-        if (Date.now() - started >= GLOBAL_POLL_TIMEOUT_MS) {
-          console.warn(
-            "[dc-runtime] x-import: global",
-            JSON.stringify(name),
-            "never appeared on window after " + GLOBAL_POLL_TIMEOUT_MS + "ms"
-          );
-          return;
-        }
-        setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
-      };
-      setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
-    }
-    function resolveGlobal(url, name) {
-      const isCE = isCustomElementName(name);
-      if (!url) {
-        if (isCE) {
-          if (customElements.get(name)) return name;
-          waitForGlobal(name);
-          return null;
-        }
-        const g2 = resolveDottedPath(window, name);
-        if (isRenderableType(g2)) return g2;
-        waitForGlobal(name);
-        return null;
-      }
-      const entry = cache.get(url);
-      if (!entry) return null;
-      if (isCE && customElements.get(name)) return name;
-      const g = entry.globals[name] ?? resolveDottedPath(window, name);
-      if (isRenderableType(g)) return g;
-      if (name.includes(".")) return null;
-      const key = url + "\0global\0" + name;
-      if (!reportedMissing.has(key)) {
-        reportedMissing.set(key, null);
-        if (isCE && !customElements.get(name)) {
-          console.warn(
-            "[dc-runtime] x-import:",
-            url,
-            "loaded but no custom element",
-            JSON.stringify(name),
-            "is registered and window." + name + " is not a function \u2014 rendering <" + name + "> as an unknown element."
-          );
-        }
-      }
-      return name;
-    }
-    function getError(url, name) {
-      const entry = cache.get(url);
-      if (entry?.error) return entry.error;
-      return reportedMissing.get(url + "\0" + name) || null;
-    }
-    return { load, resolve: resolve2, resolveGlobal, getError };
-  }
-  function isElementClass(g) {
-    try {
-      return typeof g === "function" && typeof HTMLElement !== "undefined" && g.prototype instanceof HTMLElement;
-    } catch {
-      return false;
-    }
-  }
-
-  // src/atomics.ts
-  var ATOMIC_CSS = (
-    // layout
-    ".fx{display:flex}.col{display:flex;flex-direction:column}.grid{display:grid}.ac{align-items:center}.jc{justify-content:center}.jb{justify-content:space-between}.f1{flex:1}.noshrink{flex-shrink:0}.wrap{flex-wrap:wrap}.fw5{font-weight:500}.fw6{font-weight:600}.fw7{font-weight:700}.fw8{font-weight:800}.fs11{font-size:11px}.fs12{font-size:12px}.fs13{font-size:13px}.fs14{font-size:14px}.fs15{font-size:15px}.fs16{font-size:16px}.fs20{font-size:20px}.fs22{font-size:22px}.upper{text-transform:uppercase}.tc{text-align:center}.nowrap{white-space:nowrap}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap24{gap:24px}.m0{margin:0}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.posrel{position:relative}.posabs{position:absolute}.round{border-radius:50%}.ohide{overflow:hidden}.bbox{box-sizing:border-box}.pointer{cursor:pointer}.w100{width:100%}.b0{border:none}"
-  );
-
-  // src/helmet.ts
-  var DESIGN_DOC_MODE_RE = /<meta\b[^>]*\bname\s*=\s*["']design_doc_mode["'][^>]*\b(?:content|value)\s*=\s*["'](\w+)["']/i;
-  var CANVAS_BG_LIGHT = "#f0eee6";
-  var CANVAS_BG_DARK = "#2e2c26";
-  function createHelmetManager(doc, isStreaming) {
-    const mounted = /* @__PURE__ */ new Set();
-    const live = /* @__PURE__ */ new Map();
-    let designDocMode = null;
-    let canvasStyleEl = null;
-    let appTheme = "light";
-    try {
-      const ds = doc.documentElement.dataset.theme;
-      appTheme = ds === "dark" || ds === "light" ? ds : new URLSearchParams(doc.defaultView?.location.search ?? "").get(
-        "theme"
-      ) === "dark" ? "dark" : "light";
-    } catch {
-    }
-    function applyCanvasBg() {
-      if (!canvasStyleEl) return;
-      const bg = appTheme === "dark" ? CANVAS_BG_DARK : CANVAS_BG_LIGHT;
-      canvasStyleEl.textContent = `html,body{background:${bg}}#dc-root>.sc-host{position:relative}`;
-    }
-    function postDesignMode(mode) {
-      if (window.parent === window) return;
-      try {
-        window.parent.postMessage({ type: "__dc_design_mode", mode }, "*");
-      } catch {
-      }
-    }
-    function setDesignDocMode(mode) {
-      if (mode === designDocMode) return;
-      designDocMode = mode;
-      postDesignMode(mode);
-      if (mode === "canvas") {
-        doc.documentElement.setAttribute("data-dc-canvas", "");
-        canvasStyleEl = doc.createElement("style");
-        canvasStyleEl.setAttribute("data-dc-canvas", "");
-        applyCanvasBg();
-        doc.head.appendChild(canvasStyleEl);
-      } else {
-        doc.documentElement.removeAttribute("data-dc-canvas");
-        canvasStyleEl?.remove();
-        canvasStyleEl = null;
-      }
-    }
-    window.addEventListener("message", (e) => {
-      const type = e.data && e.data.type;
-      if (type === "__dc_theme") {
-        const t = e.data.theme;
-        if (t === "light" || t === "dark") {
-          appTheme = t;
-          applyCanvasBg();
-        }
-        return;
-      }
-      if (!designDocMode || type !== "__dc_probe") return;
-      postDesignMode(designDocMode);
-    });
-    function compile(node) {
-      const raw = [...node.children];
-      const helmetClosed = node.nextSibling != null || node.parentNode?.nextSibling != null;
-      if (node.hasAttribute("data-dc-atomics") && !mounted.has("__dc-atomics")) {
-        mounted.add("__dc-atomics");
-        const el = doc.createElement("style");
-        el.id = "__dc-atomics";
-        el.textContent = ATOMIC_CSS;
-        doc.head.appendChild(el);
-      }
-      return (_vals, ctx) => {
-        const name = ctx && ctx.__name || "";
-        const streaming = !!(name && isStreaming(name));
-        for (let i = 0; i < raw.length; i++) {
-          const child = raw[i];
-          const tag = child.tagName;
-          const mayBePartial = streaming && !helmetClosed && i === raw.length - 1;
-          if (tag === "SCRIPT") {
-            if (mayBePartial) continue;
-            const key = "SCRIPT|" + (child.getAttribute("src") || child.textContent || "");
-            if (mounted.has(key)) continue;
-            mounted.add(key);
-            const el = doc.createElement("script");
-            for (const { name: an, value } of [...child.attributes])
-              el.setAttribute(an, value);
-            if (child.textContent) el.textContent = child.textContent;
-            doc.head.appendChild(el);
-          } else if (tag === "LINK" || tag === "META") {
-            if (mayBePartial) continue;
-            const key = tag + "|" + (child.getAttribute("href") || child.getAttribute("src") || child.outerHTML);
-            if (mounted.has(key)) continue;
-            mounted.add(key);
-            if (tag === "LINK") {
-              const rel = (child.getAttribute("rel") || "").toLowerCase().split(/\s+/);
-              const href = (child.getAttribute("href") || "").trim();
-              const res = window.__resources;
-              const pre = res && rel.includes("stylesheet") && !rel.includes("alternate") ? res[href] : void 0;
-              const blob = typeof pre === "string" && pre ? bundledBlob(pre) : null;
-              if (blob) {
-                const el = doc.createElement("style");
-                if (child.hasAttribute("disabled")) {
-                  el.setAttribute("media", "not all");
-                } else if (child.getAttribute("media")) {
-                  el.setAttribute("media", child.getAttribute("media"));
-                }
-                if (child.getAttribute("title"))
-                  el.setAttribute("title", child.getAttribute("title"));
-                void blob.text().then((css) => {
-                  el.textContent = css;
-                });
-                doc.head.appendChild(el);
-                continue;
-              }
-            }
-            doc.head.appendChild(child.cloneNode(true));
-          } else {
-            const key = name + "|" + i;
-            let el = live.get(key);
-            if (!el || el.tagName !== tag) {
-              if (el) el.remove();
-              el = doc.createElement(tag.toLowerCase());
-              live.set(key, el);
-              doc.head.appendChild(el);
-            }
-            for (const { name: an, value } of [...child.attributes]) {
-              if (el.getAttribute(an) !== value) el.setAttribute(an, value);
-            }
-            if (el.textContent !== child.textContent)
-              el.textContent = child.textContent;
-          }
-        }
-        return null;
-      };
-    }
-    return { compile, setDesignDocMode };
-  }
-
-  // src/pseudo.ts
-  function createPseudoSheet(doc) {
-    let el = null;
-    const cache = /* @__PURE__ */ new Map();
-    let n = 0;
-    return (pseudo, css) => {
-      const k = pseudo + "|" + css;
-      const hit = cache.get(k);
-      if (hit) return hit;
-      if (!el) {
-        el = doc.createElement("style");
-        doc.head.appendChild(el);
-      }
-      const cls = "scp" + (n++).toString(36);
-      const sel = pseudo === "before" || pseudo === "after" ? "." + cls + "::" + pseudo : "." + cls + ":" + pseudo;
-      el.sheet.insertRule(sel + "{" + css + "}", el.sheet.cssRules.length);
-      cache.set(k, cls);
-      return cls;
-    };
-  }
-
-  // src/registry.ts
-  function createRegistry() {
-    const entries = /* @__PURE__ */ Object.create(null);
-    function get(name) {
-      return entries[name] || (entries[name] = {
-        html: "",
-        tpl: null,
-        Logic: null,
-        jsStreaming: false,
-        htmlStreaming: false,
-        ver: 0,
-        subs: /* @__PURE__ */ new Set(),
-        fetched: false
-      });
-    }
-    function bump(name) {
-      const r = get(name);
-      r.ver++;
-      for (const fn of r.subs) fn();
-    }
-    return {
-      entries,
-      get,
-      bump,
-      bumpAll() {
-        for (const n in entries) bump(n);
-      }
-    };
-  }
-
-  // src/runtime.ts
-  var COMPONENT_DIR = ".";
-  function createRuntime(doc = document) {
-    const registry = createRegistry();
-    const pseudoClass = createPseudoSheet(doc);
-    const helmet = createHelmetManager(
-      doc,
-      (name) => registry.get(name).htmlStreaming
-    );
-    const external = createExternalModules(() => registry.bumpAll());
-    const factory = createComponentFactory(registry, ensureFetched);
-    const host = {
-      component: (name) => factory.getDC(name),
-      placeholder: (props) => h(Placeholder, props),
-      helmet: (node) => helmet.compile(node),
-      loadExternal: (kind, url, after) => external.load(kind, url, after),
-      resolveExternal: (url, name) => external.resolve(url, name),
-      resolveExternalGlobal: (url, name) => external.resolveGlobal(url, name),
-      resolveExternalError: (url, name) => external.getError(url, name),
-      pseudoClass
-    };
-    function ensureFetched(name) {
-      const r = registry.get(name);
-      if (r.fetched) return;
-      r.fetched = true;
-      const url = COMPONENT_DIR + "/" + encodeURIComponent(name) + ".dc.html";
-      const res = window.__resources;
-      const pre = res ? res[url] : void 0;
-      const target = typeof pre === "string" && pre ? pre : url;
-      const blob = bundledBlob(target);
-      (blob ? blob.text() : fetch(target).then((res2) => {
-        if (!res2.ok) {
-          console.error(
-            '[dc-runtime] sibling fetch for "' + name + '" failed:',
-            url,
-            "returned",
-            res2.status,
-            "\u2014 the reference renders as an empty placeholder."
-          );
-          return "";
-        }
-        return res2.text();
-      })).then((t) => {
-        if (!t) return;
-        const parsed = parseDcText(t);
-        if (!parsed) {
-          console.error(
-            '[dc-runtime] sibling fetch for "' + name + '":',
-            url,
-            "has no <x-dc> block \u2014 not a Design Component."
-          );
-          return;
-        }
-        if (parsed.props) r.propsMeta = parsed.props;
-        if (parsed.preview) r.preview = parsed.preview;
-        if (parsed.template && !r.html) updateHtml(name, parsed.template);
-        if (parsed.js && !r.Logic) updateJs(name, parsed.js);
-      }).catch(
-        (e) => console.error(
-          '[dc-runtime] sibling fetch for "' + name + '" threw:',
-          url,
-          e
-        )
-      );
-    }
-    let rootName = null;
-    function updateHtml(name, html) {
-      const r = registry.get(name);
-      r.html = html;
-      if (name === rootName) {
-        const mode = DESIGN_DOC_MODE_RE.exec(html)?.[1] ?? null;
-        if (mode || !r.htmlStreaming) helmet.setDesignDocMode(mode);
-      }
-      try {
-        r.tpl = compileTemplate(html, host);
-      } catch (e) {
-        console.error("[dc-runtime] template compile FAILED for", name, e);
-      }
-      registry.bump(name);
-    }
-    function updateJs(name, src) {
-      const r = registry.get(name);
-      const seq = r.jsSeq = (r.jsSeq || 0) + 1;
-      try {
-        const Cls = evalDcLogic(src);
-        if (r.jsSeq !== seq) return;
-        if (typeof Cls !== "function") {
-          r.logicError = name + ".dc.html: <script data-dc-script> must define `class Component extends DCLogic`";
-        } else {
-          r.logicError = null;
-          r.Logic = Cls;
-        }
-      } catch (e) {
-        if (r.jsSeq !== seq) return;
-        console.error(
-          "[dc-runtime] logic class eval FAILED for",
-          name,
-          "\u2014 the template renders with props only.",
-          e
-        );
-        r.logicError = name + ": " + (e instanceof Error && e.message ? e.message : String(e));
-      }
-      registry.bump(name);
-    }
-    function setStreaming(name, kind, on) {
-      const r = registry.get(name);
-      if (kind === "html") r.htmlStreaming = !!on;
-      else r.jsStreaming = !!on;
-      let any = false;
-      for (const n in registry.entries) {
-        const e = registry.entries[n];
-        if (e && (e.htmlStreaming || e.jsStreaming)) {
-          any = true;
-          break;
-        }
-      }
-      doc.documentElement.classList.toggle("sc-dc-streaming", any);
-      registry.bump(name);
-    }
-    function dcUpdate(name, kind, content, streaming) {
-      if (streaming) registry.get(name).fetched = true;
-      if (kind === "html") {
-        setStreaming(name, "html", !!streaming);
-        updateHtml(name, content);
-      } else if (kind === "js") {
-        setStreaming(name, "js", !!streaming);
-        if (!streaming) updateJs(name, content);
-      } else if (kind === "props") {
-        const { props, preview } = parseDataProps(content);
-        const r = registry.get(name);
-        r.propsMeta = props ?? void 0;
-        r.preview = preview;
-        registry.bump(name);
-      }
-    }
-    function setProps(name, overrides) {
-      registry.get(name).propOverrides = overrides && typeof overrides === "object" ? { ...overrides } : null;
-      registry.bump(name);
-    }
-    function adoptParsed(name, parsed) {
-      if (!parsed) return;
-      const r = registry.get(name);
-      if (parsed.props) r.propsMeta = parsed.props;
-      if (parsed.preview) r.preview = parsed.preview;
-      if (parsed.template) updateHtml(name, parsed.template);
-      if (parsed.js) updateJs(name, parsed.js);
-    }
-    return {
-      registry,
-      getDC: factory.getDC,
-      updateHtml,
-      updateJs,
-      dcUpdate,
-      setProps,
-      adoptParsed,
-      setRootName: (name) => {
-        rootName = name;
-      },
-      markFetched: (name) => {
-        registry.get(name).fetched = true;
-      },
-      annotatedTemplate: (name) => {
-        const r = registry.get(name);
-        return r.tpl && r.tpl.__annotated || null;
-      },
-      templateSource: (name) => registry.get(name).html || null,
-      StreamableLogic
-    };
-  }
-
-  // src/stream-state.ts
-  function createStreamTracker(staleMs = 6e4, now = Date.now) {
-    const since = /* @__PURE__ */ new Map();
-    const liveOne = (n) => {
-      const t = since.get(n);
-      if (t === void 0) return false;
-      if (now() - t > staleMs) {
-        since.delete(n);
-        return false;
-      }
-      return true;
-    };
-    return {
-      push(name, streaming, viewportKey) {
-        if (viewportKey === "dc-model") return;
-        if (streaming) since.set(name, now());
-        else since.delete(name);
-      },
-      live(name) {
-        if (name !== void 0) return liveOne(name);
-        for (const n of [...since.keys()]) if (liveOne(n)) return true;
-        return false;
-      }
-    };
-  }
-
-  // src/index.ts
-  function hideRawTemplate() {
-    const s = document.createElement("style");
-    s.textContent = "x-dc{display:none!important}";
-    document.head.appendChild(s);
-  }
-  function loadScript(src, integrity) {
-    return new Promise((resolve2, reject) => {
-      //! nosemgrep: create-script-element
-      const s = document.createElement("script");
-      s.src = src;
-      if (integrity) {
-        s.integrity = integrity;
-        s.crossOrigin = "anonymous";
-      }
-      s.async = false;
-      s.onload = () => resolve2();
-      s.onerror = () => reject(new Error(`failed to load ${src}`));
-      document.head.appendChild(s);
-    });
-  }
-  function loadReactUmd() {
-    const w = window;
-    if (w.React && w.ReactDOM) return Promise.resolve();
-    const react = cdnScriptFor(REACT_URL, REACT_SRI);
-    const reactDom = cdnScriptFor(REACT_DOM_URL, REACT_DOM_SRI);
-    return Promise.all([
-      loadScript(react.src, react.integrity),
-      loadScript(reactDom.src, reactDom.integrity)
-    ]).then(() => void 0);
-  }
-  function init() {
-    const runtime = createRuntime(document);
-    let rootName = "Root";
-    const baseCss = document.createElement("style");
-    baseCss.textContent = BASE_CSS;
-    document.head.prepend(baseCss);
-    const notifyHost = () => {
-      if (window.parent === window) return;
-      const r = runtime.registry.entries[rootName];
-      try {
-        window.parent.postMessage(
-          {
-            type: "__dc_booted",
-            rootName,
-            propsMeta: r && r.propsMeta || null,
-            preview: r && r.preview || null
+    // ---- admin rows ----
+    const btn = (on) => 'font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;border:1px solid ' +
+      (on ? '#E11B22;background:#E11B22;color:#fff' : 'rgba(255,255,255,0.18);background:transparent;color:#cdd2da');
+    let adminRows = [];
+    if (s.fixtures) {
+      const mk = (fx, label) => {
+        const d = s.drafts[fx.id] || {};
+        const canEdit = !!(fx.home && fx.away);
+        return {
+          id: fx.id, home: fx.home || 'TBD', away: fx.away || 'TBD', label, pitch: fx.pitch || 'TBD',
+          canEdit, awaiting: !canEdit,
+          draft: {
+            homeScore: d.homeScore || '', awayScore: d.awayScore || '',
+            homeTries: d.homeTries || '', awayTries: d.awayTries || '',
+            homeCards: d.homeCards || '', awayCards: d.awayCards || '',
           },
-          "*"
-        );
-      } catch {
-      }
+          woNoneStyle: btn(!d.walkover), woHomeStyle: btn(d.walkover === 'home'), woAwayStyle: btn(d.walkover === 'away'),
+          savedNote: s.savedIds[fx.id] || '',
+          pitchDraft: (s.pitchDrafts && s.pitchDrafts[fx.id] != null) ? s.pitchDrafts[fx.id] : fx.pitch,
+          showSpirit: !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId)),
+          spiritDraftHome: d.spiritNomineeHome || '', spiritDraftAway: d.spiritNomineeAway || '',
+          h: {
+            hs: (e) => this.setDraft(fx.id, 'homeScore', e.target.value),
+            spiritHome: (e) => this.setDraft(fx.id, 'spiritNomineeHome', e.target.value),
+            spiritAway: (e) => this.setDraft(fx.id, 'spiritNomineeAway', e.target.value),
+            as: (e) => this.setDraft(fx.id, 'awayScore', e.target.value),
+            ht: (e) => this.setDraft(fx.id, 'homeTries', e.target.value),
+            at: (e) => this.setDraft(fx.id, 'awayTries', e.target.value),
+            hc: (e) => this.setDraft(fx.id, 'homeCards', e.target.value),
+            ac: (e) => this.setDraft(fx.id, 'awayCards', e.target.value),
+            woNone: () => this.setWalkover(fx.id, null),
+            woHome: () => this.setWalkover(fx.id, 'home'),
+            woAway: () => this.setWalkover(fx.id, 'away'),
+            save: () => this.save(fx.id),
+            pitch: (e) => this.setPitchDraft(fx.id, fx.stage, e.target.value),
+          },
+        };
+      };
+      adminRows = [
+        ...s.fixtures.pool.map((fx) => mk(fx, fx.poolName || 'Pool')),
+        ...s.fixtures.knockout.map((fx) => mk(fx, fx.round)),
+      ];
+    }
+
+    const session = s.session;
+    const adminAgeMeta = s.ageGroups.find((a) => a.id === s.adminSelectedAgeId);
+    const adminName = session ? (adminAgeMeta || {}).name || (session.ageGroupId === '*' ? 'All age groups' : '') : '';
+    const adminSelectedHasStandings = adminAgeMeta ? adminAgeMeta.hasStandings : true;
+    const showSpiritInput = !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId));
+    const spiritAward = s.spiritAward;
+    const spiritTally = spiritAward && spiritAward.tally ? spiritAward.tally.map((t) => {
+      const isWinner = spiritAward.complete && spiritAward.winners.some((w) => w.name === t.name);
+      return {
+        name: t.name, count: t.count, team: t.team, isWinner,
+        chipBg: isWinner ? 'rgba(59,208,112,0.16)' : '#1f1f22',
+        chipBorder: isWinner ? '#3bd070' : 'rgba(255,255,255,0.15)',
+        countColor: isWinner ? '#3bd070' : '#aeb4bf',
+      };
+    }) : [];
+
+    // ---- fixture editor ----
+    const knockoutRosterGroups = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => ({
+      id: pool.id, name: pool.name,
+      chips: pool.teams.map((t) => ({ name: t, onDragStart: (e) => this.onTeamDragStart(t, e) })),
+    }));
+    const poolCards = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => {
+      const slots = (s.editorDraw.slots || []).filter((sl) => sl.poolId === pool.id).sort((a, b) => a.startMins - b.startMins);
+      return {
+        id: pool.id, name: pool.name,
+        onDragOverZone: (e) => e.preventDefault(),
+        onDropZone: (e) => { e.preventDefault(); this.onPoolDropTeam(pool.id); },
+        teamChips: pool.teams.map((t) => ({
+          name: t,
+          onDragStart: (e) => this.onTeamDragStart(t, e),
+          onRename: () => this.onRenameTeam(pool.id, t),
+          onRemove: () => this.onRemoveTeam(pool.id, t),
+        })),
+        newTeamValue: s.newTeamInputs[pool.id] || '',
+        onNewTeamInput: (e) => this.onNewTeamInputChange(pool.id, e.target.value),
+        onNewTeamKey: (e) => { if (e.key === 'Enter') this.onAddTeam(pool.id); },
+        onAddTeamClick: () => this.onAddTeam(pool.id),
+        onRenamePool: () => this.onRenamePool(pool.id, pool.name),
+        onRemovePool: () => this.onRemovePool(pool.id),
+        onAddSlot: () => this.onAddSlot(pool.id),
+        onRegenerate: () => this.onRegeneratePool(pool.id),
+        slotRows: slots.map((sl) => ({
+          id: sl.id,
+          timeVal: s.api.minutesToTimeInput(sl.startMins),
+          pitchVal: sl.pitch || '',
+          home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
+          homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+          onTimeChange: (e) => this.onSlotTimeChange(sl.id, e.target.value),
+          onPitchChange: (e) => this.onSlotPitchChange(sl.id, e.target.value),
+          onDragOver: (e) => e.preventDefault(),
+          onDropHome: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'home'); },
+          onDropAway: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'away'); },
+          onRemove: () => this.onRemoveSlot(sl.id),
+        })),
+      };
+    });
+
+    return {
+      isModalOpen: !!s.modal,
+      isModalPrompt: !!s.modal && s.modal.kind === 'prompt',
+      modalTitle: s.modal ? s.modal.title : '',
+      modalValue: s.modalValue,
+      onModalValueChange: (e) => this.setState({ modalValue: e.target.value }),
+      onModalCancel: () => this.closeModal(),
+      onModalConfirm: () => this.submitModal(),
+      onModalKeyDown: (e) => { if (e.key === 'Enter') this.submitModal(); if (e.key === 'Escape') this.closeModal(); },
+
+      isPublic: s.view === 'public', isAdmin: s.view === 'admin',
+      showPublic: () => this.setState({ view: 'public' }),
+      showAdmin: () => this.setState({ view: 'admin', toast: '' }, () => { if (this.state.session) this.loadAdmin(); }),
+      tabPublicStyle: s.view === 'public' ? tabOn : tabOff,
+      tabAdminStyle: s.view === 'admin' ? tabOn : tabOff,
+      toast: s.toast,
+
+      ageTabs, selectedName: selName, selectedFestival: festival,
+      showTables: !!(st && st.ageGroup.hasStandings), pools, bracket, hasBracket,
+      isU16BSpecial, doubleBrackets, awardsSummary, awardsReady: awardsSummary.some((a) => a.ready),
+      knockoutSeeds, seedsReady: seedsReadyFlag,
+
+      loggedIn: !!session, loggedOut: !session,
+      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
+      onUser: (e) => this.setState({ loginUser: e.target.value }),
+      onPass: (e) => this.setState({ loginPass: e.target.value }),
+      onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
+      onLogin: () => this.doLogin(),
+      onLogout: () => this.doLogout(),
+
+      isLoginMode: s.authMode === 'login',
+      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
+      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
+      signupPendingMessage: s.signupPendingMessage,
+      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
+      signupName: s.signupName, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
+      signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
+      onSignupName: (e) => this.setState({ signupName: e.target.value }),
+      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
+      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
+      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
+      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
+      onSignup: () => this.doSignup(),
+
+      sessionName: session ? session.name : '',
+      adminAgeName: adminName || 'Your fixtures',
+      adminRows,
+
+      isAdminAll: !!(session && session.ageGroupId === '*'),
+      adminAgeOptions: s.ageGroups,
+      adminSelectedAgeId: s.adminSelectedAgeId || '',
+      onAdminAgeChange: (e) => { const id = e.target.value; this.setState({ adminSelectedAgeId: id }, () => this.loadAdmin(id)); },
+
+      adminSelectedHasStandings, showScoresTabButton: adminSelectedHasStandings,
+      isFestivalAdminGroup: !!(adminAgeMeta && !adminAgeMeta.hasStandings),
+      showSpiritInput,
+      spiritTally, hasSpiritTally: spiritTally.length > 0, noSpiritTally: spiritTally.length === 0,
+      spiritComplete: !!(spiritAward && spiritAward.complete),
+      spiritWinnersText: spiritAward && spiritAward.winners ? spiritAward.winners.map((w) => (w.team ? `${w.name} (${w.team})` : w.name)).join(' & ') : '',
+      spiritProgressText: spiritAward ? `${spiritAward.playedMatches} of ${spiritAward.totalMatches} matches scored` : '',
+      isScoresSubTab: s.subTab !== 'fixtures' && adminSelectedHasStandings, isFixturesSubTab: s.subTab === 'fixtures' || !adminSelectedHasStandings,
+      showScoresSubTab: () => this.setState({ subTab: 'scores' }),
+      showFixturesSubTab: () => this.setState({ subTab: 'fixtures' }),
+      subTabScoresStyle: s.subTab !== 'fixtures' ? tabOn : tabOff,
+      subTabFixturesStyle: s.subTab === 'fixtures' ? tabOn : tabOff,
+
+      editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,
+      poolCards, knockoutRosterGroups,
+      knockoutRosterDragOver: (e) => e.preventDefault(),
+      onSaveDraw: () => this.onSaveDraw(),
+      onResetDraw: () => this.onResetDraw(),
+      onAddPool: () => this.onAddPool(),
+
+      knockoutRows: (s.editorDraw && s.editorDraw.knockout ? [...s.editorDraw.knockout] : []).sort((a, b) => a.startMins - b.startMins).map((sl) => ({
+        id: sl.id, round: sl.round,
+        timeVal: s.api.minutesToTimeInput(sl.startMins),
+        pitchVal: sl.pitch || '',
+        home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
+        homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+        onTimeChange: (e) => this.onKnockoutTimeChange(sl.id, e.target.value),
+        onPitchChange: (e) => this.onKnockoutPitchChange(sl.id, e.target.value),
+        onDragOver: (e) => e.preventDefault(),
+        onDropHome: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'home'); },
+        onDropAway: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'away'); },
+        onRename: () => this.onRenameKnockoutRound(sl.id, sl.round),
+        onRemove: () => this.onRemoveKnockoutSlot(sl.id),
+      })),
+      onAddKnockoutSlot: () => this.onAddKnockoutSlot(),
+      onRegenerateKnockout: () => this.onRegenerateKnockout(),
     };
-    const streams = createStreamTracker();
-    const api = {
-      __dcUpdate: (name, kind, content, streaming, viewportKey) => {
-        streams.push(name, streaming, viewportKey);
-        runtime.dcUpdate(name, kind, content, streaming);
-        if (name === rootName && !streaming && kind === "props") notifyHost();
-      },
-      __dcStreaming: (name) => streams.live(name),
-      __dcSetProps: (name, overrides) => runtime.setProps(name, overrides),
-      /** Name of the component currently mounted as the page root — DC tools
-       *  push their template-stream here when targeting "the open page". */
-      __dcRootName: () => rootName,
-      /** Editor bridge — the encoded, `data-dc-tpl`-annotated template source.
-       *  The host editor parses this into its own template DOM so it can map a
-       *  rendered node (carrying the same `data-dc-tpl`) back to the source
-       *  node that emitted it. Returns the encoded form (`sc-camel-*` attrs,
-       *  `<sc-raw-*>`/`<sc-helmet>` tags); the editor decodes on serialize. */
-      __dcAnnotatedTemplate: (name) => runtime.annotatedTemplate(name),
-      /** Editor bridge — the *original* (decoded) template source. */
-      __dcTemplateSource: (name) => runtime.templateSource(name),
-      __dcBoot: () => {
-        rootName = boot(runtime, document) ?? rootName;
-        notifyHost();
-      },
-      __dcRegistry: runtime.registry.entries,
-      getDC: (name) => runtime.getDC(name),
-      // `DCLogic` is the documented base class name; `StreamableLogic` is the
-      // implementation alias kept for any project that already references it.
-      DCLogic: runtime.StreamableLogic,
-      StreamableLogic: runtime.StreamableLogic
-    };
-    Object.assign(window, api);
-    window.__dcContentKeyed = true;
-    if (document.readyState !== "loading") api.__dcBoot();
-    else document.addEventListener("DOMContentLoaded", () => api.__dcBoot());
   }
-  hideRawTemplate();
-  loadReactUmd().then(init).catch((err) => {
-    console.error("[dc] failed to load React or boot:", err);
-    throw err;
-  });
-})();
+
+  _fmtMatch(g) {
+    const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
+    const r = g.result || {};
+    const hasScore = r.homeScore != null;
+    return {
+      home: g.home || 'TBD', away: g.away || 'TBD',
+      homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
+      awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
+      homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
+      awayColor: !g.away ? colorMute : (g.winner === g.away ? colorWin : colorNorm),
+      homeWeight: g.winner === g.home ? '800' : '600',
+      awayWeight: g.winner === g.away ? '800' : '600',
+    };
+  }
+
+  _advance(st) {
+    // mirror advance count from data layer via pool sizes; fetched value lives server-side,
+    // but standings response encodes qualification by pool config length heuristics.
+    return st && st._advance != null ? st._advance : (st && st.pools && st.pools.length > 1 ? 2 : 4);
+  }
+  _advanceFor(st) { return this._advance(st); }
+}
+</script>
+</body>
+</html>

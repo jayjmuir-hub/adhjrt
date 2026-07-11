@@ -1,462 +1,53 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<template id="__bundler_thumbnail" data-bg-color="#0C0C0E">
-  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <rect width="200" height="200" fill="#0C0C0E"/>
-    <rect x="50" y="60" width="100" height="14" fill="#E11B22"/>
-    <rect x="50" y="86" width="100" height="14" fill="#fff"/>
-    <rect x="50" y="112" width="100" height="14" fill="#17A34A"/>
-  </svg>
-</template>
-<helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<meta name="robots" content="noindex, nofollow">
-<title>Organizer — ADH JRT</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
-  input,select,button{font-family:inherit}
-  table{border-collapse:collapse}
-</style>
-</helmet>
+// netlify/functions/submit-result.js
+//
+// Records one match result. Requires an Authorization: Bearer <token>
+// header from manager-login.js / manager-signup.js OR an Organizer
+// token (organizer-login.js / organizer-signup.js) — organizers can
+// submit for any age group; a manager only for their own (the special
+// "admin" manager invite code's accounts can act on any group too —
+// see hasAgeGroupAccess in _auth.js). Never trust the client for this
+// check; it's re-verified here from the signed token.
+//
+// Results are stored in Netlify Blobs as one JSON object keyed by
+// matchId, shared by every reader (see get-results.js). Requires the
+// same SESSION_SECRET as the other auth functions.
 
-<div style="min-height:100vh">
+const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
 
-  <!-- ===================== LOGIN ===================== -->
-  <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-      <div style="width:100%;max-width:400px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:36px">
-        <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;color:#fff">
-          <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;position:relative;flex:none">
-            <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
-          </div>
-          <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
-        </a>
-        <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
-          <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Organizer sign in</div>
-          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Team &amp; player registrations, in one place.</p>
+const WALKOVER_SCORE = 20;
 
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-          <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
-          <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
-          <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
-          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New organizer? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
-        </sc-if>
-
-        <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
-          <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
-          <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#8ff0b0;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
-          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794"><a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
-        </sc-if>
-
-        <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
-          <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create organizer account</div>
-          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Requires an invite code from the Tournament Director. New accounts also need approval before signing in.</p>
-
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">YOUR NAME</label>
-          <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">ROLE / TITLE</label>
-          <input value="{{ signupTitle }}" onInput="{{ onSignupTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">USERNAME</label>
-          <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
-          <input type="password" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">INVITE CODE</label>
-          <input type="password" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-          <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
-          <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
-          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
-        </sc-if>
-      </div>
-    </div>
-  </sc-if>
-
-  <!-- ===================== DASHBOARD ===================== -->
-  <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
-    <div style="max-width:1300px;margin:0 auto;padding:28px 24px 80px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
-        <div style="display:flex;align-items:center;gap:14px">
-          <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#fff">
-            <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
-              <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
-            </div>
-            <div style="line-height:1">
-              <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · ORGANIZER</div>
-              <div style="font-size:11px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">REGISTRATIONS</div>
-            </div>
-          </a>
-          <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#aeb4bf;border-left:1px solid rgba(255,255,255,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#fff">← Main site</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:14px">
-          <div style="text-align:right;line-height:1.3">
-            <div style="font-weight:700;font-size:14px">{{ sessionName }}</div>
-            <div style="font-size:12px;color:#7f8794">{{ sessionRole }}</div>
-          </div>
-          <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer">Sign out</button>
-        </div>
-      </div>
-
-      <!-- tabs -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
-        <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
-        <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
-        <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
-      </div>
-
-      <!-- filters -->
-      <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
-          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-          <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-            <option value="">All clubs</option>
-            <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
-              <option value="{{ c }}">{{ c }}</option>
-            </sc-for>
-          </select>
-          <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-            <option value="">All age groups</option>
-            <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
-              <option value="{{ a }}">{{ a }}</option>
-            </sc-for>
-          </select>
-          <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
-        </div>
-      </sc-if>
-
-      <!-- accounts tab -->
-      <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px">
-          <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
-            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#f5c518">Pending approval</div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
-              <sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="2">
-                <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-                  <div>
-                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#7f8794;font-weight:500">— {{ a.username }}</span></div>
-                    <div style="font-size:12px;color:#7f8794;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <button onClick="{{ a.onApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
-                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
-                  </div>
-                </div>
-              </sc-for>
-            </div>
-          </sc-if>
-
-          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">All accounts</div>
-          <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
-            <table style="width:100%;min-width:700px">
-              <thead>
-                <tr style="background:#151517">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Name</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Username</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Role</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Status</th>
-                  <th style="text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <sc-for list="{{ approvedAccounts }}" as="a" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                    <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ a.name }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf">{{ a.username }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ a.roleLabel }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#3bd070;font-weight:700">Active</td>
-                    <td style="padding:12px 14px;text-align:right"><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></td>
-                  </tr>
-                </sc-for>
-              </tbody>
-            </table>
-            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No approved accounts yet.</div></sc-if>
-          </div>
-        </div>
-      </sc-if>
-
-      <!-- teams table -->
-      <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
-          <table style="width:100%;min-width:1100px">
-            <thead>
-              <tr style="background:#151517">
-                <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
-                </sc-for>
-              </tr>
-            </thead>
-            <tbody>
-              <sc-for list="{{ teamRows }}" as="r" hint-placeholder-count="6">
-                <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                  <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
-                  <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
-                  <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
-                </tr>
-              </sc-for>
-            </tbody>
-          </table>
-          <sc-if value="{{ teamsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No team registrations match your filters.</div></sc-if>
-        </div>
-      </sc-if>
-
-      <!-- players table -->
-      <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
-          <table style="width:100%;min-width:1200px">
-            <thead>
-              <tr style="background:#151517">
-                <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
-                </sc-for>
-              </tr>
-            </thead>
-            <tbody>
-              <sc-for list="{{ playerRows }}" as="r" hint-placeholder-count="6">
-                <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                  <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.club }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.parentName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.emergencyContact }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
-                </tr>
-              </sc-for>
-            </tbody>
-          </table>
-          <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No player registrations match your filters.</div></sc-if>
-        </div>
-      </sc-if>
-    </div>
-  </sc-if>
-
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
-class Component extends DCLogic {
-  state = {
-    api: null, session: null, loginUser: '', loginPass: '', loginError: '', loginBusy: false,
-    authMode: 'login',
-    signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
-    signupPending: false, signupPendingMessage: '',
-    tab: 'teams', search: '', clubFilter: '', ageFilter: '',
-    teams: [], players: [], accounts: [],
-  };
-
-  async componentDidMount() {
-    const api = await import(new URL('organizer-data.js', document.baseURI).href);
-    const session = api.currentSession();
-    this.setState({ api, session });
-    if (session) this.loadData(api);
-  }
-
-  async loadData(api) {
-    const [data, accounts] = await Promise.all([api.getRegistrations(), api.listAccounts()]);
-    this.setState({ teams: data.teams, players: data.players, accounts });
-  }
-
-  async refreshAccounts() {
-    const { api } = this.state;
-    const accounts = await api.listAccounts();
-    this.setState({ accounts });
-  }
-
-  async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
-  async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
-  async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
-
-  async doLogin() {
-    const { api, loginUser, loginPass } = this.state;
-    this.setState({ loginBusy: true, loginError: '' });
-    const res = await api.login(loginUser, loginPass);
-    if (res.ok) {
-      this.setState({ session: res.session, loginBusy: false, loginPass: '' });
-      this.loadData(api);
-    } else {
-      this.setState({ loginError: res.error, loginBusy: false });
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  try {
+    const session = verify(getBearerToken(event));
+    if (!session || (session.role !== 'manager' && session.role !== 'organizer')) {
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
     }
-  }
 
-  doLogout() { this.state.api.logout(); this.setState({ session: null, teams: [], players: [] }); }
-
-  async doSignup() {
-    const { api, signupName, signupTitle, signupUser, signupPass, signupCode } = this.state;
-    this.setState({ signupBusy: true, signupError: '' });
-    const res = await api.signup({ name: signupName, title: signupTitle, username: signupUser, password: signupPass, inviteCode: signupCode });
-    if (res.ok && res.pending) {
-      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
-    } else if (res.ok) {
-      this.setState({ session: res.session, signupBusy: false, signupPass: '', signupCode: '' });
-      this.loadData(api);
-    } else {
-      this.setState({ signupError: res.error, signupBusy: false });
+    const { matchId, data } = JSON.parse(event.body || '{}');
+    if (!matchId || !data) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Missing matchId or data.' }) };
+    const agId = matchId.split(':')[0];
+    if (!hasAgeGroupAccess(session, agId)) {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'You can only enter scores for your own age group.' }) };
     }
-  }
 
-  fmtDate(iso) {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    } catch (e) { return iso; }
-  }
-
-  matches(hay, needle) { return hay.toLowerCase().includes(needle.toLowerCase()); }
-
-  exportCsv() {
-    const { tab, teams, players } = this.state;
-    const rows = tab === 'teams' ? this._filteredTeams() : this._filteredPlayers();
-    const headers = tab === 'teams'
-      ? ['Submitted At', 'Club', 'Team Name', 'Age Group', 'Head Coach Name', 'Head Coach Email', 'Head Coach Mobile', 'Manager Name', 'Manager Email', 'Manager Mobile', 'Num Players', 'Notes']
-      : ['Submitted At', 'Player Name', 'DOB', 'Club', 'Age Group', 'Parent Name', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent', 'Play-Up Consent'];
-    const lines = [headers.join(',')];
-    rows.forEach((r) => {
-      const vals = tab === 'teams'
-        ? [r.submittedAt, r.club, r.teamName, r.ageGroup, r.headCoachName, r.headCoachEmail, r.headCoachMobile, r.managerName, r.managerEmail, r.managerMobile, r.numPlayers, r.notes]
-        : [r.submittedAt, r.playerName, r.dob, r.club, r.ageGroup, r.parentName, r.parentEmail, r.parentMobile, r.emergencyContact, r.emergencyMobile, r.medicalNotes, r.consent, r.playUpConsent];
-      lines.push(vals.map((v) => '"' + String(v || '').replace(/"/g, '""') + '"').join(','));
-    });
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'adhjrt-' + tab + '.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  _filteredTeams() {
-    const { teams, search, clubFilter, ageFilter } = this.state;
-    return teams.filter((r) => {
-      if (clubFilter && r.club !== clubFilter) return false;
-      if (ageFilter && r.ageGroup !== ageFilter) return false;
-      if (search) {
-        const hay = [r.club, r.teamName, r.ageGroup, r.headCoachName, r.headCoachEmail, r.managerName, r.managerEmail].join(' ');
-        if (!this.matches(hay, search)) return false;
-      }
-      return true;
-    });
-  }
-  _filteredPlayers() {
-    const { players, search, clubFilter, ageFilter } = this.state;
-    return players.filter((r) => {
-      if (clubFilter && r.club !== clubFilter) return false;
-      if (ageFilter && r.ageGroup !== ageFilter) return false;
-      if (search) {
-        const hay = [r.club, r.playerName, r.ageGroup, r.parentName, r.parentEmail, r.emergencyContact].join(' ');
-        if (!this.matches(hay, search)) return false;
-      }
-      return true;
-    });
-  }
-
-  renderVals() {
-    const s = this.state;
-    const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;';
-    const tabOn = tabBase + 'background:#E11B22;color:#fff;';
-    const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
-
-    const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
-    const allAges = Array.from(new Set([...s.teams.map((t) => t.ageGroup), ...s.players.map((p) => p.ageGroup)])).sort();
-
-    const teamRows = this._filteredTeams().map((r) => ({ ...r, submittedAtDisplay: this.fmtDate(r.submittedAt) }));
-    const playerRows = this._filteredPlayers().map((r) => ({
-      ...r,
-      submittedAtDisplay: this.fmtDate(r.submittedAt),
-      medicalDisplay: r.medicalNotes || '—',
-      medicalColor: r.medicalNotes ? '#ffb74d' : '#5a616d',
-      medicalWeight: r.medicalNotes ? '700' : '400',
-      consentColor: r.consent === 'Yes' ? '#3bd070' : '#ff6b6b',
-    }));
-
-    return {
-      loggedOut: !s.session, loggedIn: !!s.session,
-      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
-      loginBusy: s.loginBusy, loginLabel: s.loginBusy ? 'Signing in…' : 'Sign in',
-      onUser: (e) => this.setState({ loginUser: e.target.value }),
-      onPass: (e) => this.setState({ loginPass: e.target.value }),
-      onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
-      onLogin: () => this.doLogin(),
-      onLogout: () => this.doLogout(),
-
-      isLoginMode: s.authMode === 'login', isSignupMode: s.authMode === 'signup',
-      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
-      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
-      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
-      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
-      signupPendingMessage: s.signupPendingMessage,
-      signupName: s.signupName, signupTitle: s.signupTitle, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
-      signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
-      onSignupName: (e) => this.setState({ signupName: e.target.value }),
-      onSignupTitle: (e) => this.setState({ signupTitle: e.target.value }),
-      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
-      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
-      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
-      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
-      onSignup: () => this.doSignup(),
-      sessionName: s.session ? s.session.name : '',
-      sessionRole: s.session ? s.session.role : '',
-
-      isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
-      showTeams: () => this.setState({ tab: 'teams' }),
-      showPlayers: () => this.setState({ tab: 'players' }),
-      showAccounts: () => this.setState({ tab: 'accounts' }),
-      tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
-      tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
-      tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
-      showFilters: s.tab === 'teams' || s.tab === 'players',
-      teamCount: s.teams.length, playerCount: s.players.length,
-
-      pendingAccounts: s.accounts.filter((a) => !a.approved).map((a) => ({
-        ...a,
-        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
-        createdAtDisplay: this.fmtDate(a.createdAt),
-        onApprove: () => this.doApprove(a.username),
-        onReject: () => this.doReject(a.username),
-      })),
-      approvedAccounts: s.accounts.filter((a) => a.approved).map((a) => ({
-        ...a,
-        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
-        onRevoke: () => this.doRevoke(a.username),
-      })),
-      hasPending: s.accounts.some((a) => !a.approved),
-      pendingCount: s.accounts.filter((a) => !a.approved).length,
-      accountsEmpty: s.accounts.filter((a) => a.approved).length === 0,
-
-      search: s.search, onSearch: (e) => this.setState({ search: e.target.value }),
-      clubFilter: s.clubFilter, onClubFilter: (e) => this.setState({ clubFilter: e.target.value }),
-      ageFilter: s.ageFilter, onAgeFilter: (e) => this.setState({ ageFilter: e.target.value }),
-      clubOptions: allClubs, ageOptions: allAges,
-      onExport: () => this.exportCsv(),
-
-      teamHeaders: ['Submitted', 'Club', 'Team Name', 'Age Group', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
-      teamRows, teamsEmpty: teamRows.length === 0,
-      playerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Age Group', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
-      playerRows, playersEmpty: playerRows.length === 0,
+    const store = blobStore('results');
+    const results = (await store.get('all', { type: 'json' })) || {};
+    results[matchId] = {
+      homeScore: data.walkover === 'home' ? WALKOVER_SCORE : (data.walkover === 'away' ? 0 : Number(data.homeScore)),
+      awayScore: data.walkover === 'away' ? WALKOVER_SCORE : (data.walkover === 'home' ? 0 : Number(data.awayScore)),
+      homeTries: data.walkover === 'home' ? 4 : (data.walkover === 'away' ? 0 : Number(data.homeTries || 0)),
+      awayTries: data.walkover === 'away' ? 4 : (data.walkover === 'home' ? 0 : Number(data.awayTries || 0)),
+      homeCards: Number(data.homeCards || 0), awayCards: Number(data.awayCards || 0),
+      walkover: data.walkover || null,
+      spiritNomineeHome: (data.spiritNomineeHome || '').trim() || null,
+      spiritNomineeAway: (data.spiritNomineeAway || '').trim() || null,
+      submittedBy: session.username, submittedAt: new Date().toISOString(),
     };
+    await store.setJSON('all', results);
+    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+  } catch (err) {
+    console.error('submit-result error:', err);
+    return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Server error.' }) };
   }
-}
-</script>
-</body>
-</html>
+};

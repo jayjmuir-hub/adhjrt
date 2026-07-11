@@ -98,12 +98,29 @@
           </a>
           <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#aeb4bf;border-left:1px solid rgba(255,255,255,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#fff">← Main site</a>
         </div>
-        <div style="display:flex;align-items:center;gap:14px">
+        <div style="display:flex;align-items:center;gap:14px;position:relative">
           <div style="text-align:right;line-height:1.3">
             <div style="font-weight:700;font-size:14px">{{ sessionName }}</div>
             <div style="font-size:12px;color:#7f8794">{{ sessionRole }}</div>
           </div>
+          <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#aeb4bf;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Change password</button>
           <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+
+          <sc-if value="{{ showChangePwd }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:calc(100% + 10px);right:0;width:300px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:20">
+              <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:12px">Change password</div>
+              <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">CURRENT PASSWORD</label>
+              <input type="password" value="{{ cpCurrent }}" onInput="{{ onCpCurrent }}" style="width:100%;margin:6px 0 12px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px">
+              <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NEW PASSWORD</label>
+              <input type="password" value="{{ cpNew }}" onInput="{{ onCpNew }}" style="width:100%;margin:6px 0 12px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px">
+              <sc-if value="{{ cpError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpError }}</div></sc-if>
+              <sc-if value="{{ cpSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpSuccess }}</div></sc-if>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ onCpSubmit }}" disabled="{{ cpBusy }}" style="flex:1;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ cpLabel }}</button>
+                <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
         </div>
       </div>
 
@@ -174,7 +191,7 @@
                     <td style="padding:12px 14px;font-size:13px;color:#aeb4bf">{{ a.username }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ a.roleLabel }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:#3bd070;font-weight:700">Active</td>
-                    <td style="padding:12px 14px;text-align:right"><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></td>
+                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
                   </tr>
                 </sc-for>
               </tbody>
@@ -264,6 +281,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     tab: 'teams', search: '', clubFilter: '', ageFilter: '',
     teams: [], players: [], accounts: [],
+    showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
   };
 
   async componentDidMount() {
@@ -287,6 +305,29 @@ class Component extends DCLogic {
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
   async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
+
+  async doResetPassword(username) {
+    const pwd = window.prompt(`New password for ${username} (min 6 characters):`);
+    if (!pwd) return;
+    if (pwd.length < 6) { window.alert('Password must be at least 6 characters.'); return; }
+    const res = await this.state.api.resetAccountPassword(username, pwd);
+    window.alert(res.ok ? 'Password reset.' : (res.error || 'Failed to reset password.'));
+  }
+
+  onToggleChangePwd() {
+    this.setState((s) => ({ showChangePwd: !s.showChangePwd, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '' }));
+  }
+
+  async doChangePassword() {
+    const { api, cpCurrent, cpNew } = this.state;
+    this.setState({ cpBusy: true, cpError: '', cpSuccess: '' });
+    const res = await api.changeMyPassword(cpCurrent, cpNew);
+    if (res.ok) {
+      this.setState({ cpBusy: false, cpSuccess: 'Password changed.', cpCurrent: '', cpNew: '' });
+    } else {
+      this.setState({ cpBusy: false, cpError: res.error || 'Failed to change password.' });
+    }
+  }
 
   async doLogin() {
     const { api, loginUser, loginPass } = this.state;
@@ -418,6 +459,14 @@ class Component extends DCLogic {
       sessionName: s.session ? s.session.name : '',
       sessionRole: s.session ? s.session.role : '',
 
+      showChangePwd: s.showChangePwd,
+      onToggleChangePwd: () => this.onToggleChangePwd(),
+      cpCurrent: s.cpCurrent, cpNew: s.cpNew, cpError: s.cpError, cpSuccess: s.cpSuccess,
+      cpBusy: s.cpBusy, cpLabel: s.cpBusy ? 'Saving…' : 'Save',
+      onCpCurrent: (e) => this.setState({ cpCurrent: e.target.value }),
+      onCpNew: (e) => this.setState({ cpNew: e.target.value }),
+      onCpSubmit: () => this.doChangePassword(),
+
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
@@ -439,6 +488,7 @@ class Component extends DCLogic {
         ...a,
         roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
         onRevoke: () => this.doRevoke(a.username),
+        onResetPassword: () => this.doResetPassword(a.username),
       })),
       hasPending: s.accounts.some((a) => !a.approved),
       pendingCount: s.accounts.filter((a) => !a.approved).length,

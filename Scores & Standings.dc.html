@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<template id="__bundler_thumbnail" data-bg-color="#0C0C0E">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#0C0C0E"/>
+    <polygon points="100,60 140,80 100,100 60,80" fill="#E11B22"/>
+    <polygon points="100,100 140,120 100,140 60,120" fill="#17A34A"/>
+    <rect x="70" y="60" width="8" height="80" fill="#fff" transform="rotate(20 100 100)"/>
+  </svg>
+</template>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  input,button{font-family:inherit}
+  input[type=number]::-webkit-inner-spin-button{opacity:.5}
+  input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer}
+  input[type=time]::-webkit-datetime-edit-ampm-field{color:#fff}
+</style>
+</helmet>
+
+<div style="min-height:100vh;max-width:1100px;margin:0 auto;padding:28px 24px 80px">
+
+  <!-- header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+        <div style="position:absolute;top:-8px;left:50%;width:6px;height:150%;background:#fff;transform:translateX(-50%) rotate(26deg)"></div>
+      </div>
+      <div style="line-height:1">
+        <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · LIVE</div>
+        <div style="font-size:11px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">SCORES &amp; STANDINGS</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px">
+      <button onClick="{{ showPublic }}" style="{{ tabPublicStyle }}">Standings</button>
+      <button onClick="{{ showAdmin }}" style="{{ tabAdminStyle }}">Manager area</button>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="">
+    <div style="margin-top:16px;background:rgba(23,163,74,0.15);border:1px solid rgba(23,163,74,0.5);color:#8ff0b0;font-weight:700;padding:10px 16px;border-radius:10px">{{ toast }}</div>
+  </sc-if>
+
+  <!-- ===================== PUBLIC ===================== -->
+  <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
+    <div style="margin-top:26px">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
+        <sc-for list="{{ ageTabs }}" as="a" hint-placeholder-count="4">
+          <button onClick="{{ a.onSelect }}" style="{{ a.style }}">{{ a.name }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ selectedFestival }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:40px;text-align:center;color:#aeb4bf">
+          <div style="font-family:'Anton';font-size:30px;color:#fff">Festival age group</div>
+          <p style="margin-top:8px">{{ selectedName }} is a non-competitive festival — no standings are kept.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <sc-for list="{{ pools }}" as="pool" hint-placeholder-count="1">
+            <div style="margin-bottom:34px">
+              <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:12px">{{ pool.name }}</div>
+              <div style="overflow:hidden;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+                <div style="display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;background:#151517;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794">
+                  <div>POS</div><div>TEAM</div><div style="text-align:center">P</div><div style="text-align:center">W</div><div style="text-align:center">D</div><div style="text-align:center">L</div><div style="text-align:center">PF</div><div style="text-align:center">PA</div><div style="text-align:center">+/−</div><div style="text-align:center">T</div><div style="text-align:center">PTS</div>
+                </div>
+                <sc-for list="{{ pool.rows }}" as="r" hint-placeholder-count="3">
+                  <div style="{{ r.rowStyle }}">
+                    <div style="text-align:center;font-weight:800;color:{{ r.rankColor }}">{{ r.rank }}</div>
+                    <div style="font-weight:700;display:flex;align-items:center;gap:8px">{{ r.team }}<sc-if value="{{ r.coinToss }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:#0C0C0E;background:#f5c518;padding:2px 6px;border-radius:100px">COIN TOSS</span></sc-if></div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.P }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.W }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.D }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.L }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.PF }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.PA }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.marginText }}</div>
+                    <div style="text-align:center;color:#aeb4bf">{{ r.tries }}</div>
+                    <div style="text-align:center;font-family:'Anton';font-size:18px">{{ r.pts }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size:12px;color:#7f8794;margin-top:8px;line-height:1.6">Green = qualifies for knockouts &nbsp;·&nbsp; P = played &nbsp;·&nbsp; W/D/L = won/drawn/lost &nbsp;·&nbsp; PF = points for &nbsp;·&nbsp; PA = points against &nbsp;·&nbsp; +/− = points difference &nbsp;·&nbsp; T = tries &nbsp;·&nbsp; PTS = league points</div>
+            </div>
+          </sc-for>
+
+          <!-- Awards ceremony summary: winner + runner-up per tier, at a glance (every competitive age group) -->
+          <sc-if value="{{ awardsReady }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:44px">
+              <div style="text-align:center;margin-bottom:20px">
+                <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);padding:8px 20px;border-radius:100px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:#f5c518;box-shadow:0 0 10px #f5c518"></span>
+                  <span style="font-weight:800;letter-spacing:2px;color:#f5c518;font-size:13px;text-transform:uppercase;white-space:nowrap">Presentation order</span>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+                <sc-for list="{{ awardsSummary }}" as="a" hint-placeholder-count="4">
+                  <div style="background:#151517;border:1.5px solid {{ a.color }}55;border-top:4px solid {{ a.color }};border-radius:16px;padding:22px 20px;text-align:center">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:14px">
+                      <sc-if value="{{ a.isCup }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5c518" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4a5 5 0 0 1-10 0V3z"></path><path d="M7 4H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4"></path><path d="M17 4h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"></path><path d="M12 12v4"></path><path d="M9 20h6"></path><path d="M9 20l1-4h4l1 4"></path></svg></sc-if>
+                      <sc-if value="{{ a.isBowl }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9ced6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="9" ry="2.4"></ellipse><path d="M3 7c0 5 3 10 9 10s9-5 9-10"></path></svg></sc-if>
+                      <sc-if value="{{ a.isPlate }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#17A34A" stroke-width="1.7"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle></svg></sc-if>
+                      <sc-if value="{{ a.isShield }}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff5a3c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"></path></svg></sc-if>
+                      <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;color:{{ a.color }};letter-spacing:.5px">{{ a.tier }}</div>
+                    </div>
+                    <sc-if value="{{ a.ready }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Winner</div>
+                      <div style="font-weight:800;font-size:18px;color:#fff;line-height:1.2;margin-bottom:16px">{{ a.winner }}</div>
+                      <div style="height:1px;background:rgba(255,255,255,0.1);margin:0 0 16px"></div>
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Runner-up</div>
+                      <div style="font-weight:600;font-size:15px;color:#aeb4bf;line-height:1.2">{{ a.runnerUp }}</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- U16B special double-bracket -->
+          <sc-if value="{{ isU16BSpecial }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:8px">
+
+              <!-- Knockout seeding: which pool finish feeds which bracket -->
+              <sc-if value="{{ seedsReady }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-bottom:44px">
+                  <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;text-align:center;margin-bottom:6px">Knockout Seeding</div>
+                  <p style="text-align:center;color:#7f8794;font-size:14px;max-width:520px;margin:0 auto 22px">Top 8 finishers across both pools advance. Seeds 1&ndash;4 contest the Cup &amp; Bowl, seeds 5&ndash;8 contest the Plate &amp; Shield.</p>
+                  <div style="max-width:640px;margin:0 auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+                    <sc-for list="{{ knockoutSeeds }}" as="s" hint-placeholder-count="8">
+                      <div style="display:grid;grid-template-columns:44px 1fr 110px 140px;gap:12px;align-items:center;padding:13px 18px;border-top:1px solid rgba(255,255,255,0.06)">
+                        <div style="font-family:'Anton';font-size:19px;color:#7f8794">{{ s.seed }}</div>
+                        <div style="font-weight:700;font-size:15px;color:#fff">{{ s.team }}</div>
+                        <div style="font-size:12px;font-weight:700;color:#7f8794">{{ s.poolLabel }} &middot; {{ s.rankLabel }}</div>
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:{{ s.bracketColor }};text-transform:uppercase;text-align:right">{{ s.bracket }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <div style="font-family:'Anton';font-size:30px;text-transform:uppercase;text-align:center;margin-bottom:32px">Knockout Brackets</div>
+              <div style="display:flex;flex-direction:column;gap:48px;align-items:center">
+                <sc-for list="{{ doubleBrackets }}" as="br" hint-placeholder-count="2">
+                  <div style="width:100%;max-width:860px;background:linear-gradient(180deg,#18191c,#111113);border:1px solid rgba(255,255,255,0.09);border-radius:22px;padding:36px 40px;box-shadow:0 24px 60px rgba(0,0,0,.4)">
+                    <div style="text-align:center;margin-bottom:34px">
+                      <div style="display:inline-flex;align-items:center;gap:10px;background:{{ br.badgeBg }};border:1px solid {{ br.titleColor }}55;padding:9px 22px;border-radius:100px">
+                        <span style="width:9px;height:9px;border-radius:50%;background:{{ br.titleColor }};box-shadow:0 0 10px {{ br.titleColor }}"></span>
+                        <span style="font-weight:800;letter-spacing:2px;color:{{ br.titleColor }};font-size:14px;text-transform:uppercase;white-space:nowrap">{{ br.title }}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:stretch;justify-content:center;gap:0;overflow-x:auto">
+                      <div style="display:flex;flex-direction:column;gap:40px;justify-content:center;width:270px;flex:none">
+                        <sc-for list="{{ br.leftCol }}" as="c" hint-placeholder-count="2">
+                          <div>
+                            <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#7f8794;text-transform:uppercase;margin-bottom:9px;text-align:center">{{ c.label }}</div>
+                            <div style="background:#1c1d20;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px 22px;box-shadow:0 10px 24px rgba(0,0,0,.3)">
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="width:96px;position:relative;flex:none">
+                        <div style="position:absolute;left:47px;top:14%;bottom:14%;border-left:3px solid rgba(255,255,255,0.16)"></div>
+                        <div style="position:absolute;left:4px;top:17%;font-size:11px;font-weight:800;letter-spacing:1px;color:#3bd070;background:#111113;padding:5px 10px;border-radius:100px;border:1px solid rgba(59,208,112,.35);white-space:nowrap">WIN &#9656;</div>
+                        <div style="position:absolute;left:4px;bottom:17%;font-size:11px;font-weight:800;letter-spacing:1px;color:#8b93a3;background:#111113;padding:5px 10px;border-radius:100px;border:1px solid rgba(255,255,255,.12);white-space:nowrap">LOSE &#9656;</div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:40px;justify-content:center;width:270px;flex:none">
+                        <sc-for list="{{ br.rightCol }}" as="c" hint-placeholder-count="2">
+                          <div>
+                            <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:9px">
+                              <sc-if value="{{ c.isCup }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f5c518" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4a5 5 0 0 1-10 0V3z"></path><path d="M7 4H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4"></path><path d="M17 4h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4"></path><path d="M12 12v4"></path><path d="M9 20h6"></path><path d="M9 20l1-4h4l1 4"></path></svg></sc-if>
+                              <sc-if value="{{ c.isBowl }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7f8794" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="9" ry="2.4"></ellipse><path d="M3 7c0 5 3 10 9 10s9-5 9-10"></path></svg></sc-if>
+                              <sc-if value="{{ c.isPlate }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17A34A" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle></svg></sc-if>
+                              <sc-if value="{{ c.isShield }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7f8794" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"></path></svg></sc-if>
+                              <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:{{ c.labelColor }};text-transform:uppercase">{{ c.label }}</div>
+                            </div>
+                            <div style="background:{{ c.cardBg }};border:1.5px solid {{ c.borderColor }};border-radius:16px;padding:20px 22px;box-shadow:{{ c.cardShadow }}">
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- bracket -->
+          <sc-if value="{{ hasBracket }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:20px">
+              <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:14px">Cup, Bowl, Plate &amp; Shield Finals</div>
+              <div style="display:flex;gap:20px;flex-wrap:wrap">
+                <sc-for list="{{ bracket }}" as="round" hint-placeholder-count="2">
+                  <div style="flex:1;min-width:240px">
+                    <div style="font-weight:800;letter-spacing:1px;color:#3bd070;font-size:12px;text-transform:uppercase;margin-bottom:10px">{{ round.round }}</div>
+                    <sc-for list="{{ round.games }}" as="g" hint-placeholder-count="2">
+                      <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.homeColor }};font-weight:{{ g.homeWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.home }}</span><span style="flex:none">{{ g.homeScore }}</span></div>
+                        <div style="height:1px;background:rgba(255,255,255,0.08);margin:8px 0"></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.awayColor }};font-weight:{{ g.awayWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.away }}</span><span style="flex:none">{{ g.awayScore }}</span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===================== ADMIN ===================== -->
+  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:26px">
+
+      <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:400px;margin:40px auto;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px">
+          <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;margin-bottom:6px">Manager sign in</div>
+            <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Enter scores for your age group.</p>
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
+            <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
+            <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
+            <button onClick="{{ onLogin }}" style="width:100%;background:#E11B22;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Sign in</button>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New manager? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+          </sc-if>
+          <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:6px">Account created</div>
+            <div style="margin:14px 0;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#8ff0b0;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794"><a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+          </sc-if>
+          <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;margin-bottom:6px">Create manager account</div>
+            <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Requires the invite code for your age group.</p>
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">YOUR NAME</label>
+            <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
+            <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
+            <input type="password" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">INVITE CODE (for your age group)</label>
+            <input type="password" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
+            <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+            <div>
+              <div style="font-family:'Anton';font-size:26px;text-transform:uppercase">{{ adminAgeName }}</div>
+              <div style="color:#aeb4bf;font-size:14px">Signed in as {{ sessionName }}</div>
+            </div>
+            <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+          </div>
+
+          <sc-if value="{{ isAdminAll }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:18px">
+              <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-bottom:6px">WORKING ON AGE GROUP</label>
+              <select value="{{ adminSelectedAgeId }}" onChange="{{ onAdminAgeChange }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 14px;color:#fff;font-size:14px">
+                <sc-for list="{{ adminAgeOptions }}" as="a" hint-placeholder-count="8">
+                  <option value="{{ a.id }}">{{ a.name }}</option>
+                </sc-for>
+              </select>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;gap:8px;margin-bottom:22px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
+            <sc-if value="{{ showScoresTabButton }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ showScoresSubTab }}" style="{{ subTabScoresStyle }}">Enter scores</button>
+            </sc-if>
+            <button onClick="{{ showFixturesSubTab }}" style="{{ subTabFixturesStyle }}">Edit fixtures</button>
+          </div>
+          <sc-if value="{{ isFestivalAdminGroup }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">This is a non-competitive festival age group — no scores or standings are kept, so only fixture times, pitches, and team assignments are editable.</p>
+          </sc-if>
+
+          <sc-if value="{{ isScoresSubTab }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ showSpiritInput }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#151517;border:1px solid rgba(59,208,112,0.35);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+                  <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:#3bd070">Spirit of Rugby Award</div>
+                  <div style="font-size:12px;color:#7f8794;font-weight:700">{{ spiritProgressText }}</div>
+                </div>
+                <sc-if value="{{ spiritComplete }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:12px">🏆 Winner: <span style="color:#3bd070">{{ spiritWinnersText }}</span></div>
+                </sc-if>
+                <sc-if value="{{ hasSpiritTally }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ spiritTally }}" as="t" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:8px;background:{{ t.chipBg }};border:1px solid {{ t.chipBorder }};border-radius:100px;padding:6px 14px;white-space:nowrap;flex:none">
+                        <span style="font-weight:700;font-size:13px;color:#fff;white-space:nowrap">{{ t.name }}</span>
+                        <span style="font-weight:600;font-size:11px;color:#8b93a3;white-space:nowrap">{{ t.team }}</span>
+                        <span style="font-weight:800;font-size:12px;color:{{ t.countColor }}">{{ t.count }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noSpiritTally }}" hint-placeholder-val="{{ true }}">
+                  <div style="color:#7f8794;font-size:13px">No nominations entered yet — nominate a player for each match below.</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-for list="{{ adminRows }}" as="m" hint-placeholder-count="3">
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+                  <div style="font-weight:800;font-size:17px">{{ m.home }} <span style="color:#7f8794">v</span> {{ m.away }}</div>
+                  <div style="display:flex;align-items:center;gap:14px">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#3bd070;text-transform:uppercase">{{ m.label }}</div>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PITCH
+                      <input value="{{ m.pitchDraft }}" onInput="{{ m.h.pitch }}" style="width:56px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:5px 6px;color:#fff;font-size:12px;text-align:center">
+                    </label>
+                  </div>
+                </div>
+                <sc-if value="{{ m.canEdit }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                      <div>
+                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.home }}</div>
+                        <div style="display:flex;gap:8px">
+                          <input type="number" min="0" value="{{ m.draft.homeScore }}" onInput="{{ m.h.hs }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.homeTries }}" onInput="{{ m.h.ht }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.homeCards }}" onInput="{{ m.h.hc }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.away }}</div>
+                        <div style="display:flex;gap:8px">
+                          <input type="number" min="0" value="{{ m.draft.awayScore }}" onInput="{{ m.h.as }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.awayTries }}" onInput="{{ m.h.at }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          <input type="number" min="0" value="{{ m.draft.awayCards }}" onInput="{{ m.h.ac }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
+                      <span style="font-size:12px;color:#7f8794;font-weight:700">WALK-OVER:</span>
+                      <button onClick="{{ m.h.woNone }}" style="{{ m.woNoneStyle }}">None</button>
+                      <button onClick="{{ m.h.woHome }}" style="{{ m.woHomeStyle }}">{{ m.home }} 20–0</button>
+                      <button onClick="{{ m.h.woAway }}" style="{{ m.woAwayStyle }}">{{ m.away }} 20–0</button>
+                    </div>
+                    <sc-if value="{{ m.showSpirit }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:14px">
+                        <label style="display:block;font-size:11px;color:#7f8794;font-weight:700;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY — ONE NOMINATION FROM EACH TEAM</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                          <div>
+                            <div style="font-size:11px;color:#aeb4bf;font-weight:700;margin-bottom:5px">{{ m.home }}</div>
+                            <input value="{{ m.spiritDraftHome }}" onInput="{{ m.h.spiritHome }}" placeholder="Player name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                          </div>
+                          <div>
+                            <div style="font-size:11px;color:#aeb4bf;font-weight:700;margin-bottom:5px">{{ m.away }}</div>
+                            <input value="{{ m.spiritDraftAway }}" onInput="{{ m.h.spiritAway }}" placeholder="Player name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <div style="display:flex;align-items:center;margin-top:16px">
+                      <button onClick="{{ m.h.save }}" style="margin-left:auto;background:#17A34A;color:#fff;font-weight:800;padding:10px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save</button>
+                    </div>
+                    <sc-if value="{{ m.savedNote }}" hint-placeholder-val=""><div style="font-size:12px;color:#3bd070;font-weight:700;margin-top:10px">{{ m.savedNote }}</div></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.awaiting }}" hint-placeholder-val="{{ false }}">
+                  <div style="color:#7f8794;font-size:14px">Awaiting earlier-round results before this can be scored.</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </sc-if>
+
+          <sc-if value="{{ isFixturesSubTab }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ editorLoaded }}" hint-placeholder-val="{{ false }}">
+              <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Drag a team from a pool's roster onto another pool to move it, or onto a match slot's Home/Away box to assign it there. Edit kickoff time directly — the list re-sorts by time automatically.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-width:0">
+                <sc-for list="{{ poolCards }}" as="pool" hint-placeholder-count="2">
+                  <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;min-width:0;overflow:hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="font-family:'Anton';font-size:19px;text-transform:uppercase">{{ pool.name }}</div>
+                        <button onClick="{{ pool.onRenamePool }}" aria-label="Rename pool" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:14px;padding:2px 4px">&#9998;</button>
+                      </div>
+                      <button onClick="{{ pool.onRemovePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:11px;padding:5px 10px;border-radius:7px;cursor:pointer">Delete pool</button>
+                    </div>
+                    <div onDragOver="{{ pool.onDragOverZone }}" onDrop="{{ pool.onDropZone }}" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:10px;margin-bottom:10px;min-height:44px">
+                      <sc-for list="{{ pool.teamChips }}" as="chip" hint-placeholder-count="5">
+                        <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 6px 6px 14px;font-size:13px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">
+                          <span style="white-space:nowrap">{{ chip.name }}</span>
+                          <button onClick="{{ chip.onRename }}" aria-label="Rename team" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px 4px">&#9998;</button>
+                          <button onClick="{{ chip.onRemove }}" aria-label="Remove team" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:14px;padding:2px 5px">&times;</button>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-bottom:16px">
+                      <input value="{{ pool.newTeamValue }}" onInput="{{ pool.onNewTeamInput }}" onKeyDown="{{ pool.onNewTeamKey }}" placeholder="New team name" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                      <button onClick="{{ pool.onAddTeamClick }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">+ Add team</button>
+                    </div>
+                    <sc-if value="{{ pool.slotRows.length }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:nowrap">
+                        <div style="width:96px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Time</div>
+                        <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
+                        <span style="width:8px;flex:none"></span>
+                        <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
+                        <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                        <span style="width:16px;flex:none"></span>
+                      </div>
+                    </sc-if>
+                    <sc-for list="{{ pool.slotRows }}" as="row" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap">
+                        <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
+                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                        <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
+                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                        <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                        <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
+                      </div>
+                    </sc-for>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                      <button onClick="{{ pool.onAddSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add match slot</button>
+                      <button onClick="{{ pool.onRegenerate }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Regenerate from pool</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <button onClick="{{ onAddPool }}" style="margin-top:16px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:10px 18px;border-radius:9px;cursor:pointer">+ Add pool</button>
+
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;margin-top:24px">
+                <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:6px">Knockout stage</div>
+                <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.6">Drag a team below onto a Home/Away box to assign it. Times auto-seed once pool play ends, but you can edit them (and the matchup) directly here.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+                  <sc-for list="{{ knockoutRosterGroups }}" as="grp" hint-placeholder-count="2">
+                    <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;flex:1;min-width:220px">
+                      <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase;margin-bottom:8px">{{ grp.name }}</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px">
+                        <sc-for list="{{ grp.chips }}" as="chip" hint-placeholder-count="5">
+                          <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">{{ chip.name }}</div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ knockoutRows.length }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:nowrap">
+                    <div style="width:160px;flex:none;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Match</div>
+                    <div style="width:96px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Time</div>
+                    <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
+                    <span style="width:8px;flex:none"></span>
+                    <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
+                    <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                    <span style="width:16px;flex:none"></span>
+                  </div>
+                </sc-if>
+                <sc-for list="{{ knockoutRows }}" as="row" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap">
+                    <div style="display:flex;align-items:center;gap:2px;width:190px;flex:none">
+                      <span style="font-size:11.5px;font-weight:700;color:#aeb4bf;line-height:1.25;overflow-wrap:break-word;min-width:0;flex:1">{{ row.round }}</span>
+                      <button onClick="{{ row.onRename }}" aria-label="Rename match" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px;flex:none">&#9998;</button>
+                    </div>
+                    <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
+                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                    <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
+                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                    <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                    <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
+                  </div>
+                </sc-for>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button onClick="{{ onAddKnockoutSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add knockout match</button>
+                  <button onClick="{{ onRegenerateKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Regenerate from standings</button>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:14px;margin-top:20px">
+                <button onClick="{{ onSaveDraw }}" disabled="{{ editorBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save changes</button>
+                <button onClick="{{ onResetDraw }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset to auto-generated</button>
+                <sc-if value="{{ editorMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ editorMsg }}</span></sc-if>
+              </div>
+            </sc-if>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
+      <div style="background:#151517;border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+        <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4">{{ modalTitle }}</div>
+        <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
+          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.18);border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;margin-bottom:18px">
+        </sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">OK</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
+class Component extends DCLogic {
+  state = {
+    view: 'public', api: null, ageGroups: [], selectedAgeId: null,
+    standings: null, fixtures: null, session: null,
+    loginUser: '', loginPass: '', loginError: '', toast: '',
+    authMode: 'login',
+    signupName: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
+    signupPending: false, signupPendingMessage: '',
+    drafts: {}, savedIds: {},
+    subTab: 'scores', adminSelectedAgeId: null,
+    editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
+    newTeamInputs: {},
+    modal: null, modalValue: '',
+  };
+
+  // ---- Generic in-app modal (replaces window.prompt/window.confirm,
+  // which are silently blocked inside this preview's sandboxed iframe —
+  // they return null/false immediately instead of showing a real dialog,
+  // so any code relying on them looks like it "does nothing"). ----
+  promptModal(title, defaultValue, onConfirm) {
+    this.setState({ modal: { kind: 'prompt', title, onConfirm }, modalValue: defaultValue || '' });
+  }
+  confirmModal(message, onConfirm) {
+    this.setState({ modal: { kind: 'confirm', title: message, onConfirm } });
+  }
+  closeModal() { this.setState({ modal: null, modalValue: '' }); }
+  submitModal() {
+    const { modal, modalValue } = this.state;
+    if (!modal) return;
+    if (modal.kind === 'prompt') {
+      const trimmed = (modalValue || '').trim();
+      this.closeModal();
+      if (trimmed) modal.onConfirm(trimmed);
+    } else {
+      this.closeModal();
+      modal.onConfirm();
+    }
+  }
+
+  async componentDidMount() {
+    const api = await import(new URL('scores-data.js', document.baseURI).href);
+    const ageGroups = await api.getAgeGroups();
+    const firstComp = ageGroups.find((a) => a.hasStandings) || ageGroups[0];
+    this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: firstComp && firstComp.id }, () => {
+      this.loadPublic();
+    });
+  }
+
+  async loadPublic() {
+    const { api, selectedAgeId } = this.state;
+    if (!api || !selectedAgeId) return;
+    const standings = await api.getStandings(selectedAgeId);
+    this.setState({ standings });
+  }
+
+  async loadAdmin(ageIdOverride) {
+    const { api, session } = this.state;
+    if (!api || !session) return;
+    let ageId = session.ageGroupId === '*' ? (ageIdOverride || this.state.adminSelectedAgeId) : session.ageGroupId;
+    if (session.ageGroupId === '*' && !ageId) {
+      const first = this.state.ageGroups.find((a) => a.hasStandings);
+      ageId = first && first.id;
+    }
+    if (!ageId) { this.setState({ fixtures: null }); return; }
+    const fixtures = await api.getFixtures(ageId);
+    const drafts = { ...this.state.drafts };
+    [...fixtures.pool, ...fixtures.knockout].forEach((fx) => {
+      const r = fx.result || {};
+      if (!drafts[fx.id]) drafts[fx.id] = {
+        homeScore: r.homeScore != null ? String(r.homeScore) : '', awayScore: r.awayScore != null ? String(r.awayScore) : '',
+        homeTries: r.homeTries != null ? String(r.homeTries) : '', awayTries: r.awayTries != null ? String(r.awayTries) : '',
+        homeCards: r.homeCards != null ? String(r.homeCards) : '', awayCards: r.awayCards != null ? String(r.awayCards) : '',
+        walkover: r.walkover || null,
+        spiritNomineeHome: r.spiritNomineeHome || '', spiritNomineeAway: r.spiritNomineeAway || '',
+      };
+    });
+    this.setState({ fixtures, drafts, adminSelectedAgeId: ageId });
+    this.loadEditor(ageId);
+    this.loadSpiritAward(ageId);
+  }
+
+  async loadSpiritAward(agId) {
+    const { api } = this.state;
+    if (!api || !api.supportsSpiritAward(agId)) { this.setState({ spiritAward: null }); return; }
+    const spiritAward = await api.getSpiritAward(agId);
+    this.setState({ spiritAward });
+  }
+
+  async loadEditor(agId) {
+    const { api } = this.state;
+    if (!api || !agId) return;
+    const draw = await api.getDraw(agId);
+    this.setState({ editorDraw: draw, editorAgeId: agId, editorMsg: '' });
+  }
+
+  onTeamDragStart(team, e) {
+    this._dragTeam = team;
+    if (e && e.dataTransfer) { try { e.dataTransfer.setData('text/plain', team); } catch (err) {} }
+  }
+  onPoolDropTeam(poolId) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => {
+      if (!s.editorDraw) return {};
+      const pools = s.editorDraw.pools.map((p) => ({ ...p, teams: p.teams.filter((t) => t !== team) }));
+      const target = pools.find((p) => p.id === poolId);
+      if (target && !target.teams.includes(team)) target.teams.push(team);
+      return { editorDraw: { ...s.editorDraw, pools } };
+    });
+    this._dragTeam = null;
+  }
+  onSlotSideDrop(slotId, side) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
+    this._dragTeam = null;
+  }
+  onSlotTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
+  }
+  // Live pitch edit from the "Enter scores" tab (a quicker path than the
+  // full Fixture Editor for just re-assigning a pitch on matchday). Saves
+  // straight into the underlying draw via saveDraw, same store as the
+  // Fixture Editor, so both stay in sync.
+  setPitchDraft(fxId, stage, val) {
+    this.setState((s) => ({ pitchDrafts: { ...(s.pitchDrafts || {}), [fxId]: val } }));
+    clearTimeout(this._pitchSaveTimer);
+    this._pitchSaveTimer = setTimeout(() => this.commitPitch(fxId, stage, val), 600);
+  }
+  async commitPitch(fxId, stage, val) {
+    const { api, session, editorDraw, editorAgeId } = this.state;
+    if (!session) return;
+    const ag = this.state.adminSelectedAgeId;
+    let draw = editorDraw && editorAgeId === ag ? editorDraw : await api.getDraw(ag);
+    if (stage === 'knockout') {
+      draw = { ...draw, knockout: draw.knockout.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
+    } else {
+      draw = { ...draw, slots: draw.slots.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
+    }
+    await api.saveDraw(ag, draw, session);
+    if (this.state.editorAgeId === ag) this.setState({ editorDraw: draw });
+    if (this.state.selectedAgeId === ag) this.loadPublic();
+  }
+  onSlotPitchChange(slotId, val) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) } }));
+  }
+  onAddSlot(poolId) {
+    this.setState((s) => {
+      const poolSlotsList = s.editorDraw.slots.filter((sl) => sl.poolId === poolId);
+      const lastMins = poolSlotsList.length ? Math.max(...poolSlotsList.map((sl) => sl.startMins)) : 8 * 60 - 20;
+      const newSlot = { id: `${s.editorAgeId}:${poolId}:new${Date.now()}`, poolId, home: '', away: '', startMins: lastMins + 20, pitch: 'TBD' };
+      return { editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots, newSlot] } };
+    });
+  }
+  onRemoveSlot(slotId) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.filter((sl) => sl.id !== slotId) } }));
+  }
+  onRenameTeam(poolId, oldName) {
+    this.promptModal('Rename team', oldName, (trimmed) => {
+      if (trimmed === oldName) return;
+      this.setState((s) => {
+        const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.map((t) => (t === oldName ? trimmed : t)) } : p));
+        const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === oldName ? trimmed : sl.home, away: sl.away === oldName ? trimmed : sl.away }));
+        return { editorDraw: { ...s.editorDraw, pools, slots } };
+      });
+    });
+  }
+  onRemoveTeam(poolId, team) {
+    this.confirmModal(`Remove ${team} from this pool? Any match slots featuring them will show "Drop team here" until reassigned.`, () => {
+      this.setState((s) => {
+        const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.filter((t) => t !== team) } : p));
+        const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === team ? '' : sl.home, away: sl.away === team ? '' : sl.away }));
+        return { editorDraw: { ...s.editorDraw, pools, slots } };
+      });
+    });
+  }
+  onNewTeamInputChange(poolId, val) {
+    this.setState((s) => ({ newTeamInputs: { ...s.newTeamInputs, [poolId]: val } }));
+  }
+  onAddTeam(poolId) {
+    const val = (this.state.newTeamInputs[poolId] || '').trim();
+    if (!val) return;
+    this.setState((s) => {
+      const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.includes(val) ? p.teams : [...p.teams, val] } : p));
+      return { editorDraw: { ...s.editorDraw, pools }, newTeamInputs: { ...s.newTeamInputs, [poolId]: '' } };
+    });
+  }
+  onAddPool() {
+    this.setState((s) => {
+      const existingIds = s.editorDraw.pools.map((p) => p.id);
+      let nextChar = 'A';
+      for (let i = 0; i < 26; i++) { const c = String.fromCharCode(65 + i); if (!existingIds.includes(c)) { nextChar = c; break; } }
+      const newPool = { id: nextChar, name: `Pool ${nextChar}`, teams: [] };
+      return { editorDraw: { ...s.editorDraw, pools: [...s.editorDraw.pools, newPool] } };
+    });
+  }
+  onRenamePool(poolId, oldName) {
+    this.promptModal('Rename pool', oldName, (trimmed) => {
+      if (trimmed === oldName) return;
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, pools: s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, name: trimmed } : p)) } }));
+    });
+  }
+  onRemovePool(poolId) {
+    this.confirmModal('Delete this pool? This removes all its teams and match slots.', () => {
+      this.setState((s) => ({
+        editorDraw: {
+          ...s.editorDraw,
+          pools: s.editorDraw.pools.filter((p) => p.id !== poolId),
+          slots: s.editorDraw.slots.filter((sl) => sl.poolId !== poolId),
+        },
+      }));
+    });
+  }
+  onRegeneratePool(poolId) {
+    this.confirmModal("Regenerate this pool's match schedule from its current team list? This replaces all of this pool's match slots, and any scores already entered for them.", () => {
+      const { api, editorDraw, editorAgeId } = this.state;
+      const pool = editorDraw.pools.find((p) => p.id === poolId);
+      const fresh = api.regeneratePoolSlots(editorAgeId, poolId, pool.teams);
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots.filter((sl) => sl.poolId !== poolId), ...fresh] } }));
+    });
+  }
+
+  onKnockoutSideDrop(slotId, side) {
+    const team = this._dragTeam; if (!team) return;
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
+    this._dragTeam = null;
+  }
+  onKnockoutTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
+  }
+  onKnockoutPitchChange(slotId, val) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) } }));
+  }
+  onRenameKnockoutRound(slotId, oldRound) {
+    this.promptModal('Rename this knockout match label', oldRound, (trimmed) => {
+      if (trimmed === oldRound) return;
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, round: trimmed } : sl)) } }));
+    });
+  }
+  onAddKnockoutSlot() {
+    this.setState((s) => {
+      const list = s.editorDraw.knockout || [];
+      const lastMins = list.length ? Math.max(...list.map((sl) => sl.startMins)) : 8 * 60;
+      const newSlot = { id: `${s.editorAgeId}:knockout:new${Date.now()}`, round: 'New knockout match', home: '', away: '', startMins: lastMins + 20, pitch: 'TBD' };
+      return { editorDraw: { ...s.editorDraw, knockout: [...list, newSlot] } };
+    });
+  }
+  onRemoveKnockoutSlot(slotId) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: (s.editorDraw.knockout || []).filter((sl) => sl.id !== slotId) } }));
+  }
+  async onRegenerateKnockout() {
+    this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
+      const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId);
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: fresh } }));
+    });
+  }
+  async onSaveDraw() {
+    const { api, editorDraw, editorAgeId, session } = this.state;
+    this.setState({ editorBusy: true, editorMsg: '' });
+    const res = await api.saveDraw(editorAgeId, editorDraw, session);
+    if (res.ok) {
+      this.setState({ editorBusy: false, editorMsg: 'Saved — live on the public schedule now.' });
+      this.loadAdmin(editorAgeId);
+      if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+    } else {
+      this.setState({ editorBusy: false, editorMsg: res.error || 'Could not save.' });
+    }
+  }
+  async onResetDraw() {
+    this.confirmModal('Reset this age group to the auto-generated draw? Your custom pools, slots, and times will be discarded.', async () => {
+      const { editorAgeId, session } = this.state;
+      this.setState({ editorBusy: true });
+      await this.state.api.resetDraw(editorAgeId, session);
+      await this.loadEditor(editorAgeId);
+      this.setState({ editorBusy: false, editorMsg: 'Reset to auto-generated draw.' });
+      this.loadAdmin(editorAgeId);
+      if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+    });
+  }
+
+  setDraft(id, field, val) {
+    this.setState((s) => ({ drafts: { ...s.drafts, [id]: { ...(s.drafts[id] || {}), [field]: val } } }));
+  }
+  setWalkover(id, val) {
+    this.setState((s) => {
+      const d = { ...(s.drafts[id] || {}), walkover: val };
+      if (val === 'home') { d.homeScore = '20'; d.awayScore = '0'; d.homeTries = '4'; d.awayTries = '0'; }
+      else if (val === 'away') { d.homeScore = '0'; d.awayScore = '20'; d.homeTries = '0'; d.awayTries = '4'; }
+      return { drafts: { ...s.drafts, [id]: d } };
+    });
+  }
+
+  async save(id) {
+    const { api, session, drafts } = this.state;
+    const res = await api.submitResult(id, drafts[id] || {}, session);
+    if (res.ok) {
+      this.setState((s) => ({ savedIds: { ...s.savedIds, [id]: 'Saved ✓ ' + new Date().toLocaleTimeString() }, toast: 'Score saved.' }));
+      await this.loadAdmin();
+      setTimeout(() => this.setState({ toast: '' }), 2500);
+    } else {
+      this.setState({ toast: res.error || 'Could not save.' });
+    }
+  }
+
+  async doLogin() {
+    const { api, loginUser, loginPass } = this.state;
+    const res = await api.login(loginUser, loginPass);
+    if (res.ok) this.setState({ session: res.session, loginError: '', loginPass: '', drafts: {} }, () => this.loadAdmin());
+    else this.setState({ loginError: res.error });
+  }
+  doLogout() { this.state.api.logout(); this.setState({ session: null, fixtures: null }); }
+
+  async doSignup() {
+    const { api, signupName, signupUser, signupPass, signupCode } = this.state;
+    this.setState({ signupBusy: true, signupError: '' });
+    const res = await api.signup({ name: signupName, username: signupUser, password: signupPass, inviteCode: signupCode });
+    if (res.ok && res.pending) {
+      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
+    } else if (res.ok) {
+      this.setState({ session: res.session, signupBusy: false, signupPass: '', signupCode: '', drafts: {} }, () => this.loadAdmin());
+    } else {
+      this.setState({ signupError: res.error, signupBusy: false });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
+    const tabOn = tabBase + 'background:#E11B22;color:#fff;';
+    const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
+
+    // ---- public age tabs ----
+    const ageTabs = s.ageGroups.map((a) => ({
+      name: a.name, hasStandings: a.hasStandings,
+      onSelect: () => this.setState({ selectedAgeId: a.id }, () => this.loadPublic()),
+      style: 'font-weight:700;font-size:13px;padding:8px 14px;border-radius:100px;cursor:pointer;white-space:nowrap;border:1px solid ' +
+        (a.id === s.selectedAgeId ? '#E11B22;background:#E11B22;color:#fff' : 'rgba(255,255,255,0.15);background:#151517;color:#cdd2da'),
+    }));
+
+    const st = s.standings;
+    const selName = st ? st.ageGroup.name : '';
+    const festival = st ? !st.ageGroup.hasStandings : false;
+    const advance = st && st.pools[0] ? (this._advanceFor(st) ) : 0;
+
+    // ---- pools ----
+    const pools = st && st.ageGroup.hasStandings ? st.pools.map((p) => {
+      const rows = (st.tables[p.id] || []).map((r) => {
+        const q = r.rank <= this._advance(st);
+        return {
+          ...r,
+          marginText: (r.margin > 0 ? '+' : '') + r.margin,
+          rankColor: q ? '#3bd070' : '#7f8794',
+          rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
+            (q ? 'background:rgba(23,163,74,0.08);border-left:3px solid #17A34A' : ''),
+        };
+      });
+      return { name: p.name, rows };
+    }) : [];
+
+    // ---- bracket ----
+    const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
+    const bracket = st && st.bracket ? st.bracket.map((rnd) => ({
+      round: rnd.round,
+      games: rnd.games.map((g) => {
+        const r = g.result || {};
+        const hasScore = r.homeScore != null;
+        return {
+          home: g.home || 'TBD', away: g.away || 'TBD',
+          homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
+          awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
+          homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
+          awayColor: !g.away ? colorMute : (g.winner === g.away ? colorWin : colorNorm),
+          homeWeight: g.winner === g.home ? '800' : '600',
+          awayWeight: g.winner === g.away ? '800' : '600',
+        };
+      }),
+    })) : [];
+    const hasBracket = bracket.some((r) => r.games.length);
+
+    // ---- U16B special double-bracket (top 2 of each pool → Cup/Bowl, next 2 → Plate/Shield) ----
+    const isU16BSpecial = !!(st && st.doubleBracket);
+    let doubleBrackets = [];
+    let awardsSummary = [];
+    let knockoutSeeds = [];
+    let seedsReadyFlag = false;
+    if (isU16BSpecial) {
+      const db = st.doubleBracket;
+      const awardRow = (g, tier, color) => {
+        const ready = !!(g.winner && g.home && g.away);
+        return { tier, color, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+      };
+      awardsSummary = [
+        awardRow(db.top.cup, 'Cup', '#f5c518'),
+        awardRow(db.top.bowl, 'Bowl', '#c9ced6'),
+        awardRow(db.bottom.plate, 'Plate', '#17A34A'),
+        awardRow(db.bottom.shield, 'Shield', '#ff5a3c'),
+      ].map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
+      doubleBrackets = [
+        {
+          title: 'Top Bracket · Cup & Bowl', titleColor: '#3bd070', badgeBg: 'rgba(59,208,112,0.12)',
+          leftCol: [
+            { label: 'Semi-Final 1', ...this._fmtMatch(db.top.sf1) },
+            { label: 'Semi-Final 2', ...this._fmtMatch(db.top.sf2) },
+          ],
+          rightCol: [
+            { label: 'Cup Final', labelColor: '#f5c518', borderColor: '#f5c518', cardBg: 'linear-gradient(160deg,#241f0f,#1c1d20)', cardShadow: '0 10px 30px rgba(245,197,24,0.18)', isCup: true, ...this._fmtMatch(db.top.cup) },
+            { label: 'Bowl Final', labelColor: '#7f8794', borderColor: 'rgba(255,255,255,0.1)', cardBg: '#1c1d20', cardShadow: '0 10px 24px rgba(0,0,0,.3)', isBowl: true, ...this._fmtMatch(db.top.bowl) },
+          ],
+        },
+        {
+          title: 'Bottom Bracket · Plate & Shield', titleColor: '#E11B22', badgeBg: 'rgba(225,27,34,0.12)',
+          leftCol: [
+            { label: 'Semi-Final 1', ...this._fmtMatch(db.bottom.sf1) },
+            { label: 'Semi-Final 2', ...this._fmtMatch(db.bottom.sf2) },
+          ],
+          rightCol: [
+            { label: 'Plate Final', labelColor: '#17A34A', borderColor: '#17A34A', cardBg: 'linear-gradient(160deg,#0f2116,#1c1d20)', cardShadow: '0 10px 30px rgba(23,163,74,0.18)', isPlate: true, ...this._fmtMatch(db.bottom.plate) },
+            { label: 'Shield Final', labelColor: '#7f8794', borderColor: 'rgba(255,255,255,0.1)', cardBg: '#1c1d20', cardShadow: '0 10px 24px rgba(0,0,0,.3)', isShield: true, ...this._fmtMatch(db.bottom.shield) },
+          ],
+        },
+      ];
+
+      seedsReadyFlag = !!db.poolsComplete;
+      if (seedsReadyFlag) {
+        const A = st.tables[st.pools[0].id] || [];
+        const B = st.tables[st.pools[1].id] || [];
+        const ordinal = (n) => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
+        const mk = (seed, row, poolLabel, bracket) => (!row ? null : {
+          seed, team: row.team, poolLabel, rankLabel: ordinal(row.rank), bracket,
+          bracketColor: bracket === 'Top Bracket' ? '#3bd070' : '#E11B22',
+        });
+        knockoutSeeds = [
+          mk(1, A[0], 'Pool A', 'Top Bracket'), mk(2, B[0], 'Pool B', 'Top Bracket'),
+          mk(3, A[1], 'Pool A', 'Top Bracket'), mk(4, B[1], 'Pool B', 'Top Bracket'),
+          mk(5, A[2], 'Pool A', 'Bottom Bracket'), mk(6, B[2], 'Pool B', 'Bottom Bracket'),
+          mk(7, A[3], 'Pool A', 'Bottom Bracket'), mk(8, B[3], 'Pool B', 'Bottom Bracket'),
+        ].filter(Boolean);
+      }
+    } else if (hasBracket) {
+      // ---- Regular waterfall groups (everyone except U16B/U16G): each
+      // knockout round IS a single Cup/Bowl/Plate/Shield final already —
+      // pull winner + runner-up straight from it for the same
+      // presentation-ready summary the double-bracket groups get. ----
+      const tierMeta = {
+        'Cup Final': { tier: 'Cup', color: '#f5c518' },
+        'Bowl Final': { tier: 'Bowl', color: '#c9ced6' },
+        'Plate Final': { tier: 'Plate', color: '#17A34A' },
+        'Shield Final': { tier: 'Shield', color: '#ff5a3c' },
+      };
+      awardsSummary = st.bracket
+        .filter((rnd) => tierMeta[rnd.round])
+        .map((rnd) => {
+          const g = rnd.games[0] || {};
+          const meta = tierMeta[rnd.round];
+          const ready = !!(g.winner && g.home && g.away);
+          return { ...meta, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+        })
+        .map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
+    }
+
+    // ---- admin rows ----
+    const btn = (on) => 'font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;border:1px solid ' +
+      (on ? '#E11B22;background:#E11B22;color:#fff' : 'rgba(255,255,255,0.18);background:transparent;color:#cdd2da');
+    let adminRows = [];
+    if (s.fixtures) {
+      const mk = (fx, label) => {
+        const d = s.drafts[fx.id] || {};
+        const canEdit = !!(fx.home && fx.away);
+        return {
+          id: fx.id, home: fx.home || 'TBD', away: fx.away || 'TBD', label, pitch: fx.pitch || 'TBD',
+          canEdit, awaiting: !canEdit,
+          draft: {
+            homeScore: d.homeScore || '', awayScore: d.awayScore || '',
+            homeTries: d.homeTries || '', awayTries: d.awayTries || '',
+            homeCards: d.homeCards || '', awayCards: d.awayCards || '',
+          },
+          woNoneStyle: btn(!d.walkover), woHomeStyle: btn(d.walkover === 'home'), woAwayStyle: btn(d.walkover === 'away'),
+          savedNote: s.savedIds[fx.id] || '',
+          pitchDraft: (s.pitchDrafts && s.pitchDrafts[fx.id] != null) ? s.pitchDrafts[fx.id] : fx.pitch,
+          showSpirit: !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId)),
+          spiritDraftHome: d.spiritNomineeHome || '', spiritDraftAway: d.spiritNomineeAway || '',
+          h: {
+            hs: (e) => this.setDraft(fx.id, 'homeScore', e.target.value),
+            spiritHome: (e) => this.setDraft(fx.id, 'spiritNomineeHome', e.target.value),
+            spiritAway: (e) => this.setDraft(fx.id, 'spiritNomineeAway', e.target.value),
+            as: (e) => this.setDraft(fx.id, 'awayScore', e.target.value),
+            ht: (e) => this.setDraft(fx.id, 'homeTries', e.target.value),
+            at: (e) => this.setDraft(fx.id, 'awayTries', e.target.value),
+            hc: (e) => this.setDraft(fx.id, 'homeCards', e.target.value),
+            ac: (e) => this.setDraft(fx.id, 'awayCards', e.target.value),
+            woNone: () => this.setWalkover(fx.id, null),
+            woHome: () => this.setWalkover(fx.id, 'home'),
+            woAway: () => this.setWalkover(fx.id, 'away'),
+            save: () => this.save(fx.id),
+            pitch: (e) => this.setPitchDraft(fx.id, fx.stage, e.target.value),
+          },
+        };
+      };
+      adminRows = [
+        ...s.fixtures.pool.map((fx) => mk(fx, fx.poolName || 'Pool')),
+        ...s.fixtures.knockout.map((fx) => mk(fx, fx.round)),
+      ];
+    }
+
+    const session = s.session;
+    const adminAgeMeta = s.ageGroups.find((a) => a.id === s.adminSelectedAgeId);
+    const adminName = session ? (adminAgeMeta || {}).name || (session.ageGroupId === '*' ? 'All age groups' : '') : '';
+    const adminSelectedHasStandings = adminAgeMeta ? adminAgeMeta.hasStandings : true;
+    const showSpiritInput = !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId));
+    const spiritAward = s.spiritAward;
+    const spiritTally = spiritAward && spiritAward.tally ? spiritAward.tally.map((t) => {
+      const isWinner = spiritAward.complete && spiritAward.winners.some((w) => w.name === t.name);
+      return {
+        name: t.name, count: t.count, team: t.team, isWinner,
+        chipBg: isWinner ? 'rgba(59,208,112,0.16)' : '#1f1f22',
+        chipBorder: isWinner ? '#3bd070' : 'rgba(255,255,255,0.15)',
+        countColor: isWinner ? '#3bd070' : '#aeb4bf',
+      };
+    }) : [];
+
+    // ---- fixture editor ----
+    const knockoutRosterGroups = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => ({
+      id: pool.id, name: pool.name,
+      chips: pool.teams.map((t) => ({ name: t, onDragStart: (e) => this.onTeamDragStart(t, e) })),
+    }));
+    const poolCards = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => {
+      const slots = (s.editorDraw.slots || []).filter((sl) => sl.poolId === pool.id).sort((a, b) => a.startMins - b.startMins);
+      return {
+        id: pool.id, name: pool.name,
+        onDragOverZone: (e) => e.preventDefault(),
+        onDropZone: (e) => { e.preventDefault(); this.onPoolDropTeam(pool.id); },
+        teamChips: pool.teams.map((t) => ({
+          name: t,
+          onDragStart: (e) => this.onTeamDragStart(t, e),
+          onRename: () => this.onRenameTeam(pool.id, t),
+          onRemove: () => this.onRemoveTeam(pool.id, t),
+        })),
+        newTeamValue: s.newTeamInputs[pool.id] || '',
+        onNewTeamInput: (e) => this.onNewTeamInputChange(pool.id, e.target.value),
+        onNewTeamKey: (e) => { if (e.key === 'Enter') this.onAddTeam(pool.id); },
+        onAddTeamClick: () => this.onAddTeam(pool.id),
+        onRenamePool: () => this.onRenamePool(pool.id, pool.name),
+        onRemovePool: () => this.onRemovePool(pool.id),
+        onAddSlot: () => this.onAddSlot(pool.id),
+        onRegenerate: () => this.onRegeneratePool(pool.id),
+        slotRows: slots.map((sl) => ({
+          id: sl.id,
+          timeVal: s.api.minutesToTimeInput(sl.startMins),
+          pitchVal: sl.pitch || '',
+          home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
+          homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+          onTimeChange: (e) => this.onSlotTimeChange(sl.id, e.target.value),
+          onPitchChange: (e) => this.onSlotPitchChange(sl.id, e.target.value),
+          onDragOver: (e) => e.preventDefault(),
+          onDropHome: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'home'); },
+          onDropAway: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'away'); },
+          onRemove: () => this.onRemoveSlot(sl.id),
+        })),
+      };
+    });
+
+    return {
+      isModalOpen: !!s.modal,
+      isModalPrompt: !!s.modal && s.modal.kind === 'prompt',
+      modalTitle: s.modal ? s.modal.title : '',
+      modalValue: s.modalValue,
+      onModalValueChange: (e) => this.setState({ modalValue: e.target.value }),
+      onModalCancel: () => this.closeModal(),
+      onModalConfirm: () => this.submitModal(),
+      onModalKeyDown: (e) => { if (e.key === 'Enter') this.submitModal(); if (e.key === 'Escape') this.closeModal(); },
+
+      isPublic: s.view === 'public', isAdmin: s.view === 'admin',
+      showPublic: () => this.setState({ view: 'public' }),
+      showAdmin: () => this.setState({ view: 'admin', toast: '' }, () => { if (this.state.session) this.loadAdmin(); }),
+      tabPublicStyle: s.view === 'public' ? tabOn : tabOff,
+      tabAdminStyle: s.view === 'admin' ? tabOn : tabOff,
+      toast: s.toast,
+
+      ageTabs, selectedName: selName, selectedFestival: festival,
+      showTables: !!(st && st.ageGroup.hasStandings), pools, bracket, hasBracket,
+      isU16BSpecial, doubleBrackets, awardsSummary, awardsReady: awardsSummary.some((a) => a.ready),
+      knockoutSeeds, seedsReady: seedsReadyFlag,
+
+      loggedIn: !!session, loggedOut: !session,
+      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
+      onUser: (e) => this.setState({ loginUser: e.target.value }),
+      onPass: (e) => this.setState({ loginPass: e.target.value }),
+      onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
+      onLogin: () => this.doLogin(),
+      onLogout: () => this.doLogout(),
+
+      isLoginMode: s.authMode === 'login',
+      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
+      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
+      signupPendingMessage: s.signupPendingMessage,
+      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
+      signupName: s.signupName, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
+      signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
+      onSignupName: (e) => this.setState({ signupName: e.target.value }),
+      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
+      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
+      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
+      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
+      onSignup: () => this.doSignup(),
+
+      sessionName: session ? session.name : '',
+      adminAgeName: adminName || 'Your fixtures',
+      adminRows,
+
+      isAdminAll: !!(session && session.ageGroupId === '*'),
+      adminAgeOptions: s.ageGroups,
+      adminSelectedAgeId: s.adminSelectedAgeId || '',
+      onAdminAgeChange: (e) => { const id = e.target.value; this.setState({ adminSelectedAgeId: id }, () => this.loadAdmin(id)); },
+
+      adminSelectedHasStandings, showScoresTabButton: adminSelectedHasStandings,
+      isFestivalAdminGroup: !!(adminAgeMeta && !adminAgeMeta.hasStandings),
+      showSpiritInput,
+      spiritTally, hasSpiritTally: spiritTally.length > 0, noSpiritTally: spiritTally.length === 0,
+      spiritComplete: !!(spiritAward && spiritAward.complete),
+      spiritWinnersText: spiritAward && spiritAward.winners ? spiritAward.winners.map((w) => (w.team ? `${w.name} (${w.team})` : w.name)).join(' & ') : '',
+      spiritProgressText: spiritAward ? `${spiritAward.playedMatches} of ${spiritAward.totalMatches} matches scored` : '',
+      isScoresSubTab: s.subTab !== 'fixtures' && adminSelectedHasStandings, isFixturesSubTab: s.subTab === 'fixtures' || !adminSelectedHasStandings,
+      showScoresSubTab: () => this.setState({ subTab: 'scores' }),
+      showFixturesSubTab: () => this.setState({ subTab: 'fixtures' }),
+      subTabScoresStyle: s.subTab !== 'fixtures' ? tabOn : tabOff,
+      subTabFixturesStyle: s.subTab === 'fixtures' ? tabOn : tabOff,
+
+      editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,
+      poolCards, knockoutRosterGroups,
+      knockoutRosterDragOver: (e) => e.preventDefault(),
+      onSaveDraw: () => this.onSaveDraw(),
+      onResetDraw: () => this.onResetDraw(),
+      onAddPool: () => this.onAddPool(),
+
+      knockoutRows: (s.editorDraw && s.editorDraw.knockout ? [...s.editorDraw.knockout] : []).sort((a, b) => a.startMins - b.startMins).map((sl) => ({
+        id: sl.id, round: sl.round,
+        timeVal: s.api.minutesToTimeInput(sl.startMins),
+        pitchVal: sl.pitch || '',
+        home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
+        homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+        onTimeChange: (e) => this.onKnockoutTimeChange(sl.id, e.target.value),
+        onPitchChange: (e) => this.onKnockoutPitchChange(sl.id, e.target.value),
+        onDragOver: (e) => e.preventDefault(),
+        onDropHome: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'home'); },
+        onDropAway: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'away'); },
+        onRename: () => this.onRenameKnockoutRound(sl.id, sl.round),
+        onRemove: () => this.onRemoveKnockoutSlot(sl.id),
+      })),
+      onAddKnockoutSlot: () => this.onAddKnockoutSlot(),
+      onRegenerateKnockout: () => this.onRegenerateKnockout(),
+    };
+  }
+
+  _fmtMatch(g) {
+    const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
+    const r = g.result || {};
+    const hasScore = r.homeScore != null;
+    return {
+      home: g.home || 'TBD', away: g.away || 'TBD',
+      homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
+      awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
+      homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
+      awayColor: !g.away ? colorMute : (g.winner === g.away ? colorWin : colorNorm),
+      homeWeight: g.winner === g.home ? '800' : '600',
+      awayWeight: g.winner === g.away ? '800' : '600',
+    };
+  }
+
+  _advance(st) {
+    // mirror advance count from data layer via pool sizes; fetched value lives server-side,
+    // but standings response encodes qualification by pool config length heuristics.
+    return st && st._advance != null ? st._advance : (st && st.pools && st.pools.length > 1 ? 2 : 4);
+  }
+  _advanceFor(st) { return this._advance(st); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+// netlify/functions/submission-created.js
+//
+// Fires automatically after every Netlify Forms submission (both
+// "team-registration" and "player-registration"). Appends a row to the
+// matching Google Sheet so multiple people can view/manage registrations
+// without needing Netlify dashboard access.
+//
+// Two sheets have already been created for you (in your "Quins JRT 2026" Drive folder):
+//   Team Registrations:   https://docs.google.com/spreadsheets/d/1u1aGMMFFVsnbbw2atMQWOofGIG7gGMt0OK98ipwjAt8/edit
+//   Player Registrations: https://docs.google.com/spreadsheets/d/1rrouliAtSlA2hqoVm8KG7Mke80oq6iBv4tJJkETi2jc/edit
+// Each already has the correct header row in row 1. Share either sheet
+// (Share button, top right) with anyone on your team who needs to see
+// registrations — Viewer is enough, Editor if they should be able to
+// correct entries by hand.
+//
+// ---------------------------------------------------------------------
+// AUTH METHOD: Service account key
+// ---------------------------------------------------------------------
+// This function authenticates as a Google service account — a robot
+// identity with its own email address (looks like
+// name@project-id.iam.gserviceaccount.com). The two sheets above must be
+// shared with that email (Share button, top right, Editor access) or the
+// append calls below will fail with a 403.
+//
+// ONE-TIME SETUP:
+// 1. https://console.cloud.google.com -> your project -> "APIs & Services"
+//    -> Library -> enable the "Google Sheets API".
+//
+// 2. "IAM & Admin" -> "Service Accounts" -> Create service account (any
+//    name, no project-level roles needed).
+//
+// 3. Open the service account -> "Keys" tab -> Add key -> Create new key
+//    -> JSON. This downloads a JSON file — you should already have this.
+//
+// 4. Share both Google Sheets with the service account's email (the
+//    `client_email` field in the JSON), Editor access.
+//
+// 5. In Netlify: Site configuration -> Environment variables -> add:
+//      GOOGLE_SERVICE_ACCOUNT_EMAIL       = (the `client_email` field in the JSON)
+//      GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = (the `private_key` field in the JSON, quotes and all)
+//      GOOGLE_SHEET_ID_TEAMS   = 1u1aGMMFFVsnbbw2atMQWOofGIG7gGMt0OK98ipwjAt8
+//      GOOGLE_SHEET_ID_PLAYERS = 1rrouliAtSlA2hqoVm8KG7Mke80oq6iBv4tJJkETi2jc
+//    The private key is multi-line — paste it exactly as it appears in the
+//    JSON (including the literal "\n" sequences); the code below converts
+//    those back into real newlines.
+//
+// 6. Make sure netlify.toml points at the functions folder, e.g.:
+//      [build]
+//        functions = "netlify/functions"
+//
+// 7. Deploy. From then on, every new form submission automatically
+//    appends a row to the matching sheet.
+// ---------------------------------------------------------------------
+
+const { google } = require('googleapis');
+
+function getAuth() {
+  return new google.auth.JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+}
+
+exports.handler = async (event) => {
+  try {
+    const body = JSON.parse(event.body);
+    const { form_name: formName, data } = body.payload;
+
+    const auth = getAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    let spreadsheetId, range, values;
+    const submittedAt = new Date().toISOString();
+
+    if (formName === 'team-registration') {
+      spreadsheetId = process.env.GOOGLE_SHEET_ID_TEAMS;
+      range = 'Sheet1!A:M';
+      values = [[
+        submittedAt,
+        data.club || '', data['team-name'] || '', data['age-group'] || '',
+        data['head-coach-name'] || '', data['head-coach-email'] || '', data['head-coach-phone'] || '',
+        data['manager-name'] || '', data['manager-email'] || '', data['manager-phone'] || '',
+        data['num-players'] || '', data.notes || '', data.players || '',
+      ]];
+    } else if (formName === 'player-registration') {
+      spreadsheetId = process.env.GOOGLE_SHEET_ID_PLAYERS;
+      range = 'Sheet1!A:P';
+      values = [[
+        submittedAt,
+        data['player-first-name'] || '', data['player-last-name'] || '', data.dob || '',
+        data.club || '', data['age-group'] || '',
+        data['parent-first-name'] || '', data['parent-last-name'] || '',
+        data['parent-email'] || '', data['parent-phone'] || '',
+        data['emergency-first-name'] || '', data['emergency-last-name'] || '', data['emergency-phone'] || '',
+        data['medical-notes'] || '', data.consent || '', data['play-up-consent'] || '',
+      ]];
+    } else {
+      // Not one of our two forms (e.g. Netlify's own honeypot test) — ignore.
+      return { statusCode: 200, body: 'ignored' };
+    }
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values },
+    });
+
+    return { statusCode: 200, body: 'ok' };
+  } catch (err) {
+    // Netlify retries background functions on failure, and logs this in
+    // the function's own log tab — check there if rows stop appearing.
+    console.error('submission-created error:', err);
+    return { statusCode: 500, body: 'error' };
+  }
+};

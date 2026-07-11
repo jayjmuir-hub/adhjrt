@@ -1,54 +1,10 @@
-<!DOCTYPE html>
-<!--
-  This file exists purely so Netlify's build-time form crawler can find and
-  register these forms. Netlify scans the raw (pre-JS) HTML of every file in
-  the publish directory for <form data-netlify="true"> tags — since the real
-  site is a client-rendered app, its forms don't exist in the static markup
-  Netlify receives. This decoy file mirrors the field names exactly; the
-  live site submits to these same form names via fetch(). This file is never
-  linked to and never seen by visitors.
-  See: https://docs.netlify.com/forms/setup/#javascript-rendered-forms
--->
-<html>
-<head><meta charset="utf-8"><title>Form registration (not a page)</title></head>
-<body>
-
-<form name="team-registration" data-netlify="true" netlify-honeypot="bot-field" hidden>
-  <input name="form-name" value="team-registration" />
-  <input name="bot-field" />
-  <input name="club" />
-  <input name="team-name" />
-  <input name="age-group" />
-  <input name="head-coach-name" />
-  <input name="head-coach-email" type="email" />
-  <input name="head-coach-phone" />
-  <input name="manager-name" />
-  <input name="manager-email" type="email" />
-  <input name="manager-phone" />
-  <input name="num-players" />
-  <input name="notes" />
-  <input name="players" />
-</form>
-
-<form name="player-registration" data-netlify="true" netlify-honeypot="bot-field" hidden>
-  <input name="form-name" value="player-registration" />
-  <input name="bot-field" />
-  <input name="player-first-name" />
-  <input name="player-last-name" />
-  <input name="dob" />
-  <input name="club" />
-  <input name="age-group" />
-  <input name="parent-first-name" />
-  <input name="parent-last-name" />
-  <input name="parent-email" type="email" />
-  <input name="parent-phone" />
-  <input name="emergency-first-name" />
-  <input name="emergency-last-name" />
-  <input name="emergency-phone" />
-  <input name="medical-notes" />
-  <input name="consent" />
-  <input name="play-up-consent" />
-</form>
-
-</body>
-</html>
+{
+  "name": "adh-jrt-website",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "googleapis": "^140.0.0",
+    "@netlify/blobs": "^8.1.0",
+    "bcryptjs": "^2.4.3"
+  }
+}

@@ -243,7 +243,10 @@
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
             <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
-            <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <div style="position:relative;margin:6px 0 16px">
+              <input type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+              <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
+            </div>
             <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
             <button onClick="{{ onLogin }}" style="width:100%;background:#E11B22;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Sign in</button>
             <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New manager? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
@@ -261,9 +264,15 @@
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
             <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
-            <input type="password" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <div style="position:relative;margin:6px 0 16px">
+              <input type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+              <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
+            </div>
             <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">INVITE CODE (for your age group)</label>
-            <input type="password" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+            <div style="position:relative;margin:6px 0 16px">
+              <input type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+              <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
+            </div>
             <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
             <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
             <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
@@ -278,7 +287,32 @@
               <div style="font-family:'Anton';font-size:26px;text-transform:uppercase">{{ adminAgeName }}</div>
               <div style="color:#aeb4bf;font-size:14px">Signed in as {{ sessionName }}</div>
             </div>
-            <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+            <div style="position:relative;display:flex;gap:10px">
+              <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#aeb4bf;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Change password</button>
+              <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+
+              <sc-if value="{{ showChangePwd }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:calc(100% + 10px);right:0;width:300px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:20">
+                  <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:12px">Change password</div>
+                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">CURRENT PASSWORD</label>
+                  <div style="position:relative;margin:6px 0 12px">
+                    <input type="{{ cpCurrentType }}" value="{{ cpCurrent }}" onInput="{{ onCpCurrent }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#fff;font-size:14px;box-sizing:border-box">
+                    <button type="button" onClick="{{ onToggleCpCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpCurrentToggleLabel }}</button>
+                  </div>
+                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NEW PASSWORD</label>
+                  <div style="position:relative;margin:6px 0 12px">
+                    <input type="{{ cpNewType }}" value="{{ cpNew }}" onInput="{{ onCpNew }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#fff;font-size:14px;box-sizing:border-box">
+                    <button type="button" onClick="{{ onToggleCpNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpNewToggleLabel }}</button>
+                  </div>
+                  <sc-if value="{{ cpError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpError }}</div></sc-if>
+                  <sc-if value="{{ cpSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpSuccess }}</div></sc-if>
+                  <div style="display:flex;gap:8px">
+                    <button onClick="{{ onCpSubmit }}" disabled="{{ cpBusy }}" style="flex:1;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ cpLabel }}</button>
+                    <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer">Cancel</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
           </div>
 
           <sc-if value="{{ isAdminAll }}" hint-placeholder-val="{{ false }}">
@@ -530,6 +564,8 @@ class Component extends DCLogic {
     standings: null, fixtures: null, session: null,
     loginUser: '', loginPass: '', loginError: '', toast: '',
     authMode: 'login',
+    showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
+    showLoginPass: false, showSignupPass: false, showSignupCode: false, showCpCurrent: false, showCpNew: false,
     signupName: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
@@ -836,6 +872,21 @@ class Component extends DCLogic {
   }
   doLogout() { this.state.api.logout(); this.setState({ session: null, fixtures: null }); }
 
+  onToggleChangePwd() {
+    this.setState((s) => ({ showChangePwd: !s.showChangePwd, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '' }));
+  }
+
+  async doChangePassword() {
+    const { api, session, cpCurrent, cpNew } = this.state;
+    this.setState({ cpBusy: true, cpError: '', cpSuccess: '' });
+    const res = await api.changePassword(cpCurrent, cpNew, session);
+    if (res.ok) {
+      this.setState({ cpBusy: false, cpSuccess: 'Password changed.', cpCurrent: '', cpNew: '' });
+    } else {
+      this.setState({ cpBusy: false, cpError: res.error || 'Failed to change password.' });
+    }
+  }
+
   async doSignup() {
     const { api, signupName, signupUser, signupPass, signupCode } = this.state;
     this.setState({ signupBusy: true, signupError: '' });
@@ -1113,7 +1164,24 @@ class Component extends DCLogic {
       onPass: (e) => this.setState({ loginPass: e.target.value }),
       onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
       onLogin: () => this.doLogin(),
+      loginPassType: s.showLoginPass ? 'text' : 'password',
+      loginPassToggleLabel: s.showLoginPass ? 'HIDE' : 'SHOW',
+      onToggleLoginPass: () => this.setState((st) => ({ showLoginPass: !st.showLoginPass })),
       onLogout: () => this.doLogout(),
+
+      showChangePwd: s.showChangePwd,
+      onToggleChangePwd: () => this.onToggleChangePwd(),
+      cpCurrent: s.cpCurrent, cpNew: s.cpNew, cpError: s.cpError, cpSuccess: s.cpSuccess,
+      cpBusy: s.cpBusy, cpLabel: s.cpBusy ? 'Saving…' : 'Save',
+      onCpCurrent: (e) => this.setState({ cpCurrent: e.target.value }),
+      onCpNew: (e) => this.setState({ cpNew: e.target.value }),
+      onCpSubmit: () => this.doChangePassword(),
+      cpCurrentType: s.showCpCurrent ? 'text' : 'password',
+      cpCurrentToggleLabel: s.showCpCurrent ? 'HIDE' : 'SHOW',
+      onToggleCpCurrent: () => this.setState((st) => ({ showCpCurrent: !st.showCpCurrent })),
+      cpNewType: s.showCpNew ? 'text' : 'password',
+      cpNewToggleLabel: s.showCpNew ? 'HIDE' : 'SHOW',
+      onToggleCpNew: () => this.setState((st) => ({ showCpNew: !st.showCpNew })),
 
       isLoginMode: s.authMode === 'login',
       isSignupPendingView: s.authMode === 'signup' && s.signupPending,
@@ -1129,6 +1197,12 @@ class Component extends DCLogic {
       onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
       onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
       onSignup: () => this.doSignup(),
+      signupPassType: s.showSignupPass ? 'text' : 'password',
+      signupPassToggleLabel: s.showSignupPass ? 'HIDE' : 'SHOW',
+      onToggleSignupPass: () => this.setState((st) => ({ showSignupPass: !st.showSignupPass })),
+      signupCodeType: s.showSignupCode ? 'text' : 'password',
+      signupCodeToggleLabel: s.showSignupCode ? 'HIDE' : 'SHOW',
+      onToggleSignupCode: () => this.setState((st) => ({ showSignupCode: !st.showSignupCode })),
 
       sessionName: session ? session.name : '',
       adminAgeName: adminName || 'Your fixtures',

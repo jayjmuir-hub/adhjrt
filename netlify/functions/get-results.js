@@ -6,12 +6,12 @@
 // data. Writes happen only through submit-result.js, which does require
 // a signed-in manager.
 
-const { getStore } = require('@netlify/blobs');
+const { blobStore } = require('./_auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const store = getStore('results');
+    const store = blobStore('results');
     const results = (await store.get('all', { type: 'json' })) || {};
     return { statusCode: 200, body: JSON.stringify({ ok: true, results }) };
   } catch (err) {

@@ -3,7 +3,9 @@
 // Creates a new age-group Manager account. Which age group the account
 // can enter scores for is decided entirely by which invite code was
 // used — there's no dropdown, so a manager can never accidentally sign
-// up for (or be tricked into) the wrong group.
+// up for (or be tricked into) the wrong group. The account is created
+// pending until an organizer approves it from the Organizer dashboard's
+// Accounts tab (see accounts-admin.js) — they cannot sign in until then.
 //
 // ONE-TIME SETUP: in Netlify -> Site configuration -> Environment
 // variables, add:
@@ -48,14 +50,12 @@ exports.handler = async (event) => {
     const passwordHash = await hashPassword(password);
     const account = {
       username: uname, passwordHash, name, role: 'manager',
-      ageGroupId, createdAt: new Date().toISOString(),
+      ageGroupId, approved: false, createdAt: new Date().toISOString(),
     };
     accounts.push(account);
     await saveAccounts(accounts);
 
-    const session = { username: uname, name, ageGroupId };
-    const token = sign({ username: uname, role: 'manager', ageGroupId });
-    return { statusCode: 200, body: JSON.stringify({ ok: true, session, token }) };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true, message: 'Account created. A tournament organizer needs to approve you before you can sign in.' }) };
   } catch (err) {
     console.error('manager-signup error:', err);
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Server error.' }) };

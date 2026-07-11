@@ -1,8 +1,12 @@
 // netlify/functions/organizer-signup.js
 //
 // Creates a new Organizer account — full access to team & player
-// registrations (including medical notes), so signup is gated by a
-// shared invite code rather than being open to anyone with the URL.
+// registrations (including medical notes), so signup requires BOTH a
+// shared invite code AND approval by an existing organizer afterwards
+// (see accounts-admin.js). The very first organizer account ever
+// created is auto-approved (bootstrap — there's nobody else yet to
+// approve them); every organizer after that starts pending until
+// someone approves them from the Organizer dashboard's Accounts tab.
 // Accounts live in Netlify Blobs (see _auth.js), no separate database.
 //
 // ONE-TIME SETUP: in Netlify -> Site configuration -> Environment
@@ -35,14 +39,18 @@ exports.handler = async (event) => {
       return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'That username is already taken.' }) };
     }
 
+    const isFirstOrganizer = !accounts.some((a) => a.role === 'organizer');
     const passwordHash = await hashPassword(password);
     const account = {
       username: uname, passwordHash, name, role: 'organizer',
-      title: title || 'Organizer', createdAt: new Date().toISOString(),
+      title: title || 'Organizer', approved: isFirstOrganizer, createdAt: new Date().toISOString(),
     };
     accounts.push(account);
     await saveAccounts(accounts);
 
+    if (!account.approved) {
+      return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true, message: 'Account created. A tournament organizer needs to approve you before you can sign in.' }) };
+    }
     const session = { username: uname, name, role: title || 'Organizer', _role: 'organizer' };
     const token = sign({ username: uname, role: 'organizer' });
     return { statusCode: 200, body: JSON.stringify({ ok: true, session, token }) };

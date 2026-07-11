@@ -16,6 +16,9 @@ exports.handler = async (event) => {
     if (!account || !(await verifyPassword(password || '', account.passwordHash))) {
       return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password.' }) };
     }
+    if (!account.approved) {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Your account is still pending approval from a tournament organizer.' }) };
+    }
     const session = { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' };
     const token = sign({ username: account.username, role: 'organizer' });
     return { statusCode: 200, body: JSON.stringify({ ok: true, session, token }) };

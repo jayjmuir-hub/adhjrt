@@ -54,9 +54,15 @@
           <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New organizer? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
         </sc-if>
 
-        <sc-if value="{{ isSignupMode }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
+          <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#8ff0b0;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794"><a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+        </sc-if>
+
+        <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
           <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create organizer account</div>
-          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Requires an invite code from the Tournament Director.</p>
+          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Requires an invite code from the Tournament Director. New accounts also need approval before signing in.</p>
 
           <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">YOUR NAME</label>
           <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -105,25 +111,78 @@
       <div style="display:flex;gap:8px;margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
         <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
+        <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
       </div>
 
       <!-- filters -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
-        <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-        <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-          <option value="">All clubs</option>
-          <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
-            <option value="{{ c }}">{{ c }}</option>
-          </sc-for>
-        </select>
-        <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-          <option value="">All age groups</option>
-          <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
-            <option value="{{ a }}">{{ a }}</option>
-          </sc-for>
-        </select>
-        <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
-      </div>
+      <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
+          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+          <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+            <option value="">All clubs</option>
+            <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
+              <option value="{{ c }}">{{ c }}</option>
+            </sc-for>
+          </select>
+          <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+            <option value="">All age groups</option>
+            <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
+              <option value="{{ a }}">{{ a }}</option>
+            </sc-for>
+          </select>
+          <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
+        </div>
+      </sc-if>
+
+      <!-- accounts tab -->
+      <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+          <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#f5c518">Pending approval</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+              <sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="2">
+                <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#7f8794;font-weight:500">— {{ a.username }}</span></div>
+                    <div style="font-size:12px;color:#7f8794;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button onClick="{{ a.onApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
+                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">All accounts</div>
+          <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+            <table style="width:100%;min-width:700px">
+              <thead>
+                <tr style="background:#151517">
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Name</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Username</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Role</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Status</th>
+                  <th style="text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ approvedAccounts }}" as="a" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ a.name }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf">{{ a.username }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ a.roleLabel }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#3bd070;font-weight:700">Active</td>
+                    <td style="padding:12px 14px;text-align:right"><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No approved accounts yet.</div></sc-if>
+          </div>
+        </div>
+      </sc-if>
 
       <!-- teams table -->
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
@@ -202,8 +261,9 @@ class Component extends DCLogic {
     api: null, session: null, loginUser: '', loginPass: '', loginError: '', loginBusy: false,
     authMode: 'login',
     signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
+    signupPending: false, signupPendingMessage: '',
     tab: 'teams', search: '', clubFilter: '', ageFilter: '',
-    teams: [], players: [],
+    teams: [], players: [], accounts: [],
   };
 
   async componentDidMount() {
@@ -214,9 +274,19 @@ class Component extends DCLogic {
   }
 
   async loadData(api) {
-    const data = await api.getRegistrations();
-    this.setState({ teams: data.teams, players: data.players });
+    const [data, accounts] = await Promise.all([api.getRegistrations(), api.listAccounts()]);
+    this.setState({ teams: data.teams, players: data.players, accounts });
   }
+
+  async refreshAccounts() {
+    const { api } = this.state;
+    const accounts = await api.listAccounts();
+    this.setState({ accounts });
+  }
+
+  async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
+  async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
+  async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
 
   async doLogin() {
     const { api, loginUser, loginPass } = this.state;
@@ -236,7 +306,9 @@ class Component extends DCLogic {
     const { api, signupName, signupTitle, signupUser, signupPass, signupCode } = this.state;
     this.setState({ signupBusy: true, signupError: '' });
     const res = await api.signup({ name: signupName, title: signupTitle, username: signupUser, password: signupPass, inviteCode: signupCode });
-    if (res.ok) {
+    if (res.ok && res.pending) {
+      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
+    } else if (res.ok) {
       this.setState({ session: res.session, signupBusy: false, signupPass: '', signupCode: '' });
       this.loadData(api);
     } else {
@@ -330,7 +402,10 @@ class Component extends DCLogic {
 
       isLoginMode: s.authMode === 'login', isSignupMode: s.authMode === 'signup',
       onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
-      onShowLogin: () => this.setState({ authMode: 'login', signupError: '' }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
+      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
+      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
+      signupPendingMessage: s.signupPendingMessage,
       signupName: s.signupName, signupTitle: s.signupTitle, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
       signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       onSignupName: (e) => this.setState({ signupName: e.target.value }),
@@ -343,12 +418,31 @@ class Component extends DCLogic {
       sessionName: s.session ? s.session.name : '',
       sessionRole: s.session ? s.session.role : '',
 
-      isTeams: s.tab === 'teams', isPlayers: s.tab === 'players',
+      isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
+      showAccounts: () => this.setState({ tab: 'accounts' }),
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
+      tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
+      showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
+
+      pendingAccounts: s.accounts.filter((a) => !a.approved).map((a) => ({
+        ...a,
+        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
+        createdAtDisplay: this.fmtDate(a.createdAt),
+        onApprove: () => this.doApprove(a.username),
+        onReject: () => this.doReject(a.username),
+      })),
+      approvedAccounts: s.accounts.filter((a) => a.approved).map((a) => ({
+        ...a,
+        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
+        onRevoke: () => this.doRevoke(a.username),
+      })),
+      hasPending: s.accounts.some((a) => !a.approved),
+      pendingCount: s.accounts.filter((a) => !a.approved).length,
+      accountsEmpty: s.accounts.filter((a) => a.approved).length === 0,
 
       search: s.search, onSearch: (e) => this.setState({ search: e.target.value }),
       clubFilter: s.clubFilter, onClubFilter: (e) => this.setState({ clubFilter: e.target.value }),

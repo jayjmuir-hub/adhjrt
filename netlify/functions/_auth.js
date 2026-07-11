@@ -19,8 +19,28 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getStore } = require('@netlify/blobs');
 
+// Netlify is supposed to auto-inject Blobs config (site ID + token) into
+// every function's environment, but on some sites/deploys that auto-wiring
+// doesn't kick in and getStore('name') throws MissingBlobsEnvironmentError.
+// Falling back to explicit siteID/token (from env vars you set once in
+// Netlify — see README note below) works around that unconditionally.
+//
+// ONE-TIME SETUP (only needed if you see MissingBlobsEnvironmentError in a
+// function's log): in Netlify -> Project configuration -> General ->
+// Project information, copy "Project ID". Then User settings (click your
+// avatar) -> Applications -> Personal access tokens -> New access token,
+// generate one. Add both as environment variables:
+//   BLOBS_SITE_ID = (the Project ID)
+//   BLOBS_TOKEN   = (the personal access token)
+function blobStore(name) {
+  if (process.env.BLOBS_SITE_ID && process.env.BLOBS_TOKEN) {
+    return getStore({ name, siteID: process.env.BLOBS_SITE_ID, token: process.env.BLOBS_TOKEN });
+  }
+  return getStore(name);
+}
+
 function accountsStore() {
-  return getStore('accounts');
+  return blobStore('accounts');
 }
 
 async function loadAccounts() {
@@ -72,4 +92,15 @@ function getBearerToken(event) {
   return m ? m[1] : null;
 }
 
-module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken };
+// True if a decoded session token may edit/submit for the given age group.
+// Organizers (full access to everything) and the special "admin" manager
+// invite code (ageGroupId === '*') can act on any age group; an ordinary
+// manager only on their own.
+function hasAgeGroupAccess(session, ageGroupId) {
+  if (!session) return false;
+  if (session.role === 'organizer') return true;
+  if (session.role === 'manager') return session.ageGroupId === '*' || session.ageGroupId === ageGroupId;
+  return false;
+}
+
+module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore };

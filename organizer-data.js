@@ -1,5 +1,5 @@
 /* ============================================================
-   ADH JRT — Organizer data layer  (LIVE backend)
+   ADH JRT — Organizer data layer  (LIVE backend, with local fallback)
    ------------------------------------------------------------
    Organizer accounts self-signup via organizer-signup.js (gated by a
    shared invite code) and are stored server-side in Netlify Blobs.
@@ -8,48 +8,73 @@
    session token. See those files in netlify/functions/ for one-time
    setup (ORGANIZER_INVITE_CODE + SESSION_SECRET env vars, on top of
    the GOOGLE_* vars documented in submission-created.js).
+
+   LOCAL PREVIEW: before this site is deployed to Netlify, none of the
+   /.netlify/functions/* endpoints exist, so every call below falls back
+   to local-backend.js (localStorage-backed) — letting you try signup,
+   login, approval, etc. right here. Once deployed for real, the real
+   functions respond with valid JSON and this file uses those instead,
+   automatically — no code changes needed. See local-backend.js for the
+   local test invite codes.
    ============================================================ */
 
 const SESSION_KEY = 'adhjrt_organizer_session';
 
-export async function login(username, password) {
+let localBackendPromise = null;
+function local() {
+  if (!localBackendPromise) localBackendPromise = import(new URL('local-backend.js', document.baseURI).href);
+  return localBackendPromise;
+}
+
+// Tries the real Netlify Function; if it can't even be reached, or
+// doesn't return valid JSON (both signs no backend is deployed here),
+// signals the caller to use the local fallback instead. A real error
+// response from an actually-deployed function (wrong password, etc.)
+// is still valid JSON, so it's trusted as-is and never falls back.
+async function tryFetchJson(url, opts) {
   try {
-    const res = await fetch('/.netlify/functions/organizer-login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const json = await res.json();
-    if (json.ok) {
-      const session = { ...json.session, token: json.token };
-      try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-      return { ok: true, session };
-    }
-    return { ok: false, error: json.error || 'Incorrect username or password.' };
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    try { return { real: true, json: JSON.parse(text) }; } catch (e) { return { real: false }; }
   } catch (e) {
-    return { ok: false, error: 'Could not reach the server. Try again.' };
+    return { real: false };
   }
+}
+
+export async function login(username, password) {
+  const r = await tryFetchJson('/.netlify/functions/organizer-login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const json = r.real ? r.json : (await local()).organizerLogin({ username, password });
+  if (json.ok) {
+    const session = { ...json.session, token: json.token };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    return { ok: true, session };
+  }
+  return { ok: false, error: json.error || 'Incorrect username or password.' };
 }
 
 // Organizer self-signup, gated by ORGANIZER_INVITE_CODE (see
 // organizer-signup.js). `title` is a free-text label shown next to the
 // organizer's name (e.g. "Registrar", "Medical Lead") — every organizer
 // currently has the same full access to both registration tables.
+// New accounts are pending until an existing organizer approves them
+// (res.pending === true) — the very first organizer ever created is
+// auto-approved.
 export async function signup({ name, title, username, password, inviteCode }) {
-  try {
-    const res = await fetch('/.netlify/functions/organizer-signup', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, title, username, password, inviteCode }),
-    });
-    const json = await res.json();
-    if (json.ok) {
-      const session = { ...json.session, token: json.token };
-      try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-      return { ok: true, session };
-    }
-    return { ok: false, error: json.error || 'Could not create account.' };
-  } catch (e) {
-    return { ok: false, error: 'Could not reach the server. Try again.' };
+  const r = await tryFetchJson('/.netlify/functions/organizer-signup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, title, username, password, inviteCode }),
+  });
+  const json = r.real ? r.json : (await local()).organizerSignup({ name, title, username, password, inviteCode });
+  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
+  if (json.ok) {
+    const session = { ...json.session, token: json.token };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    return { ok: true, session };
   }
+  return { ok: false, error: json.error || 'Could not create account.' };
 }
 
 export function currentSession() {
@@ -66,15 +91,56 @@ export function logout() {
 export async function getRegistrations() {
   const session = currentSession();
   if (!session || !session.token) return { teams: [], players: [] };
-  try {
-    const res = await fetch('/.netlify/functions/get-registrations', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.token}` },
-    });
-    const json = await res.json();
-    if (!json.ok) return { teams: [], players: [] };
-    return { teams: json.teams, players: json.players };
-  } catch (e) {
-    return { teams: [], players: [] };
-  }
+  const r = await tryFetchJson('/.netlify/functions/get-registrations', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.token}` },
+  });
+  if (r.real) return r.json.ok ? { teams: r.json.teams, players: r.json.players } : { teams: [], players: [] };
+  return (await local()).sampleRegistrations();
+}
+
+// -------- Account approvals (Accounts tab) --------
+function authHeaders() {
+  const session = currentSession();
+  return session && session.token ? { 'Authorization': `Bearer ${session.token}` } : {};
+}
+
+export async function listAccounts() {
+  const session = currentSession();
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', { headers: authHeaders() });
+  if (r.real) return r.json.ok ? r.json.accounts : [];
+  return (await local()).accountsList(session && session.token);
+}
+
+export async function approveAccount(username) {
+  const session = currentSession();
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'approve', username }),
+  });
+  if (r.real) return r.json;
+  return (await local()).accountsAction(session && session.token, 'approve', username);
+}
+
+export async function rejectAccount(username) {
+  const session = currentSession();
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'reject', username }),
+  });
+  if (r.real) return r.json;
+  return (await local()).accountsAction(session && session.token, 'reject', username);
+}
+
+export async function revokeAccount(username) {
+  const session = currentSession();
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'revoke', username }),
+  });
+  if (r.real) return r.json;
+  return (await local()).accountsAction(session && session.token, 'revoke', username);
 }

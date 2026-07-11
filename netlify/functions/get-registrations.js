@@ -1,29 +1,16 @@
 // netlify/functions/get-registrations.js
 //
-// TEMPLATE — not wired up yet. Once you've completed the service-account
-// setup described in submission-created.js's header comment, this function
-// lets Organizer.dc.html fetch real registrations without the sheets
-// themselves ever being public.
+// Returns the live team & player registrations from the two Google
+// Sheets, for a signed-in Organizer. Requires an Authorization: Bearer
+// <token> header from organizer-login.js / organizer-signup.js — the
+// token is verified here (see _auth.js), so the sheets themselves never
+// need to be public.
 //
-// It expects a POST body of { username, password } and checks it against
-// an ORGANIZER_ACCOUNTS env var — a JSON array like:
-//   [{"username":"jay","password":"...","name":"Jay Muir","role":"Tournament Director"}, ...]
-// Set that in Netlify alongside the GOOGLE_SERVICE_ACCOUNT_* and
-// GOOGLE_SHEET_ID_* vars already documented in submission-created.js.
-// (For real production use, store hashed passwords and check with
-// bcrypt/scrypt instead of a plain-text comparison — this mirrors the
-// simple demo-account style already used elsewhere in the prototype.)
-//
-// Once this is live, swap organizer-data.js's login()/getRegistrations()
-// mocks for fetch('/.netlify/functions/get-registrations', ...) calls.
+// Setup: the same GOOGLE_SERVICE_ACCOUNT_* / GOOGLE_SHEET_ID_* vars as
+// submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
 
 const { google } = require('googleapis');
-
-function checkCredentials(username, password) {
-  let accounts = [];
-  try { accounts = JSON.parse(process.env.ORGANIZER_ACCOUNTS || '[]'); } catch (e) {}
-  return accounts.find((a) => a.username === username && a.password === password) || null;
-}
+const { verify, getBearerToken } = require('./_auth');
 
 function getAuth() {
   return new google.auth.JWT({
@@ -33,37 +20,59 @@ function getAuth() {
   });
 }
 
-async function readSheet(auth, spreadsheetId, range) {
+// Sheet columns are read by position (matching the exact order
+// submission-created.js appends them in), then mapped onto the
+// camelCase field names the Organizer dashboard expects — combining
+// first/last name pairs into single display fields.
+const TEAM_FIELDS = ['submittedAt', 'club', 'teamName', 'ageGroup', 'headCoachName', 'headCoachEmail', 'headCoachMobile', 'managerName', 'managerEmail', 'managerMobile', 'numPlayers', 'notes', 'players'];
+
+function mapPlayerRow(row) {
+  const [submittedAt, playerFirst, playerLast, dob, club, ageGroup, parentFirst, parentLast, parentEmail, parentMobile, emergencyFirst, emergencyLast, emergencyMobile, medicalNotes, consent, playUpConsent] = row;
+  return {
+    submittedAt: submittedAt || '',
+    playerName: [playerFirst, playerLast].filter(Boolean).join(' '),
+    dob: dob || '', club: club || '', ageGroup: ageGroup || '',
+    parentName: [parentFirst, parentLast].filter(Boolean).join(' '),
+    parentEmail: parentEmail || '', parentMobile: parentMobile || '',
+    emergencyContact: [emergencyFirst, emergencyLast].filter(Boolean).join(' '),
+    emergencyMobile: emergencyMobile || '',
+    medicalNotes: medicalNotes || '', consent: consent || '', playUpConsent: playUpConsent || '',
+  };
+}
+
+function mapTeamRow(row) {
+  const obj = {};
+  TEAM_FIELDS.forEach((f, i) => { obj[f] = row[i] || ''; });
+  return obj;
+}
+
+async function readRows(auth, spreadsheetId, range) {
   const sheets = google.sheets({ version: 'v4', auth });
   const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const [header, ...rows] = res.data.values || [[]];
-  return rows.map((row) => {
-    const obj = {};
-    header.forEach((h, i) => { obj[h] = row[i] || ''; });
-    return obj;
-  });
+  const [, ...rows] = res.data.values || [[]]; // skip header row
+  return rows;
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const { username, password } = JSON.parse(event.body || '{}');
-    const account = checkCredentials(username, password);
-    if (!account) return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password.' }) };
+    const session = verify(getBearerToken(event));
+    if (!session || session.role !== 'organizer') {
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    }
 
     const auth = getAuth();
-
-    const [teams, players] = await Promise.all([
-      readSheet(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'Sheet1!A:M'),
-      readSheet(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'Sheet1!A:P'),
+    const [teamRows, playerRows] = await Promise.all([
+      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'Sheet1!A:M'),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'Sheet1!A:P'),
     ]);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         ok: true,
-        session: { username: account.username, name: account.name, role: account.role },
-        teams, players,
+        teams: teamRows.map(mapTeamRow),
+        players: playerRows.map(mapPlayerRow),
       }),
     };
   } catch (err) {

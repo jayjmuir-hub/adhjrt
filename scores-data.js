@@ -1,19 +1,19 @@
 /* ============================================================
-   ADH JRT — Scores & Standings data layer  (MOCK / prototype)
+   ADH JRT — Scores & Standings data layer  (LIVE backend)
    ------------------------------------------------------------
    Every read/write the UI needs goes through the async functions
-   exported at the bottom. Right now they run against localStorage
-   so the whole thing works with no server. To go live, replace the
-   body of each exported function with a fetch() to a Netlify
-   Function (see NOTE markers) — the UI never changes.
+   exported at the bottom. Manager accounts, match results, and
+   sessions are real — accounts self-signup via manager-signup.js
+   (gated by an invite code per age group) and are stored server-side
+   in Netlify Blobs; results are written via submit-result.js and read
+   back (by anyone, including the public Standings page) via
+   get-results.js. See those three files in netlify/functions/ for the
+   one-time setup (MANAGER_INVITE_CODES + SESSION_SECRET env vars).
 
-   Recommended production backend: Netlify Functions + a shared
-   store. Two good options:
-     • Netlify Blobs  (zero setup, JSON in/out)   ← simplest
-     • Google Sheets  (googleapis is already in package.json)
-   Managers authenticate against a small accounts list; the
-   function verifies the token + that the match belongs to the
-   manager's age group before writing.
+   Everything below this point — age group / pool config, the
+   standings/bracket-building math — is pure client-side logic that
+   runs the same regardless of backend; only the storage plumbing
+   changed.
    ============================================================ */
 
 const STORE_KEY = 'adhjrt_results_v1';   // matchId -> result
@@ -47,33 +47,23 @@ const AGE_GROUPS = [
   { id: 'u18g', name: 'U18G Contact',     hasStandings: true, advance: 4, pools: twoPools9() },
 ];
 
-/* -------- Manager accounts (dedicated login per age group) --------
-   In production these live server-side; the password check happens
-   inside the Netlify Function, never in the browser. One account per
-   standings-enabled age group, generated from AGE_GROUPS so a new age
-   group always gets a login automatically — username = age-group id,
-   password = quins-<id>. Plus a master admin account that can enter
-   scores for any age group. */
-const MANAGERS = [
-  ...AGE_GROUPS.filter((a) => a.hasStandings).map((a) => ({
-    username: a.id, password: `quins-${a.id}`, ageGroupId: a.id, name: `${a.name} Manager`,
-  })),
-  { username: 'admin', password: 'quins-admin', ageGroupId: '*', name: 'Tournament Admin' },
-];
-
 const WALKOVER_SCORE = 20; // walk-over recorded as 20-0
 
 // Age groups using the special double-bracket knockout format (see
 // buildU16BBracket) instead of the plain waterfall every other group uses.
 const SPECIAL_BRACKET_AGE_IDS = ['u16b', 'u16g'];
 
-/* ---------------- storage helpers (mock only) ---------------- */
-function readStore() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
-  catch (e) { return {}; }
+/* ---------------- storage helpers (live backend) ----------------
+   Results are read from the public get-results Netlify Function, which
+   serves whatever's been written to Netlify Blobs by submit-result. */
+async function readStore() {
+  try {
+    const res = await fetch('/.netlify/functions/get-results');
+    const json = await res.json();
+    return json.ok ? json.results : {};
+  } catch (e) { return {}; }
 }
-function writeStore(obj) { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }
-const delay = (ms) => new Promise((r) => setTimeout(r, ms)); // fake network latency
+const delay = (ms) => new Promise((r) => setTimeout(r, ms)); // small UI-friendly pause
 
 /* ---------------- fixtures (deterministic) ---------------- */
 // Round-robin match ids per pool: `${agId}:${poolId}:${i}-${j}` (i<j indices)
@@ -216,7 +206,6 @@ function fmtTime(totalMins) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-// NOTE(backend): GET /.netlify/functions/schedule?age=<id>
 export async function getSchedule(agId) {
   await delay(60);
   const ag = findAg(agId);
@@ -238,7 +227,7 @@ export async function getSchedule(agId) {
   // anywhere wraps up.
   let knockout = null;
   if (SPECIAL_BRACKET_AGE_IDS.includes(ag.id)) {
-    const store = readStore();
+    const store = await readStore();
     const tables = computeStandings(ag, store);
     const db = buildU16BBracket(ag, tables, store);
     const order = [
@@ -364,11 +353,10 @@ export async function getAgeGroups() {
   return AGE_GROUPS.map(({ id, name, hasStandings }) => ({ id, name, hasStandings }));
 }
 
-// NOTE(backend): GET /.netlify/functions/standings?age=<id>
 export async function getStandings(agId) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return null;
-  const store = readStore();
+  const store = await readStore();
   const tables = ag.hasStandings ? computeStandings(ag, store) : {};
   const isSpecial = SPECIAL_BRACKET_AGE_IDS.includes(ag.id);
   const bracket = ag.hasStandings && !isSpecial ? buildBracket(ag, tables, store) : [];
@@ -376,11 +364,10 @@ export async function getStandings(agId) {
   return { ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings }, _advance: ag.advance, pools: ag.pools || [], tables, bracket, doubleBracket };
 }
 
-// NOTE(backend): GET /.netlify/functions/fixtures?age=<id>
 export async function getFixtures(agId) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return [];
-  const store = readStore();
+  const store = await readStore();
   const pool = poolFixtures(ag).map((fx) => ({ ...fx, poolName: (ag.pools.find((p) => p.id === fx.poolId) || {}).name, result: store[fx.id] || null }));
   const tables = computeStandings(ag, store);
   let knockout;
@@ -402,39 +389,68 @@ export async function getFixtures(agId) {
   return { pool, knockout };
 }
 
-// NOTE(backend): POST /.netlify/functions/login {username,password} -> {token}
+// Manager sign-in. Backed by netlify/functions/manager-login.js — an
+// account created via signup() below, stored server-side in Netlify Blobs.
 export async function login(username, password) {
-  await delay(120);
-  const m = MANAGERS.find((x) => x.username === (username || '').trim().toLowerCase() && x.password === password);
-  if (!m) return { ok: false, error: 'Wrong username or password.' };
-  const token = btoa(`${m.username}:${Date.now()}`);
-  const session = { token, username: m.username, name: m.name, ageGroupId: m.ageGroupId };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  return { ok: true, session };
+  try {
+    const res = await fetch('/.netlify/functions/manager-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      const session = { ...json.session, token: json.token };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      return { ok: true, session };
+    }
+    return { ok: false, error: json.error || 'Wrong username or password.' };
+  } catch (e) {
+    return { ok: false, error: 'Could not reach the server. Try again.' };
+  }
 }
+
+// Manager self-signup. Which age group the account is tied to is decided
+// entirely by which invite code was entered (see manager-signup.js) — no
+// dropdown, so a manager can't accidentally sign up for the wrong group.
+export async function signup({ name, username, password, inviteCode }) {
+  try {
+    const res = await fetch('/.netlify/functions/manager-signup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, username, password, inviteCode }),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      const session = { ...json.session, token: json.token };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      return { ok: true, session };
+    }
+    return { ok: false, error: json.error || 'Could not create account.' };
+  } catch (e) {
+    return { ok: false, error: 'Could not reach the server. Try again.' };
+  }
+}
+
 export function currentSession() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
 }
 export function logout() { localStorage.removeItem(SESSION_KEY); }
 
-// NOTE(backend): POST /.netlify/functions/result  (Authorization: token)
-// Server must re-verify the token AND that matchId belongs to the
-// manager's age group before writing.
+// Submits one match result. Backed by netlify/functions/submit-result.js,
+// which re-verifies the manager's token and age-group ownership server-side
+// before writing — the checks here are just for instant UI feedback.
 export async function submitResult(matchId, data, session) {
-  await delay(120);
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
   const agId = matchId.split(':')[0];
   if (session.ageGroupId !== '*' && session.ageGroupId !== agId) return { ok: false, error: 'You can only enter scores for your own age group.' };
-  const store = readStore();
-  store[matchId] = {
-    homeScore: data.walkover === 'home' ? WALKOVER_SCORE : (data.walkover === 'away' ? 0 : Number(data.homeScore)),
-    awayScore: data.walkover === 'away' ? WALKOVER_SCORE : (data.walkover === 'home' ? 0 : Number(data.awayScore)),
-    homeTries: data.walkover === 'home' ? 4 : (data.walkover === 'away' ? 0 : Number(data.homeTries || 0)),
-    awayTries: data.walkover === 'away' ? 4 : (data.walkover === 'home' ? 0 : Number(data.awayTries || 0)),
-    homeCards: Number(data.homeCards || 0), awayCards: Number(data.awayCards || 0),
-    walkover: data.walkover || null,
-    submittedBy: session.username, submittedAt: new Date().toISOString(),
-  };
-  writeStore(store);
-  return { ok: true };
+  try {
+    const res = await fetch('/.netlify/functions/submit-result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+      body: JSON.stringify({ matchId, data }),
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    return { ok: false, error: 'Could not reach the server. Try again.' };
+  }
 }

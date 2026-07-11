@@ -41,16 +41,37 @@
           </div>
           <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
         </a>
-        <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Organizer sign in</div>
-        <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Team &amp; player registrations, in one place.</p>
+        <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Organizer sign in</div>
+          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Team &amp; player registrations, in one place.</p>
 
-        <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-        <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-        <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
-        <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-        <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
-        <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
-        <div style="margin-top:20px;font-size:12px;color:#5a616d;line-height:1.7">Demo accounts — jay / adhjrt-jay &middot; registrar / adhjrt-registrar &middot; medical / adhjrt-medical<br>Replace with real named organizer accounts once the secure backend is live.</div>
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
+          <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
+          <input type="password" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
+          <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
+          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New organizer? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+        </sc-if>
+
+        <sc-if value="{{ isSignupMode }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create organizer account</div>
+          <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Requires an invite code from the Tournament Director.</p>
+
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">YOUR NAME</label>
+          <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">ROLE / TITLE</label>
+          <input value="{{ signupTitle }}" onInput="{{ onSignupTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">USERNAME</label>
+          <input value="{{ signupUser }}" onInput="{{ onSignupUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
+          <input type="password" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">INVITE CODE</label>
+          <input type="password" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+          <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
+          <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
+          <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -79,9 +100,6 @@
           <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer">Sign out</button>
         </div>
       </div>
-
-      <!-- data source note -->
-      <div style="margin-top:18px;background:rgba(225,27,34,0.08);border:1px solid rgba(225,27,34,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:#f0a8ab">Showing sample data. Live registrations connect once the Google Sheets backend is wired up.</div>
 
       <!-- tabs -->
       <div style="display:flex;gap:8px;margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
@@ -182,6 +200,8 @@
 class Component extends DCLogic {
   state = {
     api: null, session: null, loginUser: '', loginPass: '', loginError: '', loginBusy: false,
+    authMode: 'login',
+    signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '',
     teams: [], players: [],
   };
@@ -211,6 +231,18 @@ class Component extends DCLogic {
   }
 
   doLogout() { this.state.api.logout(); this.setState({ session: null, teams: [], players: [] }); }
+
+  async doSignup() {
+    const { api, signupName, signupTitle, signupUser, signupPass, signupCode } = this.state;
+    this.setState({ signupBusy: true, signupError: '' });
+    const res = await api.signup({ name: signupName, title: signupTitle, username: signupUser, password: signupPass, inviteCode: signupCode });
+    if (res.ok) {
+      this.setState({ session: res.session, signupBusy: false, signupPass: '', signupCode: '' });
+      this.loadData(api);
+    } else {
+      this.setState({ signupError: res.error, signupBusy: false });
+    }
+  }
 
   fmtDate(iso) {
     try {
@@ -295,6 +327,19 @@ class Component extends DCLogic {
       onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
       onLogin: () => this.doLogin(),
       onLogout: () => this.doLogout(),
+
+      isLoginMode: s.authMode === 'login', isSignupMode: s.authMode === 'signup',
+      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '' }),
+      signupName: s.signupName, signupTitle: s.signupTitle, signupUser: s.signupUser, signupPass: s.signupPass, signupCode: s.signupCode,
+      signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
+      onSignupName: (e) => this.setState({ signupName: e.target.value }),
+      onSignupTitle: (e) => this.setState({ signupTitle: e.target.value }),
+      onSignupUser: (e) => this.setState({ signupUser: e.target.value }),
+      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
+      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
+      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
+      onSignup: () => this.doSignup(),
       sessionName: s.session ? s.session.name : '',
       sessionRole: s.session ? s.session.role : '',
 

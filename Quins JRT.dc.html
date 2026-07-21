@@ -69,6 +69,7 @@
         <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
         <a href="#results" style="color:#EDEDED;font-weight:600;font-size:15px">Results</a>
         <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
+        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-weight:800;font-size:13px;letter-spacing:.5px;padding:9px 18px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,filter .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);filter:brightness(1.05)">Register a Team</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.55);font-weight:800;font-size:13px;letter-spacing:.5px;padding:7.5px 16px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,background .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);background:rgba(255,255,255,0.12)">Register a Player</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
       </nav>
@@ -513,9 +514,22 @@
   </section>
 
   <!-- ============ SPONSORS ============ -->
-  <!-- SPONSORS — temporarily removed. The logo artwork is being replaced;
-       put the section back (with a fresh assets/sponsors-logos.png) and
-       restore the "Sponsors" link in the header nav when it is ready. -->
+  <!-- Placeholder while the sponsor line-up is confirmed. When the artwork is
+       ready, swap the card below for:
+         <img src="assets/sponsors-logos.png" alt="..." style="width:100%;height:auto;display:block"> -->
+  <section id="sponsors" style="background:#0C0C0E;color:#fff;padding:74px 32px 84px">
+    <div style="max-width:1100px;margin:0 auto;text-align:center">
+      <div style="font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:14px" data-reveal>Sponsors &amp; partners</div>
+      <h2 style="font-family:'Anton';font-size:56px;line-height:0.95;text-transform:uppercase;margin-bottom:36px" data-reveal>With thanks to our sponsors</h2>
+
+      <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:56px 40px;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
+        <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.4)">Coming soon</span>
+        <div style="font-family:'Anton';font-size:34px;color:#fff;margin-top:20px;text-transform:uppercase;line-height:1.05">Our 2026 partners</div>
+        <p style="margin:16px auto 0;max-width:540px;color:#aeb4bf;font-size:17px;line-height:1.6">This year&rsquo;s sponsors are being confirmed and will be announced here before the tournament. Interested in supporting a volunteer-run festival of junior rugby? <a href="mailto:admin@adhjrt.com" style="color:#3bd070;font-weight:700">Get in touch</a>.</p>
+      </div>
+    </div>
+  </section>
 
 
   <!-- ============ FOOTER ============ -->

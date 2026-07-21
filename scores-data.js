@@ -665,15 +665,6 @@ export async function saveDraw(agId, draw, session) {
   return (await local()).saveScheduleOverride(session.token, agId, payload, false);
 }
 
-/* Which age groups have published fixtures. Used by the main site to decide
-   whether to veil its Fixtures and Results sections. One call instead of
-   asking about all fifteen age groups separately. */
-export async function getPublishedAgeGroups() {
-  const r = await tryFetchJson('/.netlify/functions/get-published-ages');
-  if (r.real && r.json && r.json.ok) return r.json.ages || [];
-  return [];
-}
-
 /* -------- Publishing --------
    Saving a draw only writes the draft. These two are what put fixtures in
    front of parents, and take them back down again.
@@ -708,8 +699,24 @@ export async function unpublishDraw(agId, session) {
    before the user clicks. publishState comes from getDraw()._publish. */
 export function canPublishNow(session, publishState) {
   if (!session) return false;
-  if (session.role === 'organizer' || session._role === 'organizer') return true;
+  if (isOrganizerSession(session)) return true;
   return !!(publishState && publishState.managerCanPublishNow);
+}
+
+/* An organiser session reaches this file in more than one shape depending on
+   where it came from: currentSession() above builds { isOrganizer: true } from
+   the organizer app's stored session, while organizer-login.js returns an
+   object carrying _role (and `role` holding their job title, not a role name).
+   Check all of them — missing one silently hides the Publish button, which is
+   exactly what happened the first time. The server re-checks properly from the
+   signed token, so this is only about what the UI offers. */
+function isOrganizerSession(session) {
+  if (!session) return false;
+  return !!(
+    session.isOrganizer ||
+    session._role === 'organizer' ||
+    session.role === 'organizer'
+  );
 }
 
 export async function resetDraw(agId, session) {

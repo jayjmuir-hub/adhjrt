@@ -349,6 +349,9 @@ function resolveSession(){
 const canScore = (s, agId) =>
   !s ? false : (isOrganiser(s) || s.ageGroupId === '*' || s.ageGroupId === agId);
 const ageName = (id) => (S.ageGroups.find(a => a.id === id) || {}).name || id;
+/* Teams are stored as codes (ADH1). Rows and tables show the code because
+   space is tight; anywhere with room shows the readable name. */
+const tName = (code) => (api.teamLabel ? api.teamLabel(code) : code) || code || '';
 
 function phase(){
   const n = Date.now();
@@ -486,7 +489,7 @@ function followCard(){
   let inner = '';
   if (next) {
     const at = kickoffAt(next, S.ageId);
-    const opp = S.team ? (next.home === S.team ? next.away : next.home) : `${next.home} v ${next.away}`;
+    const opp = S.team ? tName(next.home === S.team ? next.away : next.home) : `${tName(next.home)} v ${tName(next.away)}`;
     inner = `<div class="tcard-m" style="margin-top:12px">
         <strong style="color:#fff">${S.team ? 'v ' + esc(opp) : esc(opp)}</strong><br>
         ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
@@ -499,13 +502,13 @@ function followCard(){
 
   const lastLine = last
     ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
-         Last: ${esc(last.home)} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(last.away)}</div>` : '';
+         Last: ${esc(tName(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tName(last.away))}</div>` : '';
 
   return `<div class="tcard">
     <button class="tcard-cta" data-act="follow">Change</button>
     <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
-    <div class="tcard-n">${esc(following)}</div>
-    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(ageName(S.ageId))}</div>` : ''}
+    <div class="tcard-n">${esc(S.team ? tName(S.team) : following)}</div>
+    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(S.team)} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
     ${inner}${lastLine}
   </div>`;
 }
@@ -676,12 +679,12 @@ function openTeamPick(){
   const teams = teamsInAge();
   if (!teams.length) { toast('Following ' + ageName(S.ageId)); return; }
   openSheet('Choose your team', `<div class="card">
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(t)}</b></div>${ICON.chev}</button>`).join('')}
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${esc(t)}</small></div>${ICON.chev}</button>`).join('')}
       <button class="row" data-pick-team=""><div><b>All teams</b><small>Follow the whole age group</small></div>${ICON.chev}</button>
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
-    toast(S.team ? 'Following ' + S.team : 'Following ' + ageName(S.ageId));
+    toast(S.team ? 'Following ' + tName(S.team) : 'Following ' + ageName(S.ageId));
   });
 }
 
@@ -722,8 +725,8 @@ function openMatch(id){
   const at = kickoffAt(m, S.browseId);
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')}</b>
-        <small>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
+      <div class="row"><div><b>${esc(m.home ? tName(m.home) : 'TBD')} v ${esc(m.away ? tName(m.away) : 'TBD')}</b>
+        <small>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')} &middot; ${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
         <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
     </div>`;
@@ -733,8 +736,8 @@ function openMatch(id){
 
   openSheet('Enter score', head + `<div id="scErr"></div>
     <div class="two">
-      <div class="field"><label>${esc(m.home||'Home')} points</label><input id="hs" type="number" inputmode="numeric" min="0" value="${r?r.homeScore:''}"></div>
-      <div class="field"><label>${esc(m.away||'Away')} points</label><input id="as" type="number" inputmode="numeric" min="0" value="${r?r.awayScore:''}"></div>
+      <div class="field"><label>${esc(m.home?tName(m.home):'Home')} points</label><input id="hs" type="number" inputmode="numeric" min="0" value="${r?r.homeScore:''}"></div>
+      <div class="field"><label>${esc(m.away?tName(m.away):'Away')} points</label><input id="as" type="number" inputmode="numeric" min="0" value="${r?r.awayScore:''}"></div>
     </div>
     <div class="two">
       <div class="field"><label>Home tries</label><input id="ht" type="number" inputmode="numeric" min="0" value="${r?(r.homeTries||0):''}"></div>
@@ -742,8 +745,8 @@ function openMatch(id){
     </div>
     <div class="field"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
-      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home||'Home')} awarded the match</option>
-      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away||'Away')} awarded the match</option>
+      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tName(m.home):'Home')} awarded the match</option>
+      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tName(m.away):'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
     <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>`);
 

@@ -34,7 +34,37 @@ const ORG_SESSION_KEY = 'adhjrt_organizer_session'; // organizer-data.js's sessi
    This is only ever the STARTING POINT for a pool's team list — once a
    manager/organizer saves a custom draw for an age group, its saved
    pools (which can differ from this) take over everywhere. */
-const ALL9 = ['Abu Dhabi Harlequins', 'Dubai Exiles', 'Dubai Sharks', 'Dubai Hurricanes', 'Barrelhouse', 'Al Ain Amblers', 'Dubai Dragons', 'Dubai Tigers', 'Abu Dhabi Small Blacks'];
+/* -------- Team identity --------
+   A team is identified everywhere by its CODE (ADH1, DE1 …) — the same scheme
+   netlify/functions/_teams.js assigns at registration. The code is what pools,
+   fixtures, standings and brackets store, because it is short enough for a
+   phone table and unambiguous when one club enters two teams in an age group
+   ("Abu Dhabi Harlequins v Abu Dhabi Harlequins" is meaningless).
+
+   TEAM_NAMES maps a code to the readable name, used wherever there is room —
+   match detail, the fixture key, the team filter. Add new clubs here as they
+   register; teamLabel() falls back to the raw code if one is missing, so an
+   unknown team shows as itself rather than blank. */
+const TEAM_NAMES = {
+  ADH1: 'Abu Dhabi Harlequins 1',
+  DE1:  'Dubai Exiles 1',
+  DS1:  'Dubai Sharks 1',
+  DH1:  'Dubai Hurricanes 1',
+  BAR1: 'Barrelhouse 1',
+  AAA1: 'Al Ain Amblers 1',
+  DD1:  'Dubai Dragons 1',
+  DT1:  'Dubai Tigers 1',
+  ADSB1:'Abu Dhabi Small Blacks 1',
+};
+
+export function teamLabel(code) {
+  return TEAM_NAMES[code] || code || '';
+}
+export function teamKey() {
+  return Object.keys(TEAM_NAMES).map((c) => ({ code: c, name: TEAM_NAMES[c] }));
+}
+
+const ALL9 = ['ADH1', 'DE1', 'DS1', 'DH1', 'BAR1', 'AAA1', 'DD1', 'DT1', 'ADSB1'];
 const twoPools9 = () => [
   { id: 'A', name: 'Pool A', teams: ALL9.slice(0, 5) },
   { id: 'B', name: 'Pool B', teams: ALL9.slice(5) },

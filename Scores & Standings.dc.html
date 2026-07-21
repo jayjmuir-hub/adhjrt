@@ -249,7 +249,19 @@
           </sc-if>
 
           <!-- bracket -->
-          <sc-if value="{{ hasBracket }}" hint-placeholder-val="{{ false }}">
+          <!-- Codes are used in the tables so they fit on a phone; spelled out here. -->
+      <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#151517;border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px 20px;margin-bottom:30px">
+          <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7f8794;margin-bottom:10px">Team key</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 22px">
+            <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
+              <div style="font-size:13.5px;color:#aeb4bf"><strong style="color:#fff">{{ k.code }}</strong> {{ k.name }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasBracket }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:20px">
               <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:14px">Cup, Bowl, Plate &amp; Shield Finals</div>
               <div style="display:flex;gap:20px;flex-wrap:wrap">
@@ -1299,6 +1311,7 @@ class Component extends DCLogic {
       /* Nothing is shown publicly until an organiser publishes. An
          auto-generated draw is sample data and must never reach parents. */
       awaitingPublication: !!(st && st.awaitingPublication),
+      teamKeyList: (s.api && s.api.teamKey ? s.api.teamKey() : []),
       showTables: !!(st && st.ageGroup.hasStandings && !st.awaitingPublication), pools, bracket, hasBracket: hasBracket && !(st && st.awaitingPublication),
       isU16BSpecial, doubleBrackets, awardsSummary, awardsReady: awardsSummary.some((a) => a.ready),
       knockoutSeeds, seedsReady: seedsReadyFlag,

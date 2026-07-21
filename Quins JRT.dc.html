@@ -610,13 +610,14 @@
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM NAME</label>
-                  <select value="{{ teamForm.teamName }}" onChange="{{ onTeamName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-                    <option value="">Select a team&hellip;</option>
-                    <sc-for list="{{ teamNameOptions }}" as="t" hint-placeholder-count="4">
+                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PREFERRED POOL</label>
+                  <select value="{{ teamForm.preferredPool }}" onChange="{{ onPreferredPool }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                    <option value="">Select a pool&hellip;</option>
+                    <sc-for list="{{ poolOptions }}" as="t" hint-placeholder-count="5">
                       <option value="{{ t }}">{{ t }}</option>
                     </sc-for>
                   </select>
+                  <div style="margin-top:6px;font-size:11px;line-height:1.5;color:#7f8794">This is a preference only. We'll do our best to accommodate it, but the final draw is set by the tournament organisers.</div>
                 </div>
                 <div>
                   <div style="display:flex;align-items:baseline;justify-content:space-between">
@@ -951,9 +952,12 @@ function encodeFormData(data) {
 }
 
 const MAX_TEAM_PLAYERS = 15;
-const TEAM_NAME_OPTIONS = ['Team 1', 'Team 2', 'Team 3', 'Team 4'];
+// Pools a coach can ask for. "No preference" is deliberately included so a
+// mandatory field does not force a meaningless answer from clubs that don't
+// mind — the requests that do come in are then real ones worth honouring.
+const POOL_OPTIONS = ['A', 'B', 'C', 'D', 'No preference'];
 const emptyTeamForm = () => ({
-  club: '', teamName: '', ageGroup: '',
+  club: '', preferredPool: '', ageGroup: '',
   headCoachName: '', headCoachEmail: '', headCoachPhone: '',
   managerName: '', managerEmail: '', managerPhone: '',
   numPlayers: '', notes: '', players: [],
@@ -1175,8 +1179,8 @@ class Component extends DCLogic {
 
   async submitTeam() {
     const f = this.state.teamForm;
-    if (!f.club || !f.teamName || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
-      this.setState({ teamError: 'Please fill in club, team name, age group, head coach name and head coach email.' });
+    if (!f.club || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
+      this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });
       return;
     }
     this.setState({ teamSubmitting: true, teamError: '' });
@@ -1186,7 +1190,7 @@ class Component extends DCLogic {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: encodeFormData({
           'form-name': 'team-registration',
-          club: f.club, 'team-name': f.teamName, 'age-group': f.ageGroup,
+          club: f.club, 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
           'head-coach-name': f.headCoachName, 'head-coach-email': f.headCoachEmail,
           'head-coach-phone': f.headCoachPhone ? `+971${f.headCoachPhone}` : '',
           'manager-name': f.managerName, 'manager-email': f.managerEmail,
@@ -1343,7 +1347,7 @@ class Component extends DCLogic {
       teamShowForm: !this.state.teamSubmitted,
       teamForm: this.state.teamForm,
       clubOptions: CLUB_NAMES,
-      teamNameOptions: TEAM_NAME_OPTIONS,
+      poolOptions: POOL_OPTIONS,
       teamAgeGroupOptions,
       teamPlayerRows,
       teamPlayerCount,
@@ -1358,7 +1362,7 @@ class Component extends DCLogic {
       onBackdropTeam: () => this.closeTeamModal(),
       stopProp: (e) => e.stopPropagation(),
       onTeamClub: (e) => this.setTeamField('club', e.target.value),
-      onTeamName: (e) => this.setTeamField('teamName', e.target.value),
+      onPreferredPool: (e) => this.setTeamField('preferredPool', e.target.value),
       onTeamAgeGroup: (e) => this.setTeamField('ageGroup', e.target.value),
       onHeadCoachName: (e) => this.setTeamField('headCoachName', e.target.value),
       onHeadCoachEmail: (e) => this.setTeamField('headCoachEmail', e.target.value),

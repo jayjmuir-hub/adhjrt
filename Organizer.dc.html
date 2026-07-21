@@ -236,6 +236,7 @@
                   <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
                   <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
                   <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
+                  <td style="padding:12px 14px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
                   <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
                   <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
                   <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
@@ -409,7 +410,7 @@ class Component extends DCLogic {
     const lines = [headers.join(',')];
     rows.forEach((r) => {
       const vals = tab === 'teams'
-        ? [r.submittedAt, r.club, r.teamName, r.ageGroup, r.headCoachName, r.headCoachEmail, r.headCoachMobile, r.managerName, r.managerEmail, r.managerMobile, r.numPlayers, r.notes]
+        ? [r.submittedAt, r.club, r.teamName, r.ageGroup, r.preferredPool, r.headCoachName, r.headCoachEmail, r.headCoachMobile, r.managerName, r.managerEmail, r.managerMobile, r.numPlayers, r.notes]
         : [r.submittedAt, r.playerName, r.dob, r.club, r.ageGroup, r.parentName, r.parentEmail, r.parentMobile, r.emergencyContact, r.emergencyMobile, r.medicalNotes, r.consent, r.playUpConsent];
       lines.push(vals.map((v) => '"' + String(v || '').replace(/"/g, '""') + '"').join(','));
     });
@@ -548,7 +549,7 @@ class Component extends DCLogic {
       clubOptions: allClubs, ageOptions: allAges,
       onExport: () => this.exportCsv(),
 
-      teamHeaders: ['Submitted', 'Club', 'Team Name', 'Age Group', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
+      teamHeaders: ['Submitted', 'Club', 'Team Code', 'Age Group', 'Pool Req', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
       teamRows, teamsEmpty: teamRows.length === 0,
       playerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Age Group', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
       playerRows, playersEmpty: playerRows.length === 0,

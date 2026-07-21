@@ -34,6 +34,17 @@ exports.handler = async (event) => {
 
     const store = blobStore('results');
     const results = (await store.get('all', { type: 'json' })) || {};
+
+    /* Clearing has to REMOVE the entry, not write zeros. A 0-0 draw is a real
+       rugby result worth two league points each, so an emptied form saved as
+       0-0 would quietly award points for a match that was never played. */
+    if (data.clear === true) {
+      if (results[matchId]) {
+        delete results[matchId];
+        await store.setJSON('all', results);
+      }
+      return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
+    }
     /* The score is COMPUTED here from the tries and kicks, using the rules for
        this age group (see _scoring.js). The client's own total is ignored, so
        a typo or a tampered request can never store a score that disagrees with

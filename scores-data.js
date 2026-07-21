@@ -98,10 +98,51 @@ async function readStore() {
   return (await local()).getResults();
 }
 
-async function fetchOverride(agId) {
-  const r = await tryFetchJson(`/.netlify/functions/get-schedule-override?age=${encodeURIComponent(agId)}`);
-  if (r.real) return r.json.ok ? r.json.schedule : null;
-  return (await local()).getScheduleOverride(agId);
+/* Returns the full publish state, not just the draw:
+     { schedule, awaitingPublication, published, publishedAt, publishedBy,
+       managerCanPublishNow }
+
+   Public callers get the PUBLISHED draw only. `awaitingPublication` is true
+   when nothing has been published for this age group — in which case readers
+   must show "coming soon" and must NOT fall back to the auto-generated draw,
+   which is sample data a parent could not tell apart from real fixtures.
+
+   Passing a session asks for the DRAFT instead, for the fixture editor. */
+async function fetchOverrideState(agId, session) {
+  const draft = session && session.token ? '&draft=1' : '';
+  const opts = session && session.token
+    ? { headers: { Authorization: `Bearer ${session.token}` } }
+    : undefined;
+
+  const r = await tryFetchJson(
+    `/.netlify/functions/get-schedule-override?age=${encodeURIComponent(agId)}${draft}`,
+    opts
+  );
+
+  if (r.real && r.json && r.json.ok) {
+    return {
+      schedule: r.json.schedule || null,
+      awaitingPublication: !!r.json.awaitingPublication,
+      published: !!r.json.published,
+      publishedAt: r.json.publishedAt || null,
+      publishedBy: r.json.publishedBy || null,
+      managerCanPublishNow: !!r.json.managerCanPublishNow,
+      isDraft: !!r.json.isDraft,
+    };
+  }
+
+  /* Local fallback (see local-backend.js) has no publish concept, so treat a
+     saved override as published — it keeps offline development usable. */
+  const schedule = await (await local()).getScheduleOverride(agId);
+  return {
+    schedule: schedule || null,
+    awaitingPublication: !schedule,
+    published: !!schedule,
+    publishedAt: null,
+    publishedBy: null,
+    managerCanPublishNow: true,
+    isDraft: false,
+  };
 }
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms)); // small UI-friendly pause
@@ -453,7 +494,10 @@ export async function getSchedule(agId) {
   await delay(60);
   const ag = findAg(agId);
   if (!ag || !(ag.pools || []).length) return null;
-  const override = await fetchOverride(agId);
+  const state = await fetchOverrideState(agId);
+  // Nothing published yet — the caller shows "coming soon" rather than a draw.
+  if (state.awaitingPublication) return { awaitingPublication: true, pools: [], knockout: [] };
+  const override = state.schedule;
   const draw = await resolveDraw(ag, override);
 
   const pools = draw.pools.map((p) => {
@@ -482,7 +526,15 @@ export async function getSchedule(agId) {
 export async function getStandings(agId) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return null;
-  const [store, override] = await Promise.all([readStore(), fetchOverride(agId)]);
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId)]);
+  if (state.awaitingPublication) {
+    return {
+      ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings },
+      awaitingPublication: true,
+      _advance: ag.advance, pools: [], tables: {}, bracket: [], doubleBracket: null,
+    };
+  }
+  const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const tables = ag.hasStandings ? computeStandings(draw, store) : {};
   const isSpecial = SPECIAL_BRACKET_AGE_IDS.includes(ag.id);
@@ -537,7 +589,9 @@ export async function getSpiritAward(agId) {
 export async function getFixtures(agId) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return [];
-  const [store, override] = await Promise.all([readStore(), fetchOverride(agId)]);
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId)]);
+  if (state.awaitingPublication) return { awaitingPublication: true, pool: [], knockout: [] };
+  const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const pool = draw.slots.map((fx) => ({
     ...fx, ageGroupId: ag.id, stage: 'pool',
@@ -559,22 +613,33 @@ export async function getFixtures(agId) {
    Only available to a signed-in manager (their own age group, or the
    "admin" invite code) or an organizer (any age group) — enforced again
    server-side in save-schedule-override.js. */
-export async function getDraw(agId) {
+export async function getDraw(agId, session) {
   const ag = findAg(agId); if (!ag) return null;
-  const [store, override] = await Promise.all([readStore(), fetchOverride(agId)]);
+  // Editor works on the draft, so pass the session through.
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const tables = computeStandings(draw, store);
   const knockout = resolveKnockout(ag, draw, override, tables, store);
   // Deep copy so the editor can freely mutate its working draft.
-  return JSON.parse(JSON.stringify({ pools: draw.pools, slots: draw.slots, knockout }));
+  return JSON.parse(JSON.stringify({
+    pools: draw.pools, slots: draw.slots, knockout,
+    _publish: {
+      published: state.published,
+      publishedAt: state.publishedAt,
+      publishedBy: state.publishedBy,
+      managerCanPublishNow: state.managerCanPublishNow,
+    },
+  }));
 }
 
 // Recomputes what the knockout stage would auto-seed to RIGHT NOW from
 // live standings, ignoring any saved knockout override — used by the
 // editor's "Regenerate from standings" button.
-export async function autoKnockoutSlots(agId) {
+export async function autoKnockoutSlots(agId, session) {
   const ag = findAg(agId); if (!ag) return [];
-  const [store, override] = await Promise.all([readStore(), fetchOverride(agId)]);
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const tables = computeStandings(draw, store);
   return JSON.parse(JSON.stringify(computeAutoKnockout(ag, draw, tables, store)));
@@ -598,6 +663,44 @@ export async function saveDraw(agId, draw, session) {
   });
   if (r.real) return r.json;
   return (await local()).saveScheduleOverride(session.token, agId, payload, false);
+}
+
+/* -------- Publishing --------
+   Saving a draw only writes the draft. These two are what put fixtures in
+   front of parents, and take them back down again.
+
+   Permission is re-checked server-side in publish-schedule.js: organisers any
+   time, managers only on the tournament days (7-8 Nov 2026) and only for
+   their own age group. The UI uses canPublishNow() to decide whether to show
+   the button as enabled, but the server is the authority. */
+export async function publishDraw(agId, session) {
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/publish-schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+    body: JSON.stringify({ ageGroupId: agId, action: 'publish' }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Publishing needs the live site.' };
+}
+
+export async function unpublishDraw(agId, session) {
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/publish-schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+    body: JSON.stringify({ ageGroupId: agId, action: 'unpublish' }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Publishing needs the live site.' };
+}
+
+/* Cosmetic only — mirrors the server rule so the UI can explain itself
+   before the user clicks. publishState comes from getDraw()._publish. */
+export function canPublishNow(session, publishState) {
+  if (!session) return false;
+  if (session.role === 'organizer' || session._role === 'organizer') return true;
+  return !!(publishState && publishState.managerCanPublishNow);
 }
 
 export async function resetDraw(agId, session) {

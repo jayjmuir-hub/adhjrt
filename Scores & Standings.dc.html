@@ -78,6 +78,15 @@
         </sc-for>
       </div>
 
+      <sc-if value="{{ awaitingPublication }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:48px 40px;text-align:center;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
+          <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:6px 16px;border-radius:100px;text-transform:uppercase">Coming soon</span>
+          <div style="font-family:'Anton';font-size:34px;color:#fff;margin-top:18px;text-transform:uppercase;line-height:1.05">Fixtures not published yet</div>
+          <p style="margin:14px auto 0;max-width:460px;color:#aeb4bf;font-size:16px;line-height:1.6">The draw for {{ selectedName }} hasn’t been released. Pools, kick-off times and pitches will appear here as soon as the organisers publish them.</p>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ selectedFestival }}" hint-placeholder-val="{{ false }}">
         <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:40px;text-align:center;color:#aeb4bf">
           <div style="font-family:'Anton';font-size:30px;color:#fff">Festival age group</div>
@@ -551,6 +560,35 @@
                 <button onClick="{{ onResetDraw }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Regenerate times &amp; bracket</button>
                 <sc-if value="{{ editorMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ editorMsg }}</span></sc-if>
               </div>
+
+              <!-- ===== PUBLISHING =====
+                   Saving above only writes a draft. Nothing reaches parents
+                   until it is published here. -->
+              <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:rgba(255,255,255,0.03)">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <span style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase">Publishing</span>
+                  <sc-if value="{{ isPublished }}" hint-placeholder-val="{{ false }}">
+                    <span style="background:#17A34A;color:#fff;font-size:11px;font-weight:800;letter-spacing:.5px;padding:4px 10px;border-radius:100px;text-transform:uppercase">Live</span>
+                  </sc-if>
+                  <sc-if value="{{ notPublished }}" hint-placeholder-val="{{ true }}">
+                    <span style="background:rgba(255,255,255,0.12);color:#cdd2da;font-size:11px;font-weight:800;letter-spacing:.5px;padding:4px 10px;border-radius:100px;text-transform:uppercase">Not published</span>
+                  </sc-if>
+                </div>
+
+                <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">{{ publishSummary }}</div>
+
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <sc-if value="{{ canPublish }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ onPublishDraw }}" disabled="{{ publishBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">{{ publishButtonLabel }}</button>
+                    <sc-if value="{{ isPublished }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ onUnpublishDraw }}" disabled="{{ publishBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish</button>
+                    </sc-if>
+                  </sc-if>
+                  <sc-if value="{{ cannotPublish }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:13px;color:#ffb26b;font-weight:600">Managers can publish on the tournament days only (7&ndash;8 November 2026). Ask a tournament organiser to publish before then.</span>
+                  </sc-if>
+                </div>
+              </div>
             </sc-if>
           </sc-if>
         </div>
@@ -587,6 +625,7 @@ class Component extends DCLogic {
     signupName: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
+    publishState: null, publishBusy: false,
     subTab: 'scores', adminSelectedAgeId: null,
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
     newTeamInputs: {},
@@ -669,8 +708,14 @@ class Component extends DCLogic {
   async loadEditor(agId) {
     const { api } = this.state;
     if (!api || !agId) return;
-    const draw = await api.getDraw(agId);
-    this.setState({ editorDraw: draw, editorAgeId: agId, editorMsg: '' });
+    // Pass the session so the editor loads the DRAFT, not the published copy.
+    const draw = await api.getDraw(agId, this.state.session);
+    this.setState({
+      editorDraw: draw,
+      editorAgeId: agId,
+      editorMsg: '',
+      publishState: (draw && draw._publish) || null,
+    });
   }
 
   onTeamDragStart(team, e) {
@@ -710,7 +755,7 @@ class Component extends DCLogic {
     const { api, session, editorDraw, editorAgeId } = this.state;
     if (!session) return;
     const ag = this.state.adminSelectedAgeId;
-    let draw = editorDraw && editorAgeId === ag ? editorDraw : await api.getDraw(ag);
+    let draw = editorDraw && editorAgeId === ag ? editorDraw : await api.getDraw(ag, session);
     if (stage === 'knockout') {
       draw = { ...draw, knockout: draw.knockout.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
     } else {
@@ -830,7 +875,7 @@ class Component extends DCLogic {
   }
   async onRegenerateKnockout() {
     this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
-      const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId);
+      const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId, this.state.session);
       this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: fresh } }));
     });
   }
@@ -839,12 +884,40 @@ class Component extends DCLogic {
     this.setState({ editorBusy: true, editorMsg: '' });
     const res = await api.saveDraw(editorAgeId, editorDraw, session);
     if (res.ok) {
-      this.setState({ editorBusy: false, editorMsg: 'Saved — live on the public schedule now.' });
+      this.setState({ editorBusy: false, editorMsg: 'Saved as a draft. Use Publish to make it public.' });
       this.loadAdmin(editorAgeId);
       if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
     } else {
       this.setState({ editorBusy: false, editorMsg: res.error || 'Could not save.' });
     }
+  }
+  async onPublishDraw() {
+    const { api, editorAgeId, session } = this.state;
+    this.confirmModal('Publish these fixtures for ' + editorAgeId.toUpperCase() + '? Parents and coaches will see them on the public fixtures and standings pages straight away.', async () => {
+      this.setState({ publishBusy: true, editorMsg: '' });
+      const res = await api.publishDraw(editorAgeId, session);
+      if (res.ok) {
+        this.setState({ publishBusy: false, editorMsg: 'Published — these fixtures are now public.' });
+        await this.loadEditor(editorAgeId);
+        if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+      } else {
+        this.setState({ publishBusy: false, editorMsg: res.error || 'Could not publish.' });
+      }
+    });
+  }
+  async onUnpublishDraw() {
+    const { api, editorAgeId, session } = this.state;
+    this.confirmModal('Take these fixtures back down? Anyone who has already seen them will find the fixtures replaced by "coming soon" until you publish again. Your draft is kept.', async () => {
+      this.setState({ publishBusy: true, editorMsg: '' });
+      const res = await api.unpublishDraw(editorAgeId, session);
+      if (res.ok) {
+        this.setState({ publishBusy: false, editorMsg: 'Unpublished — the public now sees "coming soon".' });
+        await this.loadEditor(editorAgeId);
+        if (this.state.selectedAgeId === editorAgeId) this.loadPublic();
+      } else {
+        this.setState({ publishBusy: false, editorMsg: res.error || 'Could not unpublish.' });
+      }
+    });
   }
   async onDiscardDraw() {
     this.confirmModal('Discard unsaved changes to this fixture editor? This reloads the last saved version.', async () => {
@@ -859,7 +932,7 @@ class Component extends DCLogic {
       const { api, editorDraw, editorAgeId, session } = this.state;
       this.setState({ editorBusy: true });
       const freshSlots = editorDraw.pools.flatMap((p) => api.regeneratePoolSlots(editorAgeId, p.id, p.teams));
-      const freshKnockout = await api.autoKnockoutSlots(editorAgeId);
+      const freshKnockout = await api.autoKnockoutSlots(editorAgeId, session);
       const nextDraw = { ...editorDraw, slots: freshSlots, knockout: freshKnockout };
       const res = await api.saveDraw(editorAgeId, nextDraw, session);
       this.setState({ editorDraw: nextDraw, editorBusy: false, editorMsg: res.ok ? 'Match times and bracket regenerated — your teams were kept.' : (res.error || 'Could not save.') });
@@ -1197,8 +1270,11 @@ class Component extends DCLogic {
       tabAdminStyle: s.view === 'admin' ? tabOn : tabOff,
       toast: s.toast,
 
-      ageTabs, selectedName: selName, selectedFestival: festival,
-      showTables: !!(st && st.ageGroup.hasStandings), pools, bracket, hasBracket,
+      ageTabs, selectedName: selName, selectedFestival: festival && !(st && st.awaitingPublication),
+      /* Nothing is shown publicly until an organiser publishes. An
+         auto-generated draw is sample data and must never reach parents. */
+      awaitingPublication: !!(st && st.awaitingPublication),
+      showTables: !!(st && st.ageGroup.hasStandings && !st.awaitingPublication), pools, bracket, hasBracket: hasBracket && !(st && st.awaitingPublication),
       isU16BSpecial, doubleBrackets, awardsSummary, awardsReady: awardsSummary.some((a) => a.ready),
       knockoutSeeds, seedsReady: seedsReadyFlag,
 
@@ -1271,6 +1347,27 @@ class Component extends DCLogic {
 
       editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,
       onDiscardDraw: () => this.onDiscardDraw(),
+
+      /* ---- publishing ----
+         The server decides for real (publish-schedule.js); these only shape
+         what the person sees before they click. */
+      isPublished: !!(s.publishState && s.publishState.published),
+      notPublished: !(s.publishState && s.publishState.published),
+      publishBusy: s.publishBusy,
+      canPublish: s.api ? s.api.canPublishNow(s.session, s.publishState) : false,
+      cannotPublish: s.api ? !s.api.canPublishNow(s.session, s.publishState) : true,
+      publishButtonLabel: (s.publishState && s.publishState.published) ? 'Republish' : 'Publish fixtures',
+      publishSummary: (() => {
+        const st = s.publishState;
+        if (!st || !st.published) {
+          return 'These fixtures are a draft. The public sees “coming soon” for this age group until you publish.';
+        }
+        const when = st.publishedAt ? new Date(st.publishedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : 'earlier';
+        const who = st.publishedBy ? ' by ' + st.publishedBy : '';
+        return 'Published ' + when + who + '. Any edits since then are draft only — press Republish to push them out.';
+      })(),
+      onPublishDraw: () => this.onPublishDraw(),
+      onUnpublishDraw: () => this.onUnpublishDraw(),
       poolCards, knockoutRosterGroups,
       knockoutRosterDragOver: (e) => e.preventDefault(),
       onSaveDraw: () => this.onSaveDraw(),

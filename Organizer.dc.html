@@ -21,6 +21,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="robots" content="noindex, nofollow">
 <title>Organizer — ADH JRT</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0C0C0E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ADH JRT">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<script>
+  /* Registers the service worker that makes this installable as an app.
+     Wrapped in a guard so an unsupported browser (or a file:// preview)
+     simply carries on as a normal website. */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+</script>
+
+
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}

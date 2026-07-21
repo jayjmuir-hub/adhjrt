@@ -13,7 +13,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <title>Abu Dhabi Harlequins Junior Rugby Tournament 2026 | ADH JRT</title>
 <link rel="icon" type="image/jpeg" href="assets/crest.jpeg">
-<link rel="apple-touch-icon" href="assets/crest.jpeg">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0C0C0E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ADH JRT">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<script>
+  /* Registers the service worker that makes this installable as an app.
+     Wrapped in a guard so an unsupported browser (or a file:// preview)
+     simply carries on as a normal website. */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+</script>
+
+
 <meta name="description" content="The Abu Dhabi Harlequins Junior Rugby Tournament (ADH JRT) is a two-day youth rugby festival on 7-8 November 2026 at Zayed Sports City, Abu Dhabi. Age groups U6 to U18, boys and girls.">
 <meta name="keywords" content="Abu Dhabi Harlequins, ADH JRT, Junior Rugby Tournament, youth rugby Abu Dhabi, UAE rugby, Zayed Sports City, mini rugby, midi rugby, Quins Abu Dhabi">
 <link rel="canonical" href="https://adhjrt.com/">

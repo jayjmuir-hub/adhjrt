@@ -69,7 +69,6 @@
         <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
         <a href="#results" style="color:#EDEDED;font-weight:600;font-size:15px">Results</a>
         <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
-        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-weight:800;font-size:13px;letter-spacing:.5px;padding:9px 18px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,filter .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);filter:brightness(1.05)">Register a Team</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.55);font-weight:800;font-size:13px;letter-spacing:.5px;padding:7.5px 16px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,background .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);background:rgba(255,255,255,0.12)">Register a Player</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
       </nav>
@@ -435,16 +434,11 @@
       <div data-reveal style="position:relative;background:#0C0C0E;border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:6px;overflow:hidden">
         <dc-import name="Scores & Standings" hint-size="100%,640px" style="display:block;width:100%;border-radius:14px;overflow:hidden"></dc-import>
 
-        <!-- Floats over the live scores app until at least one age group is
-             published. Fails closed: while the check is still loading the
-             veil stays up. -->
-        <sc-if value="{{ resultsComingSoon }}" hint-placeholder-val="{{ false }}">
-          <div style="position:absolute;inset:6px;border-radius:14px;background:rgba(12,12,14,0.93);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:3">
-            <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.4)">Coming soon</span>
-            <div style="font-family:'Anton';font-size:38px;color:#fff;margin-top:20px;text-transform:uppercase;line-height:1.02">Standings go live on match days</div>
-            <p style="margin:16px auto 0;max-width:520px;color:#aeb4bf;font-size:17px;line-height:1.6">Pool tables, tries and the knockout brackets will appear here once the fixtures are published and the first whistle goes.</p>
-          </div>
-        </sc-if>
+        <!-- No veil here on purpose. The embedded Scores & Standings app
+             shows its own per-age-group "coming soon" panel, so nothing
+             placeholder can appear — and an overlay would cover the
+             Standings / Manager area toggle, leaving managers no way to
+             sign in from the homepage. -->
       </div>
     </div>
   </section>
@@ -519,13 +513,10 @@
   </section>
 
   <!-- ============ SPONSORS ============ -->
-  <section id="sponsors" style="background:#0C0C0E;color:#fff;padding:74px 32px 84px">
-    <div style="text-align:center;font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:12px" data-reveal>Sponsors &amp; partners</div>
-    <h2 style="text-align:center;font-family:'Anton';font-size:44px;text-transform:uppercase;margin-bottom:40px" data-reveal>With thanks to our sponsors</h2>
-    <div style="max-width:1080px;margin:0 auto;background:#fff;border-radius:20px;padding:40px;box-shadow:0 24px 60px rgba(0,0,0,.35)" data-reveal>
-      <img src="assets/sponsors-logos.png" alt="Abu Dhabi Harlequins JRT sponsors" style="width:100%;height:auto;display:block">
-    </div>
-  </section>
+  <!-- SPONSORS — temporarily removed. The logo artwork is being replaced;
+       put the section back (with a fresh assets/sponsors-logos.png) and
+       restore the "Sponsors" link in the header nav when it is ready. -->
+
 
   <!-- ============ FOOTER ============ -->
   <footer style="background:#060606;color:#8a8f99;padding:60px 32px 40px">
@@ -555,7 +546,7 @@
       <div>
         <div style="color:#fff;font-weight:800;letter-spacing:1px;font-size:13px;text-transform:uppercase;margin-bottom:16px">Contact</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <a href="/cdn-cgi/l/email-protection#0d6c696064634d6c6965677f79236e6260" style="color:#8a8f99"><span class="__cf_email__" data-cfemail="ddbcb9b0b4b39dbcb9b5b7afa9f3beb2b0">[email&#160;protected]</span></a>
+          <a href="mailto:admin@adhjrt.com" style="color:#8a8f99">admin@adhjrt.com</a>
           <span>Zayed Sports City</span>
           <span>Abu Dhabi, UAE</span>
         </div>
@@ -889,7 +880,7 @@
 
 </div>
 </x-dc>
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E11B22&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E11B22&quot;,&quot;#17A34A&quot;,&quot;#0C0C0E&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showCountdown&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;registrationOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E11B22&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E11B22&quot;,&quot;#17A34A&quot;,&quot;#0C0C0E&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showCountdown&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;registrationOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;}}">
 const AGE_GROUP_NAMES = ['U6 Tag', 'U7 Tag', 'U8 Tag', 'U9 Mixed Contact', 'U10 Mixed Contact', 'U11 Mixed Contact', 'U12 Mixed Contact', 'U12G QR', 'U13 Mixed Contact', 'U14B Contact', 'U14G QR', 'U16B Contact', 'U16G Contact', 'U18B Contact', 'U18G Contact'];
 
 // Same club list used for pools/fixtures in scores-data.js.
@@ -994,7 +985,7 @@ function sanitizeUaePhone(val) { return val.replace(/\D/g, '').slice(0, 9); }
 
 class Component extends DCLogic {
   state = {
-    days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '', publishedAges: null,
+    days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '',
     ctaToast: '',
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
@@ -1033,18 +1024,6 @@ class Component extends DCLogic {
     if (!fxApi) return;
     const schedule = await fxApi.getSchedule(agId);
     this.setState({ fxSchedule: schedule });
-
-    /* Which age groups are public, for the two "coming soon" veils. Fetched
-       once and cached on state — it does not change while somebody reads the
-       page, and both sections need the same answer. */
-    if (this.state.publishedAges === null && fxApi.getPublishedAgeGroups) {
-      try {
-        const ages = await fxApi.getPublishedAgeGroups();
-        this.setState({ publishedAges: ages });
-      } catch (e) {
-        this.setState({ publishedAges: [] }); // fail closed — veil stays up
-      }
-    }
   }
 
   componentWillUnmount() {
@@ -1363,13 +1342,11 @@ class Component extends DCLogic {
       accent,
       fixtureAgeTabs, fixturePools,
       isU16BFixtures, fixtureKnockout,
-      /* Veils. fixturesComingSoon covers the selected age group's fixture
-         grid; resultsComingSoon covers the embedded scores app and only lifts
-         once at least one age group is public. Both fail closed — while the
-         published list is still loading (null) the veil stays up, so
-         placeholder fixtures can never flash on screen. */
+      /* Veil for the fixture grid only. It fails closed — while the schedule
+         is still loading the veil stays up, so placeholder pools can never
+         flash on screen. The Results section needs no veil: the embedded
+         scores app handles its own "coming soon" per age group. */
       fixturesComingSoon: !!(fxSchedule && fxSchedule.awaitingPublication),
-      resultsComingSoon: !(Array.isArray(this.state.publishedAges) && this.state.publishedAges.length),
       comingSoonAgeName: (this.state.fxAgeGroups.find((a) => a.id === this.state.fxSelectedId) || {}).name || 'this age group',
 
       hasFixturePools: !!(fxSchedule && fxSchedule.pools && fxSchedule.pools.length),

@@ -1024,7 +1024,14 @@ class Component extends DCLogic {
     const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
 
     // ---- public age tabs ----
-    const ageTabs = s.ageGroups.map((a) => ({
+    /* U6 and U7 are non-competitive festivals — no pools, no tables, no
+       knockout. They are hidden from the PUBLIC standings tabs so parents are
+       not offered a tab that can only ever say "no standings are kept". They
+       remain fully available in the Manager area, where their fixtures and
+       pitches still need managing. */
+    const publicAgeGroups = s.ageGroups.filter((a) => a.hasStandings);
+
+    const ageTabs = publicAgeGroups.map((a) => ({
       name: a.name, hasStandings: a.hasStandings,
       onSelect: () => this.setState({ selectedAgeId: a.id }, () => this.loadPublic()),
       style: 'font-weight:700;font-size:13px;padding:8px 14px;border-radius:100px;cursor:pointer;white-space:nowrap;border:1px solid ' +

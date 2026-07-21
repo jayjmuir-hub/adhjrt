@@ -54,6 +54,7 @@
 
 const { google } = require('googleapis');
 const { sendConfirmation } = require('./_email');
+const { nextTeamCode } = require('./_teams');
 
 // The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
 // names it after the account locale, and anyone can rename it. Hardcoding the
@@ -107,13 +108,38 @@ exports.handler = async (event) => {
 
     if (formName === 'team-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_TEAMS;
-      columns = 'A:M';
+      columns = 'A:N';
+
+      /* The team code (e.g. ADH1) is generated here rather than typed by the
+         coach, so it is consistent everywhere it appears. It counts the club's
+         existing entries in the same age group, which means the sheet has to
+         be read before the row is appended. */
+      const sheetName = await firstSheetName(sheets, spreadsheetId);
+      let existingRows = [];
+      try {
+        const current = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!A:N`,
+        });
+        const [, ...rows] = current.data.values || [[]]; // drop header
+        existingRows = rows;
+      } catch (e) {
+        /* If the read fails the registration still matters more than the code,
+           so fall through with an empty list — the team just becomes <prefix>1
+           and an organiser can renumber it in the sheet. */
+        console.warn('could not read teams sheet for numbering:', e.message);
+      }
+
+      const teamCode = nextTeamCode(data.club, data['age-group'], existingRows);
+      data['team-name'] = teamCode; // so the confirmation email shows it too
+
       values = [[
         submittedAt,
-        data.club || '', data['team-name'] || '', data['age-group'] || '',
+        data.club || '', teamCode, data['age-group'] || '',
         data['head-coach-name'] || '', data['head-coach-email'] || '', data['head-coach-phone'] || '',
         data['manager-name'] || '', data['manager-email'] || '', data['manager-phone'] || '',
         data['num-players'] || '', data.notes || '', data.players || '',
+        data['preferred-pool'] || '',
       ]];
     } else if (formName === 'player-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_PLAYERS;

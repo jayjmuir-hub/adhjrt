@@ -55,7 +55,7 @@ function getAuth() {
 // submission-created.js appends them in), then mapped onto the
 // camelCase field names the Organizer dashboard expects — combining
 // first/last name pairs into single display fields.
-const TEAM_FIELDS = ['submittedAt', 'club', 'teamName', 'ageGroup', 'headCoachName', 'headCoachEmail', 'headCoachMobile', 'managerName', 'managerEmail', 'managerMobile', 'numPlayers', 'notes', 'players'];
+const TEAM_FIELDS = ['submittedAt', 'club', 'teamName', 'ageGroup', 'headCoachName', 'headCoachEmail', 'headCoachMobile', 'managerName', 'managerEmail', 'managerMobile', 'numPlayers', 'notes', 'players', 'preferredPool'];
 
 function mapPlayerRow(row) {
   const [submittedAt, playerFirst, playerLast, dob, club, ageGroup, parentFirst, parentLast, parentEmail, parentMobile, emergencyFirst, emergencyLast, emergencyMobile, medicalNotes, consent, playUpConsent] = row;
@@ -95,7 +95,7 @@ exports.handler = async (event) => {
 
     const auth = getAuth();
     const [teamRows, playerRows] = await Promise.all([
-      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'A:M'),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'A:N'),
       readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'A:P'),
     ]);
 

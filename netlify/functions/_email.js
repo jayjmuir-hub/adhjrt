@@ -112,6 +112,42 @@ const esc = (s) =>
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+/* The team form sends its squad as a JSON string in `players`, e.g.
+   [{"firstName":"Tyler","lastName":"Muir","dob":"2010-09-01"}]
+   Rendered as a numbered list so the coach can check the squad at a glance
+   and spot anyone missing. Dates of birth are shown because a wrong DOB is
+   the most common reason a player ends up in the wrong age group, and the
+   coach is the person able to correct it. */
+function squadList(raw) {
+  let players = [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (Array.isArray(parsed)) players = parsed;
+  } catch (e) {
+    return '';
+  }
+  if (!players.length) return '';
+
+  const items = players
+    .map((p, i) => {
+      const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim();
+      if (!name) return '';
+      const dob = p.dob ? `<span style="color:#6b7280;font-weight:400"> &middot; ${esc(p.dob)}</span>` : '';
+      return `<li style="margin:0 0 6px;font-size:14px;color:#111827;font-weight:600">${esc(name)}${dob}</li>`;
+    })
+    .filter(Boolean)
+    .join('');
+
+  if (!items) return '';
+
+  return `<tr>
+    <td style="padding:12px 16px 12px 0;color:#6b7280;font-size:14px;vertical-align:top">Squad</td>
+    <td style="padding:12px 0">
+      <ol style="margin:0;padding-left:20px">${items}</ol>
+    </td>
+  </tr>`;
+}
+
 function row(label, value) {
   if (!value) return '';
   return `<tr>
@@ -194,8 +230,9 @@ function teamEmail(d) {
   const team = d['team-name'] || '';
   const rows = [
     row('Club', d.club),
-    row('Team', team),
+    row('Team code', team),
     row('Age group', d['age-group']),
+    row('Preferred pool', d['preferred-pool']),
     row('Head coach', d['head-coach-name']),
     row('Coach email', d['head-coach-email']),
     row('Coach number', d['head-coach-phone']),
@@ -203,16 +240,17 @@ function teamEmail(d) {
     row('Manager email', d['manager-email']),
     row('Manager number', d['manager-phone']),
     row('Players entered', d['num-players']),
+    squadList(d.players),
     row('Notes', d.notes),
   ].join('');
 
   return {
-    subject: `Team registration received — ${team || d.club || 'team'} | ADH JRT 2026`,
+    subject: `Team registration received — ${team ? team + ' ' : ''}${d.club || ''} | ADH JRT 2026`.replace(/\s+\|/, ' |'),
     html: wrap(
       'Thanks, we have your team entry',
       `Thank you for entering ${team ? `<strong>${esc(team)}</strong>` : 'your team'} into the Abu Dhabi Harlequins Junior Rugby Tournament. Here is what we received:`,
       rows,
-      'Nothing further is needed right now. Pool draws and fixtures are confirmed closer to the tournament and sent to the contacts above. If any detail is wrong, or your squad changes, reply to this email and we will update it.'
+      'Your team code above is how this side appears in the draw, the fixture list and the live standings. Your pool preference has been noted — we will do our best to accommodate it, but the final draw is set by the tournament organisers. Nothing further is needed right now; fixtures are confirmed closer to the tournament and sent to the contacts above. If any detail is wrong, or your squad changes, reply to this email and we will update it.'
     ),
   };
 }

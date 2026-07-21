@@ -53,6 +53,7 @@
 // ---------------------------------------------------------------------
 
 const { google } = require('googleapis');
+const { sendConfirmation } = require('./_email');
 
 // The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
 // names it after the account locale, and anyone can rename it. Hardcoding the
@@ -139,6 +140,22 @@ exports.handler = async (event) => {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values },
     });
+
+    /* Confirmation email to whoever registered. Deliberately AFTER the sheet
+       write and wrapped in its own try/catch: the row is the record that
+       matters, so a mail failure must never cost us a registration, and must
+       never make Netlify retry a submission that was already saved (which
+       would duplicate the row). A failure here is logged and swallowed. */
+    try {
+      const result = await sendConfirmation(formName, data);
+      if (result.sent) {
+        console.log(`confirmation sent for ${formName} (${result.count} recipient(s))`);
+      } else {
+        console.warn(`confirmation not sent for ${formName}: ${result.reason}`);
+      }
+    } catch (mailErr) {
+      console.error('confirmation email failed (registration WAS saved):', mailErr.message);
+    }
 
     return { statusCode: 200, body: 'ok' };
   } catch (err) {

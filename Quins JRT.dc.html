@@ -285,7 +285,18 @@
         <button onClick="{{ fa.onSelect }}" style="{{ fa.style }}">{{ fa.name }}</button>
       </sc-for>
     </div>
-    <sc-if value="{{ hasFixturePools }}" hint-placeholder-val="{{ false }}">
+
+    <!-- Veil shown until an organiser publishes this age group's draw. The
+         auto-generated pools are sample data and must never appear here. -->
+    <sc-if value="{{ fixturesComingSoon }}" hint-placeholder-val="{{ false }}">
+      <div data-reveal style="position:relative;background:#fff;border:1px solid #e2ded4;border-radius:18px;padding:56px 40px;text-align:center;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.06)">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
+        <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.15)">Coming soon</span>
+        <div style="font-family:'Anton';font-size:38px;color:#0C0C0E;margin-top:20px;text-transform:uppercase;line-height:1.02">Fixtures not released yet</div>
+        <p style="margin:16px auto 0;max-width:520px;color:#5a616d;font-size:17px;line-height:1.6">The draw for {{ comingSoonAgeName }} hasn&rsquo;t been published. Pools, kick-off times and pitch allocations will appear here as soon as the organisers release them.</p>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showFixtureFilter }}" hint-placeholder-val="{{ false }}">
       <div data-reveal style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:30px">
         <label style="font-size:13px;font-weight:700;color:#5a616d;letter-spacing:.4px;text-transform:uppercase">Filter by team</label>
         <select value="{{ fixtureTeamFilter }}" onChange="{{ onFixtureTeamChange }}" style="font-weight:700;font-size:14px;padding:9px 16px;border-radius:9px;border:1.5px solid #e2ded4;background:#fff;color:#14151A;cursor:pointer">
@@ -423,6 +434,17 @@
       <p style="text-align:center;color:#aeb4bf;max-width:660px;margin:0 auto 44px;font-size:17px">Pool results and live standings will be published here across the weekend of 7&ndash;8 November 2026, with brackets updating as teams reach the semi-finals and finals. U6 &amp; U7 play a non-competitive festival &mdash; no standings are kept.</p>
       <div data-reveal style="position:relative;background:#0C0C0E;border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:6px;overflow:hidden">
         <dc-import name="Scores & Standings" hint-size="100%,640px" style="display:block;width:100%;border-radius:14px;overflow:hidden"></dc-import>
+
+        <!-- Floats over the live scores app until at least one age group is
+             published. Fails closed: while the check is still loading the
+             veil stays up. -->
+        <sc-if value="{{ resultsComingSoon }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:6px;border-radius:14px;background:rgba(12,12,14,0.93);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:3">
+            <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.4)">Coming soon</span>
+            <div style="font-family:'Anton';font-size:38px;color:#fff;margin-top:20px;text-transform:uppercase;line-height:1.02">Standings go live on match days</div>
+            <p style="margin:16px auto 0;max-width:520px;color:#aeb4bf;font-size:17px;line-height:1.6">Pool tables, tries and the knockout brackets will appear here once the fixtures are published and the first whistle goes.</p>
+          </div>
+        </sc-if>
       </div>
     </div>
   </section>
@@ -972,7 +994,7 @@ function sanitizeUaePhone(val) { return val.replace(/\D/g, '').slice(0, 9); }
 
 class Component extends DCLogic {
   state = {
-    days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '',
+    days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '', publishedAges: null,
     ctaToast: '',
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
@@ -1011,6 +1033,18 @@ class Component extends DCLogic {
     if (!fxApi) return;
     const schedule = await fxApi.getSchedule(agId);
     this.setState({ fxSchedule: schedule });
+
+    /* Which age groups are public, for the two "coming soon" veils. Fetched
+       once and cached on state — it does not change while somebody reads the
+       page, and both sections need the same answer. */
+    if (this.state.publishedAges === null && fxApi.getPublishedAgeGroups) {
+      try {
+        const ages = await fxApi.getPublishedAgeGroups();
+        this.setState({ publishedAges: ages });
+      } catch (e) {
+        this.setState({ publishedAges: [] }); // fail closed — veil stays up
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -1329,8 +1363,18 @@ class Component extends DCLogic {
       accent,
       fixtureAgeTabs, fixturePools,
       isU16BFixtures, fixtureKnockout,
+      /* Veils. fixturesComingSoon covers the selected age group's fixture
+         grid; resultsComingSoon covers the embedded scores app and only lifts
+         once at least one age group is public. Both fail closed — while the
+         published list is still loading (null) the veil stays up, so
+         placeholder fixtures can never flash on screen. */
+      fixturesComingSoon: !!(fxSchedule && fxSchedule.awaitingPublication),
+      resultsComingSoon: !(Array.isArray(this.state.publishedAges) && this.state.publishedAges.length),
+      comingSoonAgeName: (this.state.fxAgeGroups.find((a) => a.id === this.state.fxSelectedId) || {}).name || 'this age group',
+
       hasFixturePools: !!(fxSchedule && fxSchedule.pools && fxSchedule.pools.length),
-      hasFixtureKnockout: !!(bracketTop || bracketBottom || seedBracketList || waterfallFinals),
+      showFixtureFilter: !!(fxSchedule && !fxSchedule.awaitingPublication && fxSchedule.pools && fxSchedule.pools.length),
+      hasFixtureKnockout: !(fxSchedule && fxSchedule.awaitingPublication) && !!(bracketTop || bracketBottom || seedBracketList || waterfallFinals),
       hasBracket: !!(bracketTop || bracketBottom), bracketList,
       hasSeedBracket: !!seedBracketList, seedBracketList,
       noBracketButHasFinals: !!waterfallFinals, waterfallFinals,

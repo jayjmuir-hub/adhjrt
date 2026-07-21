@@ -665,6 +665,15 @@ export async function saveDraw(agId, draw, session) {
   return (await local()).saveScheduleOverride(session.token, agId, payload, false);
 }
 
+/* Which age groups have published fixtures. Used by the main site to decide
+   whether to veil its Fixtures and Results sections. One call instead of
+   asking about all fifteen age groups separately. */
+export async function getPublishedAgeGroups() {
+  const r = await tryFetchJson('/.netlify/functions/get-published-ages');
+  if (r.real && r.json && r.json.ok) return r.json.ages || [];
+  return [];
+}
+
 /* -------- Publishing --------
    Saving a draw only writes the draft. These two are what put fixtures in
    front of parents, and take them back down again.

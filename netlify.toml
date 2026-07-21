@@ -16,6 +16,15 @@
   to = "/Scores & Standings.dc.html"
   status = 200
 
+# The three page files reference /assets/icons/apple-touch-icon.png, but the
+# icons live directly in /assets/. This rewrite makes both paths work so the
+# pages did not need re-uploading. Safe to delete once those hrefs are
+# corrected in the .dc.html files.
+[[redirects]]
+  from = "/assets/icons/*"
+  to = "/assets/:splat"
+  status = 200
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.

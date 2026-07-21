@@ -10,6 +10,21 @@
 // submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
 
 const { google } = require('googleapis');
+
+// The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
+// names it after the account locale, and anyone can rename it. Hardcoding the
+// name produces "Unable to parse range: Sheet1!A:P". Ask the API for the first
+// tab's real name instead, so renaming a tab can never break this again.
+async function firstSheetName(sheets, spreadsheetId) {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties.title',
+  });
+  const title = ((meta.data.sheets || [])[0] || {}).properties?.title;
+  if (!title) throw new Error('Spreadsheet has no tabs: ' + spreadsheetId);
+  return title;
+}
+
 const { verify, getBearerToken } = require('./_auth');
 
 // Reads the service account private key from the environment and repairs the
@@ -62,8 +77,9 @@ function mapTeamRow(row) {
   return obj;
 }
 
-async function readRows(auth, spreadsheetId, range) {
+async function readRows(auth, spreadsheetId, columns) {
   const sheets = google.sheets({ version: 'v4', auth });
+  const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   const [, ...rows] = res.data.values || [[]]; // skip header row
   return rows;
@@ -79,8 +95,8 @@ exports.handler = async (event) => {
 
     const auth = getAuth();
     const [teamRows, playerRows] = await Promise.all([
-      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'Sheet1!A:M'),
-      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'Sheet1!A:P'),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'A:M'),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'A:P'),
     ]);
 
     return {

@@ -54,6 +54,21 @@
 
 const { google } = require('googleapis');
 
+// The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
+// names it after the account locale, and anyone can rename it. Hardcoding the
+// name produces "Unable to parse range: Sheet1!A:P". Ask the API for the first
+// tab's real name instead, so renaming a tab can never break this again.
+async function firstSheetName(sheets, spreadsheetId) {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties.title',
+  });
+  const title = ((meta.data.sheets || [])[0] || {}).properties?.title;
+  if (!title) throw new Error('Spreadsheet has no tabs: ' + spreadsheetId);
+  return title;
+}
+
+
 // Reads the service account private key from the environment and repairs the
 // two ways it commonly arrives broken:
 //   1. wrapped in the double quotes copied straight out of the JSON key file
@@ -86,12 +101,12 @@ exports.handler = async (event) => {
     const auth = getAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    let spreadsheetId, range, values;
+    let spreadsheetId, columns, values;
     const submittedAt = new Date().toISOString();
 
     if (formName === 'team-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_TEAMS;
-      range = 'Sheet1!A:M';
+      columns = 'A:M';
       values = [[
         submittedAt,
         data.club || '', data['team-name'] || '', data['age-group'] || '',
@@ -101,7 +116,7 @@ exports.handler = async (event) => {
       ]];
     } else if (formName === 'player-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_PLAYERS;
-      range = 'Sheet1!A:P';
+      columns = 'A:P';
       values = [[
         submittedAt,
         data['player-first-name'] || '', data['player-last-name'] || '', data.dob || '',
@@ -115,6 +130,8 @@ exports.handler = async (event) => {
       // Not one of our two forms (e.g. Netlify's own honeypot test) — ignore.
       return { statusCode: 200, body: 'ignored' };
     }
+
+    const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,

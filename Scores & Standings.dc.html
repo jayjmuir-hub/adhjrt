@@ -489,7 +489,10 @@
                         </div>
                       </div>
                     </sc-if>
-                    <div style="display:flex;align-items:center;margin-top:16px">
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+                      <sc-if value="{{ m.hasResult }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ m.h.clear }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;font-size:13px">Clear result</button>
+                      </sc-if>
                       <button onClick="{{ m.h.save }}" style="margin-left:auto;background:#17A34A;color:#fff;font-weight:800;padding:10px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Save</button>
                     </div>
                     <sc-if value="{{ m.savedNote }}" hint-placeholder-val=""><div style="font-size:12px;color:#3bd070;font-weight:700;margin-top:10px">{{ m.savedNote }}</div></sc-if>
@@ -1059,7 +1062,43 @@ class Component extends DCLogic {
     });
   }
 
+  /* Removing a result has to delete it, not save zeros — 0-0 is a real draw
+     worth two league points each, so an emptied form saved as 0-0 would award
+     points for a match that was never played. */
+  async clearResult(id) {
+    const { api, session } = this.state;
+    this.confirmModal('Clear this result? The match goes back to unplayed and the pool table is recalculated.', async () => {
+      const res = await api.clearResult(id, session);
+      if (res.ok) {
+        this.setState((s) => {
+          const drafts = { ...s.drafts }; delete drafts[id];
+          const savedIds = { ...s.savedIds }; delete savedIds[id];
+          return { drafts, savedIds, toast: 'Result cleared.' };
+        });
+        await this.loadAdmin();
+        setTimeout(() => this.setState({ toast: '' }), 2500);
+      } else {
+        this.setState({ toast: res.error || 'Could not clear.' });
+      }
+    });
+  }
+
   async save(id) {
+    const { api, session, drafts } = this.state;
+    const d = drafts[id] || {};
+    if (!d.walkover) {
+      const keys = ['Tries','Conversions','Penalties','Drops'];
+      const zero = ['home','away'].every((side) => keys.every((k) => !Number(d[side + k] || 0)));
+      if (zero) {
+        this.confirmModal('Save this as a 0–0 draw? Both teams get two league points. To remove the result instead, use Clear result.',
+          () => this._doSave(id));
+        return;
+      }
+    }
+    return this._doSave(id);
+  }
+
+  async _doSave(id) {
     const { api, session, drafts } = this.state;
     const res = await api.submitResult(id, drafts[id] || {}, session);
     if (res.ok) {
@@ -1305,6 +1344,7 @@ class Component extends DCLogic {
           },
           woNoneStyle: btn(!d.walkover), woHomeStyle: btn(d.walkover === 'home'), woAwayStyle: btn(d.walkover === 'away'),
           savedNote: s.savedIds[fx.id] || '',
+          hasResult: !!fx.result,
           pitchDraft: (s.pitchDrafts && s.pitchDrafts[fx.id] != null) ? s.pitchDrafts[fx.id] : fx.pitch,
           showSpirit: !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId)),
           spiritDraftHome: d.spiritNomineeHome || '', spiritDraftAway: d.spiritNomineeAway || '',
@@ -1321,6 +1361,7 @@ class Component extends DCLogic {
             woHome: () => this.setWalkover(fx.id, 'home'),
             woAway: () => this.setWalkover(fx.id, 'away'),
             save: () => this.save(fx.id),
+            clear: () => this.clearResult(fx.id),
             pitch: (e) => this.setPitchDraft(fx.id, fx.stage, e.target.value),
           },
         };

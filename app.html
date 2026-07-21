@@ -788,7 +788,9 @@ function openMatch(id){
       <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home||'Home')} awarded the match</option>
       <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away||'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
-    <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>`);
+    <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>
+    ${r ? `<button class="btn btn-o" id="sclr" style="margin-top:10px;color:#c0392b">Clear result</button>
+      <p class="muted" style="font-size:12px;margin-top:8px;line-height:1.5">Clearing puts the match back to unplayed. It is not the same as saving 0&ndash;0, which is a draw worth two league points each.</p>` : ''}`);
 
   const readSide = (side) => {
     const o = {};
@@ -812,8 +814,24 @@ function openMatch(id){
   $('wo').onchange = recalc;
   recalc();
 
+  if (r && $('sclr')) $('sclr').onclick = async () => {
+    if (!confirm('Clear this result? The match goes back to unplayed and the pool table is recalculated.')) return;
+    $('sclr').textContent = 'Clearing…';
+    const res = await api.clearResult(m.id, S.session);
+    if (res.ok) { closeSheet(); toast('Result cleared'); await load(S.browseId); }
+    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not clear.')}</div>`; $('sclr').textContent = 'Clear result'; }
+  };
+
   $('sgo').onclick = async () => {
     const wo = $('wo').value;
+    /* An all-zero save is a real 0-0 draw. Worth confirming, because the more
+       likely intent is to clear a result that was entered by mistake. */
+    if (!wo) {
+      const zero = ['home','away'].every(side => parts.every(k => !Number(($(`${side}-${k}`)||{}).value || 0)));
+      if (zero && !confirm('Save this as a 0–0 draw? Both teams get two league points.\n\nTo remove the result instead, use Clear result.')) {
+        return;
+      }
+    }
     $('sgo').textContent = 'Saving…';
     const payload = { walkover: wo || null };
     ['home','away'].forEach(side => parts.forEach(k => {

@@ -865,6 +865,19 @@ export function logout() { localStorage.removeItem(SESSION_KEY); }
 // which re-verifies the signed-in manager/organizer's age-group access
 // server-side before writing — the check here is just for instant UI
 // feedback.
+/* Removes a result entirely, so the match goes back to unplayed. Distinct
+   from saving 0-0, which is a real draw worth two league points each. */
+export async function clearResult(matchId, session) {
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/submit-result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+    body: JSON.stringify({ matchId, data: { clear: true } }),
+  });
+  if (r.real) return r.json;
+  return (await local()).submitResult(session.token, matchId, { clear: true });
+}
+
 export async function submitResult(matchId, data, session) {
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
   const agId = matchId.split(':')[0];

@@ -224,7 +224,6 @@ async function sendConfirmation(formName, data) {
     const { subject, html } = playerEmail(data);
     return sendMail({
       to: data['parent-email'],
-      replyTo: 'player-registration@adhjrt.com',
       subject,
       html,
     });
@@ -236,7 +235,6 @@ async function sendConfirmation(formName, data) {
     const to = [...new Set([data['head-coach-email'], data['manager-email']].filter(Boolean))];
     return sendMail({
       to,
-      replyTo: 'team-registration@adhjrt.com',
       subject,
       html,
     });

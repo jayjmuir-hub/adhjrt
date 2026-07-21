@@ -60,6 +60,55 @@ const TEAM_NAMES = {
 export function teamLabel(code) {
   return TEAM_NAMES[code] || code || '';
 }
+/* Mirrors netlify/functions/_scoring.js so the entry forms can build
+   themselves. The server re-derives the total from these same rules, so this
+   copy only decides which inputs are shown — it can never change a score. */
+const SCORE_POINTS = { tries: 5, conversions: 2, penalties: 3, drops: 3 };
+const SCORE_LABEL  = { tries: 'Tries', conversions: 'Conversions', penalties: 'Penalties', drops: 'Drop goals' };
+const SCORE_BY_AGE = {
+  u6:['tries'], u7:['tries'], u8:['tries'], u9:['tries'], u10:['tries'], u11:['tries'],
+  u12:['tries','conversions'], u12g:['tries','conversions'], u13:['tries','conversions'],
+  u14b:['tries','conversions','penalties','drops'], u14g:['tries','conversions','penalties','drops'],
+  u16b:['tries','conversions','penalties','drops'], u16g:['tries','conversions','penalties','drops'],
+  u18b:['tries','conversions','penalties','drops'], u18g:['tries','conversions','penalties','drops'],
+};
+/* Live rules, once fetched, replace the built-in defaults. Fetched on demand
+   and cached — a config lookup must never sit between a manager and a score. */
+let LIVE_RULES = null;
+
+export async function loadScoringRules() {
+  if (LIVE_RULES) return LIVE_RULES;
+  const r = await tryFetchJson('/.netlify/functions/scoring-rules');
+  if (r.real && r.json && r.json.ok && r.json.rules) LIVE_RULES = r.json.rules;
+  else LIVE_RULES = { ...SCORE_BY_AGE };
+  return LIVE_RULES;
+}
+
+export async function saveScoringRules(rules, session) {
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/scoring-rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+    body: JSON.stringify({ rules }),
+  });
+  if (r.real && r.json && r.json.ok) { LIVE_RULES = r.json.rules; return { ok: true }; }
+  return { ok: false, error: (r.json && r.json.error) || 'Could not save the scoring rules.' };
+}
+
+export function scoringFor(ageGroupId) {
+  const src = LIVE_RULES || SCORE_BY_AGE;
+  return src[ageGroupId] || ['tries','conversions','penalties','drops'];
+}
+export function allScoreTypes() { return ['tries','conversions','penalties','drops']; }
+export function scorePoints(k) { return SCORE_POINTS[k] || 0; }
+export function scoreLabel(k) { return SCORE_LABEL[k] || k; }
+export function scoreTotal(ageGroupId, parts) {
+  return scoringFor(ageGroupId).reduce((sum, k) => {
+    const v = Math.max(0, Math.floor(Number((parts || {})[k]) || 0));
+    return sum + v * SCORE_POINTS[k];
+  }, 0);
+}
+
 export function teamKey() {
   return Object.keys(TEAM_NAMES).map((c) => ({ code: c, name: TEAM_NAMES[c] }));
 }

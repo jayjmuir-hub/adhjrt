@@ -253,9 +253,12 @@
       <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
         <div style="background:#151517;border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px 20px;margin-bottom:30px">
           <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7f8794;margin-bottom:10px">Team key</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px 22px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px">
             <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
-              <div style="font-size:13.5px;color:#aeb4bf"><strong style="color:#fff">{{ k.code }}</strong> {{ k.name }}</div>
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="flex:none;min-width:56px;text-align:center;background:#fff;color:#0C0C0E;font-family:'Anton';font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px">{{ k.code }}</span>
+                <span style="font-size:13.5px;color:#cdd2da">{{ k.name }}</span>
+              </div>
             </sc-for>
           </div>
         </div>
@@ -433,19 +436,35 @@
                   <div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                       <div>
-                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.home }}</div>
-                        <div style="display:flex;gap:8px">
-                          <input type="number" min="0" value="{{ m.draft.homeScore }}" onInput="{{ m.h.hs }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
-                          <input type="number" min="0" value="{{ m.draft.homeTries }}" onInput="{{ m.h.ht }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
-                          <input type="number" min="0" value="{{ m.draft.homeCards }}" onInput="{{ m.h.hc }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+                          <span style="font-size:12px;color:#7f8794;font-weight:700">{{ m.home }}</span>
+                          <span style="font-family:'Anton';font-size:24px;color:#E11B22;line-height:1">{{ m.homeTotal }}</span>
+                        </div>
+                        <sc-for list="{{ m.homeFields }}" as="f" hint-placeholder-count="4">
+                          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+                            <label style="flex:1;font-size:13px;color:#cdd2da">{{ f.label }} <span style="color:#7f8794;font-size:11.5px">{{ f.pts }}</span></label>
+                            <input type="number" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          </div>
+                        </sc-for>
+                        <div style="display:flex;align-items:center;gap:10px;margin-top:9px">
+                          <label style="flex:1;font-size:13px;color:#7f8794">Cards</label>
+                          <input type="number" min="0" value="{{ m.draft.homeCards }}" onInput="{{ m.h.hc }}" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
                         </div>
                       </div>
                       <div>
-                        <div style="font-size:12px;color:#7f8794;font-weight:700;margin-bottom:6px">{{ m.away }}</div>
-                        <div style="display:flex;gap:8px">
-                          <input type="number" min="0" value="{{ m.draft.awayScore }}" onInput="{{ m.h.as }}" placeholder="Pts" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
-                          <input type="number" min="0" value="{{ m.draft.awayTries }}" onInput="{{ m.h.at }}" placeholder="Tries" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
-                          <input type="number" min="0" value="{{ m.draft.awayCards }}" onInput="{{ m.h.ac }}" placeholder="Cards" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+                          <span style="font-size:12px;color:#7f8794;font-weight:700">{{ m.away }}</span>
+                          <span style="font-family:'Anton';font-size:24px;color:#E11B22;line-height:1">{{ m.awayTotal }}</span>
+                        </div>
+                        <sc-for list="{{ m.awayFields }}" as="f" hint-placeholder-count="4">
+                          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+                            <label style="flex:1;font-size:13px;color:#cdd2da">{{ f.label }} <span style="color:#7f8794;font-size:11.5px">{{ f.pts }}</span></label>
+                            <input type="number" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
+                          </div>
+                        </sc-for>
+                        <div style="display:flex;align-items:center;gap:10px;margin-top:9px">
+                          <label style="flex:1;font-size:13px;color:#7f8794">Cards</label>
+                          <input type="number" min="0" value="{{ m.draft.awayCards }}" onInput="{{ m.h.ac }}" style="width:64px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px;color:#fff;text-align:center">
                         </div>
                       </div>
                     </div>
@@ -619,6 +638,31 @@
                   </sc-if>
                 </div>
               </div>
+
+              <!-- ===== SCORING RULES (organisers only) =====
+                   What counts at this age group. Changing it here changes the
+                   score entry form and how totals are worked out — the server
+                   uses the same setting, so they cannot drift apart. -->
+              <sc-if value="{{ isOrganiserView }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:rgba(255,255,255,0.03)">
+                  <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Scoring for {{ selectedAdminName }}</div>
+                  <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them.</div>
+
+                  <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px">
+                    <sc-for list="{{ scoreTypeToggles }}" as="t" hint-placeholder-count="4">
+                      <label style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
+                        <input type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
+                        {{ t.label }} <span style="color:#7f8794;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
+                      </label>
+                    </sc-for>
+                  </div>
+
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <button onClick="{{ onSaveScoring }}" disabled="{{ scoringBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;font-size:13px">Save scoring</button>
+                    <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
+                  </div>
+                </div>
+              </sc-if>
             </sc-if>
           </sc-if>
         </div>
@@ -656,6 +700,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
     publishState: null, publishBusy: false,
+    scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
     newTeamInputs: {},
@@ -688,6 +733,7 @@ class Component extends DCLogic {
 
   async componentDidMount() {
     const api = await import(new URL('scores-data.js', document.baseURI).href);
+    if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
     const ageGroups = await api.getAgeGroups();
     const firstComp = ageGroups.find((a) => a.hasStandings) || ageGroups[0];
     this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: firstComp && firstComp.id }, () => {
@@ -718,6 +764,9 @@ class Component extends DCLogic {
       if (!drafts[fx.id]) drafts[fx.id] = {
         homeScore: r.homeScore != null ? String(r.homeScore) : '', awayScore: r.awayScore != null ? String(r.awayScore) : '',
         homeTries: r.homeTries != null ? String(r.homeTries) : '', awayTries: r.awayTries != null ? String(r.awayTries) : '',
+        homeConversions: r.homeConversions != null ? String(r.homeConversions) : '', awayConversions: r.awayConversions != null ? String(r.awayConversions) : '',
+        homePenalties: r.homePenalties != null ? String(r.homePenalties) : '', awayPenalties: r.awayPenalties != null ? String(r.awayPenalties) : '',
+        homeDrops: r.homeDrops != null ? String(r.homeDrops) : '', awayDrops: r.awayDrops != null ? String(r.awayDrops) : '',
         homeCards: r.homeCards != null ? String(r.homeCards) : '', awayCards: r.awayCards != null ? String(r.awayCards) : '',
         walkover: r.walkover || null,
         spiritNomineeHome: r.spiritNomineeHome || '', spiritNomineeAway: r.spiritNomineeAway || '',
@@ -949,6 +998,28 @@ class Component extends DCLogic {
       }
     });
   }
+  toggleScoreType(key){
+    const ag = this.state.adminSelectedAgeId; if (!ag) return;
+    this.setState((st) => {
+      const cur = (st.scoringDraft && st.scoringDraft[ag]) || (st.api ? st.api.scoringFor(ag) : ['tries']);
+      const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+      // Never leave an age group with nothing scoreable.
+      return { scoringDraft: { ...(st.scoringDraft||{}), [ag]: next.length ? next : ['tries'] }, scoringMsg: '' };
+    });
+  }
+  async onSaveScoring(){
+    const { api, session, adminSelectedAgeId, scoringDraft } = this.state;
+    const list = scoringDraft && scoringDraft[adminSelectedAgeId];
+    if (!list) { this.setState({ scoringMsg: 'Nothing changed.' }); return; }
+    this.setState({ scoringBusy: true, scoringMsg: '' });
+    const res = await api.saveScoringRules({ [adminSelectedAgeId]: list }, session);
+    if (res.ok) {
+      this.setState({ scoringBusy: false, scoringMsg: 'Saved — score entry updated.' });
+      this.loadAdmin(adminSelectedAgeId);
+    } else {
+      this.setState({ scoringBusy: false, scoringMsg: res.error || 'Could not save.' });
+    }
+  }
   async onDiscardDraw() {
     this.confirmModal('Discard unsaved changes to this fixture editor? This reloads the last saved version.', async () => {
       const { editorAgeId } = this.state;
@@ -977,8 +1048,13 @@ class Component extends DCLogic {
   setWalkover(id, val) {
     this.setState((s) => {
       const d = { ...(s.drafts[id] || {}), walkover: val };
-      if (val === 'home') { d.homeScore = '20'; d.awayScore = '0'; d.homeTries = '4'; d.awayTries = '0'; }
-      else if (val === 'away') { d.homeScore = '0'; d.awayScore = '20'; d.homeTries = '0'; d.awayTries = '4'; }
+      /* The server derives 20-0 and 4 tries from the walkover flag, so the
+         draft only needs the flag — leaving stale component values behind
+         would be confusing if the walkover were then cleared. */
+      if (val === 'home' || val === 'away') {
+        ['Tries','Conversions','Penalties','Drops'].forEach((k) => { d['home'+k] = ''; d['away'+k] = ''; });
+        d.homeScore = ''; d.awayScore = '';
+      }
       return { drafts: { ...s.drafts, [id]: d } };
     });
   }
@@ -1197,9 +1273,31 @@ class Component extends DCLogic {
       const mk = (fx, label) => {
         const d = s.drafts[fx.id] || {};
         const canEdit = !!(fx.home && fx.away);
+        /* Which kicks count is decided by the age group (see _scoring.js on the
+           server, mirrored in scores-data.js). Building the inputs from that
+           list means a U10 manager is never shown a conversions box, and the
+           running total is calculated rather than typed. */
+        const ag = s.adminSelectedAgeId;
+        const parts = (s.api && s.api.scoringFor) ? s.api.scoringFor(ag) : ['tries'];
+        const cap = (k) => k.charAt(0).toUpperCase() + k.slice(1);
+        const fieldsFor = (side) => parts.map((k) => ({
+          label: s.api.scoreLabel(k),
+          pts: s.api.scorePoints(k) + ' pts',
+          value: d[side + cap(k)] != null ? d[side + cap(k)] : '',
+          onInput: (e) => this.setDraft(fx.id, side + cap(k), e.target.value),
+        }));
+        const totalFor = (side) => {
+          if (d.walkover === side) return 20;
+          if (d.walkover) return 0;
+          const o = {}; parts.forEach((k) => { o[k] = d[side + cap(k)]; });
+          return s.api && s.api.scoreTotal ? s.api.scoreTotal(ag, o) : 0;
+        };
+
         return {
           id: fx.id, home: fx.home || 'TBD', away: fx.away || 'TBD', label, pitch: fx.pitch || 'TBD',
           canEdit, awaiting: !canEdit,
+          homeFields: fieldsFor('home'), awayFields: fieldsFor('away'),
+          homeTotal: totalFor('home'), awayTotal: totalFor('away'),
           draft: {
             homeScore: d.homeScore || '', awayScore: d.awayScore || '',
             homeTries: d.homeTries || '', awayTries: d.awayTries || '',
@@ -1404,6 +1502,21 @@ class Component extends DCLogic {
         const who = st.publishedBy ? ' by ' + st.publishedBy : '';
         return 'Published ' + when + who + '. Any edits since then are draft only — press Republish to push them out.';
       })(),
+      /* Organisers only — a manager changing their own group's laws mid-
+         tournament would silently change how every score in it totals. */
+      isOrganiserView: !!(s.api && s.api.canPublishNow && s.session &&
+        (s.session.isOrganizer || s.session._role === 'organizer' || s.session.role === 'organizer')),
+      selectedAdminName: (s.ageGroups.find((a) => a.id === s.adminSelectedAgeId) || {}).name || '',
+      scoringBusy: s.scoringBusy,
+      scoringMsg: s.scoringMsg,
+      scoreTypeToggles: (s.api && s.api.allScoreTypes ? s.api.allScoreTypes() : []).map((k) => {
+        const ag = s.adminSelectedAgeId;
+        const cur = (s.scoringDraft && s.scoringDraft[ag]) || (s.api ? s.api.scoringFor(ag) : []);
+        return {
+          key: k, label: s.api.scoreLabel(k), pts: s.api.scorePoints(k) + ' pts',
+          on: cur.includes(k), toggle: () => this.toggleScoreType(k),
+        };
+      }),
       onPublishDraw: () => this.onPublishDraw(),
       onUnpublishDraw: () => this.onUnpublishDraw(),
       poolCards, knockoutRosterGroups,

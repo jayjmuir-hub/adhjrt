@@ -152,6 +152,25 @@ td:nth-child(2){text-align:left;font-weight:600}
 tr.q td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pts{font-family:'Anton';font-size:16px}
 .legend{padding:10px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);line-height:1.6}
+.scoreblock{border:1.5px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.sb-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#faf9f7;
+         border-bottom:1px solid var(--line);font-weight:700;font-size:14.5px}
+.sb-head b{font-family:'Anton';font-size:26px;color:var(--red);line-height:1}
+.sb-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.sb-row:first-of-type{border-top:none}
+.sb-row label{flex:1;margin:0;font-size:13.5px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--text)}
+.sb-pts{color:var(--muted);font-weight:500;font-size:12px}
+.sb-in{width:88px;flex:none;text-align:center;font-weight:700}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tscroll table{min-width:460px}
+.tscroll::-webkit-scrollbar{height:5px}
+.tscroll::-webkit-scrollbar-thumb{background:#d6d2cb;border-radius:4px}
+.keygrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+@media(max-width:420px){ .keygrid{grid-template-columns:1fr} }
+.keyrow{display:flex;align-items:center;gap:10px;background:#fff;padding:11px 13px}
+.keycode{flex:none;min-width:52px;text-align:center;background:var(--ink);color:#fff;font-family:'Anton';
+         font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px}
+.keyname{font-size:13.5px;color:var(--text)}
 
 /* forms + sheet */
 .sheet-scrim{position:fixed;inset:0;background:rgba(12,12,14,.5);z-index:60;opacity:0;
@@ -448,6 +467,16 @@ function comingSoon(what, agId){
     <div>The draw for ${esc(ageName(agId))} hasn’t been released. It will appear here as soon as the organisers publish it.</div>
   </div></div>`;
 }
+/* Codes are used in every row and table because they fit; this is where they
+   are spelled out. Shown under Fixtures and Tables, not on Today. */
+function teamKeyCard(){
+  const list = (api.teamKey ? api.teamKey() : []);
+  if (!list.length) return '';
+  return `<div class="sec-t">Team key</div><div class="card"><div class="keygrid">
+    ${list.map(k => `<div class="keyrow"><span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></div>`).join('')}
+  </div></div>`;
+}
+
 function matchRow(m, agId){
   const r = m.result, mine = isMine(m);
   const at = kickoffAt(m, agId || S.browseId);
@@ -489,7 +518,7 @@ function followCard(){
   let inner = '';
   if (next) {
     const at = kickoffAt(next, S.ageId);
-    const opp = S.team ? tName(next.home === S.team ? next.away : next.home) : `${tName(next.home)} v ${tName(next.away)}`;
+    const opp = S.team ? (next.home === S.team ? next.away : next.home) : `${next.home} v ${next.away}`;
     inner = `<div class="tcard-m" style="margin-top:12px">
         <strong style="color:#fff">${S.team ? 'v ' + esc(opp) : esc(opp)}</strong><br>
         ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
@@ -502,13 +531,13 @@ function followCard(){
 
   const lastLine = last
     ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
-         Last: ${esc(tName(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tName(last.away))}</div>` : '';
+         Last: ${esc(last.home)} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(last.away)}</div>` : '';
 
   return `<div class="tcard">
     <button class="tcard-cta" data-act="follow">Change</button>
     <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
-    <div class="tcard-n">${esc(S.team ? tName(S.team) : following)}</div>
-    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(S.team)} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
+    <div class="tcard-n">${esc(following)}</div>
+    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(tName(S.team))} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
     ${inner}${lastLine}
   </div>`;
 }
@@ -543,7 +572,7 @@ function viewToday(){
   const practical = `<div class="sec-t">Before the day</div><div class="card">
       <div class="row"><div><b>Zayed Sports City</b><small>Enter via Gate 16 &middot; parking across the complex</small></div></div>
       <div class="row"><div><b>Pools kick off 8:00am</b><small>20-minute slots &mdash; two 7-minute halves</small></div></div>
-      <div class="row"><div><b>Every player gets a medal</b><small>Bring boots, a mouthguard, water and sun cover</small></div></div>
+      <div class="row"><div><b>What to bring</b><small>Boots, a mouthguard, water, sun cover and a folding chair</small></div></div>
     </div>
     <div class="sec-t">Registration</div><div class="card">
       <a class="row" href="/#register"><div><b>Enter a team or player</b><small>Registration is open on the tournament website</small></div>${ICON.chev}</a>
@@ -587,7 +616,8 @@ function viewFixtures(){
   const ko = (fx.knockout || []).filter(k => k.home || k.away);
   return head + seg
     + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
-    + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId)).join('')}</div>` : '');
+    + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId)).join('')}</div>` : '')
+    + teamKeyCard();
 }
 
 /* ---------------- Tables ---------------- */
@@ -607,14 +637,14 @@ function viewTables(){
   const adv = st._advance || 0;
   return head + pools.map(p => {
     const rows = st.tables[p.id] || [];
-    return `<div class="sec-t">${esc(p.name)}</div><div class="card"><table>
-      <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/−</th><th>Pts</th></tr></thead>
+    return `<div class="sec-t">${esc(p.name)}</div><div class="card"><div class="tscroll"><table>
+      <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>+/−</th><th>Pts</th></tr></thead>
       <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${t.team===S.team?'me':''}">
         <td>${i+1}</td><td>${esc(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
-        <td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table>
-      <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · +/− points difference · Pts league points.</div>
+        <td>${t.PF}</td><td>${t.PA}</td><td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table></div>
+      <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · PF/PA points for and against · Pts league points. Scroll the table sideways for more columns.</div>
     </div>`;
-  }).join('');
+  }).join('') + teamKeyCard();
 }
 
 /* ---------------- More ---------------- */
@@ -679,12 +709,12 @@ function openTeamPick(){
   const teams = teamsInAge();
   if (!teams.length) { toast('Following ' + ageName(S.ageId)); return; }
   openSheet('Choose your team', `<div class="card">
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${esc(t)}</small></div>${ICON.chev}</button>`).join('')}
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(t)}</b><small>${esc(tName(t))}</small></div>${ICON.chev}</button>`).join('')}
       <button class="row" data-pick-team=""><div><b>All teams</b><small>Follow the whole age group</small></div>${ICON.chev}</button>
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
-    toast(S.team ? 'Following ' + tName(S.team) : 'Following ' + ageName(S.ageId));
+    toast(S.team ? 'Following ' + S.team : 'Following ' + ageName(S.ageId));
   });
 }
 
@@ -725,8 +755,8 @@ function openMatch(id){
   const at = kickoffAt(m, S.browseId);
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home ? tName(m.home) : 'TBD')} v ${esc(m.away ? tName(m.away) : 'TBD')}</b>
-        <small>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')} &middot; ${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
+      <div class="row"><div><b>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')}</b>
+        <small>${esc(m.home?tName(m.home):'TBD')} v ${esc(m.away?tName(m.away):'TBD')}<br>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
         <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
     </div>`;
@@ -734,30 +764,62 @@ function openMatch(id){
   if (!mayScore) return openSheet('Match', head + (r ? '' :
     `<p class="muted" style="font-size:13.5px;line-height:1.6">No result yet. Scores appear here as soon as the age group manager enters them.</p>`));
 
+  /* Inputs are built from the age group's scoring rules, so a U10 manager is
+     never shown a conversions box for a kick that does not exist at that age.
+     The total updates as you type — nobody adds up 5s, 2s and 3s under
+     pressure at a pitch — and the server recomputes it from the same rules. */
+  const parts = api.scoringFor(S.browseId);
+  const sideInputs = (side, label) => `
+    <div class="scoreblock">
+      <div class="sb-head"><span>${esc(label)}</span><b id="tot-${side}">0</b></div>
+      ${parts.map(k => `
+        <div class="sb-row">
+          <label for="${side}-${k}">${esc(api.scoreLabel(k))} <span class="sb-pts">${api.scorePoints(k)} pts</span></label>
+          <input id="${side}-${k}" class="sb-in" type="number" inputmode="numeric" min="0" step="1"
+                 value="${r ? (r[side + k.charAt(0).toUpperCase() + k.slice(1)] || 0) : 0}">
+        </div>`).join('')}
+    </div>`;
+
   openSheet('Enter score', head + `<div id="scErr"></div>
-    <div class="two">
-      <div class="field"><label>${esc(m.home?tName(m.home):'Home')} points</label><input id="hs" type="number" inputmode="numeric" min="0" value="${r?r.homeScore:''}"></div>
-      <div class="field"><label>${esc(m.away?tName(m.away):'Away')} points</label><input id="as" type="number" inputmode="numeric" min="0" value="${r?r.awayScore:''}"></div>
-    </div>
-    <div class="two">
-      <div class="field"><label>Home tries</label><input id="ht" type="number" inputmode="numeric" min="0" value="${r?(r.homeTries||0):''}"></div>
-      <div class="field"><label>Away tries</label><input id="at" type="number" inputmode="numeric" min="0" value="${r?(r.awayTries||0):''}"></div>
-    </div>
-    <div class="field"><label>Walk-over</label><select id="wo">
+    ${sideInputs('home', m.home || 'Home')}
+    ${sideInputs('away', m.away || 'Away')}
+    <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
-      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tName(m.home):'Home')} awarded the match</option>
-      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tName(m.away):'Away')} awarded the match</option>
+      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home||'Home')} awarded the match</option>
+      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away||'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
     <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>`);
 
+  const readSide = (side) => {
+    const o = {};
+    parts.forEach(k => { o[k] = Number(($(`${side}-${k}`) || {}).value || 0); });
+    return o;
+  };
+  const recalc = () => {
+    const wo = $('wo').value;
+    ['home','away'].forEach(side => {
+      const t = wo ? (wo === side ? 20 : 0) : api.scoreTotal(S.browseId, readSide(side));
+      $('tot-' + side).textContent = t;
+    });
+    const off = !!$('wo').value;
+    parts.forEach(k => ['home','away'].forEach(side => {
+      const el = $(`${side}-${k}`); if (el) { el.disabled = off; el.style.opacity = off ? .45 : 1; }
+    }));
+  };
+  parts.forEach(k => ['home','away'].forEach(side => {
+    const el = $(`${side}-${k}`); if (el) el.oninput = recalc;
+  }));
+  $('wo').onchange = recalc;
+  recalc();
+
   $('sgo').onclick = async () => {
     const wo = $('wo').value;
-    if (!wo && ($('hs').value==='' || $('as').value==='')) {
-      $('scErr').innerHTML = '<div class="err">Enter both scores, or choose a walk-over.</div>'; return; }
     $('sgo').textContent = 'Saving…';
-    const res = await api.submitResult(m.id, {
-      homeScore:$('hs').value, awayScore:$('as').value,
-      homeTries:$('ht').value, awayTries:$('at').value, walkover:wo||null }, S.session);
+    const payload = { walkover: wo || null };
+    ['home','away'].forEach(side => parts.forEach(k => {
+      payload[side + k.charAt(0).toUpperCase() + k.slice(1)] = Number(($(`${side}-${k}`)||{}).value || 0);
+    }));
+    const res = await api.submitResult(m.id, payload, S.session);
     if (res.ok) { closeSheet(); toast('Result saved'); await load(S.browseId); }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
   };
@@ -766,6 +828,8 @@ function openMatch(id){
 /* ---------------- boot ---------------- */
 (async function init(){
   S.session = resolveSession();
+  // Live scoring rules decide which inputs the score form offers.
+  if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
   S.ageGroups = (await api.getAgeGroups()).filter(a => a.hasStandings);
   loadFollow();
 

@@ -235,6 +235,10 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
    scores, standings, publishing and permissions behave identically — there is
    no second source of truth to keep in step. */
 const api = await import('/scores-data.js');
+/* Managers and organisers authenticate against different endpoints and store
+   their sessions under different keys. The sign-in below tries manager first,
+   then organiser, so nobody has to know which kind of account they hold. */
+const orgApi = await import('/organizer-data.js');
 
 /* ---------------- constants ---------------- */
 const KICKOFF = new Date('2026-11-07T08:00:00+04:00');   // Gulf Standard Time
@@ -518,7 +522,7 @@ function wire(){
 
 function act(a){
   if (a === 'signin')  return openSignIn();
-  if (a === 'signout') { api.logout(); S.session = null; render(); toast('Signed out'); return; }
+  if (a === 'signout') { api.logout(); try { orgApi.logout(); } catch(e){} S.session = null; render(); toast('Signed out'); return; }
   if (a === 'tools')   { location.href = '/scores'; return; }
   if (a === 'install') return openSheet('Add to home screen',
     `<p style="line-height:1.7;margin-bottom:14px">Installing puts the crest on your home screen and opens straight to match day, without the browser bar.</p>
@@ -536,16 +540,36 @@ function openSignIn(){
     <div class="field"><label>Password</label><input id="lp" type="password" autocomplete="current-password"></div>
     <button class="btn btn-p" id="lgo">Sign in</button>
     <p class="muted" style="margin-top:16px;font-size:13px;line-height:1.6">
-      Managers sign in with the account they created using their age group invite code.
-      Organisers sign in on the <a href="/organizer" style="color:var(--red);font-weight:700">organiser page</a>.
+      Managers use the account they created with their age group invite code.
+      Organisers use their organiser account — both work here.
     </p>`);
   $('lgo').onclick = async () => {
     const u = $('lu').value.trim(), p = $('lp').value;
     if (!u || !p) { $('loginErr').innerHTML = '<div class="err">Enter your username and password.</div>'; return; }
     $('lgo').textContent = 'Signing in…';
-    const r = await api.login(u, p);
-    if (r.ok) { S.session = api.currentSession(); closeSheet(); render(); toast('Signed in'); }
-    else { $('loginErr').innerHTML = `<div class="err">${esc(r.error || 'Could not sign in.')}</div>`; $('lgo').textContent = 'Sign in'; }
+
+    /* Try the manager endpoint first (most accounts), then the organiser one.
+       Only if BOTH reject do we show an error — otherwise an organiser typing
+       correct details would be told they were wrong. */
+    let r = await api.login(u, p);
+    if (!r.ok) {
+      const o = await orgApi.login(u, p);
+      if (o.ok) r = o;
+    }
+
+    if (r.ok) {
+      S.session = api.currentSession();
+      closeSheet();
+      // Organisers can score any age group; managers land on their own.
+      if (S.session && S.session.ageGroupId && S.session.ageGroupId !== '*'
+          && S.ageGroups.some(a => a.id === S.session.ageGroupId)) {
+        await loadAge(S.session.ageGroupId);
+      } else { render(); }
+      toast('Signed in');
+    } else {
+      $('loginErr').innerHTML = '<div class="err">Wrong username or password. Managers use their age group account; organisers use their organiser account.</div>';
+      $('lgo').textContent = 'Sign in';
+    }
   };
 }
 

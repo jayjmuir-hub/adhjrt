@@ -1,9 +1,9 @@
 {
-  "name": "ADH JRT — Abu Dhabi Harlequins Junior Rugby Tournament",
+  "name": "ADH JRT \u2014 Abu Dhabi Harlequins Junior Rugby Tournament",
   "short_name": "ADH JRT",
   "description": "Fixtures, live scores and standings for the Abu Dhabi Harlequins Junior Rugby Tournament, 7-8 November 2026 at Zayed Sports City.",
   "id": "/",
-  "start_url": "/scores",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -11,7 +11,9 @@
   "theme_color": "#0C0C0E",
   "lang": "en-GB",
   "dir": "ltr",
-  "categories": ["sports"],
+  "categories": [
+    "sports"
+  ],
   "icons": [
     {
       "src": "/assets/icon-192.png",
@@ -34,22 +36,22 @@
   ],
   "shortcuts": [
     {
-      "name": "Live scores & standings",
-      "short_name": "Scores",
-      "description": "Pool tables, results and knockout brackets",
-      "url": "/scores"
-    },
-    {
       "name": "Fixtures",
       "short_name": "Fixtures",
-      "description": "Kick-off times, pitches and pool draws",
-      "url": "/#schedule"
+      "description": "Kick-off times and pitches",
+      "url": "/app"
     },
     {
-      "name": "Organiser area",
-      "short_name": "Organiser",
-      "description": "Registrations and account approvals",
-      "url": "/organizer"
+      "name": "Tables",
+      "short_name": "Tables",
+      "description": "Pool standings",
+      "url": "/app"
+    },
+    {
+      "name": "Tournament website",
+      "short_name": "Website",
+      "description": "About, registration, venue",
+      "url": "/"
     }
   ]
 }

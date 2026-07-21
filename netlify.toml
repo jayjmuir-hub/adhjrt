@@ -16,6 +16,11 @@
   to = "/Scores & Standings.dc.html"
   status = 200
 
+[[redirects]]
+  from = "/app"
+  to = "/app.html"
+  status = 200
+
 # The three page files reference /assets/icons/apple-touch-icon.png, but the
 # icons live directly in /assets/. This rewrite makes both paths work so the
 # pages did not need re-uploading. Safe to delete once those hrefs are

@@ -13,6 +13,7 @@
 // same SESSION_SECRET as the other auth functions.
 
 const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { scoringFor, totalFor, loadRules } = require('./_scoring');
 
 const WALKOVER_SCORE = 20;
 
@@ -33,13 +34,39 @@ exports.handler = async (event) => {
 
     const store = blobStore('results');
     const results = (await store.get('all', { type: 'json' })) || {};
+    /* The score is COMPUTED here from the tries and kicks, using the rules for
+       this age group (see _scoring.js). The client's own total is ignored, so
+       a typo or a tampered request can never store a score that disagrees with
+       the detail recorded beside it. */
+    /* Organisers can change what counts at each age group, so read the live
+       rules rather than the compiled-in defaults. */
+    const rules = await loadRules(blobStore);
+    const allowed = rules[agId] || scoringFor(agId);
+    const pick = (side) => {
+      const out = {};
+      allowed.forEach((k) => { out[k] = Math.max(0, Math.floor(Number(data[side + k.charAt(0).toUpperCase() + k.slice(1)]) || 0)); });
+      return out;
+    };
+    const homeParts = pick('home');
+    const awayParts = pick('away');
+
+    const wo = data.walkover === 'home' || data.walkover === 'away' ? data.walkover : null;
+    const homeTotal = wo === 'home' ? WALKOVER_SCORE : wo === 'away' ? 0 : totalFor(agId, homeParts, rules);
+    const awayTotal = wo === 'away' ? WALKOVER_SCORE : wo === 'home' ? 0 : totalFor(agId, awayParts, rules);
+
     results[matchId] = {
-      homeScore: data.walkover === 'home' ? WALKOVER_SCORE : (data.walkover === 'away' ? 0 : Number(data.homeScore)),
-      awayScore: data.walkover === 'away' ? WALKOVER_SCORE : (data.walkover === 'home' ? 0 : Number(data.awayScore)),
-      homeTries: data.walkover === 'home' ? 4 : (data.walkover === 'away' ? 0 : Number(data.homeTries || 0)),
-      awayTries: data.walkover === 'away' ? 4 : (data.walkover === 'home' ? 0 : Number(data.awayTries || 0)),
+      homeScore: homeTotal,
+      awayScore: awayTotal,
+      homeTries: wo === 'home' ? 4 : wo === 'away' ? 0 : (homeParts.tries || 0),
+      awayTries: wo === 'away' ? 4 : wo === 'home' ? 0 : (awayParts.tries || 0),
+      homeConversions: wo ? 0 : (homeParts.conversions || 0),
+      awayConversions: wo ? 0 : (awayParts.conversions || 0),
+      homePenalties: wo ? 0 : (homeParts.penalties || 0),
+      awayPenalties: wo ? 0 : (awayParts.penalties || 0),
+      homeDrops: wo ? 0 : (homeParts.drops || 0),
+      awayDrops: wo ? 0 : (awayParts.drops || 0),
       homeCards: Number(data.homeCards || 0), awayCards: Number(data.awayCards || 0),
-      walkover: data.walkover || null,
+      walkover: wo,
       spiritNomineeHome: (data.spiritNomineeHome || '').trim() || null,
       spiritNomineeAway: (data.spiritNomineeAway || '').trim() || null,
       submittedBy: session.username, submittedAt: new Date().toISOString(),

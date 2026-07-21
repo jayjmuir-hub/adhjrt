@@ -52,6 +52,9 @@ header.top{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
            padding-top:env(safe-area-inset-top)}
 .top-line{height:4px;background:linear-gradient(90deg,var(--red),var(--red) 45%,var(--green))}
 .top-in{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.brand{display:flex;align-items:center;gap:12px;text-align:left;padding:0;color:inherit}
+.brand:active{opacity:.7}
+.top-t,.top-s{display:block}
 .crest{width:38px;height:38px;border-radius:9px;background:#fff;padding:3px;flex:none}
 .crest img{width:100%;height:100%;object-fit:contain;display:block}
 .top-t{font-family:'Anton';font-size:18px;letter-spacing:.5px;line-height:1}
@@ -62,6 +65,12 @@ header.top{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
 .badge-pub{background:rgba(255,255,255,.13);color:#cdd2da}
 .badge-mgr{background:var(--green);color:#fff}
 .badge-org{background:var(--red);color:#fff}
+.sitelink{display:flex;align-items:center;gap:5px;padding:6px 11px 6px 9px;border-radius:100px;
+          border:1px solid rgba(255,255,255,.22);color:#cdd2da;font-size:11px;font-weight:700;
+          letter-spacing:.6px;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.sitelink svg{width:14px;height:14px;flex:none}
+.sitelink:active{background:rgba(255,255,255,.1)}
+@media(max-width:400px){ .sitelink span{display:none} .sitelink{padding:7px} }
 
 /* desktop nav */
 .nav-desktop{display:none;gap:4px;padding:0 12px 10px}
@@ -201,12 +210,22 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
   <header class="top">
     <div class="top-line"></div>
     <div class="top-in">
-      <div class="crest"><img src="/assets/crest.jpeg" alt="Abu Dhabi Harlequins"></div>
-      <div>
-        <div class="top-t">ADH JRT</div>
-        <div class="top-s">MATCH DAY</div>
+      <!-- Tapping the crest returns to Today, the app's home screen — the
+           convention people already expect from a logo in an app header. -->
+      <button class="brand" id="goHome" aria-label="Back to Today">
+        <span class="crest"><img src="/assets/crest.jpeg" alt=""></span>
+        <span>
+          <span class="top-t">ADH JRT</span>
+          <span class="top-s">MATCH DAY</span>
+        </span>
+      </button>
+      <div class="who">
+        <span class="badge badge-pub" id="roleBadge">Viewing</span>
+        <a class="sitelink" href="/" aria-label="Tournament website" title="Tournament website">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
+          <span>Site</span>
+        </a>
       </div>
-      <div class="who"><span class="badge badge-pub" id="roleBadge">Viewing</span></div>
     </div>
     <nav class="nav-desktop" id="navDesktop"></nav>
   </header>
@@ -285,6 +304,23 @@ function toast(msg){
 /* An organiser session arrives in a different shape from a manager one —
    currentSession() marks it with isOrganizer. */
 const isOrganiser = (s) => !!(s && (s.isOrganizer || s._role === 'organizer' || s.role === 'organizer'));
+
+/* Someone can hold BOTH a manager account and an organiser account — an
+   organiser who also made a manager login to test, for instance. scores-data's
+   currentSession() returns the manager one first, which would quietly demote an
+   organiser to a single age group. Prefer the broader role. */
+function resolveSession(){
+  const s = api.currentSession();
+  if (isOrganiser(s)) return s;
+  try {
+    const raw = localStorage.getItem('adhjrt_organizer_session');
+    const org = raw ? JSON.parse(raw) : null;
+    if (org && org.token) {
+      return { token: org.token, username: org.username, name: org.name, ageGroupId: '*', isOrganizer: true };
+    }
+  } catch (e) {}
+  return s;
+}
 const canScore = (s, agId) => {
   if (!s) return false;
   if (isOrganiser(s)) return true;
@@ -319,6 +355,10 @@ function buildNav(){
 }
 
 function go(view){ S.view = view; buildNav(); render(); window.scrollTo(0,0); }
+
+/* Crest returns to Today, and closes an open sheet first so it always feels
+   like "get me back to the start" rather than leaving a sheet stranded. */
+document.getElementById('goHome').onclick = () => { closeSheet(); go('today'); };
 
 /* ---------------- sheet ---------------- */
 function openSheet(title, html){
@@ -403,12 +443,24 @@ function viewToday(){
   const fx = S.fixtures;
   const played = fx && fx.pool ? fx.pool.filter(m => m.result) : [];
   const next   = fx && fx.pool ? fx.pool.filter(m => !m.result).slice(0,4) : [];
-  const tiles = `<div class="tiles">
-    <div class="tile"><b>${S.ageGroups.length}</b><span>Age groups</span></div>
-    <div class="tile"><b>${fx && fx.pool ? fx.pool.length : '—'}</b><span>Pool matches</span></div>
-    <div class="tile"><b>${played.length || '—'}</b><span>Results in</span></div>
-    <div class="tile"><b>${d}</b><span>Days to go</span></div>
-  </div>`;
+  /* Tiles change with the phase. Before the tournament there are no matches to
+     count, and showing "0 pool matches" reads like a fault rather than "not
+     published yet" — so show facts that are true today instead. The countdown
+     already sits in the hero, so no "days to go" tile duplicating it. */
+  const live = fx && !fx.awaitingPublication && fx.pool;
+  const tiles = phase === 'before'
+    ? `<div class="tiles">
+        <div class="tile"><b>15</b><span>Age groups</span></div>
+        <div class="tile"><b>2</b><span>Days of rugby</span></div>
+        <div class="tile"><b>16</b><span>Pitches</span></div>
+        <div class="tile"><b>8am</b><span>First kick-off</span></div>
+      </div>`
+    : `<div class="tiles">
+        <div class="tile"><b>${live ? fx.pool.length : '—'}</b><span>Pool matches</span></div>
+        <div class="tile"><b>${live ? played.length : '—'}</b><span>Results in</span></div>
+        <div class="tile"><b>15</b><span>Age groups</span></div>
+        <div class="tile"><b>16</b><span>Pitches</span></div>
+      </div>`;
 
   let body;
   if (!fx) body = `<div class="card"><div class="spin">Loading ${esc(ageName(S.ageId))}…</div></div>`;
@@ -418,6 +470,29 @@ function viewToday(){
       : '<div class="empty"><b>No matches left</b><div>Every pool match for this age group has a result.</div></div>'}</div>`;
 
   const recent = played.slice(-3).reverse();
+
+  /* Before the tournament there is nothing live to show, and a "Next up"
+     heading over a coming-soon card is a heading doing no work. Show the
+     practical stuff instead — what to bring, where to go, what happens next —
+     so the screen is worth opening in the months beforehand. */
+  if (phase === 'before') {
+    return hero + tiles
+      + `<div class="sec-t">Following</div>${pills()}`
+      + `<div class="sec-t">${esc(ageName(S.ageId))}</div>`
+      + (fx && fx.awaitingPublication
+          ? comingSoon('Fixtures')
+          : (body || ''))
+      + `<div class="sec-t">Before the day</div>
+         <div class="card">
+           <div class="row"><div><b>Zayed Sports City</b><small>Enter via Gate 16 &middot; parking across the complex</small></div></div>
+           <div class="row"><div><b>Pools kick off 8:00am</b><small>20-minute slots &mdash; two 7-minute halves</small></div></div>
+           <div class="row"><div><b>Every player gets a medal</b><small>Bring boots, a mouthguard, water and sun cover</small></div></div>
+         </div>
+         <div class="sec-t">Registration</div>
+         <div class="card">
+           <a class="row" href="/#register"><div><b>Enter a team or player</b><small>Registration is open on the tournament website</small></div>${ICON.chev}</a>
+         </div>`;
+  }
 
   return hero + tiles
     + `<div class="sec-t">Following</div>${pills()}`
@@ -558,7 +633,7 @@ function openSignIn(){
     }
 
     if (r.ok) {
-      S.session = api.currentSession();
+      S.session = resolveSession();
       closeSheet();
       // Organisers can score any age group; managers land on their own.
       if (S.session && S.session.ageGroupId && S.session.ageGroupId !== '*'
@@ -631,7 +706,7 @@ function openMatch(id){
 
 /* ---------------- boot ---------------- */
 (async function init(){
-  S.session = api.currentSession();
+  S.session = resolveSession();
   S.ageGroups = (await api.getAgeGroups()).filter(a => a.hasStandings);
 
   const saved = localStorage.getItem(FOLLOW_KEY);

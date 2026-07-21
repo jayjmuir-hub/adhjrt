@@ -87,6 +87,7 @@
         <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
         <a href="#results" style="color:#EDEDED;font-weight:600;font-size:15px">Results</a>
         <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
+        <a href="/app" style="color:#3bd070;font-weight:700;font-size:15px">App</a>
         <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-weight:800;font-size:13px;letter-spacing:.5px;padding:9px 18px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,filter .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);filter:brightness(1.05)">Register a Team</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
         <div style="position:relative;display:inline-block"><a href="#register" style="display:inline-block;position:relative;z-index:1;background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.55);font-weight:800;font-size:13px;letter-spacing:.5px;padding:7.5px 16px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,background .18s ease;white-space:nowrap" style-hover="transform:translateY(-2px);background:rgba(255,255,255,0.12)">Register a Player</a><sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-3px;right:8px;width:80px;height:15px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-8px;right:11px;z-index:3;background:linear-gradient(95deg,#17A34A,#8f1319);color:#fff;font-weight:800;font-size:8px;letter-spacing:.8px;padding:3px 8px;border-radius:100px;text-transform:uppercase;box-shadow:0 3px 8px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if></div>
@@ -449,7 +450,17 @@
         <div style="font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:14px">Live on match days</div>
         <h2 style="font-family:'Anton';font-size:60px;line-height:0.95;text-transform:uppercase">Results &amp; Standings</h2>
       </div>
-      <p style="text-align:center;color:#aeb4bf;max-width:660px;margin:0 auto 44px;font-size:17px">Pool results and live standings will be published here across the weekend of 7&ndash;8 November 2026, with brackets updating as teams reach the semi-finals and finals. U6 &amp; U7 play a non-competitive festival &mdash; no standings are kept.</p>
+      <p style="text-align:center;color:#aeb4bf;max-width:660px;margin:0 auto 30px;font-size:17px">Pool results and live standings will be published here across the weekend of 7&ndash;8 November 2026, with brackets updating as teams reach the semi-finals and finals. U6 &amp; U7 play a non-competitive festival &mdash; no standings are kept.</p>
+
+      <!-- Match-day app pointer. Sits above the embedded scores view because
+           this is where someone looking for fixtures or scores lands. -->
+      <div data-reveal style="max-width:660px;margin:0 auto 40px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:22px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;text-align:center">
+        <div style="flex:1;min-width:240px;text-align:left">
+          <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;letter-spacing:.4px">On your phone</div>
+          <p style="color:#aeb4bf;font-size:15px;line-height:1.55;margin-top:6px">Fixtures, live scores and pool tables in a layout built for standing pitch-side. Managers can enter scores from it too.</p>
+        </div>
+        <a href="/app" style="flex:none;background:#17A34A;color:#fff;font-weight:800;font-size:15px;letter-spacing:.5px;padding:14px 28px;border-radius:10px;text-transform:uppercase;white-space:nowrap;transition:transform .18s ease,filter .18s ease" style-hover="transform:translateY(-2px);filter:brightness(1.08)">Use the app</a>
+      </div>
       <div data-reveal style="position:relative;background:#0C0C0E;border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:6px;overflow:hidden">
         <dc-import name="Scores & Standings" hint-size="100%,640px" style="display:block;width:100%;border-radius:14px;overflow:hidden"></dc-import>
 
@@ -573,6 +584,7 @@
           <a href="#format" style="color:#8a8f99">Format</a>
           <a href="#schedule" style="color:#8a8f99">Fixtures</a>
           <a href="#venue" style="color:#8a8f99">Venue</a>
+          <a href="/app" style="color:#8a8f99">Match-day app</a>
         </div>
       </div>
       <div>

@@ -12,10 +12,26 @@
 const { google } = require('googleapis');
 const { verify, getBearerToken } = require('./_auth');
 
+// Reads the service account private key from the environment and repairs the
+// two ways it commonly arrives broken:
+//   1. wrapped in the double quotes copied straight out of the JSON key file
+//      — the leading " sits in front of "-----BEGIN PRIVATE KEY-----" and the
+//      PEM parser rejects it with ERR_OSSL_UNSUPPORTED
+//   2. newlines still written as the two characters \ and n rather than real
+//      line breaks
+// Handles a correctly-pasted key unchanged, so it is safe either way.
+function privateKey() {
+  let k = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
+  if (k.length > 1 && ((k[0] === '"' && k[k.length - 1] === '"') || (k[0] === "'" && k[k.length - 1] === "'"))) {
+    k = k.slice(1, -1);
+  }
+  return k.replace(/\\n/g, '\n');
+}
+
 function getAuth() {
   return new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    key: privateKey(),
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
 }

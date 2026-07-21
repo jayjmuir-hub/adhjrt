@@ -20,6 +20,7 @@ Google). Avoid unexplained jargon.
 | `/` | `Quins JRT.dc.html` |
 | `/scores` | `Scores & Standings.dc.html` |
 | `/organizer` | `Organizer.dc.html` |
+| `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
 
 Edit the `.dc.html` file, push, done. If you find yourself looking for a build
 output or a bundling step, stop — there isn't one. (Earlier versions of this
@@ -34,6 +35,14 @@ backend files there — `adhjrt.com/<filename>` will serve them.
 ## Layout
 
 ```
+app.html                   match-day app  →  /app. Plain vanilla HTML/CSS/JS,
+                           NOT a DC component. Imports scores-data.js and
+                           organizer-data.js as ES modules, so it shares the
+                           website's data layer, auth and permissions — there
+                           is no second source of truth.
+manifest.webmanifest       PWA manifest (start_url /app)
+sw.js                      service worker — network-first, never caches
+                           /.netlify/functions/
 Quins JRT.dc.html          public marketing site  →  /
 Scores & Standings.dc.html live scores + manager area  →  /scores
 Organizer.dc.html          organiser back office  →  /organizer
@@ -144,6 +153,30 @@ every social share preview to fail).
 
 ---
 
+## The match-day app (`/app`)
+
+A Club Hub-style phone app: bottom tab bar (Today / Fixtures / Tables / More),
+top nav on desktop above 820px, bottom sheets for match detail and score entry.
+JRT palette, Anton + Barlow.
+
+- Reads through `scores-data.js`, so publishing, permissions and the
+  "coming soon" state behave exactly as on the website.
+- Sign-in tries `manager-login` first, then `organizer-login` — the two use
+  different endpoints and different localStorage keys, and an organiser session
+  is marked `isOrganizer` rather than carrying a `role` field. Check all three
+  shapes when testing a role (see `isOrganizerSession` in scores-data.js —
+  missing one silently hid the Publish button once).
+- Managers get score entry on their own age group; organisers on all.
+- The fixture editor and publishing controls are deliberately NOT in the app —
+  they are drag-and-drop work better suited to `/scores`, which the More tab
+  links to.
+- A follower's chosen age group is remembered in localStorage, per device.
+
+The PWA install works but was judged not worth promoting — the install is
+buried in browser menus and the one feature that would justify it (push
+notifications for pitch changes) needs a backend that does not exist. Treat
+`/app` as a fast mobile web page; the manifest and icons are harmless extras.
+
 ## Sensitive data
 
 The player registration sheet holds children's names, dates of birth, medical
@@ -204,6 +237,16 @@ application permission. Config lives in `MS_TENANT_ID`, `MS_CLIENT_ID`,
 - **The client secret expires around July 2028.** When it does these emails
   stop silently. Diagnose from the AADSTS code in the function log.
 
+## Recently settled — do NOT re-do these
+
+- Stat strip is 20+ clubs / 3000+ players / 15 age groups / 16 pitches. Correct
+  and deliberate; they are static numbers with a scroll count-up animation.
+- Footer email is `admin@adhjrt.com`. It was previously mangled Cloudflare
+  email-obfuscation markup that rendered as "[email protected]".
+- U6 and U7 are hidden from the PUBLIC standings tabs (non-competitive
+  festivals) but remain available in the Manager area.
+- Sponsors section is a deliberate placeholder, not a bug.
+
 ## Outstanding
 
 1. **The real draw.** All 15 groups still start from nine placeholder clubs
@@ -214,8 +257,11 @@ application permission. Config lives in `MS_TENANT_ID`, `MS_CLIENT_ID`,
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for a "View live scores" button — but only once the draw is real,
    or the placeholder pools go public.
-3. **Stat strip** on the homepage claims 24+ clubs, 700+ players, 16 pitches.
-   Only "15 age groups" is true. Awaiting real numbers.
+3. **Sponsors** is a "coming soon" placeholder. When the artwork arrives, a
+   comment directly above the section gives the exact `<img>` tag to swap in.
+4. **Deploy cost.** Every production deploy costs 15 Netlify credits on a
+   3,000/month Pro plan, whatever its size. Batch changes into one commit, and
+   use a branch + preview (free) while iterating, merging to `main` once.
 
 ---
 

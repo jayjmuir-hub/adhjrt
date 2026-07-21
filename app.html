@@ -202,6 +202,33 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
        transition:transform .3s;box-shadow:var(--shadow);max-width:88vw;text-align:center}
 .toast.on{transform:translateX(-50%) translateY(0)}
 .spin{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* team card + chips */
+.tcard{background:var(--ink);color:#fff;border-radius:var(--radius);padding:18px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.tcard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--red),var(--red) 45%,var(--green))}
+.tcard-k{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#3bd070}
+.tcard-n{font-family:'Anton';font-size:26px;line-height:1.06;text-transform:uppercase;margin-top:7px}
+.tcard-m{color:#aeb4bf;font-size:13.5px;margin-top:6px;line-height:1.5}
+.tcard-cta{position:absolute;top:16px;right:16px;font-size:11px;font-weight:800;letter-spacing:.6px;
+           text-transform:uppercase;color:#cdd2da;border:1px solid rgba(255,255,255,.25);
+           padding:6px 12px;border-radius:100px}
+.kick{display:flex;gap:8px;margin-top:14px}
+.kick div{flex:1;background:rgba(255,255,255,.08);border-radius:10px;padding:9px 4px;text-align:center}
+.kick b{display:block;font-family:'Anton';font-size:20px;line-height:1}
+.kick span{font-size:9px;letter-spacing:1.1px;color:#8b93a3;font-weight:700}
+.chip{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;
+      padding:4px 9px;border-radius:100px;margin-left:7px;vertical-align:2px}
+.chip-live{background:var(--red);color:#fff}
+.chip-next{background:var(--green);color:#fff}
+.mine{background:#fffdf4}
+.mine .mteams{font-weight:800}
+.pool-h{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+        padding:12px 14px 6px;background:#faf9f7;border-top:1px solid var(--line)}
+tr.me td{background:#fffdf4;font-weight:800}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;padding:9px;border-radius:9px;font-weight:700;font-size:13px;
+            border:1.5px solid var(--line);background:#fff;color:var(--muted)}
+.seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
 </style>
 </head>
 <body>
@@ -255,14 +282,20 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
    no second source of truth to keep in step. */
 const api = await import('/scores-data.js');
 /* Managers and organisers authenticate against different endpoints and store
-   their sessions under different keys. The sign-in below tries manager first,
-   then organiser, so nobody has to know which kind of account they hold. */
+   their sessions under different keys — see signIn(). */
 const orgApi = await import('/organizer-data.js');
 
-/* ---------------- constants ---------------- */
-const KICKOFF = new Date('2026-11-07T08:00:00+04:00');   // Gulf Standard Time
-const END     = new Date('2026-11-08T20:00:00+04:00');
-const FOLLOW_KEY = 'adhjrt_app_follow_v1';               // remembered age group
+/* ---------------- tournament facts ----------------
+   Which day an age group plays is fixed and published on the website. Knowing
+   it lets a fixture's kick-off minutes become a real date, which is what makes
+   "kick-off in 24 minutes" possible rather than just showing "09:20". */
+const DAY1 = '2026-11-07', DAY2 = '2026-11-08';
+const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g'];
+const dayOf = (agId) => SATURDAY.includes(agId) ? DAY1 : DAY2;
+
+const KICKOFF = new Date(DAY1 + 'T08:00:00+04:00');
+const END     = new Date(DAY2 + 'T20:00:00+04:00');
+const FOLLOW_KEY = 'adhjrt_follow_v2';   // { ageId, team }
 
 const ICON = {
   today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M8 3v4M16 3v4"/><rect x="3" y="5" width="18" height="16" rx="2"/></svg>',
@@ -273,21 +306,17 @@ const ICON = {
 };
 
 const TABS = [
-  { id:'today',    label:'Today'    },
-  { id:'fixtures', label:'Fixtures' },
-  { id:'tables',   label:'Tables'   },
-  { id:'more',     label:'More'     },
+  { id:'today', label:'Today' }, { id:'fixtures', label:'Fixtures' },
+  { id:'tables', label:'Tables' }, { id:'more', label:'More' },
 ];
 
 /* ---------------- state ---------------- */
 const S = {
-  view: 'today',
-  session: null,
-  ageGroups: [],
-  ageId: null,          // currently selected age group
-  fixtures: null,
-  standings: null,
-  busy: false,
+  view:'today', session:null, ageGroups:[],
+  ageId:null, team:null,        // what you follow
+  browseId:null,                // what Fixtures/Tables are showing
+  fixtures:null, standings:null,
+  onlyMine:true,                // Fixtures filter when a team is followed
 };
 
 /* ---------------- helpers ---------------- */
@@ -301,79 +330,102 @@ function toast(msg){
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('on'), 2600);
 }
 
-/* An organiser session arrives in a different shape from a manager one —
-   currentSession() marks it with isOrganizer. */
 const isOrganiser = (s) => !!(s && (s.isOrganizer || s._role === 'organizer' || s.role === 'organizer'));
 
-/* Someone can hold BOTH a manager account and an organiser account — an
-   organiser who also made a manager login to test, for instance. scores-data's
-   currentSession() returns the manager one first, which would quietly demote an
-   organiser to a single age group. Prefer the broader role. */
+/* Someone can hold BOTH a manager and an organiser account. currentSession()
+   returns the manager one first, which would quietly demote an organiser to a
+   single age group. Prefer the broader role. */
 function resolveSession(){
   const s = api.currentSession();
   if (isOrganiser(s)) return s;
   try {
     const raw = localStorage.getItem('adhjrt_organizer_session');
-    const org = raw ? JSON.parse(raw) : null;
-    if (org && org.token) {
-      return { token: org.token, username: org.username, name: org.name, ageGroupId: '*', isOrganizer: true };
-    }
-  } catch (e) {}
+    const o = raw ? JSON.parse(raw) : null;
+    if (o && o.token) return { token:o.token, username:o.username, name:o.name, ageGroupId:'*', isOrganizer:true };
+  } catch(e){}
   return s;
 }
-const canScore = (s, agId) => {
-  if (!s) return false;
-  if (isOrganiser(s)) return true;
-  return s.ageGroupId === '*' || s.ageGroupId === agId;
-};
+
+const canScore = (s, agId) =>
+  !s ? false : (isOrganiser(s) || s.ageGroupId === '*' || s.ageGroupId === agId);
 const ageName = (id) => (S.ageGroups.find(a => a.id === id) || {}).name || id;
 
-function tournamentPhase(){
-  const now = Date.now();
-  if (now < KICKOFF.getTime()) return 'before';
-  if (now <= END.getTime()) return 'during';
-  return 'after';
+function phase(){
+  const n = Date.now();
+  return n < KICKOFF.getTime() ? 'before' : n <= END.getTime() ? 'during' : 'after';
 }
+
+/* A fixture's real kick-off moment, from its minutes-past-midnight and the day
+   its age group plays. */
+function kickoffAt(m, agId){
+  if (m.startMins == null) return null;
+  const h = String(Math.floor(m.startMins/60)).padStart(2,'0');
+  const mi = String(m.startMins%60).padStart(2,'0');
+  return new Date(`${dayOf(agId)}T${h}:${mi}:00+04:00`);
+}
+function untilText(dt){
+  if (!dt) return '';
+  const diff = dt.getTime() - Date.now();
+  if (diff < -75*60*1000) return '';
+  if (diff < 0) return 'Under way';
+  const mins = Math.round(diff/60000);
+  if (mins < 60) return `Kick-off in ${mins} min`;
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return `Kick-off in ${hrs}h ${mins%60}m`;
+  return dt.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+}
+
+/* ---------------- follow ---------------- */
+function loadFollow(){
+  try {
+    const f = JSON.parse(localStorage.getItem(FOLLOW_KEY));
+    if (f && f.ageId) { S.ageId = f.ageId; S.team = f.team || null; }
+  } catch(e){}
+}
+function saveFollow(){
+  try { localStorage.setItem(FOLLOW_KEY, JSON.stringify({ ageId:S.ageId, team:S.team })); } catch(e){}
+}
+
+/* Teams only exist once a draw is published, so this can come back empty and
+   the UI has to cope rather than showing an empty chooser. */
+function teamsInAge(){
+  const st = S.standings;
+  if (!st || st.awaitingPublication) return [];
+  const out = new Set();
+  (st.pools || []).forEach(p => (p.teams || []).forEach(t => out.add(t)));
+  return [...out].sort();
+}
+const isMine = (m) => !!(S.team && (m.home === S.team || m.away === S.team));
 
 /* ---------------- chrome ---------------- */
 function paintRole(){
   const b = $('roleBadge');
   if (isOrganiser(S.session)) { b.className='badge badge-org'; b.textContent='Organiser'; }
-  else if (S.session)         { b.className='badge badge-mgr'; b.textContent = (S.session.ageGroupId === '*' ? 'Admin' : ageName(S.session.ageGroupId)); }
-  else                        { b.className='badge badge-pub'; b.textContent='Viewing'; }
+  else if (S.session) { b.className='badge badge-mgr';
+    b.textContent = S.session.ageGroupId === '*' ? 'Admin' : ageName(S.session.ageGroupId); }
+  else { b.className='badge badge-pub'; b.textContent='Viewing'; }
 }
-
 function buildNav(){
   $('tabbar').innerHTML = TABS.map(t =>
-    `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${ICON[t.id]}<span>${t.label}</span></button>`
-  ).join('');
+    `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${ICON[t.id]}<span>${t.label}</span></button>`).join('');
   $('navDesktop').innerHTML = TABS.map(t =>
-    `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${t.label}</button>`
-  ).join('');
-  document.querySelectorAll('[data-go]').forEach(b =>
-    b.onclick = () => go(b.dataset.go));
+    `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${t.label}</button>`).join('');
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
 }
-
-function go(view){ S.view = view; buildNav(); render(); window.scrollTo(0,0); }
-
-/* Crest returns to Today, and closes an open sheet first so it always feels
-   like "get me back to the start" rather than leaving a sheet stranded. */
-document.getElementById('goHome').onclick = () => { closeSheet(); go('today'); };
+function go(v){ S.view = v; buildNav(); render(); window.scrollTo(0,0); }
+$('goHome').onclick = () => { closeSheet(); go('today'); };
 
 /* ---------------- sheet ---------------- */
 function openSheet(title, html){
-  $('sheetTitle').textContent = title;
-  $('sheetBody').innerHTML = html;
+  $('sheetTitle').textContent = title; $('sheetBody').innerHTML = html;
   $('sheet').classList.add('on'); $('scrim').classList.add('on');
 }
 function closeSheet(){ $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
-$('sheetClose').onclick = closeSheet;
-$('scrim').onclick = closeSheet;
+$('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
 
 /* ---------------- data ---------------- */
-async function loadAge(agId){
-  S.ageId = agId;
-  localStorage.setItem(FOLLOW_KEY, agId);
+async function load(agId){
+  S.browseId = agId;
   S.fixtures = null; S.standings = null;
   render();
   const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
@@ -381,265 +433,276 @@ async function loadAge(agId){
   render();
 }
 
-/* ---------------- views ---------------- */
-function render(){
-  paintRole();
-  const m = $('main');
-  if (S.view === 'today')    m.innerHTML = viewToday();
-  if (S.view === 'fixtures') m.innerHTML = viewFixtures();
-  if (S.view === 'tables')   m.innerHTML = viewTables();
-  if (S.view === 'more')     m.innerHTML = viewMore();
-  wire();
-}
-
+/* ---------------- shared bits ---------------- */
 function pills(){
   return `<div class="pill-row">${S.ageGroups.map(a =>
-    `<button class="pill ${a.id===S.ageId?'on':''}" data-age="${a.id}">${esc(a.name)}</button>`
-  ).join('')}</div>`;
+    `<button class="pill ${a.id===S.browseId?'on':''}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
 }
-
-function comingSoon(what){
+function comingSoon(what, agId){
   return `<div class="card"><div class="empty">
     <span class="cs-pill">Coming soon</span>
     <b>${what} not published yet</b>
-    <div>The draw for ${esc(ageName(S.ageId))} hasn’t been released. It will appear here as soon as the organisers publish it.</div>
+    <div>The draw for ${esc(ageName(agId))} hasn’t been released. It will appear here as soon as the organisers publish it.</div>
   </div></div>`;
 }
+function matchRow(m, agId){
+  const r = m.result, mine = isMine(m);
+  const at = kickoffAt(m, agId || S.browseId);
+  const soon = !r && at && (at.getTime() - Date.now()) < 45*60*1000 && (at.getTime() - Date.now()) > -75*60*1000;
+  return `<button class="mrow ${mine?'mine':''}" data-match="${esc(m.id)}">
+    <div><div class="mtime">${esc(m.time || '')}</div><div class="mpitch">${esc(m.pitch || 'TBD')}</div></div>
+    <div><div class="mteams">${esc(m.home || 'TBD')} <span class="muted">v</span> ${esc(m.away || 'TBD')}</div>
+      <div class="mmeta">${esc(m.poolName || m.round || '')}${soon ? `<span class="chip chip-next">${esc(untilText(at))}</span>` : ''}</div></div>
+    <div>${r ? `<span class="mscore">${r.homeScore}&ndash;${r.awayScore}</span>` : ICON.chev}</div>
+  </button>`;
+}
 
-/* ----- Today ----- */
+/* ---------------- Today ---------------- */
+function render(){
+  paintRole();
+  const m = $('main');
+  m.innerHTML = S.view==='today' ? viewToday()
+              : S.view==='fixtures' ? viewFixtures()
+              : S.view==='tables' ? viewTables() : viewMore();
+  wire();
+}
+
+function followCard(){
+  const following = S.team || (S.ageId ? ageName(S.ageId) : null);
+  if (!following) {
+    return `<button class="tcard" data-act="follow" style="width:100%;text-align:left">
+      <div class="tcard-k">Get started</div>
+      <div class="tcard-n">Follow your team</div>
+      <div class="tcard-m">Pick an age group and we’ll show you its fixtures, results and pool table first.</div>
+    </button>`;
+  }
+
+  const fx = S.fixtures && S.browseId === S.ageId ? S.fixtures : null;
+  const all = fx && !fx.awaitingPublication ? (fx.pool || []).concat(fx.knockout || []) : [];
+  const mine = S.team ? all.filter(isMine) : all;
+  const next = mine.find(m => !m.result);
+  const last = [...mine].reverse().find(m => m.result);
+
+  let inner = '';
+  if (next) {
+    const at = kickoffAt(next, S.ageId);
+    const opp = S.team ? (next.home === S.team ? next.away : next.home) : `${next.home} v ${next.away}`;
+    inner = `<div class="tcard-m" style="margin-top:12px">
+        <strong style="color:#fff">${S.team ? 'v ' + esc(opp) : esc(opp)}</strong><br>
+        ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
+      </div>${at && untilText(at) ? `<div class="kick"><div style="flex:none;padding-left:14px;padding-right:14px"><b>${esc(untilText(at))}</b></div></div>` : ''}`;
+  } else if (fx && fx.awaitingPublication) {
+    inner = `<div class="tcard-m" style="margin-top:12px">Fixtures for this age group haven’t been published yet.</div>`;
+  } else if (mine.length) {
+    inner = `<div class="tcard-m" style="margin-top:12px">All matches played.</div>`;
+  }
+
+  const lastLine = last
+    ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
+         Last: ${esc(last.home)} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(last.away)}</div>` : '';
+
+  return `<div class="tcard">
+    <button class="tcard-cta" data-act="follow">Change</button>
+    <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
+    <div class="tcard-n">${esc(following)}</div>
+    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(ageName(S.ageId))}</div>` : ''}
+    ${inner}${lastLine}
+  </div>`;
+}
+
 function viewToday(){
-  const phase = tournamentPhase();
+  const p = phase();
   const diff = Math.max(0, KICKOFF.getTime() - Date.now());
   const d = Math.floor(diff/86400000), h = Math.floor(diff/3600000)%24,
         mi = Math.floor(diff/60000)%60, se = Math.floor(diff/1000)%60;
 
   let hero;
-  if (phase === 'before'){
+  if (p === 'before') {
     hero = `<div class="hero">
       <div class="hero-k">Sat 7 &amp; Sun 8 November 2026</div>
       <div class="hero-h">Two big days<br>of junior rugby</div>
-      <div class="hero-p">Zayed Sports City, Abu Dhabi · Gate 16</div>
+      <div class="hero-p">Zayed Sports City, Abu Dhabi &middot; Gate 16</div>
       <div class="cd">
-        <div><b>${d}</b><span>DAYS</span></div>
-        <div><b>${String(h).padStart(2,'0')}</b><span>HRS</span></div>
-        <div><b>${String(mi).padStart(2,'0')}</b><span>MIN</span></div>
-        <div><b>${String(se).padStart(2,'0')}</b><span>SEC</span></div>
+        <div><b>${d}</b><span>DAYS</span></div><div><b>${String(h).padStart(2,'0')}</b><span>HRS</span></div>
+        <div><b>${String(mi).padStart(2,'0')}</b><span>MIN</span></div><div><b>${String(se).padStart(2,'0')}</b><span>SEC</span></div>
       </div></div>`;
-  } else if (phase === 'during'){
-    const day = Date.now() < new Date('2026-11-08T00:00:00+04:00').getTime() ? 1 : 2;
-    hero = `<div class="hero">
-      <div class="hero-k">Live now · Day ${day}</div>
+  } else if (p === 'during') {
+    const day = Date.now() < new Date(DAY2+'T00:00:00+04:00').getTime() ? 1 : 2;
+    hero = `<div class="hero"><div class="hero-k">Live now &middot; day ${day}</div>
       <div class="hero-h">Match day</div>
-      <div class="hero-p">Zayed Sports City · Gate 16. Scores update as managers enter them.</div>
-    </div>`;
+      <div class="hero-p">Zayed Sports City &middot; Gate 16. Scores update as managers enter them.</div></div>`;
   } else {
-    hero = `<div class="hero">
-      <div class="hero-k">Tournament complete</div>
+    hero = `<div class="hero"><div class="hero-k">Tournament complete</div>
       <div class="hero-h">Thanks for<br>a great weekend</div>
-      <div class="hero-p">Final tables and results are below.</div>
+      <div class="hero-p">Final tables and results are in the Tables tab.</div></div>`;
+  }
+
+  const practical = `<div class="sec-t">Before the day</div><div class="card">
+      <div class="row"><div><b>Zayed Sports City</b><small>Enter via Gate 16 &middot; parking across the complex</small></div></div>
+      <div class="row"><div><b>Pools kick off 8:00am</b><small>20-minute slots &mdash; two 7-minute halves</small></div></div>
+      <div class="row"><div><b>Every player gets a medal</b><small>Bring boots, a mouthguard, water and sun cover</small></div></div>
+    </div>
+    <div class="sec-t">Registration</div><div class="card">
+      <a class="row" href="/#register"><div><b>Enter a team or player</b><small>Registration is open on the tournament website</small></div>${ICON.chev}</a>
     </div>`;
-  }
 
-  const fx = S.fixtures;
-  const played = fx && fx.pool ? fx.pool.filter(m => m.result) : [];
-  const next   = fx && fx.pool ? fx.pool.filter(m => !m.result).slice(0,4) : [];
-  /* Tiles change with the phase. Before the tournament there are no matches to
-     count, and showing "0 pool matches" reads like a fault rather than "not
-     published yet" — so show facts that are true today instead. The countdown
-     already sits in the hero, so no "days to go" tile duplicating it. */
-  const live = fx && !fx.awaitingPublication && fx.pool;
-  const tiles = phase === 'before'
-    ? `<div class="tiles">
-        <div class="tile"><b>15</b><span>Age groups</span></div>
-        <div class="tile"><b>2</b><span>Days of rugby</span></div>
-        <div class="tile"><b>16</b><span>Pitches</span></div>
-        <div class="tile"><b>8am</b><span>First kick-off</span></div>
-      </div>`
-    : `<div class="tiles">
-        <div class="tile"><b>${live ? fx.pool.length : '—'}</b><span>Pool matches</span></div>
-        <div class="tile"><b>${live ? played.length : '—'}</b><span>Results in</span></div>
-        <div class="tile"><b>15</b><span>Age groups</span></div>
-        <div class="tile"><b>16</b><span>Pitches</span></div>
-      </div>`;
+  const fx = S.fixtures && S.browseId === S.ageId ? S.fixtures : null;
+  const live = fx && !fx.awaitingPublication ? (fx.pool || []) : [];
+  const mineList = S.team ? live.filter(isMine) : live;
+  const upcoming = mineList.filter(m => !m.result).slice(0, 4);
+  const recent = mineList.filter(m => m.result).slice(-3).reverse();
 
-  let body;
-  if (!fx) body = `<div class="card"><div class="spin">Loading ${esc(ageName(S.ageId))}…</div></div>`;
-  else if (fx.awaitingPublication) body = comingSoon('Fixtures');
-  else body = `<div class="card">${next.length
-      ? next.map(matchRow).join('')
-      : '<div class="empty"><b>No matches left</b><div>Every pool match for this age group has a result.</div></div>'}</div>`;
+  const more = (upcoming.length ? `<div class="sec-t">${S.team ? 'Your fixtures' : 'Next up'}</div><div class="card">${upcoming.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '')
+             + (recent.length ? `<div class="sec-t">Recent results</div><div class="card">${recent.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '');
 
-  const recent = played.slice(-3).reverse();
-
-  /* Before the tournament there is nothing live to show, and a "Next up"
-     heading over a coming-soon card is a heading doing no work. Show the
-     practical stuff instead — what to bring, where to go, what happens next —
-     so the screen is worth opening in the months beforehand. */
-  if (phase === 'before') {
-    return hero + tiles
-      + `<div class="sec-t">Following</div>${pills()}`
-      + `<div class="sec-t">${esc(ageName(S.ageId))}</div>`
-      + (fx && fx.awaitingPublication
-          ? comingSoon('Fixtures')
-          : (body || ''))
-      + `<div class="sec-t">Before the day</div>
-         <div class="card">
-           <div class="row"><div><b>Zayed Sports City</b><small>Enter via Gate 16 &middot; parking across the complex</small></div></div>
-           <div class="row"><div><b>Pools kick off 8:00am</b><small>20-minute slots &mdash; two 7-minute halves</small></div></div>
-           <div class="row"><div><b>Every player gets a medal</b><small>Bring boots, a mouthguard, water and sun cover</small></div></div>
-         </div>
-         <div class="sec-t">Registration</div>
-         <div class="card">
-           <a class="row" href="/#register"><div><b>Enter a team or player</b><small>Registration is open on the tournament website</small></div>${ICON.chev}</a>
-         </div>`;
-  }
-
-  return hero + tiles
-    + `<div class="sec-t">Following</div>${pills()}`
-    + `<div class="sec-t">Next up</div>${body}`
-    + (recent.length ? `<div class="sec-t">Latest results</div><div class="card">${recent.map(matchRow).join('')}</div>` : '');
+  return hero + followCard() + (p === 'before' && !more ? practical : more + (p==='before' ? practical : ''));
 }
 
-/* ----- match row ----- */
-function matchRow(m){
-  const r = m.result;
-  const score = r ? `${r.homeScore}&ndash;${r.awayScore}` : '';
-  return `<button class="mrow" data-match="${esc(m.id)}">
-    <div><div class="mtime">${esc(m.time || '')}</div><div class="mpitch">${esc(m.pitch || 'TBD')}</div></div>
-    <div><div class="mteams">${esc(m.home || 'TBD')} <span class="muted">v</span> ${esc(m.away || 'TBD')}</div>
-         <div class="mmeta">${esc(m.poolName || m.round || '')}</div></div>
-    <div>${score ? `<span class="mscore">${score}</span>` : ICON.chev}</div>
-  </button>`;
-}
-
-/* ----- Fixtures ----- */
+/* ---------------- Fixtures ---------------- */
 function viewFixtures(){
   const fx = S.fixtures;
-  let body;
-  if (!fx) body = `<div class="card"><div class="spin">Loading…</div></div>`;
-  else if (fx.awaitingPublication) body = comingSoon('Fixtures');
-  else {
-    const ko = (fx.knockout || []).filter(k => k.home || k.away);
-    body = `<div class="card">${(fx.pool||[]).map(matchRow).join('') ||
-             '<div class="empty"><b>No fixtures</b><div>Nothing scheduled for this age group.</div></div>'}</div>`
-         + (ko.length ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(matchRow).join('')}</div>` : '');
-  }
-  return `<div class="sec-t">Fixtures</div>${pills()}${body}`;
+  const head = `<div class="sec-t">Fixtures</div>${pills()}`;
+  if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
+  if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
+
+  const showFilter = S.team && S.browseId === S.ageId;
+  const seg = showFilter ? `<div class="seg">
+      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(S.team)}</button>
+      <button data-seg="all" class="${!S.onlyMine?'on':''}">All matches</button>
+    </div>` : '';
+
+  let pool = fx.pool || [];
+  if (showFilter && S.onlyMine) pool = pool.filter(isMine);
+
+  /* Grouped by pool — twenty undifferentiated rows is hard to scan, and the
+     pool is how people think about the draw. */
+  const byPool = {};
+  pool.forEach(m => { const k = m.poolName || 'Matches'; (byPool[k] = byPool[k] || []).push(m); });
+  const groups = Object.keys(byPool).map(k =>
+    `<div class="pool-h">${esc(k)}</div>${byPool[k].map(m=>matchRow(m,S.browseId)).join('')}`).join('');
+
+  const ko = (fx.knockout || []).filter(k => k.home || k.away);
+  return head + seg
+    + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
+    + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId)).join('')}</div>` : '');
 }
 
-/* ----- Tables ----- */
+/* ---------------- Tables ---------------- */
 function viewTables(){
   const st = S.standings;
-  if (!st) return `<div class="sec-t">Tables</div>${pills()}<div class="card"><div class="spin">Loading…</div></div>`;
-  if (st.awaitingPublication) return `<div class="sec-t">Tables</div>${pills()}${comingSoon('Standings')}`;
-  if (!st.ageGroup.hasStandings) return `<div class="sec-t">Tables</div>${pills()}
-    <div class="card"><div class="empty"><b>Festival age group</b>
-    <div>${esc(st.ageGroup.name)} is non-competitive — no standings are kept.</div></div></div>`;
+  const head = `<div class="sec-t">Tables</div>${pills()}`;
+  if (!st) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
+  if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
+  if (!st.ageGroup.hasStandings) return head +
+    `<div class="card"><div class="empty"><b>Festival age group</b>
+     <div>${esc(st.ageGroup.name)} is non-competitive — no standings are kept.</div></div></div>`;
 
   const pools = st.pools || [];
-  if (!pools.length) return `<div class="sec-t">Tables</div>${pills()}
-    <div class="card"><div class="empty"><b>No pools yet</b><div>Nothing to show for this age group.</div></div></div>`;
+  if (!pools.length) return head +
+    `<div class="card"><div class="empty"><b>No pools yet</b><div>Nothing to show for this age group.</div></div></div>`;
 
   const adv = st._advance || 0;
-  const tbl = pools.map(p => {
-    const rows = (st.tables[p.id] || []);
+  return head + pools.map(p => {
+    const rows = st.tables[p.id] || [];
     return `<div class="sec-t">${esc(p.name)}</div><div class="card"><table>
       <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/−</th><th>Pts</th></tr></thead>
-      <tbody>${rows.map((t,i) => `<tr class="${i < adv ? 'q' : ''}">
-        <td>${i+1}</td><td>${esc(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td>
-        <td>${t.L}</td><td>${t.PF - t.PA > 0 ? '+' : ''}${t.PF - t.PA}</td><td class="pts">${t.pts}</td>
-      </tr>`).join('')}</tbody></table>
+      <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${t.team===S.team?'me':''}">
+        <td>${i+1}</td><td>${esc(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
+        <td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table>
       <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · +/− points difference · Pts league points.</div>
     </div>`;
   }).join('');
-
-  return `<div class="sec-t">Tables</div>${pills()}${tbl}`;
 }
 
-/* ----- More ----- */
+/* ---------------- More ---------------- */
 function viewMore(){
   const s = S.session;
-  const signed = !!s;
-  return `<div class="sec-t">Venue</div>
-    <div class="card">
-      <div class="row"><div><b>Zayed Sports City</b><small>Abu Dhabi · enter via Gate 16</small></div></div>
+  return `<div class="sec-t">Venue</div><div class="card">
+      <div class="row"><div><b>Zayed Sports City</b><small>Abu Dhabi &middot; enter via Gate 16</small></div></div>
       <div class="row"><div><b>Pitches A, B, C &amp; D</b><small>Follow the Quins signage from the Tennis Centre</small></div></div>
       <div class="row"><div><b>Sat 7 &amp; Sun 8 November 2026</b><small>Pools kick off 8:00am</small></div></div>
     </div>
 
-    <div class="sec-t">${signed ? 'Your account' : 'Managers &amp; organisers'}</div>
-    <div class="card">
-      ${signed
-        ? `<div class="row"><div><b>${esc(s.name || s.username)}</b>
-             <small>${isOrganiser(s) ? 'Organiser — all age groups' : (s.ageGroupId === '*' ? 'Admin — all age groups' : ageName(s.ageGroupId))}</small></div></div>
-           <button class="row" data-act="tools"><div><b>Full manager tools</b><small>Fixture editor, publishing, spirit award</small></div>${ICON.chev}</button>
-           <button class="row" data-act="signout"><div><b>Sign out</b></div>${ICON.chev}</button>`
-        : `<button class="row" data-act="signin"><div><b>Sign in</b><small>Enter scores for your age group</small></div>${ICON.chev}</button>`}
+    <div class="sec-t">Following</div><div class="card">
+      <button class="row" data-act="follow"><div><b>${esc(S.team || (S.ageId ? ageName(S.ageId) : 'Not set'))}</b>
+        <small>${S.team ? esc(ageName(S.ageId)) : 'Choose the team or age group you follow'}</small></div>${ICON.chev}</button>
     </div>
 
-    <div class="sec-t">More</div>
-    <div class="card">
+    <div class="sec-t">${s ? 'Your account' : 'Managers &amp; organisers'}</div><div class="card">
+      ${s ? `<div class="row"><div><b>${esc(s.name || s.username)}</b>
+          <small>${isOrganiser(s) ? 'Organiser — all age groups' : (s.ageGroupId==='*' ? 'Admin — all age groups' : ageName(s.ageGroupId))}</small></div></div>
+        <button class="row" data-act="tools"><div><b>Full manager tools</b><small>Fixture editor, publishing, spirit award</small></div>${ICON.chev}</button>
+        <button class="row" data-act="signout"><div><b>Sign out</b></div>${ICON.chev}</button>`
+       : `<button class="row" data-act="signin"><div><b>Sign in</b><small>Enter scores for your age group</small></div>${ICON.chev}</button>`}
+    </div>
+
+    <div class="sec-t">More</div><div class="card">
       <a class="row" href="/"><div><b>Tournament website</b><small>About, registration, sponsors</small></div>${ICON.chev}</a>
       <a class="row" href="/scores"><div><b>Full scores page</b><small>Brackets and the complete standings view</small></div>${ICON.chev}</a>
-      <button class="row" data-act="install"><div><b>Add to home screen</b><small>Use this like an app</small></div>${ICON.chev}</button>
     </div>
     <p class="muted" style="padding:18px 4px;font-size:12.5px;line-height:1.6">
-      Abu Dhabi Harlequins Rugby Football Club · founded 1970<br>Affiliated with Harlequin F.C. London
-    </p>`;
+      Abu Dhabi Harlequins Rugby Football Club &middot; founded 1970<br>Affiliated with Harlequin F.C. London</p>`;
 }
 
 /* ---------------- interactions ---------------- */
 function wire(){
-  document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => loadAge(b.dataset.age));
+  document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => load(b.dataset.age));
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
+  document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
 }
 
 function act(a){
-  if (a === 'signin')  return openSignIn();
-  if (a === 'signout') { api.logout(); try { orgApi.logout(); } catch(e){} S.session = null; render(); toast('Signed out'); return; }
+  if (a === 'follow')  return openFollow();
+  if (a === 'signin')  return signIn();
+  if (a === 'signout') { api.logout(); try{orgApi.logout();}catch(e){} S.session=null; render(); toast('Signed out'); return; }
   if (a === 'tools')   { location.href = '/scores'; return; }
-  if (a === 'install') return openSheet('Add to home screen',
-    `<p style="line-height:1.7;margin-bottom:14px">Installing puts the crest on your home screen and opens straight to match day, without the browser bar.</p>
-     <div class="card" style="margin-bottom:14px">
-       <div class="row"><div><b>iPhone &amp; iPad</b><small>Share button, then “Add to Home Screen”</small></div></div>
-       <div class="row"><div><b>Android</b><small>Menu (⋮), then “Install app” or “Add to Home screen”</small></div></div>
-     </div>
-     <p class="muted" style="font-size:13px;line-height:1.6">You’ll still need a signal for live scores — the app shows the last page you opened if you lose it.</p>`);
 }
 
-function openSignIn(){
-  openSheet('Sign in', `
-    <div id="loginErr"></div>
+/* Two-stage: age group always, then narrow to a team once the draw exists. */
+function openFollow(){
+  const list = S.ageGroups.map(a =>
+    `<button class="row" data-pick-age="${a.id}"><div><b>${esc(a.name)}</b>${a.id===S.ageId?'<small>Currently following</small>':''}</div>${ICON.chev}</button>`).join('');
+  openSheet('Choose age group', `<div class="card">${list}</div>
+    <p class="muted" style="margin-top:16px;font-size:13px;line-height:1.6">
+      Once the draw is published you can narrow this to your own team, and the app will show your fixtures first.</p>`);
+  document.querySelectorAll('[data-pick-age]').forEach(b => b.onclick = async () => {
+    S.ageId = b.dataset.pickAge; S.team = null; saveFollow();
+    closeSheet(); await load(S.ageId); openTeamPick();
+  });
+}
+
+function openTeamPick(){
+  const teams = teamsInAge();
+  if (!teams.length) { toast('Following ' + ageName(S.ageId)); return; }
+  openSheet('Choose your team', `<div class="card">
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(t)}</b></div>${ICON.chev}</button>`).join('')}
+      <button class="row" data-pick-team=""><div><b>All teams</b><small>Follow the whole age group</small></div>${ICON.chev}</button>
+    </div>`);
+  document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
+    S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
+    toast(S.team ? 'Following ' + S.team : 'Following ' + ageName(S.ageId));
+  });
+}
+
+function signIn(){
+  openSheet('Sign in', `<div id="loginErr"></div>
     <div class="field"><label>Username</label><input id="lu" autocomplete="username" autocapitalize="none"></div>
     <div class="field"><label>Password</label><input id="lp" type="password" autocomplete="current-password"></div>
     <button class="btn btn-p" id="lgo">Sign in</button>
     <p class="muted" style="margin-top:16px;font-size:13px;line-height:1.6">
       Managers use the account they created with their age group invite code.
-      Organisers use their organiser account — both work here.
-    </p>`);
+      Organisers use their organiser account — both work here.</p>`);
   $('lgo').onclick = async () => {
     const u = $('lu').value.trim(), p = $('lp').value;
     if (!u || !p) { $('loginErr').innerHTML = '<div class="err">Enter your username and password.</div>'; return; }
     $('lgo').textContent = 'Signing in…';
-
-    /* Try the manager endpoint first (most accounts), then the organiser one.
-       Only if BOTH reject do we show an error — otherwise an organiser typing
-       correct details would be told they were wrong. */
     let r = await api.login(u, p);
-    if (!r.ok) {
-      const o = await orgApi.login(u, p);
-      if (o.ok) r = o;
-    }
-
+    if (!r.ok) { const o = await orgApi.login(u, p); if (o.ok) r = o; }
     if (r.ok) {
-      S.session = resolveSession();
-      closeSheet();
-      // Organisers can score any age group; managers land on their own.
-      if (S.session && S.session.ageGroupId && S.session.ageGroupId !== '*'
-          && S.ageGroups.some(a => a.id === S.session.ageGroupId)) {
-        await loadAge(S.session.ageGroupId);
-      } else { render(); }
+      S.session = resolveSession(); closeSheet();
+      const ag = S.session && S.session.ageGroupId;
+      if (ag && ag !== '*' && S.ageGroups.some(a => a.id === ag)) await load(ag); else render();
       toast('Signed in');
     } else {
       $('loginErr').innerHTML = '<div class="err">Wrong username or password. Managers use their age group account; organisers use their organiser account.</div>';
@@ -655,52 +718,45 @@ function findMatch(id){
 
 function openMatch(id){
   const m = findMatch(id); if (!m) return;
-  const r = m.result;
-  const mayScore = canScore(S.session, S.ageId);
+  const r = m.result, mayScore = canScore(S.session, S.browseId);
+  const at = kickoffAt(m, S.browseId);
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home || 'TBD')} v ${esc(m.away || 'TBD')}</b>
-        <small>${esc(m.poolName || m.round || '')} · ${esc(m.time || '')} · ${esc(m.pitch || 'Pitch TBD')}</small></div></div>
+      <div class="row"><div><b>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')}</b>
+        <small>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
-        <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover ? ' · walk-over' : ''}</small></div></div>` : ''}
+        <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
     </div>`;
 
-  if (!mayScore){
-    openSheet('Match', head + (r ? '' :
-      `<p class="muted" style="font-size:13.5px;line-height:1.6">No result yet. Scores appear here as soon as the age group manager enters them.</p>`));
-    return;
-  }
+  if (!mayScore) return openSheet('Match', head + (r ? '' :
+    `<p class="muted" style="font-size:13.5px;line-height:1.6">No result yet. Scores appear here as soon as the age group manager enters them.</p>`));
 
-  openSheet('Enter score', head + `
-    <div id="scErr"></div>
+  openSheet('Enter score', head + `<div id="scErr"></div>
     <div class="two">
-      <div class="field"><label>${esc(m.home || 'Home')} points</label><input id="hs" type="number" inputmode="numeric" min="0" value="${r ? r.homeScore : ''}"></div>
-      <div class="field"><label>${esc(m.away || 'Away')} points</label><input id="as" type="number" inputmode="numeric" min="0" value="${r ? r.awayScore : ''}"></div>
+      <div class="field"><label>${esc(m.home||'Home')} points</label><input id="hs" type="number" inputmode="numeric" min="0" value="${r?r.homeScore:''}"></div>
+      <div class="field"><label>${esc(m.away||'Away')} points</label><input id="as" type="number" inputmode="numeric" min="0" value="${r?r.awayScore:''}"></div>
     </div>
     <div class="two">
-      <div class="field"><label>Home tries</label><input id="ht" type="number" inputmode="numeric" min="0" value="${r ? (r.homeTries||0) : ''}"></div>
-      <div class="field"><label>Away tries</label><input id="at" type="number" inputmode="numeric" min="0" value="${r ? (r.awayTries||0) : ''}"></div>
+      <div class="field"><label>Home tries</label><input id="ht" type="number" inputmode="numeric" min="0" value="${r?(r.homeTries||0):''}"></div>
+      <div class="field"><label>Away tries</label><input id="at" type="number" inputmode="numeric" min="0" value="${r?(r.awayTries||0):''}"></div>
     </div>
     <div class="field"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
-      <option value="home" ${r && r.walkover==='home' ? 'selected':''}>${esc(m.home||'Home')} awarded the match</option>
-      <option value="away" ${r && r.walkover==='away' ? 'selected':''}>${esc(m.away||'Away')} awarded the match</option>
+      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home||'Home')} awarded the match</option>
+      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away||'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
-    <button class="btn btn-g" id="sgo">${r ? 'Update result' : 'Save result'}</button>`);
+    <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>`);
 
   $('sgo').onclick = async () => {
     const wo = $('wo').value;
-    if (!wo && ($('hs').value === '' || $('as').value === '')) {
-      $('scErr').innerHTML = '<div class="err">Enter both scores, or choose a walk-over.</div>'; return;
-    }
+    if (!wo && ($('hs').value==='' || $('as').value==='')) {
+      $('scErr').innerHTML = '<div class="err">Enter both scores, or choose a walk-over.</div>'; return; }
     $('sgo').textContent = 'Saving…';
     const res = await api.submitResult(m.id, {
-      homeScore: $('hs').value, awayScore: $('as').value,
-      homeTries: $('ht').value, awayTries: $('at').value,
-      walkover: wo || null,
-    }, S.session);
-    if (res.ok) { closeSheet(); toast('Result saved'); await loadAge(S.ageId); }
-    else { $('scErr').innerHTML = `<div class="err">${esc(res.error || 'Could not save.')}</div>`; $('sgo').textContent = 'Save result'; }
+      homeScore:$('hs').value, awayScore:$('as').value,
+      homeTries:$('ht').value, awayTries:$('at').value, walkover:wo||null }, S.session);
+    if (res.ok) { closeSheet(); toast('Result saved'); await load(S.browseId); }
+    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
   };
 }
 
@@ -708,23 +764,19 @@ function openMatch(id){
 (async function init(){
   S.session = resolveSession();
   S.ageGroups = (await api.getAgeGroups()).filter(a => a.hasStandings);
+  loadFollow();
 
-  const saved = localStorage.getItem(FOLLOW_KEY);
-  const start = (S.session && S.session.ageGroupId && S.session.ageGroupId !== '*'
-                  && S.ageGroups.some(a => a.id === S.session.ageGroupId))
-              ? S.session.ageGroupId
-              : (S.ageGroups.some(a => a.id === saved) ? saved : (S.ageGroups[0] || {}).id);
+  const mgrAge = S.session && S.session.ageGroupId !== '*' ? S.session.ageGroupId : null;
+  if (mgrAge && S.ageGroups.some(a => a.id === mgrAge)) S.ageId = mgrAge;
+  if (!S.ageId || !S.ageGroups.some(a => a.id === S.ageId)) S.ageId = (S.ageGroups[0]||{}).id;
 
   buildNav();
-  if (start) await loadAge(start); else render();
+  await load(S.ageId);
 
-  // Keep the countdown ticking on the Today view.
+  // Countdown ticks; during the tournament also pull fresh scores.
   setInterval(() => { if (S.view === 'today') render(); }, 1000);
+  setInterval(() => { if (phase() === 'during') load(S.browseId); }, 60000);
 })();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
-}
 </script>
 </body>
 </html>

@@ -822,6 +822,19 @@ export async function login(username, password) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return { ok: true, session };
   }
+  // If these were actually organizer credentials (they clicked the wrong
+  // login), sign them in as an organizer — the scores page fully supports an
+  // organizer session (all-age-group access), so there's nothing to redirect.
+  const ro = await tryFetchJson('/.netlify/functions/organizer-login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const ojson = ro.real ? ro.json : (await local()).organizerLogin({ username, password });
+  if (ojson.ok) {
+    const orgSession = { ...ojson.session, token: ojson.token };
+    localStorage.setItem(ORG_SESSION_KEY, JSON.stringify(orgSession));
+    return { ok: true, session: { token: ojson.token, username: orgSession.username, name: orgSession.name, ageGroupId: '*', isOrganizer: true } };
+  }
   return { ok: false, error: json.error || 'Wrong username or password.' };
 }
 

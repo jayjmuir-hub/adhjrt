@@ -52,6 +52,21 @@ export async function login(username, password) {
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
     return { ok: true, session };
   }
+  // If these were actually manager credentials (they clicked the wrong login),
+  // sign them in as a manager and send them to the scores/manager area — the
+  // organizer dashboard is organizer-only, so there's nothing useful to show a
+  // manager here.
+  const rm = await tryFetchJson('/.netlify/functions/manager-login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const mjson = rm.real ? rm.json : (await local()).managerLogin({ username, password });
+  if (mjson.ok) {
+    const mgrSession = { ...mjson.session, token: mjson.token };
+    // 'adhjrt_session_v1' is the scores page's manager session key (SESSION_KEY in scores-data.js).
+    try { localStorage.setItem('adhjrt_session_v1', JSON.stringify(mgrSession)); } catch (e) {}
+    return { ok: true, redirect: '/scores' };
+  }
   return { ok: false, error: json.error || 'Incorrect username or password.' };
 }
 

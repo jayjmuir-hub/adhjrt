@@ -665,7 +665,11 @@
                     <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
                       <option value="{{ c }}">{{ c }}</option>
                     </sc-for>
+                    <option value="__other__">Other &mdash; my club isn't listed</option>
                   </select>
+                  <sc-if value="{{ teamClubIsOther }}" hint-placeholder-val="{{ false }}">
+                    <input value="{{ teamClubOtherVal }}" onInput="{{ onTeamClubOther }}" placeholder="Type your club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  </sc-if>
                 </div>
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP ENTERING</label>
@@ -752,6 +756,7 @@
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYERS</label>
                   <span style="font-size:12px;font-weight:700;color:{{ teamPlayerCountColor }}">{{ teamPlayerCount }} / 15</span>
                 </div>
+                <button onClick="{{ onAddPlayer }}" disabled="{{ addPlayerDisabled }}" style="{{ addPlayerStyle }}">+ Add player</button>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
                   <sc-for list="{{ teamPlayerRows }}" as="p" hint-placeholder-count="0">
                     <div style="display:grid;grid-template-columns:1fr 1fr 130px 32px;gap:8px;align-items:center">
@@ -762,7 +767,6 @@
                     </div>
                   </sc-for>
                 </div>
-                <button onClick="{{ onAddPlayer }}" disabled="{{ addPlayerDisabled }}" style="{{ addPlayerStyle }}">+ Add player</button>
               </div>
 
               <input value="" style="position:absolute;left:-9999px" tabIndex="-1" aria-hidden="true">
@@ -827,7 +831,11 @@
                   <sc-for list="{{ playerClubOptions }}" as="c" hint-placeholder-count="9">
                     <option value="{{ c }}">{{ c }}</option>
                   </sc-for>
+                  <option value="__other__">Other &mdash; club not listed</option>
                 </select>
+                <sc-if value="{{ playerClubIsOther }}" hint-placeholder-val="{{ false }}">
+                  <input value="{{ playerClubOtherVal }}" onInput="{{ onPlayerClubOther }}" placeholder="Type the club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                </sc-if>
               </div>
 
               <div>
@@ -942,6 +950,10 @@ const AGE_GROUP_NAMES = ['U6 Tag', 'U7 Tag', 'U8 Tag', 'U9 Mixed Contact', 'U10 
 
 // Same club list used for pools/fixtures in scores-data.js.
 const CLUB_NAMES = ['Abu Dhabi Harlequins', 'Dubai Exiles', 'Dubai Sharks', 'Dubai Hurricanes', 'Barrelhouse', 'Al Ain Amblers', 'Dubai Dragons', 'Dubai Tigers', 'Abu Dhabi Small Blacks'];
+// When a coach/parent picks "Other" in the club dropdown, the real club name
+// comes from the free-text `clubOther` field instead. effClub() returns the
+// effective club name for validation and submission.
+const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.club);
 
 // Age bands per group at the UAERF cut-off (31 Aug 2026). U16 and U18 are
 // "double" age groups spanning two cut-off ages each (there's no separate
@@ -1027,13 +1039,13 @@ const MAX_TEAM_PLAYERS = 15;
 // mind — the requests that do come in are then real ones worth honouring.
 const POOL_OPTIONS = ['A', 'B', 'C', 'D', 'No preference'];
 const emptyTeamForm = () => ({
-  club: '', preferredPool: '', ageGroup: '',
+  club: '', clubOther: '', preferredPool: '', ageGroup: '',
   headCoachName: '', headCoachEmail: '', headCoachPhone: '',
   managerName: '', managerEmail: '', managerPhone: '',
   numPlayers: '', notes: '', players: [],
 });
 const emptyPlayerForm = () => ({
-  playerFirstName: '', playerLastName: '', dob: '', club: '', ageGroup: '',
+  playerFirstName: '', playerLastName: '', dob: '', club: '', clubOther: '', ageGroup: '',
   parentFirstName: '', parentLastName: '', parentEmail: '', parentPhone: '',
   emergencySame: false, emergencyFirstName: '', emergencyLastName: '', emergencyPhone: '',
   medicalNotes: '', consent: false, playUpConsent: false,
@@ -1198,7 +1210,7 @@ class Component extends DCLogic {
   // Same validation submitPlayer() runs, but read-only — used both to
   // gate submission and to reactively clear a stale error as fields change.
   _playerFormError(f) {
-    if (!f.playerFirstName.trim() || !f.playerLastName.trim() || !f.dob || !f.club || !f.parentFirstName.trim() || !f.parentLastName.trim() || !f.parentEmail.trim() || !f.emergencyFirstName.trim() || !f.emergencyLastName.trim() || !f.emergencyPhone.trim()) {
+    if (!f.playerFirstName.trim() || !f.playerLastName.trim() || !f.dob || !effClub(f) || !f.parentFirstName.trim() || !f.parentLastName.trim() || !f.parentEmail.trim() || !f.emergencyFirstName.trim() || !f.emergencyLastName.trim() || !f.emergencyPhone.trim()) {
       return 'Please fill in the player name, date of birth, club, parent name, parent email and an emergency contact (name and mobile).';
     }
     if (!f.consent) return 'Please read and agree to the Medical Declaration & Consent before submitting.';
@@ -1249,7 +1261,7 @@ class Component extends DCLogic {
 
   async submitTeam() {
     const f = this.state.teamForm;
-    if (!f.club || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
+    if (!effClub(f) || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
       this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });
       return;
     }
@@ -1260,7 +1272,7 @@ class Component extends DCLogic {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: encodeFormData({
           'form-name': 'team-registration',
-          club: f.club, 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
+          club: effClub(f), 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
           'head-coach-name': f.headCoachName, 'head-coach-email': f.headCoachEmail,
           'head-coach-phone': f.headCoachPhone ? `+971${f.headCoachPhone}` : '',
           'manager-name': f.managerName, 'manager-email': f.managerEmail,
@@ -1287,7 +1299,7 @@ class Component extends DCLogic {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: encodeFormData({
           'form-name': 'player-registration',
-          'player-first-name': f.playerFirstName, 'player-last-name': f.playerLastName, dob: f.dob, club: f.club, 'age-group': f.ageGroup,
+          'player-first-name': f.playerFirstName, 'player-last-name': f.playerLastName, dob: f.dob, club: effClub(f), 'age-group': f.ageGroup,
           'parent-first-name': f.parentFirstName, 'parent-last-name': f.parentLastName,
           'parent-email': f.parentEmail, 'parent-phone': f.parentPhone ? `+971${f.parentPhone}` : '',
           'emergency-first-name': f.emergencyFirstName, 'emergency-last-name': f.emergencyLastName,
@@ -1444,6 +1456,9 @@ class Component extends DCLogic {
       onBackdropTeam: () => this.closeTeamModal(),
       stopProp: (e) => e.stopPropagation(),
       onTeamClub: (e) => this.setTeamField('club', e.target.value),
+      teamClubIsOther: this.state.teamForm.club === '__other__',
+      teamClubOtherVal: this.state.teamForm.clubOther,
+      onTeamClubOther: (e) => this.setTeamField('clubOther', e.target.value),
       onPreferredPool: (e) => this.setTeamField('preferredPool', e.target.value),
       onTeamAgeGroup: (e) => this.setTeamField('ageGroup', e.target.value),
       onHeadCoachName: (e) => this.setTeamField('headCoachName', e.target.value),
@@ -1471,6 +1486,9 @@ class Component extends DCLogic {
       onPlayerDob: (e) => this.setPlayerField('dob', e.target.value),
       onDobClick: (e) => { if (typeof e.target.showPicker === 'function') { try { e.target.showPicker(); } catch (err) {} } },
       onPlayerClub: (e) => this.setPlayerField('club', e.target.value),
+      playerClubIsOther: this.state.playerForm.club === '__other__',
+      playerClubOtherVal: this.state.playerForm.clubOther,
+      onPlayerClubOther: (e) => this.setPlayerField('clubOther', e.target.value),
       playerClubOptions: CLUB_NAMES,
       onPlayerAgeGroup: (e) => this.setPlayerField('ageGroup', e.target.value),
       onPlayerParentFirstName: (e) => this.setPlayerField('parentFirstName', e.target.value),

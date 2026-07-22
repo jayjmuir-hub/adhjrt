@@ -190,6 +190,38 @@
       <!-- accounts tab -->
       <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create manager login</div>
+            <p style="color:#7f8794;font-size:13px;margin-bottom:16px;line-height:1.5">Make an age-group manager account that can sign in straight away — no invite code or approval needed. A manager sees the scores, fixtures and registrations for their group only.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NAME</label>
+                <input value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
+                <input value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
+                <input value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
+                <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                  <option value="">Select&hellip;</option>
+                  <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
+                    <option value="{{ ag.id }}">{{ ag.name }}</option>
+                  </sc-for>
+                </select>
+              </div>
+            </div>
+            <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
+            <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
+            <button onClick="{{ onCreateManager }}" disabled="{{ cmBusy }}" style="margin-top:16px;background:#17A34A;color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ cmLabel }}</button>
+          </div>
+
           <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#f5c518">Pending approval</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
@@ -310,8 +342,18 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
+const MANAGER_AGE_GROUPS = [
+  { id: 'u6', name: 'U6 Tag' }, { id: 'u7', name: 'U7 Tag' }, { id: 'u8', name: 'U8 Tag' },
+  { id: 'u9', name: 'U9 Mixed Contact' }, { id: 'u10', name: 'U10 Mixed Contact' }, { id: 'u11', name: 'U11 Mixed Contact' },
+  { id: 'u12', name: 'U12 Mixed Contact' }, { id: 'u12g', name: 'U12G QR' }, { id: 'u13', name: 'U13 Mixed Contact' },
+  { id: 'u14b', name: 'U14B Contact' }, { id: 'u14g', name: 'U14G QR' },
+  { id: 'u16b', name: 'U16B Contact' }, { id: 'u16g', name: 'U16G Contact' },
+  { id: 'u18b', name: 'U18B Contact' }, { id: 'u18g', name: 'U18G Contact' },
+];
+
 class Component extends DCLogic {
   state = {
+    cmName: '', cmUser: '', cmPass: '', cmAge: '', cmError: '', cmSuccess: '', cmBusy: false,
     api: null, session: null, loginUser: '', loginPass: '', loginError: '', loginBusy: false,
     authMode: 'login',
     signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
@@ -343,6 +385,23 @@ class Component extends DCLogic {
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
   async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
+
+  async doCreateManager() {
+    const { api, cmName, cmUser, cmPass, cmAge } = this.state;
+    if (!cmName.trim() || !cmUser.trim() || !cmPass || !cmAge) {
+      this.setState({ cmError: 'Fill in name, username, password and age group.', cmSuccess: '' });
+      return;
+    }
+    if (cmPass.length < 6) { this.setState({ cmError: 'Password must be at least 6 characters.', cmSuccess: '' }); return; }
+    this.setState({ cmBusy: true, cmError: '', cmSuccess: '' });
+    const res = await api.createManager({ name: cmName.trim(), username: cmUser.trim(), password: cmPass, ageGroupId: cmAge });
+    if (res.ok) {
+      this.setState({ cmBusy: false, cmSuccess: `Login "${cmUser.trim().toLowerCase()}" created — they can sign in now.`, cmName: '', cmUser: '', cmPass: '', cmAge: '' });
+      this.refreshAccounts();
+    } else {
+      this.setState({ cmBusy: false, cmError: res.error || 'Could not create login.' });
+    }
+  }
 
   async doResetPassword(username) {
     const pwd = window.prompt(`New password for ${username} (min 6 characters):`);
@@ -561,6 +620,16 @@ class Component extends DCLogic {
       hasPending: s.accounts.some((a) => !a.approved),
       pendingCount: s.accounts.filter((a) => !a.approved).length,
       accountsEmpty: s.accounts.filter((a) => a.approved).length === 0,
+
+      cmName: s.cmName, cmUser: s.cmUser, cmPass: s.cmPass, cmAge: s.cmAge,
+      cmError: s.cmError, cmSuccess: s.cmSuccess, cmBusy: s.cmBusy,
+      cmLabel: s.cmBusy ? 'Creating…' : 'Create login',
+      cmAgeOptions: MANAGER_AGE_GROUPS,
+      onCmName: (e) => this.setState({ cmName: e.target.value }),
+      onCmUser: (e) => this.setState({ cmUser: e.target.value }),
+      onCmPass: (e) => this.setState({ cmPass: e.target.value }),
+      onCmAge: (e) => this.setState({ cmAge: e.target.value }),
+      onCreateManager: () => this.doCreateManager(),
 
       search: s.search, onSearch: (e) => this.setState({ search: e.target.value }),
       clubFilter: s.clubFilter, onClubFilter: (e) => this.setState({ clubFilter: e.target.value }),

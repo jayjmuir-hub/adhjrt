@@ -74,7 +74,7 @@ good reason.
 | `manager-login.js` | returns a signed session token |
 | `organizer-signup.js` | shared invite code; **first organiser account is auto-approved** |
 | `organizer-login.js` | as above |
-| `accounts-admin.js` | organiser-only: list / approve / reject / revoke accounts |
+| `accounts-admin.js` | organiser-only: list / approve / reject / revoke accounts, and **create** an already-approved manager login directly (`action:'create'`) |
 | `get-results.js` | public read of all match results |
 | `submit-result.js` | write one result; re-verifies role and age group from the token |
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published — see below) |
@@ -83,6 +83,7 @@ good reason.
 | `_teams.js` | club prefixes and team code generation |
 | `_email.js` | confirmation emails via Microsoft Graph |
 | `get-registrations.js` | organiser-only; reads both Google Sheets |
+| `get-my-registrations.js` | manager: own age group only (teams + players, medical notes included); organiser / `*` admin-manager: all groups. The group is taken from the signed token, never the request |
 | `submission-created.js` | fires on every Netlify Forms submission; appends a row to the matching Sheet |
 
 Storage is **Netlify Blobs** (`results`, `accounts`, schedule overrides) plus two
@@ -183,6 +184,10 @@ The player registration sheet holds children's names, dates of birth, medical
 notes and parent contact details. Treat it accordingly:
 
 - Never widen access to `/organizer` or to `get-registrations.js`.
+- Age-group managers can see their OWN group's registrations in full (teams +
+  players, including medical notes) via `get-my-registrations.js` — deliberate,
+  for player welfare. The group is derived from the signed token, never from
+  the request, so a manager can only ever see their own group. Keep it that way.
 - Never log registration field values.
 - Never paste sheet contents into a commit, an issue, or a public file.
 - The organiser bootstrap rule (first account auto-approved) means the account

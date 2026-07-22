@@ -58,7 +58,7 @@ const TEAM_NAMES = {
 };
 
 export function teamLabel(code) {
-  return TEAM_NAMES[code] || code || '';
+  return (TEAM_NAMES[code] || code || '').replace(/Abu Dhabi/gi, 'AD');
 }
 /* Mirrors netlify/functions/_scoring.js so the entry forms can build
    themselves. The server re-derives the total from these same rules, so this
@@ -578,10 +578,21 @@ export async function getSchedule(agId) {
   if (state.awaitingPublication) return { awaitingPublication: true, pools: [], knockout: [] };
   const override = state.schedule;
   const draw = await resolveDraw(ag, override);
+  const store = await readStore();
+  // Score for a match id, mirroring the walkover rule the server applies (a
+  // walkover is scored 20-0). Returns empty strings when nothing is entered
+  // yet, so the fixtures list shows "home v away" until a result exists.
+  const scoreOf = (id) => {
+    const r = store[id];
+    if (!r || r.homeScore == null) return { homeScore: '', awayScore: '', played: false };
+    const hs = r.walkover === 'home' ? WALKOVER_SCORE : (r.walkover === 'away' ? 0 : Number(r.homeScore));
+    const as = r.walkover === 'away' ? WALKOVER_SCORE : (r.walkover === 'home' ? 0 : Number(r.awayScore));
+    return { homeScore: hs, awayScore: as, played: true };
+  };
 
   const pools = draw.pools.map((p) => {
     const slots = slotsForPool(draw, p.id);
-    const games = slots.map((s) => ({ home: teamLabel(s.home), away: teamLabel(s.away), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD' }));
+    const games = slots.map((s) => ({ home: teamLabel(s.home), away: teamLabel(s.away), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id) }));
     return { id: p.id, name: p.name, games };
   });
 
@@ -593,10 +604,9 @@ export async function getSchedule(agId) {
   // (if any) always takes over via resolveKnockout.
   let knockout = null;
   if (ag.hasStandings) {
-    const store = await readStore();
     const tables = computeStandings(draw, store);
     const slots = resolveKnockout(ag, draw, override, tables, store);
-    knockout = slots.map((s) => ({ label: s.round, home: s.home || 'TBD', away: s.away || 'TBD', time: fmtTime(s.startMins), pitch: s.pitch || 'TBD' }));
+    knockout = slots.map((s) => ({ label: s.round, home: s.home || 'TBD', away: s.away || 'TBD', time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id) }));
   }
 
   return { ageGroup: { id: ag.id, name: ag.name }, pools, knockout };
@@ -704,6 +714,7 @@ export async function getDraw(agId, session) {
   // Deep copy so the editor can freely mutate its working draft.
   return JSON.parse(JSON.stringify({
     pools: draw.pools, slots: draw.slots, knockout,
+    pitches: draw.pitches || [],
     _publish: {
       published: state.published,
       publishedAt: state.publishedAt,
@@ -735,7 +746,7 @@ export function minutesToDisplay(mins) { return fmtTime(mins); }
 
 export async function saveDraw(agId, draw, session) {
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
-  const payload = { pools: draw.pools, slots: draw.slots, knockout: draw.knockout };
+  const payload = { pools: draw.pools, slots: draw.slots, knockout: draw.knockout, pitches: draw.pitches || [] };
   const r = await tryFetchJson('/.netlify/functions/save-schedule-override', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },

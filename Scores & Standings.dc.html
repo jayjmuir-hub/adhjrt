@@ -62,7 +62,7 @@
 </style>
 </helmet>
 
-<div style="min-height:100vh;max-width:1100px;margin:0 auto;padding:28px 24px 80px">
+<div id="sc-top" style="min-height:100vh;max-width:1100px;margin:0 auto;padding:28px 24px 80px">
 
   <!-- header -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
@@ -527,14 +527,17 @@
                 </sc-if>
               </div>
             </sc-if>
+            <sc-if value="{{ hasScoreMatches }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ onJumpToCurrentMatch }}" style="background:#17A34A;color:#fff;font-weight:700;font-size:12px;padding:9px 16px;border-radius:8px;border:none;cursor:pointer;margin-bottom:14px">&#8595; Jump to current match</button>
+            </sc-if>
             <sc-for list="{{ adminRows }}" as="m" hint-placeholder-count="3">
-              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:14px">
+              <div data-scmatch="{{ m.id }}" style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:14px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
                   <div style="font-weight:800;font-size:17px">{{ m.home }} <span style="color:#7f8794">v</span> {{ m.away }}</div>
                   <div style="display:flex;align-items:center;gap:14px">
                     <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#3bd070;text-transform:uppercase">{{ m.label }}</div>
                     <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PITCH
-                      <input value="{{ m.pitchDraft }}" onInput="{{ m.h.pitch }}" style="width:56px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:5px 6px;color:#fff;font-size:12px;text-align:center">
+                      <select value="{{ m.pitchDraft }}" onChange="{{ m.h.pitch }}" style="width:92px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:5px 6px;color:#fff;font-size:12px;color-scheme:dark"><sc-for list="{{ m.pitchOptions }}" as="po"><option value="{{ po }}">{{ po }}</option></sc-for></select>
                     </label>
                   </div>
                 </div>
@@ -614,6 +617,22 @@
           <sc-if value="{{ isFixturesSubTab }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ editorLoaded }}" hint-placeholder-val="{{ false }}">
               <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Drag a team from a pool's roster onto another pool to move it, or onto a match slot's Home/Away box to assign it there. Edit kickoff time directly — the list re-sorts by time automatically.</p>
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7f8794;margin-bottom:8px">Pitches for this age group</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+                  <sc-for list="{{ pitchChips }}" as="pc" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:5px 6px 5px 14px;font-size:13px;font-weight:700">
+                      <span style="white-space:nowrap">{{ pc.name }}</span>
+                      <button onClick="{{ pc.onRemove }}" aria-label="Remove pitch" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:14px;padding:2px 5px">&times;</button>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ pitchesEmpty }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#7f8794;align-self:center">No pitches added yet &mdash; add them below, then pick one per match.</span></sc-if>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <input value="{{ newPitchValue }}" onInput="{{ onNewPitchInput }}" onKeyDown="{{ onNewPitchKey }}" placeholder="Add a pitch (e.g. Pitch 1)" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
+                  <button onClick="{{ onAddPitch }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">+ Add pitch</button>
+                </div>
+              </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-width:0">
                 <sc-for list="{{ poolCards }}" as="pool" hint-placeholder-count="2">
                   <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;min-width:0;overflow:hidden">
@@ -643,7 +662,7 @@
                         <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
                         <span style="width:8px;flex:none"></span>
                         <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
-                        <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                        <div style="width:76px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
                         <span style="width:16px;flex:none"></span>
                       </div>
                     </sc-if>
@@ -653,7 +672,7 @@
                         <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
                         <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
                         <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
-                        <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                        <select value="{{ row.pitchVal }}" onChange="{{ row.onPitchChange }}" style="width:76px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;color-scheme:dark"><sc-for list="{{ row.pitchOptions }}" as="po"><option value="{{ po }}">{{ po }}</option></sc-for></select>
                         <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
                       </div>
                     </sc-for>
@@ -688,7 +707,7 @@
                     <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 1</div>
                     <span style="width:8px;flex:none"></span>
                     <div style="flex:1;min-width:56px;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Team 2</div>
-                    <div style="width:44px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
+                    <div style="width:76px;flex:none;text-align:center;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch</div>
                     <span style="width:16px;flex:none"></span>
                   </div>
                 </sc-if>
@@ -702,16 +721,18 @@
                     <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
                     <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
                     <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
-                    <input value="{{ row.pitchVal }}" onInput="{{ row.onPitchChange }}" placeholder="Pitch" style="width:44px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;text-align:center">
+                    <select value="{{ row.pitchVal }}" onChange="{{ row.onPitchChange }}" style="width:76px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;color-scheme:dark"><sc-for list="{{ row.pitchOptions }}" as="po"><option value="{{ po }}">{{ po }}</option></sc-for></select>
                     <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
                   </div>
                 </sc-for>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
                   <button onClick="{{ onAddKnockoutSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add knockout match</button>
                   <button onClick="{{ onRegenerateKnockout }}" disabled="{{ knockoutGenDisabled }}" style="{{ knockoutGenStyle }}">Generate knockout from standings</button>
+                  <button onClick="{{ onGenerateFinals }}" disabled="{{ finalsGenDisabled }}" style="{{ finalsGenStyle }}">Generate finals from knockout</button>
                   <button onClick="{{ onClearKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Clear knockout</button>
                 </div>
                 <sc-if value="{{ knockoutGenDisabled }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#ffb26b;margin-top:8px">Enter every pool score first &mdash; then you can generate the knockout from the final standings.</div></sc-if>
+                <sc-if value="{{ finalsHintShow }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#ffb26b;margin-top:6px">Play the knockout matches first &mdash; then this fills the finals from the winners.</div></sc-if>
               </div>
 
               <div style="display:flex;align-items:center;gap:14px;margin-top:20px">
@@ -809,6 +830,10 @@
     </div>
   </sc-if>
 
+  <div style="text-align:center;margin-top:44px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08)">
+    <button onClick="{{ onBackToMenu }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:10px 20px;border-radius:9px;cursor:pointer">&#8593; Back to menu</button>
+  </div>
+
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
@@ -824,7 +849,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
     publishState: null, publishBusy: false,
-    bulkBusy: false, bulkMsg: '',
+    bulkBusy: false, bulkMsg: '', newPitchInput: '',
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
@@ -1089,6 +1114,47 @@ class Component extends DCLogic {
     this.confirmModal('Clear all knockout matches for this age group? You can generate them again from the standings afterwards. (Remember to Save changes.)', () => {
       this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: [] } }));
     });
+  }
+  async onGenerateFinals() {
+    this.confirmModal('Fill the finals from the current knockout results? This updates only the final matches (Cup, Bowl, Plate, Shield or Final) from the winners so far, leaving the earlier knockout matches as they are. (Remember to Save changes.)', async () => {
+      const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId, this.state.session);
+      const isFinal = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+      this.setState((s) => {
+        const cur = s.editorDraw.knockout || [];
+        const freshFinals = fresh.filter((f) => isFinal(f.id));
+        const byId = {}; freshFinals.forEach((f) => { byId[f.id] = f; });
+        const haveIds = new Set(cur.map((sl) => sl.id));
+        const updated = cur.map((sl) => (isFinal(sl.id) && byId[sl.id]) ? { ...sl, home: byId[sl.id].home, away: byId[sl.id].away } : sl);
+        freshFinals.forEach((f) => { if (!haveIds.has(f.id)) updated.push(f); });
+        return { editorDraw: { ...s.editorDraw, knockout: updated } };
+      });
+    });
+  }
+  onJumpToCurrentMatch() {
+    const f = this.state.fixtures; if (!f) return;
+    const all = [...(f.pool || []), ...(f.knockout || [])];
+    const cur = all.find((fx) => fx.home && fx.away && !(fx.result && fx.result.homeScore != null)) || all[0];
+    if (!cur) return;
+    const key = (window.CSS && CSS.escape) ? CSS.escape(cur.id) : cur.id;
+    const el = document.querySelector('[data-scmatch="' + key + '"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  onBackToMenu() {
+    const el = document.getElementById('sc-top');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  onAddPitch() {
+    const name = (this.state.newPitchInput || '').trim();
+    if (!name) return;
+    this.setState((s) => {
+      const cur = (s.editorDraw && s.editorDraw.pitches) || [];
+      if (cur.some((p) => p.toLowerCase() === name.toLowerCase())) return { newPitchInput: '' };
+      return { editorDraw: { ...s.editorDraw, pitches: [...cur, name] }, newPitchInput: '' };
+    });
+  }
+  onRemovePitch(name) {
+    this.setState((s) => ({ editorDraw: { ...s.editorDraw, pitches: ((s.editorDraw && s.editorDraw.pitches) || []).filter((p) => p !== name) } }));
   }
   async onPublishAll() {
     this.confirmModal('Publish every age group that has a saved draw? Parents and coaches will see all of them on the public pages straight away.', async () => {
@@ -1361,6 +1427,12 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state;
+    const agePitches = (s.editorDraw && s.editorDraw.pitches) || [];
+    const pitchOptsFor = (cur) => Array.from(new Set(['TBD', ...agePitches, cur].filter((v) => v != null && v !== '')));
+    const koListFinals = (s.fixtures && s.fixtures.knockout) || [];
+    const isFinalKo = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+    const koSemis = koListFinals.filter((k) => !isFinalKo(k.id) && k.home && k.away);
+    const koSemisAllPlayed = koSemis.length > 0 && koSemis.every((k) => k.result && k.result.homeScore != null);
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const tabOn = tabBase + 'background:#E11B22;color:#fff;';
     const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
@@ -1532,6 +1604,7 @@ class Component extends DCLogic {
 
         return {
           id: fx.id, home: fx.home || 'TBD', away: fx.away || 'TBD', label, pitch: fx.pitch || 'TBD',
+          pitchOptions: pitchOptsFor(fx.pitch),
           canEdit, awaiting: !canEdit,
           homeFields: fieldsFor('home'), awayFields: fieldsFor('away'),
           homeTotal: totalFor('home'), awayTotal: totalFor('away'),
@@ -1699,7 +1772,7 @@ class Component extends DCLogic {
         slotRows: slots.map((sl) => ({
           id: sl.id,
           timeVal: s.api.minutesToTimeInput(sl.startMins),
-          pitchVal: sl.pitch || '',
+          pitchVal: sl.pitch || '', pitchOptions: pitchOptsFor(sl.pitch),
           home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
           homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
           onTimeChange: (e) => this.onSlotTimeChange(sl.id, e.target.value),
@@ -1881,7 +1954,7 @@ class Component extends DCLogic {
       knockoutRows: (s.editorDraw && s.editorDraw.knockout ? [...s.editorDraw.knockout] : []).sort((a, b) => a.startMins - b.startMins).map((sl) => ({
         id: sl.id, round: sl.round,
         timeVal: s.api.minutesToTimeInput(sl.startMins),
-        pitchVal: sl.pitch || '',
+        pitchVal: sl.pitch || '', pitchOptions: pitchOptsFor(sl.pitch),
         home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
         homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
         onTimeChange: (e) => this.onKnockoutTimeChange(sl.id, e.target.value),
@@ -1899,6 +1972,21 @@ class Component extends DCLogic {
       knockoutGenStyle: (s.fixtures && s.fixtures.pool && s.fixtures.pool.length > 0 && s.fixtures.pool.every((fx) => fx.result && fx.result.homeScore != null))
         ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer'
         : 'background:transparent;border:1px solid rgba(255,255,255,0.12);color:#5a616d;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:not-allowed;opacity:.6',
+      onGenerateFinals: () => this.onGenerateFinals(),
+      finalsGenDisabled: !koSemisAllPlayed,
+      finalsHintShow: koSemis.length > 0 && !koSemisAllPlayed,
+      finalsGenStyle: koSemisAllPlayed
+        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer'
+        : 'background:transparent;border:1px solid rgba(255,255,255,0.12);color:#5a616d;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:not-allowed;opacity:.6',
+      onJumpToCurrentMatch: () => this.onJumpToCurrentMatch(),
+      hasScoreMatches: !!(s.fixtures && (((s.fixtures.pool || []).length + (s.fixtures.knockout || []).length) > 0)),
+      onBackToMenu: () => this.onBackToMenu(),
+      pitchChips: agePitches.map((p) => ({ name: p, onRemove: () => this.onRemovePitch(p) })),
+      pitchesEmpty: agePitches.length === 0,
+      newPitchValue: s.newPitchInput || '',
+      onNewPitchInput: (e) => this.setState({ newPitchInput: e.target.value }),
+      onNewPitchKey: (e) => { if (e.key === 'Enter') this.onAddPitch(); },
+      onAddPitch: () => this.onAddPitch(),
     };
   }
 

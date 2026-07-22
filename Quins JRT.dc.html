@@ -338,7 +338,7 @@
               <div style="display:grid;grid-template-columns:84px 70px 1fr;gap:8px;padding:12px 16px;align-items:center;border-top:1px solid #EDEBE6">
                 <div style="font-weight:800;color:#E11B22;font-size:13px">{{ g.time }}</div>
                 <div style="color:#8b9099;font-size:13px;font-weight:700">{{ g.pitch }}</div>
-                <div style="font-weight:600;font-size:14px;color:#14151A">{{ g.home }} <span style="color:#a8adb6">v</span> {{ g.away }}</div>
+                <div style="font-weight:600;font-size:14px;color:#14151A">{{ g.home }} <strong style="color:#E11B22">{{ g.homeScore }}</strong> <span style="color:#a8adb6">v</span> <strong style="color:#E11B22">{{ g.awayScore }}</strong> {{ g.away }}</div>
               </div>
             </sc-for>
           </div>
@@ -374,8 +374,8 @@
                       <div style="height:76px;display:flex;flex-direction:column;justify-content:center;opacity:{{ sm.opacity }}">
                         <div style="font-size:11px;color:#7a808c;font-weight:700;margin-bottom:4px">{{ sm.time }} · {{ sm.pitch }}</div>
                         <div style="width:220px;height:58px;border:1.5px solid #e2ded4;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ sm.home }}</div>
-                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sm.away }}</div>
+                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ sm.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.homeScore }}</span></div>
+                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sm.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.awayScore }}</span></div>
                         </div>
                       </div>
                     </sc-for>
@@ -389,16 +389,16 @@
                   <div style="display:flex;flex-direction:column;justify-content:center;height:176px;width:220px;flex:none;opacity:{{ br.final.opacity }}">
                     <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">{{ br.finalLabel }} · {{ br.final.time }}</div>
                     <div style="width:220px;height:58px;border:2px solid #E11B22;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}</div>
-                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}</div>
+                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
+                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
                     </div>
                   </div>
                 </div>
                 <div style="margin-top:22px;padding-top:16px;border-top:1px dashed #e2ded4;display:flex;flex-direction:column;align-items:center;opacity:{{ br.consolation.opacity }}">
                   <div style="font-size:10px;color:#a8adb6;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">{{ br.consolationLabel }} (consolation) · {{ br.consolation.time }}</div>
                   <div style="width:220px;height:58px;border:1.5px solid #EDEBE6;border-radius:10px;background:#FAF9F6;overflow:hidden;display:flex;flex-direction:column">
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.consolation.home }}</div>
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.consolation.away }}</div>
+                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.consolation.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.homeScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.consolation.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.awayScore }}</span></div>
                   </div>
                 </div>
               </div>
@@ -427,8 +427,8 @@
                 <div style="display:flex;flex-direction:column;justify-content:center;height:140px;width:220px;flex:none;opacity:{{ br.final.opacity }}">
                   <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">{{ br.finalLabel }} · {{ br.final.time }}</div>
                   <div style="width:220px;height:58px;border:2px solid #E11B22;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}</div>
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}</div>
+                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
                   </div>
                 </div>
               </div>
@@ -442,8 +442,8 @@
               <div style="width:220px;opacity:{{ wf.opacity }}">
                 <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;text-align:center">{{ wf.label }} · {{ wf.time }}</div>
                 <div style="width:220px;height:58px;border:1.5px solid #e2ded4;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ wf.home }}</div>
-                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ wf.away }}</div>
+                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ wf.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.homeScore }}</span></div>
+                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ wf.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.awayScore }}</span></div>
                 </div>
               </div>
             </sc-for>

@@ -278,3 +278,55 @@ application permission. Config lives in `MS_TENANT_ID`, `MS_CLIENT_ID`,
   and the `netlify-forms.html` field names both depend on exact names.
 - After a change that touches functions, check the function log in Netlify
   rather than assuming success.
+## Tooling — how Claude reads and writes this repo (learned the hard way, Jul 2026)
+
+Three separate channels. Only one can write, and it has a real size limit. Reach for them in this order.
+
+**Reading — plain `git` over HTTPS in the sandbox. Reliable; use this first, always.**
+The repo is public, so `git ls-remote --heads https://github.com/jayjmuir-hub/adhjrt.git`
+and `git clone` need no auth. Use them to find branch HEADs and to verify file contents
+byte-for-byte with `git hash-object <file>`. It is read-only (no token to push).
+- Do NOT trust `raw.githubusercontent.com` for verification — it serves a STALE cached
+  copy for minutes and ignores `?cache-buster` params. Use `git` (or the API) instead.
+- The unauthenticated GitHub REST API from bash is heavily rate-limited — prefer `git`.
+
+**Writing — the local `github:` MCP server (`@modelcontextprotocol/server-github`).**
+Authenticates as Jay with a `repo`-scoped personal access token, so it CAN create
+branches, open/merge PRs, and push small files. Config lives on each of Jay's machines
+(Settings → Developer → Edit Config); on Windows the command must be the full path
+`C:\Program Files\nodejs\npx.cmd` (bare `npx` → `spawn npx ENOENT`). Any config edit or
+new token needs a FULL quit-from-the-system-tray-and-reopen to take effect.
+- SIZE LIMIT (the important bit): pushing a file means supplying its whole contents
+  through the chat, so files above ~10-15 KB can't be pushed reliably, and the big
+  `.dc.html` files (100 KB+) are hopeless. Don't fight it — see the deploy workflow.
+- There is also a SECOND, read-only GitHub connector ("Git Hub", the Copilot one at
+  `api.githubcopilot.com`). It 403s on every write ("resource not accessible by
+  integration"). Never attempt a write through it.
+
+**Acting in the browser — Claude in Chrome, driving Jay's logged-in GitHub session.**
+For anything the connector can't do (deleting branches, clicking Merge on a blocked PR)
+I can operate the branch/PR pages directly. Note: `file_upload` is currently broken
+(rejects sandbox paths, "update the desktop app"), so I cannot upload files via the
+browser — Jay works the native file picker himself.
+
+**Deploy workflow that actually works:**
+1. Edit the `.dc.html` / data files in the sandbox; validate (`node --check` the DC
+   script, confirm `sc-if`/`sc-for` tag balance); stage to `/mnt/user-data/outputs`.
+2. SMALL files → push via the `github:` connector. BIG files → hand to Jay with
+   `present_files` and have him upload via GitHub's web uploader.
+3. Commit STRAIGHT TO `main` (Upload files → "Commit directly to the main branch";
+   `main` has no branch protection). This deploys immediately and avoids the conflict
+   trap below.
+4. Verify byte-exact with `git hash-object` vs the staged versions, then confirm the
+   Netlify deploy is `ready` (Netlify connector → get-project, site
+   `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
+
+**Merge-conflict trap.** Earlier features were SQUASH-merged into `main`. A branch that
+still carries the pre-squash commits will CONFLICT when re-merged (main holds the same
+changes as one squashed commit). So don't reopen old feature branches — commit directly
+to `main`, or branch fresh off current `main`.
+
+**Upload gotcha.** GitHub's web uploader commits to whatever branch is selected in the
+UI — it silently sent an upload to the wrong branch once. Always point Jay at
+`https://github.com/jayjmuir-hub/adhjrt/upload/main`, and keep the exact filename
+`Scores & Standings.dc.html` (spaces and `&` included).

@@ -861,6 +861,33 @@ export function currentSession() {
 }
 export function logout() { localStorage.removeItem(SESSION_KEY); }
 
+// Registrations for the signed-in manager's OWN age group (teams + players,
+// including medical notes and emergency contacts — a manager is responsible
+// for player safety in their group). The server (get-my-registrations.js)
+// decides the group from the login token, so this can only ever return the
+// caller's own group; organizers and the '*' admin-manager get every group.
+export async function getMyRegistrations(session) {
+  session = session || currentSession();
+  if (!session || !session.token) return { teams: [], players: [], scope: '' };
+  const r = await tryFetchJson('/.netlify/functions/get-my-registrations', {
+    headers: { 'Authorization': `Bearer ${session.token}` },
+  });
+  if (r.real) {
+    return r.json.ok
+      ? { teams: r.json.teams || [], players: r.json.players || [], scope: r.json.scope || '' }
+      : { teams: [], players: [], scope: '' };
+  }
+  // Local preview fallback: filter the shared sample down to this manager's
+  // group so the screen still demonstrates before the site is deployed.
+  try {
+    const sample = (await local()).sampleRegistrations();
+    if (!session.ageGroupId || session.ageGroupId === '*') return { ...sample, scope: 'all' };
+    const name = (AGE_GROUPS.find((a) => a.id === session.ageGroupId) || {}).name || '';
+    const keep = (row) => String(row.ageGroup || '').trim().toLowerCase() === name.toLowerCase();
+    return { teams: (sample.teams || []).filter(keep), players: (sample.players || []).filter(keep), scope: name };
+  } catch (e) { return { teams: [], players: [], scope: '' }; }
+}
+
 // Submits one match result. Backed by netlify/functions/submit-result.js,
 // which re-verifies the signed-in manager/organizer's age-group access
 // server-side before writing — the check here is just for instant UI

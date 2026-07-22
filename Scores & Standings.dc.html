@@ -390,9 +390,82 @@
               <button onClick="{{ showScoresSubTab }}" style="{{ subTabScoresStyle }}">Enter scores</button>
             </sc-if>
             <button onClick="{{ showFixturesSubTab }}" style="{{ subTabFixturesStyle }}">Edit fixtures</button>
+            <button onClick="{{ showRegistrationsSubTab }}" style="{{ subTabRegistrationsStyle }}">Registrations</button>
           </div>
           <sc-if value="{{ isFestivalAdminGroup }}" hint-placeholder-val="{{ false }}">
             <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">This is a non-competitive festival age group — no scores or standings are kept, so only fixture times, pitches, and team assignments are editable.</p>
+          </sc-if>
+
+          <sc-if value="{{ isRegistrationsSubTab }}" hint-placeholder-val="{{ false }}">
+            <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Team and player registrations for <strong style="color:#fff">{{ regScopeName }}</strong>. As this group's manager you can see full player details — date of birth, parent and emergency contacts and medical notes — so you have what you need for player welfare on the day.</p>
+
+            <sc-if value="{{ regBusy }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:30px;text-align:center;color:#7f8794">Loading registrations&hellip;</div>
+            </sc-if>
+
+            <sc-if value="{{ regReady }}" hint-placeholder-val="{{ true }}">
+              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:10px">Teams ({{ regTeamCount }})</div>
+              <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px;margin-bottom:28px">
+                <table style="width:100%;min-width:900px;border-collapse:collapse">
+                  <thead>
+                    <tr style="background:#0C0C0E">
+                      <sc-for list="{{ regTeamHeaders }}" as="h" hint-placeholder-count="11">
+                        <th style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                      </sc-for>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ regTeamRows }}" as="r" hint-placeholder-count="4">
+                      <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                        <td style="padding:11px 13px;font-size:14px;font-weight:700">{{ r.club }}</td>
+                        <td style="padding:11px 13px;font-size:14px">{{ r.teamName }}</td>
+                        <td style="padding:11px 13px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
+                        <td style="padding:11px 13px;font-size:13px">{{ r.headCoachName }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
+                        <td style="padding:11px 13px;font-size:13px">{{ r.managerName }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
+                        <td style="padding:11px 13px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+                <sc-if value="{{ regTeamsEmpty }}" hint-placeholder-val="{{ true }}"><div style="padding:34px;text-align:center;color:#7f8794">No team registrations for this age group yet.</div></sc-if>
+              </div>
+
+              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:10px">Players ({{ regPlayerCount }})</div>
+              <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+                <table style="width:100%;min-width:1100px;border-collapse:collapse">
+                  <thead>
+                    <tr style="background:#0C0C0E">
+                      <sc-for list="{{ regPlayerHeaders }}" as="h" hint-placeholder-count="11">
+                        <th style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                      </sc-for>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ regPlayerRows }}" as="r" hint-placeholder-count="4">
+                      <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                        <td style="padding:11px 13px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
+                        <td style="padding:11px 13px;font-size:13px">{{ r.club }}</td>
+                        <td style="padding:11px 13px;font-size:13px">{{ r.parentName }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
+                        <td style="padding:11px 13px;font-size:13px">{{ r.emergencyContact }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:{{ r.medicalColor }};max-width:240px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
+                        <td style="padding:11px 13px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+                <sc-if value="{{ regPlayersEmpty }}" hint-placeholder-val="{{ true }}"><div style="padding:34px;text-align:center;color:#7f8794">No player registrations for this age group yet.</div></sc-if>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ isScoresSubTab }}" hint-placeholder-val="{{ true }}">
@@ -705,6 +778,7 @@ class Component extends DCLogic {
     publishState: null, publishBusy: false,
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
+    regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
     newTeamInputs: {},
     modal: null, modalValue: '',
@@ -1162,6 +1236,22 @@ class Component extends DCLogic {
     }
   }
 
+  // Loads registrations for the signed-in manager's own age group (teams +
+  // players). The server scopes to the login token, so this only ever returns
+  // the manager's group; the '*' admin-manager gets all and we narrow to the
+  // selected group in renderVals.
+  async loadMyRegistrations() {
+    const { api, session } = this.state;
+    if (!api || !session) return;
+    this.setState({ regBusy: true });
+    try {
+      const data = await api.getMyRegistrations(session);
+      this.setState({ regTeams: data.teams || [], regPlayers: data.players || [], regScope: data.scope || '', regBusy: false, regLoaded: true });
+    } catch (e) {
+      this.setState({ regBusy: false, regLoaded: true });
+    }
+  }
+
   renderVals() {
     const s = this.state;
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
@@ -1376,6 +1466,27 @@ class Component extends DCLogic {
     const adminAgeMeta = s.ageGroups.find((a) => a.id === s.adminSelectedAgeId);
     const adminName = session ? (adminAgeMeta || {}).name || (session.ageGroupId === '*' ? 'All age groups' : '') : '';
     const adminSelectedHasStandings = adminAgeMeta ? adminAgeMeta.hasStandings : true;
+
+    // Registrations for the manager area. The server already scoped these to
+    // the caller's own group; for the '*' admin-manager it returns every group,
+    // so we additionally narrow to whichever group the dropdown has selected.
+    const fmtReg = (iso) => { try { const d = new Date(iso); return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso || ''; } };
+    const regNarrow = (rows) => {
+      if (session && session.ageGroupId === '*' && adminAgeMeta) {
+        const nm = (adminAgeMeta.name || '').trim().toLowerCase();
+        return (rows || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
+      }
+      return rows || [];
+    };
+    const regTeamRows = regNarrow(s.regTeams).map((r) => ({ ...r, submittedAtDisplay: fmtReg(r.submittedAt) }));
+    const regPlayerRows = regNarrow(s.regPlayers).map((r) => ({
+      ...r,
+      submittedAtDisplay: fmtReg(r.submittedAt),
+      medicalDisplay: r.medicalNotes ? r.medicalNotes : '—',
+      medicalColor: r.medicalNotes ? '#ffb74d' : '#5a616d',
+      medicalWeight: r.medicalNotes ? '700' : '400',
+      consentColor: r.consent === 'Yes' ? '#3bd070' : '#ff6b6b',
+    }));
     const showSpiritInput = !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId));
     const spiritAward = s.spiritAward;
     const spiritTally = spiritAward && spiritAward.tally ? spiritAward.tally.map((t) => {
@@ -1516,11 +1627,21 @@ class Component extends DCLogic {
       spiritComplete: !!(spiritAward && spiritAward.complete),
       spiritWinnersText: spiritAward && spiritAward.winners ? spiritAward.winners.map((w) => (w.team ? `${w.name} (${w.team})` : w.name)).join(' & ') : '',
       spiritProgressText: spiritAward ? `${spiritAward.playedMatches} of ${spiritAward.totalMatches} matches scored` : '',
-      isScoresSubTab: s.subTab !== 'fixtures' && adminSelectedHasStandings, isFixturesSubTab: s.subTab === 'fixtures' || !adminSelectedHasStandings,
+      isScoresSubTab: s.subTab !== 'fixtures' && s.subTab !== 'registrations' && adminSelectedHasStandings,
+      isFixturesSubTab: s.subTab !== 'registrations' && (s.subTab === 'fixtures' || !adminSelectedHasStandings),
+      isRegistrationsSubTab: s.subTab === 'registrations',
       showScoresSubTab: () => this.setState({ subTab: 'scores' }),
       showFixturesSubTab: () => this.setState({ subTab: 'fixtures' }),
-      subTabScoresStyle: s.subTab !== 'fixtures' ? tabOn : tabOff,
+      showRegistrationsSubTab: () => { this.setState({ subTab: 'registrations' }); this.loadMyRegistrations(); },
+      subTabScoresStyle: (s.subTab !== 'fixtures' && s.subTab !== 'registrations') ? tabOn : tabOff,
       subTabFixturesStyle: s.subTab === 'fixtures' ? tabOn : tabOff,
+      subTabRegistrationsStyle: s.subTab === 'registrations' ? tabOn : tabOff,
+      regScopeName: adminName || 'your age group',
+      regBusy: s.regBusy, regReady: !s.regBusy,
+      regTeamHeaders: ['Submitted', 'Club', 'Team Code', 'Pool Req', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
+      regTeamRows, regTeamCount: regTeamRows.length, regTeamsEmpty: regTeamRows.length === 0,
+      regPlayerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
+      regPlayerRows, regPlayerCount: regPlayerRows.length, regPlayersEmpty: regPlayerRows.length === 0,
 
       editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,
       onDiscardDraw: () => this.onDiscardDraw(),

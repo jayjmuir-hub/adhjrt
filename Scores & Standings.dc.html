@@ -706,10 +706,12 @@
                     <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
                   </div>
                 </sc-for>
-                <div style="display:flex;gap:8px;margin-top:12px">
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
                   <button onClick="{{ onAddKnockoutSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">+ Add knockout match</button>
-                  <button onClick="{{ onRegenerateKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Regenerate from standings</button>
+                  <button onClick="{{ onRegenerateKnockout }}" disabled="{{ knockoutGenDisabled }}" style="{{ knockoutGenStyle }}">Generate knockout from standings</button>
+                  <button onClick="{{ onClearKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer">Clear knockout</button>
                 </div>
+                <sc-if value="{{ knockoutGenDisabled }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#ffb26b;margin-top:8px">Enter every pool score first &mdash; then you can generate the knockout from the final standings.</div></sc-if>
               </div>
 
               <div style="display:flex;align-items:center;gap:14px;margin-top:20px">
@@ -747,6 +749,19 @@
                   </sc-if>
                 </div>
               </div>
+
+              <!-- ===== ALL AGE GROUPS (organisers only) — bulk publish ===== -->
+              <sc-if value="{{ isOrganiserView }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(225,27,34,0.3);border-radius:12px;background:rgba(225,27,34,0.05)">
+                  <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">All age groups</div>
+                  <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <button onClick="{{ onPublishAll }}" disabled="{{ bulkBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Publish all age groups</button>
+                    <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
+                    <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
+                  </div>
+                </div>
+              </sc-if>
 
               <!-- ===== SCORING RULES (organisers only) =====
                    What counts at this age group. Changing it here changes the
@@ -809,6 +824,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
     publishState: null, publishBusy: false,
+    bulkBusy: false, bulkMsg: '',
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
@@ -1067,6 +1083,45 @@ class Component extends DCLogic {
     this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
       const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId, this.state.session);
       this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: fresh } }));
+    });
+  }
+  onClearKnockout() {
+    this.confirmModal('Clear all knockout matches for this age group? You can generate them again from the standings afterwards. (Remember to Save changes.)', () => {
+      this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: [] } }));
+    });
+  }
+  async onPublishAll() {
+    this.confirmModal('Publish every age group that has a saved draw? Parents and coaches will see all of them on the public pages straight away.', async () => {
+      const { api, session, ageGroups } = this.state;
+      this.setState({ bulkBusy: true, bulkMsg: '' });
+      let published = 0, skipped = 0, failed = 0;
+      for (const ag of ageGroups) {
+        const res = await api.publishDraw(ag.id, session);
+        if (res && res.ok) published++;
+        else if (res && /nothing to publish|save a draw/i.test(res.error || '')) skipped++;
+        else failed++;
+      }
+      const msg = `Published ${published} age group${published === 1 ? '' : 's'}.`
+        + (skipped ? ` Skipped ${skipped} with no saved draw.` : '')
+        + (failed ? ` ${failed} could not be published.` : '');
+      this.setState({ bulkBusy: false, bulkMsg: msg });
+      if (this.state.editorAgeId) this.loadAdmin(this.state.editorAgeId);
+      this.loadPublic();
+    });
+  }
+  async onUnpublishAll() {
+    this.confirmModal('Unpublish EVERY age group? Parents and coaches will no longer see any fixtures or standings until you publish again.', async () => {
+      const { api, session, ageGroups } = this.state;
+      this.setState({ bulkBusy: true, bulkMsg: '' });
+      let done = 0, failed = 0;
+      for (const ag of ageGroups) {
+        const res = await api.unpublishDraw(ag.id, session);
+        if (res && res.ok) done++; else failed++;
+      }
+      const msg = `Unpublished ${done} age group${done === 1 ? '' : 's'}.` + (failed ? ` ${failed} could not be unpublished.` : '');
+      this.setState({ bulkBusy: false, bulkMsg: msg });
+      if (this.state.editorAgeId) this.loadAdmin(this.state.editorAgeId);
+      this.loadPublic();
     });
   }
   async onSaveDraw() {
@@ -1336,6 +1391,7 @@ class Component extends DCLogic {
         const q = r.rank <= this._advance(st);
         return {
           ...r,
+          team: (s.api ? s.api.teamLabel(r.team) : r.team),
           marginText: (r.margin > 0 ? '+' : '') + r.margin,
           rankColor: q ? '#3bd070' : '#7f8794',
           rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
@@ -1812,6 +1868,10 @@ class Component extends DCLogic {
       }),
       onPublishDraw: () => this.onPublishDraw(),
       onUnpublishDraw: () => this.onUnpublishDraw(),
+      onPublishAll: () => this.onPublishAll(),
+      onUnpublishAll: () => this.onUnpublishAll(),
+      bulkBusy: s.bulkBusy,
+      bulkMsg: s.bulkMsg,
       poolCards, knockoutRosterGroups,
       knockoutRosterDragOver: (e) => e.preventDefault(),
       onSaveDraw: () => this.onSaveDraw(),
@@ -1834,6 +1894,11 @@ class Component extends DCLogic {
       })),
       onAddKnockoutSlot: () => this.onAddKnockoutSlot(),
       onRegenerateKnockout: () => this.onRegenerateKnockout(),
+      onClearKnockout: () => this.onClearKnockout(),
+      knockoutGenDisabled: !(s.fixtures && s.fixtures.pool && s.fixtures.pool.length > 0 && s.fixtures.pool.every((fx) => fx.result && fx.result.homeScore != null)),
+      knockoutGenStyle: (s.fixtures && s.fixtures.pool && s.fixtures.pool.length > 0 && s.fixtures.pool.every((fx) => fx.result && fx.result.homeScore != null))
+        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer'
+        : 'background:transparent;border:1px solid rgba(255,255,255,0.12);color:#5a616d;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:not-allowed;opacity:.6',
     };
   }
 

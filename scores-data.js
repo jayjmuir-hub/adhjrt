@@ -46,7 +46,7 @@ const ORG_SESSION_KEY = 'adhjrt_organizer_session'; // organizer-data.js's sessi
    register; teamLabel() falls back to the raw code if one is missing, so an
    unknown team shows as itself rather than blank. */
 const TEAM_NAMES = {
-  ADH1: 'Abu Dhabi Harlequins 1',
+  ADH1: 'AD Harlequins 1',
   DE1:  'Dubai Exiles 1',
   DS1:  'Dubai Sharks 1',
   DH1:  'Dubai Hurricanes 1',
@@ -54,7 +54,7 @@ const TEAM_NAMES = {
   AAA1: 'Al Ain Amblers 1',
   DD1:  'Dubai Dragons 1',
   DT1:  'Dubai Tigers 1',
-  ADSB1:'Abu Dhabi Small Blacks 1',
+  ADSB1:'AD Small Blacks 1',
 };
 
 export function teamLabel(code) {
@@ -581,7 +581,7 @@ export async function getSchedule(agId) {
 
   const pools = draw.pools.map((p) => {
     const slots = slotsForPool(draw, p.id);
-    const games = slots.map((s) => ({ home: s.home, away: s.away, time: fmtTime(s.startMins), pitch: s.pitch || 'TBD' }));
+    const games = slots.map((s) => ({ home: teamLabel(s.home), away: teamLabel(s.away), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD' }));
     return { id: p.id, name: p.name, games };
   });
 
@@ -674,6 +674,7 @@ export async function getFixtures(agId) {
   const draw = await resolveDraw(ag, override);
   const pool = draw.slots.map((fx) => ({
     ...fx, ageGroupId: ag.id, stage: 'pool',
+    home: teamLabel(fx.home), away: teamLabel(fx.away),
     poolName: (draw.pools.find((p) => p.id === fx.poolId) || {}).name,
     time: fmtTime(fx.startMins), result: store[fx.id] || null,
   })).sort((a, b) => a.startMins - b.startMins);

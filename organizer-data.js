@@ -144,3 +144,16 @@ export async function revokeAccount(username) {
   if (r.real) return r.json;
   return (await local()).accountsAction(session && session.token, 'revoke', username);
 }
+
+// Create an age-group Manager login directly (organizer-only, server-side).
+// The new account is approved immediately, so the manager can sign in right
+// away — useful for testing and for onboarding without invite codes.
+export async function createManager({ name, username, password, ageGroupId }) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'create', name, username, password, ageGroupId }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Creating logins needs the deployed site (not available in local preview).' };
+}

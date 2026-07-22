@@ -430,6 +430,10 @@ class Component extends DCLogic {
     const { api, loginUser, loginPass } = this.state;
     this.setState({ loginBusy: true, loginError: '' });
     const res = await api.login(loginUser, loginPass);
+    if (res.ok && res.redirect) {
+      window.location.href = res.redirect;
+      return;
+    }
     if (res.ok) {
       this.setState({ session: res.session, loginBusy: false, loginPass: '' });
       this.loadData(api);

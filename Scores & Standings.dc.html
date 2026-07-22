@@ -397,28 +397,37 @@
           </sc-if>
 
           <sc-if value="{{ isRegistrationsSubTab }}" hint-placeholder-val="{{ false }}">
-            <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Team and player registrations for <strong style="color:#fff">{{ regScopeName }}</strong>. As this group's manager you can see full player details — date of birth, parent and emergency contacts and medical notes — so you have what you need for player welfare on the day.</p>
+            <p style="color:#7f8794;font-size:13px;margin-bottom:16px;line-height:1.6">Team and player registrations for <strong style="color:#fff">{{ regScopeName }}</strong>. As this group's manager you can see full player details — date of birth, parent and emergency contacts and medical notes — so you have what you need for player welfare on the day.</p>
 
             <sc-if value="{{ regBusy }}" hint-placeholder-val="{{ false }}">
               <div style="padding:30px;text-align:center;color:#7f8794">Loading registrations&hellip;</div>
             </sc-if>
 
             <sc-if value="{{ regReady }}" hint-placeholder-val="{{ true }}">
-              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:10px">Teams ({{ regTeamCount }})</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+                <input value="{{ regSearch }}" onInput="{{ onRegSearch }}" placeholder="Search player, club, coach or parent&hellip;" style="flex:1;min-width:220px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                <button onClick="{{ regJumpBottom }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:13px;padding:11px 16px;border-radius:9px;cursor:pointer;white-space:nowrap">Jump to bottom &#8595;</button>
+              </div>
+
+              <sc-if value="{{ regHasUnmatched }}" hint-placeholder-val="{{ false }}">
+                <div style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.35);border-radius:10px;padding:11px 14px;margin-bottom:18px;color:#ffb0b0;font-size:13px;line-height:1.5">&#9888; {{ regUnmatchedTotal }} player registration(s) don't match any team roster by name + date of birth — they're highlighted in the Players table below.</div>
+              </sc-if>
+
+              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:6px">Teams ({{ regTeamCount }})</div>
+              <div style="font-size:12px;color:#7f8794;margin-bottom:10px">Click a team to see the roster the coach submitted and whether each player has a matching parent registration.</div>
               <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px;margin-bottom:28px">
                 <table style="width:100%;min-width:900px;border-collapse:collapse">
                   <thead>
                     <tr style="background:#0C0C0E">
-                      <sc-for list="{{ regTeamHeaders }}" as="h" hint-placeholder-count="11">
-                        <th style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                      <sc-for list="{{ regTeamHeaders }}" as="h" hint-placeholder-count="10">
+                        <th onClick="{{ h.onClick }}" style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none">{{ h.label }}</th>
                       </sc-for>
                     </tr>
                   </thead>
                   <tbody>
                     <sc-for list="{{ regTeamRows }}" as="r" hint-placeholder-count="4">
-                      <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
-                        <td style="padding:11px 13px;font-size:14px;font-weight:700">{{ r.club }}</td>
+                      <tr onClick="{{ r.onToggle }}" style="border-top:1px solid rgba(255,255,255,0.06);cursor:pointer">
+                        <td style="padding:11px 13px;font-size:14px;font-weight:700"><span style="color:#7f8794;display:inline-block;width:14px">{{ r.caret }}</span> {{ r.club }}</td>
                         <td style="padding:11px 13px;font-size:14px">{{ r.teamName }}</td>
                         <td style="padding:11px 13px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
                         <td style="padding:11px 13px;font-size:13px">{{ r.headCoachName }}</td>
@@ -426,9 +435,28 @@
                         <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
                         <td style="padding:11px 13px;font-size:13px">{{ r.managerName }}</td>
                         <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
-                        <td style="padding:11px 13px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
-                        <td style="padding:11px 13px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
+                        <td style="padding:11px 13px;font-size:13px;white-space:nowrap">{{ r.rosterCount }} listed <span style="color:#ffb74d;font-weight:700">{{ r.missingBadge }}</span></td>
+                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                       </tr>
+                      <sc-if value="{{ r.expanded }}" hint-placeholder-val="{{ false }}">
+                        <tr style="background:#0C0C0E">
+                          <td colspan="10" style="padding:4px 13px 16px">
+                            <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ true }}">
+                              <div style="border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden">
+                                <sc-for list="{{ r.rosterRows }}" as="rp" hint-placeholder-count="6">
+                                  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 14px;border-top:1px solid rgba(255,255,255,0.05)">
+                                    <span style="font-size:13px"><strong>{{ rp.name }}</strong> <span style="color:#7f8794;margin-left:8px">{{ rp.dob }}</span></span>
+                                    <span style="font-size:12px;font-weight:700;color:{{ rp.regColor }};white-space:nowrap">{{ rp.regLabel }}</span>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </sc-if>
+                            <sc-if value="{{ r.noRoster }}" hint-placeholder-val="{{ false }}">
+                              <div style="padding:12px 14px;color:#7f8794;font-size:13px">No roster was entered for this team at registration.</div>
+                            </sc-if>
+                          </td>
+                        </tr>
+                      </sc-if>
                     </sc-for>
                   </tbody>
                 </table>
@@ -437,21 +465,21 @@
 
               <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:10px">Players ({{ regPlayerCount }})</div>
               <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
-                <table style="width:100%;min-width:1100px;border-collapse:collapse">
+                <table style="width:100%;min-width:1200px;border-collapse:collapse">
                   <thead>
                     <tr style="background:#0C0C0E">
-                      <sc-for list="{{ regPlayerHeaders }}" as="h" hint-placeholder-count="11">
-                        <th style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                      <sc-for list="{{ regPlayerHeaders }}" as="h" hint-placeholder-count="12">
+                        <th onClick="{{ h.onClick }}" style="text-align:left;padding:11px 13px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none">{{ h.label }}</th>
                       </sc-for>
                     </tr>
                   </thead>
                   <tbody>
                     <sc-for list="{{ regPlayerRows }}" as="r" hint-placeholder-count="4">
-                      <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                      <tr style="border-top:1px solid rgba(255,255,255,0.06);background:{{ r.rowBg }}">
                         <td style="padding:11px 13px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
                         <td style="padding:11px 13px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
                         <td style="padding:11px 13px;font-size:13px">{{ r.club }}</td>
+                        <td style="padding:11px 13px;font-size:12px;font-weight:700;color:{{ r.rosterFlagColor }};white-space:nowrap">{{ r.rosterFlag }}</td>
                         <td style="padding:11px 13px;font-size:13px">{{ r.parentName }}</td>
                         <td style="padding:11px 13px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
                         <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
@@ -459,11 +487,16 @@
                         <td style="padding:11px 13px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
                         <td style="padding:11px 13px;font-size:13px;color:{{ r.medicalColor }};max-width:240px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
                         <td style="padding:11px 13px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
+                        <td style="padding:11px 13px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                       </tr>
                     </sc-for>
                   </tbody>
                 </table>
                 <sc-if value="{{ regPlayersEmpty }}" hint-placeholder-val="{{ true }}"><div style="padding:34px;text-align:center;color:#7f8794">No player registrations for this age group yet.</div></sc-if>
+              </div>
+
+              <div style="text-align:center;margin-top:20px">
+                <button onClick="{{ regJumpTop }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:13px;padding:10px 18px;border-radius:9px;cursor:pointer">Back to top &#8593;</button>
               </div>
             </sc-if>
           </sc-if>
@@ -779,6 +812,7 @@ class Component extends DCLogic {
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
+    regSearch: '', regPSort: 'playerName', regPDir: 'asc', regTSort: 'club', regTDir: 'asc', regExpanded: {},
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
     newTeamInputs: {},
     modal: null, modalValue: '',
@@ -1252,6 +1286,24 @@ class Component extends DCLogic {
     }
   }
 
+  toggleRegTeam(key) {
+    this.setState((s) => ({ regExpanded: { ...s.regExpanded, [key]: !s.regExpanded[key] } }));
+  }
+  setRegSort(which, key) {
+    this.setState((s) => {
+      if (which === 'p') {
+        const dir = s.regPSort === key && s.regPDir === 'asc' ? 'desc' : 'asc';
+        return { regPSort: key, regPDir: dir };
+      }
+      const dir = s.regTSort === key && s.regTDir === 'asc' ? 'desc' : 'asc';
+      return { regTSort: key, regTDir: dir };
+    });
+  }
+  jumpTo(where) {
+    try { window.scrollTo({ top: where === 'bottom' ? document.body.scrollHeight : 0, behavior: 'smooth' }); }
+    catch (e) { window.scrollTo(0, where === 'bottom' ? 9999999 : 0); }
+  }
+
   renderVals() {
     const s = this.state;
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
@@ -1478,15 +1530,79 @@ class Component extends DCLogic {
       }
       return rows || [];
     };
-    const regTeamRows = regNarrow(s.regTeams).map((r) => ({ ...r, submittedAtDisplay: fmtReg(r.submittedAt) }));
-    const regPlayerRows = regNarrow(s.regPlayers).map((r) => ({
-      ...r,
-      submittedAtDisplay: fmtReg(r.submittedAt),
-      medicalDisplay: r.medicalNotes ? r.medicalNotes : '—',
-      medicalColor: r.medicalNotes ? '#ffb74d' : '#5a616d',
-      medicalWeight: r.medicalNotes ? '700' : '400',
-      consentColor: r.consent === 'Yes' ? '#3bd070' : '#ff6b6b',
-    }));
+    // Cross-reference the coach-submitted team rosters (stored as JSON on each
+    // team row) against the parent player registrations, matching on name + DOB.
+    const regNormName = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const regKeyOf = (name, dob) => regNormName(name) + '|' + String(dob || '').trim();
+    const regParseRoster = (t) => {
+      let arr = [];
+      try { arr = JSON.parse(t.players || '[]'); } catch (e) { arr = []; }
+      if (!Array.isArray(arr)) arr = [];
+      return arr.map((p) => ({ name: [p.firstName, p.lastName].filter(Boolean).join(' ').trim(), dob: p.dob || '' }));
+    };
+    const regTeamsRaw = regNarrow(s.regTeams);
+    const regPlayersRaw = regNarrow(s.regPlayers);
+    const regRosterKeys = new Set();
+    const regTeamRosters = regTeamsRaw.map((t) => {
+      const roster = regParseRoster(t);
+      roster.forEach((p) => regRosterKeys.add(regKeyOf(p.name, p.dob)));
+      return { team: t, roster };
+    });
+    const regRegKeys = new Set();
+    regPlayersRaw.forEach((p) => regRegKeys.add(regKeyOf(p.playerName, p.dob)));
+    const regUnmatchedTotal = regPlayersRaw.filter((p) => !regRosterKeys.has(regKeyOf(p.playerName, p.dob))).length;
+
+    const regQ = String(s.regSearch || '').trim().toLowerCase();
+    const regHit = (hay) => !regQ || hay.toLowerCase().includes(regQ);
+    const regSortRows = (rows, key, dir) => {
+      const mul = dir === 'desc' ? -1 : 1;
+      return rows.slice().sort((a, b) => String(a[key] == null ? '' : a[key]).localeCompare(String(b[key] == null ? '' : b[key]), undefined, { numeric: true }) * mul);
+    };
+
+    let regPlayerRows = regPlayersRaw
+      .filter((r) => regHit([r.playerName, r.club, r.parentName, r.parentEmail, r.dob].join(' ')))
+      .map((r) => {
+        const onRoster = regRosterKeys.has(regKeyOf(r.playerName, r.dob));
+        return {
+          ...r,
+          submittedAtDisplay: fmtReg(r.submittedAt),
+          medicalDisplay: r.medicalNotes ? r.medicalNotes : '—',
+          medicalColor: r.medicalNotes ? '#ffb74d' : '#5a616d',
+          medicalWeight: r.medicalNotes ? '700' : '400',
+          consentColor: r.consent === 'Yes' ? '#3bd070' : '#ff6b6b',
+          onRoster,
+          rosterFlag: onRoster ? '✓ on a roster' : '⚠ not on a roster',
+          rosterFlagColor: onRoster ? '#3bd070' : '#ff6b6b',
+          rowBg: onRoster ? 'transparent' : 'rgba(255,107,107,0.07)',
+        };
+      });
+    regPlayerRows = regSortRows(regPlayerRows, s.regPSort || 'playerName', s.regPDir);
+
+    let regTeamRows = regTeamRosters
+      .filter(({ team }) => regHit([team.club, team.teamName, team.headCoachName, team.managerName].join(' ')))
+      .map(({ team, roster }) => {
+        const tkey = (team.club || '') + '|' + (team.teamName || '');
+        const expanded = !!s.regExpanded[tkey];
+        const rosterRows = roster.map((rp) => {
+          const registered = regRegKeys.has(regKeyOf(rp.name, rp.dob));
+          return {
+            name: rp.name || '—', dob: rp.dob || '—', registered,
+            regLabel: registered ? '✓ registered' : '⚠ no parent registration',
+            regColor: registered ? '#3bd070' : '#ffb74d',
+          };
+        });
+        const missingCount = rosterRows.filter((rr) => !rr.registered).length;
+        return {
+          ...team,
+          submittedAtDisplay: fmtReg(team.submittedAt),
+          tkey, expanded, caret: expanded ? '▾' : '▸',
+          onToggle: () => this.toggleRegTeam(tkey),
+          rosterRows, rosterCount: rosterRows.length,
+          hasRoster: rosterRows.length > 0, noRoster: rosterRows.length === 0,
+          missingCount, missingBadge: missingCount > 0 ? (missingCount + ' unregistered') : '',
+        };
+      });
+    regTeamRows = regSortRows(regTeamRows, s.regTSort || 'club', s.regTDir);
     const showSpiritInput = !!(s.api && s.adminSelectedAgeId && s.api.supportsSpiritAward(s.adminSelectedAgeId));
     const spiritAward = s.spiritAward;
     const spiritTally = spiritAward && spiritAward.tally ? spiritAward.tally.map((t) => {
@@ -1638,9 +1754,24 @@ class Component extends DCLogic {
       subTabRegistrationsStyle: s.subTab === 'registrations' ? tabOn : tabOff,
       regScopeName: adminName || 'your age group',
       regBusy: s.regBusy, regReady: !s.regBusy,
-      regTeamHeaders: ['Submitted', 'Club', 'Team Code', 'Pool Req', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
+      regSearch: s.regSearch,
+      onRegSearch: (e) => this.setState({ regSearch: e.target.value }),
+      regUnmatchedTotal, regHasUnmatched: regUnmatchedTotal > 0,
+      regJumpTop: () => this.jumpTo('top'),
+      regJumpBottom: () => this.jumpTo('bottom'),
+      regTeamHeaders: [
+        { label: 'Team', key: 'club' }, { label: 'Code', key: 'teamName' }, { label: 'Pool', key: 'preferredPool' },
+        { label: 'Head Coach', key: 'headCoachName' }, { label: 'Coach Email', key: 'headCoachEmail' }, { label: 'Coach Mobile', key: 'headCoachMobile' },
+        { label: 'Manager', key: 'managerName' }, { label: 'Manager Mobile', key: 'managerMobile' },
+        { label: 'Roster', key: 'rosterCount' }, { label: 'Submitted', key: 'submittedAt' },
+      ].map((h) => ({ label: h.label + (s.regTSort === h.key ? (s.regTDir === 'desc' ? ' \u25BC' : ' \u25B2') : ''), onClick: () => this.setRegSort('t', h.key) })),
       regTeamRows, regTeamCount: regTeamRows.length, regTeamsEmpty: regTeamRows.length === 0,
-      regPlayerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
+      regPlayerHeaders: [
+        { label: 'Player', key: 'playerName' }, { label: 'DOB', key: 'dob' }, { label: 'Club', key: 'club' },
+        { label: 'On roster?', key: 'onRoster' }, { label: 'Parent', key: 'parentName' }, { label: 'Parent Email', key: 'parentEmail' },
+        { label: 'Parent Mobile', key: 'parentMobile' }, { label: 'Emergency Contact', key: 'emergencyContact' }, { label: 'Emergency Mobile', key: 'emergencyMobile' },
+        { label: 'Medical Notes', key: 'medicalNotes' }, { label: 'Consent', key: 'consent' }, { label: 'Submitted', key: 'submittedAt' },
+      ].map((h) => ({ label: h.label + (s.regPSort === h.key ? (s.regPDir === 'desc' ? ' \u25BC' : ' \u25B2') : ''), onClick: () => this.setRegSort('p', h.key) })),
       regPlayerRows, regPlayerCount: regPlayerRows.length, regPlayersEmpty: regPlayerRows.length === 0,
 
       editorLoaded: !!s.editorDraw, editorBusy: s.editorBusy, editorMsg: s.editorMsg,

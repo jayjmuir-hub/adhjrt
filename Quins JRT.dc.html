@@ -142,7 +142,7 @@
       </p>
       <div style="display:flex;gap:16px;margin-top:38px;align-items:center;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
         <div style="position:relative;display:inline-block">
-          <a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-family:'Barlow Semi Condensed';font-weight:800;font-size:18px;letter-spacing:.5px;padding:16px 34px;border-radius:12px;text-transform:uppercase;box-shadow:0 12px 30px rgba(0,0,0,.35);transition:transform .18s ease,box-shadow .18s ease" style-hover="transform:translateY(-3px);box-shadow:0 18px 40px rgba(0,0,0,.45)">Register a team</a>
+          <a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-family:'Barlow Semi Condensed';font-weight:800;font-size:18px;letter-spacing:.5px;padding:16px 34px;border-radius:12px;text-transform:uppercase;box-shadow:0 10px 34px rgba(225,27,34,.55);transition:transform .18s ease,box-shadow .18s ease" style-hover="transform:translateY(-3px);box-shadow:0 16px 46px rgba(225,27,34,.78)">Register a team</a>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
         <a href="#schedule" style="border:2px solid rgba(255,255,255,0.35);color:#fff;font-family:'Barlow Semi Condensed';font-weight:700;font-size:18px;padding:14px 30px;border-radius:10px;text-transform:uppercase;transition:background .2s ease,border-color .2s ease" style-hover="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.6)">View fixtures</a>
@@ -150,33 +150,13 @@
 
       <!-- countdown -->
       <sc-if value="{{ showCountdown }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:60px;display:flex;align-items:flex-end;gap:0;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .32s both">
-          <div style="display:flex;flex-direction:column;margin-right:26px">
-            <span style="font-size:12px;letter-spacing:2px;color:#3bd070;font-weight:700;text-transform:uppercase">Kick-off in</span>
-          </div>
-          <div style="display:flex;gap:14px">
-            <div style="text-align:center">
-              <div style="font-family:'Anton';font-size:52px;line-height:1;min-width:80px">{{ days }}</div>
-              <div style="font-size:11px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:6px">DAYS</div>
-            </div>
-            <div style="font-family:'Anton';font-size:52px;line-height:1;color:#3a3a3f">:</div>
-            <div style="text-align:center">
-              <div style="font-family:'Anton';font-size:52px;line-height:1;min-width:80px">{{ hours }}</div>
-              <div style="font-size:11px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:6px">HRS</div>
-            </div>
-            <div style="font-family:'Anton';font-size:52px;line-height:1;color:#3a3a3f">:</div>
-            <div style="text-align:center">
-              <div style="font-family:'Anton';font-size:52px;line-height:1;min-width:80px">{{ mins }}</div>
-              <div style="font-size:11px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:6px">MIN</div>
-            </div>
-            <div style="font-family:'Anton';font-size:52px;line-height:1;color:#3a3a3f">:</div>
-            <div style="text-align:center">
-              <div style="font-family:'Anton';font-size:52px;line-height:1;min-width:80px;color:#22c55e">{{ secs }}</div>
-              <div style="font-size:11px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:6px">SEC</div>
-            </div>
-          </div>
-        </div>
-      </sc-if>
+        <div style="margin-top:56px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .32s both">
+          <span style="font-size:12px;letter-spacing:2px;color:#3bd070;font-weight:700;text-transform:uppercase;margin-right:6px">Kick-off in</span>
+          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:44px;line-height:1">{{ days }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">DAYS</div></div>
+          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:44px;line-height:1">{{ hours }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">HRS</div></div>
+          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:44px;line-height:1">{{ mins }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">MIN</div></div>
+          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:44px;line-height:1;color:#22c55e">{{ secs }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">SEC</div></div>
+        </sc-if>
     </div>
   </section>
 

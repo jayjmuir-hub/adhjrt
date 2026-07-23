@@ -6,7 +6,9 @@ scores app plus an organiser back office, for a two-day youth rugby festival on
 
 Run by volunteers. The maintainer (Jay) is not a developer — explain changes in
 plain language and say which system each step applies to (GitHub / Netlify /
-Google). Avoid unexplained jargon.
+Google). Avoid unexplained jargon. (Full working-with-Jay etiquette and the
+GitHub access channels live in the project instructions, not here — read those
+first, every session.)
 
 ---
 
@@ -22,10 +24,8 @@ Google). Avoid unexplained jargon.
 | `/organizer` | `Organizer.dc.html` |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
 
-Edit the `.dc.html` file, push, done. If you find yourself looking for a build
-output or a bundling step, stop — there isn't one. (Earlier versions of this
-project used an inliner that produced `index.html`. That is gone. Ignore any
-instruction that refers to it.)
+Edit the `.dc.html` file, push, done. There is no bundling step to look for — an
+earlier version used an inliner that produced `index.html`; that's gone.
 
 Anything in the repo root is **served publicly**. Do not leave stray copies of
 backend files there — `adhjrt.com/<filename>` will serve them.
@@ -37,9 +37,9 @@ backend files there — `adhjrt.com/<filename>` will serve them.
 ```
 app.html                   match-day app  →  /app. Plain vanilla HTML/CSS/JS,
                            NOT a DC component. Imports scores-data.js and
-                           organizer-data.js as ES modules, so it shares the
-                           website's data layer, auth and permissions — there
-                           is no second source of truth.
+                           organizer-data.js as ES modules — shares the
+                           website's data layer, auth and permissions, no
+                           second source of truth.
 manifest.webmanifest       PWA manifest (start_url /app)
 sw.js                      service worker — network-first, never caches
                            /.netlify/functions/
@@ -74,14 +74,16 @@ read files "just to understand the code." Map:
 - Live scores, standings, brackets, fixture editor → `Scores & Standings.dc.html`
   and `scores-data.js`.
 - Organiser back office → `Organizer.dc.html` and `organizer-data.js`.
-- Match-day app → `app.html` (it reads `scores-data.js`, so add that only if the
-  change touches data or permissions).
+- Match-day app → `app.html` (add `scores-data.js` only if the change touches
+  data or permissions).
 - A backend change → the one file in `netlify/functions/` plus `_auth.js` (and
   `_scoring.js` / `_publish.js` / `_teams.js` only if that area is involved).
+- A scores/fixtures change → also check **"Shipped, don't rebuild"** below
+  first, so you don't redo something that already exists.
 
 **Do NOT read these unless something is provably broken inside them** — they are
-framework/runtime plumbing, never edited, and together they are larger than the
-rest of the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
+framework/runtime plumbing, never edited, and together larger than the rest of
+the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 `doc-page.js`, `local-backend.js`.
 
 ---
@@ -93,26 +95,26 @@ rest of the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `_auth.js` | shared helpers — Blobs store, bcrypt hashing, HMAC session tokens, `hasAgeGroupAccess` |
 | `manager-signup.js` | per-age-group invite code decides the age group; account starts pending |
 | `manager-login.js` | returns a signed session token |
-| `organizer-signup.js` | shared invite code; **first organiser account is auto-approved** |
+| `organizer-signup.js` | shared invite code; first organiser account auto-approved |
 | `organizer-login.js` | as above |
-| `accounts-admin.js` | organiser-only: list / approve / reject / revoke accounts, and **create** an already-approved manager login directly (`action:'create'`) |
+| `accounts-admin.js` | organiser-only: list / approve / reject / revoke; can also create an already-approved manager login directly (`action:'create'`) |
 | `get-results.js` | public read of all match results |
-| `submit-result.js` | write one result; re-verifies role and age group from the token |
-| `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published — see below) |
+| `submit-result.js` | write one result; re-verifies role + age group from the token |
+| `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
-| `_publish.js` | draft/published keys and the publish permission rule |
+| `_publish.js` | draft/published keys, publish permission rule |
 | `_teams.js` | club prefixes and team code generation |
 | `_email.js` | confirmation emails via Microsoft Graph |
 | `get-registrations.js` | organiser-only; reads both Google Sheets |
-| `get-my-registrations.js` | manager: own age group only (teams + players, medical notes included); organiser / `*` admin-manager: all groups. The group is taken from the signed token, never the request |
+| `get-my-registrations.js` | manager: own age group only (teams + players, medical notes included); organiser/`*` admin: all groups — group always comes from the signed token, never the request |
 | `submission-created.js` | fires on every Netlify Forms submission; appends a row to the matching Sheet |
 
-Storage is **Netlify Blobs** (`results`, `accounts`, schedule overrides) plus two
+Storage: **Netlify Blobs** (`results`, `accounts`, schedule overrides) plus two
 **Google Sheets** for registrations.
 
-Permissions are always re-checked server-side from the signed token. Never trust
-an age group or role sent by the browser — `submit-result.js` derives the age
-group from the match id itself. Preserve that pattern.
+Permissions are always re-checked server-side from the signed token — never
+trust an age group or role sent by the browser (`submit-result.js` derives the
+age group from the match id itself; preserve that pattern).
 
 ---
 
@@ -121,24 +123,25 @@ group from the match id itself. Preserve that pattern.
 `SESSION_SECRET`, `MANAGER_INVITE_CODES`, `ORGANIZER_INVITE_CODE`,
 `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`,
 `GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`,
-`BLOBS_SITE_ID`, `BLOBS_TOKEN`
+`BLOBS_SITE_ID`, `BLOBS_TOKEN`,
+`MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MAIL_FROM`
 
 **Never commit a value for any of these.** If a fix seems to need a secret in
-code, it doesn't — fix the variable in Netlify instead.
-
-All of them should read *"All scopes · Same value in all deploy contexts"*. If
-one shows several values across contexts, that's almost certainly a mistake.
+code, it doesn't — fix the variable in Netlify instead. All should read *"All
+scopes · Same value in all deploy contexts"*; several values across contexts is
+almost certainly a mistake.
 
 ---
 
 ## Age groups
 
-15 groups. Ids are used as manager roles and as the prefix of every match id:
+15 groups, used as manager roles and as the prefix of every match id:
 
 `u6 u7 u8 u9 u10 u11 u12 u12g u13 u14b u14g u16b u16g u18b u18g`
 
 - Saturday: U6–U12 plus U12G. Sunday: U13–U18.
-- `u6`/`u7` are festival only — `hasStandings: false`, no table.
+- `u6`/`u7` are festival only — `hasStandings: false`, no table, hidden from
+  public standings tabs (but available in the Manager area).
 - `u16b`/`u16g` use a special double-bracket knockout.
 - Spirit of Rugby award applies to U14 and up.
 - Match id format: `<ageGroupId>:<poolId>:<i>-<j>` e.g. `u14b:A:0-1`.
@@ -153,239 +156,229 @@ conceded → mini-league for 3+ → coin toss.
 
 Black base, red `#E11B22`, green `#17A34A`, white. From the Akuma kit — **not**
 London Harlequins magenta/blue. Fonts: Anton (display), Barlow (body). Crest at
-`assets/crest.jpeg` (there is no `crest.png` — a broken reference to one caused
-every social share preview to fail).
+`assets/crest.jpeg` (there is no `crest.png` — a broken reference once broke
+every social share preview).
 
 ---
 
 ## Gotchas found the hard way
 
-- **Netlify form detection is off by default.** Forms must be enabled *and* a
-  fresh deploy run afterwards — the crawler only scans at deploy time.
-- **The Google Sheets tab is not called `Sheet1`.** Both functions look up the
-  first tab's real name at runtime. Don't hardcode a tab name again.
-- **The service account private key** must be the `private_key` value from the
-  JSON with no wrapping quotes; literal `\n` sequences are expected and are
-  converted in code. A malformed key throws `ERR_OSSL_UNSUPPORTED` at
-  `Sign.sign` — that error always means the key, never the sheet permissions.
-- **Netlify Forms and the Sheets are separate stores.** Deleting a submission in
-  Netlify does not remove the row already written to the Sheet. To remove a
-  registration properly, delete the sheet row.
-- Netlify Identity is *not* used. Auth is the custom bcrypt + HMAC system above.
+- **Netlify form detection is off by default** — forms must be enabled *and* a
+  fresh deploy run afterwards; the crawler only scans at deploy time.
+- **Google Sheets tab is not called `Sheet1`.** Both functions look up the
+  first tab's real name at runtime. Don't hardcode a tab name.
+- **Service account private key**: use the raw `private_key` value from the
+  JSON, no wrapping quotes; literal `\n` is expected and converted in code. A
+  malformed key throws `ERR_OSSL_UNSUPPORTED` at `Sign.sign` — that error
+  always means the key, never Sheet permissions.
+- **Netlify Forms and the Sheets are separate stores** — deleting a submission
+  in Netlify does not remove the Sheet row. To remove a registration, delete
+  the sheet row.
+- Netlify Identity is *not* used; auth is the custom bcrypt + HMAC system above.
 
 ---
 
 ## The match-day app (`/app`)
 
-A Club Hub-style phone app: bottom tab bar (Today / Fixtures / Tables / More),
+Club Hub-style phone app: bottom tab bar (Today / Fixtures / Tables / More),
 top nav on desktop above 820px, bottom sheets for match detail and score entry.
 JRT palette, Anton + Barlow.
 
-- Reads through `scores-data.js`, so publishing, permissions and the
-  "coming soon" state behave exactly as on the website.
-- Sign-in tries `manager-login` first, then `organizer-login` — the two use
-  different endpoints and different localStorage keys, and an organiser session
-  is marked `isOrganizer` rather than carrying a `role` field. Check all three
-  shapes when testing a role (see `isOrganizerSession` in scores-data.js —
-  missing one silently hid the Publish button once).
+- Reads through `scores-data.js` — publishing, permissions and "coming soon"
+  behave exactly as on the website.
+- Sign-in tries `manager-login` then `organizer-login` — different endpoints,
+  different localStorage keys; an organiser session is marked `isOrganizer`
+  rather than carrying a `role` field. Check all three shapes when testing a
+  role (`isOrganizerSession` in scores-data.js — missing one silently hid the
+  Publish button once).
 - Managers get score entry on their own age group; organisers on all.
-- The fixture editor and publishing controls are deliberately NOT in the app —
-  they are drag-and-drop work better suited to `/scores`, which the More tab
-  links to.
+- Fixture editor and publishing controls are deliberately NOT in the app — the
+  More tab links to `/scores` for that drag-and-drop work.
 - A follower's chosen age group is remembered in localStorage, per device.
-
-The PWA install works but was judged not worth promoting — the install is
-buried in browser menus and the one feature that would justify it (push
-notifications for pitch changes) needs a backend that does not exist. Treat
-`/app` as a fast mobile web page; the manifest and icons are harmless extras.
-
-## Sensitive data
-
-The player registration sheet holds children's names, dates of birth, medical
-notes and parent contact details. Treat it accordingly:
-
-- Never widen access to `/organizer` or to `get-registrations.js`.
-- Age-group managers can see their OWN group's registrations in full (teams +
-  players, including medical notes) via `get-my-registrations.js` — deliberate,
-  for player welfare. The group is derived from the signed token, never from
-  the request, so a manager can only ever see their own group. Keep it that way.
-- Never log registration field values.
-- Never paste sheet contents into a commit, an issue, or a public file.
-- The organiser bootstrap rule (first account auto-approved) means the account
-  list is worth auditing — flag anything unexpected rather than fixing silently.
+- PWA install works but isn't promoted (push notifications would justify it
+  but there's no backend for that). Treat `/app` as a fast mobile web page.
 
 ---
 
-## Publishing fixtures (added later)
+## Sensitive data — read this section, always
+
+The player registration sheet holds children's names, DOBs, medical notes and
+parent contact details.
+
+- Never widen access to `/organizer` or to `get-registrations.js`.
+- Age-group managers see their OWN group's registrations in full (deliberate,
+  for player welfare) via `get-my-registrations.js` — the group comes from the
+  signed token, never the request. Keep it that way.
+- Never log registration field values or paste sheet contents into a commit,
+  issue, or public file.
+- First-organiser-auto-approved means the account list is worth auditing —
+  flag anything unexpected rather than fixing it silently.
+
+---
+
+## Publishing fixtures
 
 Fixtures are draft-first. The `schedules` blob store holds two copies per age
-group: `<ageGroupId>` is the DRAFT that the fixture editor reads and writes,
-`pub:<ageGroupId>` is the PUBLISHED copy and the only thing the public sees.
+group: `<ageGroupId>` is the DRAFT the fixture editor reads/writes, `pub:<id>`
+is the PUBLISHED copy and the only thing the public sees.
 
-- `save-schedule-override.js` writes the draft ONLY — it never makes anything public.
+- `save-schedule-override.js` writes the draft only — never makes anything public.
 - `publish-schedule.js` copies draft → published, or deletes the published copy.
-- `get-schedule-override.js` serves the published copy to the public, and the
-  draft to a signed-in editor that asks with `?draft=1` + Bearer token.
-- Organisers can publish any time; managers only on the tournament days and
-  only their own age group (see `_publish.js`).
-- **An auto-generated draw is never shown publicly.** No published copy means
-  the page shows "coming soon" — before, during and after the tournament. The
-  auto-generated pools are sample data and a parent cannot tell them apart
-  from real fixtures.
-- The draft draw object also carries a `pitches` array (the age group's pitch
-  list, set in the editor). It rides in the same blob — `save-schedule-override`
-  stores the whole object and `resolveDraw` returns it whole, so no endpoint or
-  schema change was needed.
+- `get-schedule-override.js` serves published to the public, draft to a
+  signed-in editor asking with `?draft=1` + Bearer token.
+- Organisers can publish any time; managers only on tournament days, own age
+  group only (`_publish.js`).
+- **An auto-generated draw is never shown publicly** — no published copy means
+  "coming soon," before/during/after the tournament, because a parent can't
+  tell placeholder pools from real fixtures.
+- The draft draw object also carries a `pitches` array (set in the editor) —
+  rides in the same blob, no schema change needed.
+
+---
 
 ## Team codes and pool preference
 
-Team names are generated, not typed. `_teams.js` builds `<prefix><n>` where n
-counts that club's teams within the age group — so two Quins U16B sides are
-ADH1 and ADH2, and their U14B side is also ADH1.
+Team names are generated: `_teams.js` builds `<prefix><n>`, n counting that
+club's teams within the age group — two Quins U16B sides are ADH1/ADH2, their
+U14B side is also ADH1. Known prefixes: ADH, DE, DT, DS, DW, DH, BAR. Unknown
+clubs fall back to initials (multi-word) or first three letters (single-word).
 
-Known prefixes: ADH, DE, DT, DS, DW, DH, BAR. Unknown clubs fall back to
-initials for a multi-word name or the first three letters of a single-word
-one, which is how the known ones were derived.
+Team form asks for a preferred pool (A/B/C/D/No preference, mandatory) — stored
+in column N of the Team Registrations sheet, shown on the Organizer dashboard.
+Request only; organisers set the final draw.
 
-The team form asks for a preferred pool (A/B/C/D/No preference, mandatory).
-It is stored in column N of the Team Registrations sheet and shown in the
-Organizer dashboard. It is a request only — organisers set the final draw.
+---
 
 ## Email
 
-Confirmation emails go out from `registrations@adhjrt.com` (a shared mailbox)
-via Microsoft Graph, using an Entra app registration with the Mail.Send
-application permission. Config lives in `MS_TENANT_ID`, `MS_CLIENT_ID`,
-`MS_CLIENT_SECRET` and `MAIL_FROM`.
+Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
+(Entra app, Mail.Send permission — config in `MS_TENANT_ID`/`MS_CLIENT_ID`/
+`MS_CLIENT_SECRET`/`MAIL_FROM`).
 
 - Player registration emails the parent; team registration emails the head
-  coach and the manager.
-- Sending happens after the sheet write and inside its own try/catch — the row
-  is the record, and a mail failure must never lose a registration or cause
-  Netlify to retry and duplicate the row.
-- Medical notes are deliberately NOT echoed back in the email.
-- **The client secret expires around July 2028.** When it does these emails
-  stop silently. Diagnose from the AADSTS code in the function log.
+  coach and manager.
+- Sending happens after the sheet write, in its own try/catch — the row is the
+  record, a mail failure must never lose a registration or cause a retry that
+  duplicates the row.
+- Medical notes are deliberately NOT echoed in the email.
+- **Client secret expires ~July 2028** — when it does, emails stop silently.
+  Diagnose from the AADSTS code in the function log.
 
-## Recently settled — do NOT re-do these
+---
 
-- Stat strip is 20+ clubs / 3000+ players / 15 age groups / 16 pitches. Correct
-  and deliberate; they are static numbers with a scroll count-up animation.
-- Footer email is `admin@adhjrt.com`. It was previously mangled Cloudflare
-  email-obfuscation markup that rendered as "[email protected]".
-- U6 and U7 are hidden from the PUBLIC standings tabs (non-competitive
-  festivals) but remain available in the Manager area.
-- Sponsors section is a deliberate placeholder, not a bug.
+## Shipped, don't rebuild
 
-**Scores + fixtures — shipped Jul 2026, don't rebuild:**
-- Pool fixtures, results and standings show full team NAMES; knockout and the
-  bracket stay CODES (with a team key). `teamLabel()` in scores-data.js maps
-  code→name and auto-shortens any "Abu Dhabi …" to "AD …" — a general rule, so
-  clubs registered later abbreviate too.
-- The homepage Fixtures section shows each match's SCORE (pool rows and the
-  knockout/finals bracket). Scores come from `getSchedule` — walkover-aware,
-  blank until a result exists.
-- The fixture editor has two gated knockout buttons: "Generate knockout from
-  standings" (needs all pool scores first) and "Generate finals from knockout"
-  (fills only the finals — Cup/Bowl/Plate/Shield/Final — from the winners so
-  far, leaving the earlier rounds; enabled once the knockout matches are
-  played). Plus "Clear knockout". Organisers also have "Publish all" /
-  "Unpublish all" for every age group at once.
-- `/scores` has a "Jump to current match" button (scrolls to the first unscored
-  match) and a "Back to menu" button at the bottom of the section.
-- Pitches are picked, not typed. The editor has a "Pitches for this age group"
-  panel (type-to-add chips); the list is stored on the draw as `pitches` and
-  each match's pitch is a DROPDOWN of those pitches (editor rows + score-entry
-  tab), not free text.
+- Stat strip (20+ clubs / 3000+ players / 15 age groups / 16 pitches) is
+  correct, static, with a scroll count-up animation — not a bug.
+- Footer email is `admin@adhjrt.com` (previously mangled Cloudflare
+  obfuscation markup rendered as "[email protected]" — fixed).
+- Sponsors section is a deliberate placeholder.
+- Pool fixtures/results/standings show full team NAMES; knockout and the
+  bracket stay CODES (team key). `teamLabel()` in scores-data.js maps
+  code→name and auto-shortens "Abu Dhabi …" to "AD …" for any club.
+- Homepage Fixtures section shows each match's SCORE (pool rows + knockout/
+  finals bracket) from `getSchedule` — walkover-aware, blank until a result
+  exists.
+- Fixture editor has two gated knockout buttons ("Generate knockout from
+  standings" needs all pool scores; "Generate finals from knockout" fills
+  Cup/Bowl/Plate/Shield/Final from the winners so far) plus "Clear knockout."
+  Organisers also have "Publish all"/"Unpublish all."
+- `/scores` has "Jump to current match" (scrolls to first unscored match) and
+  "Back to menu."
+- Pitches are picked, not typed — "Pitches for this age group" panel
+  (type-to-add chips) stored on the draw as `pitches`; each match's pitch is a
+  dropdown of those pitches (editor rows + score-entry tab).
+
+---
 
 ## Outstanding
 
 1. **The real draw.** All 15 groups still start from nine placeholder clubs
    (Harlequins, Exiles, Sharks, Hurricanes, Barrelhouse, Amblers, Dragons,
-   Tigers, Small Blacks) auto-split into Pool A/B, kickoffs from 08:00, pitches
-   default to "TBD" until an organiser sets them (the editor now has a
-   per-age-group pitch picker + dropdowns). Everything else waits on this.
+   Tigers, Small Blacks) auto-split Pool A/B, kickoffs from 08:00, pitches
+   default "TBD" until an organiser sets them via the pitch picker. Everything
+   else waits on this.
 2. **Results nav link.** Line ~66 of `Quins JRT.dc.html` is still
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
-   preview for a "View live scores" button — but only once the draw is real,
-   or the placeholder pools go public.
-3. **Sponsors** is a "coming soon" placeholder. When the artwork arrives, a
-   comment directly above the section gives the exact `<img>` tag to swap in.
-4. **Deploy cost.** Every production deploy costs 15 Netlify credits on a
-   3,000/month Pro plan, whatever its size. Batch changes into one commit, and
-   use a branch + preview (free) while iterating, merging to `main` once.
+   preview for "View live scores" — only once the draw is real, or placeholder
+   pools go public.
+3. **Sponsors** placeholder — when artwork arrives, a comment directly above
+   the section gives the exact `<img>` tag to swap in.
+4. **Deploy cost** — every production deploy costs 15 Netlify credits
+   (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
+   on a branch/preview (free), merge to `main` once. (Full deploy-credit and
+   working-agreement rules live in the project instructions.)
 
 ---
 
-## Working agreement
+## How Claude writes to GitHub (verified 23 Jul 2026)
 
-- Read before editing. This repo deploys to production on every push to `main`.
-- Show the diff and say what will change before committing.
-- Don't rename or restructure files without asking — the `netlify.toml` rewrites
-  and the `netlify-forms.html` field names both depend on exact names.
-- After a change that touches functions, check the function log in Netlify
-  rather than assuming success.
-## Tooling — how Claude reads and writes this repo (learned the hard way, Jul 2026)
+There is ONE thing that can write to this repo: a **local GitHub MCP server**
+running on Jay's PC through the desktop app. It is NOT the account-level
+"GitHub Integration" connector — that one is OAuth/read-only and 403s on every
+write, because Anthropic's GitHub app can't write to a PUBLIC repo by design.
+Ignore that connector for writes; it's only good for reading.
 
-Three separate channels. Only one can write, and it has a real size limit. Reach for them in this order.
+**How the write path is built (do this once per PC Jay uses):**
+1. Node.js installed on the PC (provides `npx`). Check with `node --version`;
+   if missing, install the LTS from nodejs.org. The desktop config points at
+   the full Windows path `C:\Program Files\nodejs\npx.cmd` (a bare `npx` throws
+   `spawn npx ENOENT`).
+2. A classic **`repo`-scoped** personal access token (currently the token named
+   **"Claude Access2"** on Jay's GitHub — regenerate it on
+   github.com/settings/tokens when it expires; the value is only shown once).
+3. The desktop app's config file (Settings → Developer → Edit Config — the JSON
+   with `coworkUserFilesPath`/`preferences`) gets an `mcpServers` block:
+   ```json
+   "mcpServers": {
+     "github": {
+       "command": "C:\\Program Files\\nodejs\\npx.cmd",
+       "args": ["-y", "@modelcontextprotocol/server-github"],
+       "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "<the token>" }
+     }
+   }
+   ```
+4. **Fully quit the app from the system tray and reopen** — config only reloads
+   on a real restart.
 
-**Reading — plain `git` over HTTPS in the sandbox. Reliable; use this first, always.**
-The repo is public, so `git ls-remote --heads https://github.com/jayjmuir-hub/adhjrt.git`
-and `git clone` need no auth. Use them to find branch HEADs and to verify file contents
-byte-for-byte with `git hash-object <file>`. It is read-only (no token to push).
-- Do NOT trust `raw.githubusercontent.com` for verification — it serves a STALE cached
-  copy for minutes and ignores `?cache-buster` params. Use `git` (or the API) instead.
-- The unauthenticated GitHub REST API from bash is heavily rate-limited — prefer `git`.
+**Reachability — the correction to the old notes:** once set up, the write
+tools appear as `mcp__remote-devices__github__*` (`create_branch`,
+`create_or_update_file`, `push_files`, `create_pull_request`, …) and are
+reachable from **any** session, cloud or on-computer, as long as the desktop
+app is running on a configured PC and the device bridge is connected. Cloud
+sessions are NOT inherently read-only — the write goes through the bridge to
+the local server. (Verified: created a branch and committed a file to `adhjrt`
+from a cloud session on 23 Jul 2026.) If those tools aren't in the tool list,
+the app isn't running / isn't configured on the bridged PC — fall back to
+handing files to Jay, don't conclude writing is impossible.
 
-**Writing — the local `github:` MCP server (`@modelcontextprotocol/server-github`).**
-Authenticates as Jay with a `repo`-scoped personal access token, so it CAN create
-branches, open/merge PRs, and push small files. Config lives on each of Jay's machines
-(Settings → Developer → Edit Config); on Windows the command must be the full path
-`C:\Program Files\nodejs\npx.cmd` (bare `npx` → `spawn npx ENOENT`). Any config edit or
-new token needs a FULL quit-from-the-system-tray-and-reopen to take effect.
-- SIZE LIMIT (the important bit): pushing a file means supplying its whole contents
-  through the chat, so files above ~10-15 KB can't be pushed reliably, and the big
-  `.dc.html` files (100 KB+) are hopeless. Don't fight it — see the deploy workflow.
-- There is also a SECOND, read-only GitHub connector ("Git Hub", the Copilot one at
-  `api.githubcopilot.com`). It 403s on every write ("resource not accessible by
-  integration"). Never attempt a write through it.
+**What's safe to push:** it's about authorship, not size. Content Claude wrote
+this session is safe to push at any size the tool accepts (Claude is the source
+of those bytes). Reproducing an existing large file from memory risks a drifted
+character — for those, fetch exact bytes first with
+`github__get_file_contents` (or plain `git`) rather than retyping, or hand the
+file to Jay to upload.
 
-**Acting in the browser — Claude in Chrome, driving Jay's logged-in GitHub session.**
-For anything the connector can't do (deleting branches, clicking Merge on a blocked PR)
-I can operate the branch/PR pages directly. Note: `file_upload` is currently broken
-(rejects sandbox paths, "update the desktop app"), so I cannot upload files via the
-browser — Jay works the native file picker himself.
-
-**Deploy workflow that actually works:**
-1. Edit the `.dc.html` / data files in the sandbox; validate (`node --check` the DC
-   script, confirm `sc-if`/`sc-for` tag balance); stage to `/mnt/user-data/outputs`.
-2. SMALL files → push via the `github:` connector. BIG files → hand to Jay with
-   `present_files` and have him upload via GitHub's web uploader.
-3. Commit STRAIGHT TO `main` (Upload files → "Commit directly to the main branch";
-   `main` has no branch protection). This deploys immediately and avoids the conflict
-   trap below.
-4. Verify byte-exact with `git hash-object` vs the staged versions, then confirm the
-   Netlify deploy is `ready` (Netlify connector → get-project, site
+**Deploy steps:**
+1. Edit in the sandbox; validate (`node --check` the DC script, tag balance for
+   `sc-if`/`sc-for`).
+2. Push with `create_or_update_file` (one file) or `push_files` (several in one
+   commit) to `owner: jayjmuir-hub, repo: adhjrt`.
+3. **Pushing to `main` deploys to production and spends 15 Netlify credits** —
+   show the diff and get a yes first (see project instructions). Docs-only or
+   non-live-site commits: put `[skip ci]` in the message so no deploy/credits.
+   Branches are free — use them freely.
+4. Verify: read the pushed file back (`github__get_file_contents` or `git`),
+   and for a live deploy confirm Netlify reached `ready` (site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
-**Merge-conflict trap.** Earlier features were SQUASH-merged into `main`. A branch that
-still carries the pre-squash commits will CONFLICT when re-merged (main holds the same
-changes as one squashed commit). So don't reopen old feature branches — commit directly
-to `main`, or branch fresh off current `main`.
+**Merge-conflict trap:** earlier features were squash-merged into `main`. A
+branch still carrying pre-squash commits will conflict on re-merge. Don't
+reopen old feature branches — branch fresh off current `main`.
 
-**Upload gotcha.** GitHub's web uploader commits to whatever branch is selected in the
-UI — it silently sent an upload to the wrong branch once. Always point Jay at
-`https://github.com/jayjmuir-hub/adhjrt/upload/main`, and keep the exact filename
-`Scores & Standings.dc.html` (spaces and `&` included).
+**`raw.githubusercontent.com` serves stale cached copies for minutes** and
+ignores cache-buster params — verify with plain `git`/`git hash-object` or
+`github__get_file_contents`, never raw.githubusercontent.
 
-**When automation stalls, hand off — don't grind (learned Jul 2026).**
-- Embedding a very large patch or base64 blob in ONE `javascript_tool` call can hang
-  the Chrome MCP (a 4-minute timeout) and is easy to corrupt when pasted by hand. If
-  you ever drive the browser to patch a big file in place, split the payload into small
-  chunks and verify a `git hash-object` match before committing.
-- The Chrome MCP can also go FULLY unresponsive — every call then times out at 4 min.
-  When that happens, STOP retrying; each retry is another 4-minute wait. Fall back to
-  `present_files` and let Jay drag the files onto `/upload/main` himself. That is how the
-  Jul 2026 scores batch actually shipped (the two "Add files via upload" commits), after
-  the browser route timed out on the third file. Files handed off this way still land
-  byte-exact — verify with `git hash-object` afterwards, same as any deploy.
+**Per-PC reminder:** this setup lives on each machine, so a new PC needs the
+Node + token + config steps above once before writing works from it.

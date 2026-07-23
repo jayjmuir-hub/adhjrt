@@ -65,6 +65,27 @@ good reason.
 
 ---
 
+## What to read for which task (context scoping)
+
+A session has a limited reading budget. Read only what the task needs — do NOT
+read files "just to understand the code." Map:
+
+- Homepage / marketing → `Quins JRT.dc.html` only.
+- Live scores, standings, brackets, fixture editor → `Scores & Standings.dc.html`
+  and `scores-data.js`.
+- Organiser back office → `Organizer.dc.html` and `organizer-data.js`.
+- Match-day app → `app.html` (it reads `scores-data.js`, so add that only if the
+  change touches data or permissions).
+- A backend change → the one file in `netlify/functions/` plus `_auth.js` (and
+  `_scoring.js` / `_publish.js` / `_teams.js` only if that area is involved).
+
+**Do NOT read these unless something is provably broken inside them** — they are
+framework/runtime plumbing, never edited, and together they are larger than the
+rest of the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
+`doc-page.js`, `local-backend.js`.
+
+---
+
 ## Functions (`netlify/functions/`)
 
 | File | Purpose |

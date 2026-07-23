@@ -211,6 +211,10 @@ group: `<ageGroupId>` is the DRAFT that the fixture editor reads and writes,
   the page shows "coming soon" — before, during and after the tournament. The
   auto-generated pools are sample data and a parent cannot tell them apart
   from real fixtures.
+- The draft draw object also carries a `pitches` array (the age group's pitch
+  list, set in the editor). It rides in the same blob — `save-schedule-override`
+  stores the whole object and `resolveDraw` returns it whole, so no endpoint or
+  schema change was needed.
 
 ## Team codes and pool preference
 
@@ -252,12 +256,34 @@ application permission. Config lives in `MS_TENANT_ID`, `MS_CLIENT_ID`,
   festivals) but remain available in the Manager area.
 - Sponsors section is a deliberate placeholder, not a bug.
 
+**Scores + fixtures — shipped Jul 2026, don't rebuild:**
+- Pool fixtures, results and standings show full team NAMES; knockout and the
+  bracket stay CODES (with a team key). `teamLabel()` in scores-data.js maps
+  code→name and auto-shortens any "Abu Dhabi …" to "AD …" — a general rule, so
+  clubs registered later abbreviate too.
+- The homepage Fixtures section shows each match's SCORE (pool rows and the
+  knockout/finals bracket). Scores come from `getSchedule` — walkover-aware,
+  blank until a result exists.
+- The fixture editor has two gated knockout buttons: "Generate knockout from
+  standings" (needs all pool scores first) and "Generate finals from knockout"
+  (fills only the finals — Cup/Bowl/Plate/Shield/Final — from the winners so
+  far, leaving the earlier rounds; enabled once the knockout matches are
+  played). Plus "Clear knockout". Organisers also have "Publish all" /
+  "Unpublish all" for every age group at once.
+- `/scores` has a "Jump to current match" button (scrolls to the first unscored
+  match) and a "Back to menu" button at the bottom of the section.
+- Pitches are picked, not typed. The editor has a "Pitches for this age group"
+  panel (type-to-add chips); the list is stored on the draw as `pitches` and
+  each match's pitch is a DROPDOWN of those pitches (editor rows + score-entry
+  tab), not free text.
+
 ## Outstanding
 
 1. **The real draw.** All 15 groups still start from nine placeholder clubs
    (Harlequins, Exiles, Sharks, Hurricanes, Barrelhouse, Amblers, Dragons,
-   Tigers, Small Blacks) auto-split into Pool A/B, kickoffs from 08:00, every
-   pitch "TBD". Everything else waits on this.
+   Tigers, Small Blacks) auto-split into Pool A/B, kickoffs from 08:00, pitches
+   default to "TBD" until an organiser sets them (the editor now has a
+   per-age-group pitch picker + dropdowns). Everything else waits on this.
 2. **Results nav link.** Line ~66 of `Quins JRT.dc.html` is still
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for a "View live scores" button — but only once the draw is real,
@@ -330,3 +356,15 @@ to `main`, or branch fresh off current `main`.
 UI — it silently sent an upload to the wrong branch once. Always point Jay at
 `https://github.com/jayjmuir-hub/adhjrt/upload/main`, and keep the exact filename
 `Scores & Standings.dc.html` (spaces and `&` included).
+
+**When automation stalls, hand off — don't grind (learned Jul 2026).**
+- Embedding a very large patch or base64 blob in ONE `javascript_tool` call can hang
+  the Chrome MCP (a 4-minute timeout) and is easy to corrupt when pasted by hand. If
+  you ever drive the browser to patch a big file in place, split the payload into small
+  chunks and verify a `git hash-object` match before committing.
+- The Chrome MCP can also go FULLY unresponsive — every call then times out at 4 min.
+  When that happens, STOP retrying; each retry is another 4-minute wait. Fall back to
+  `present_files` and let Jay drag the files onto `/upload/main` himself. That is how the
+  Jul 2026 scores batch actually shipped (the two "Add files via upload" commits), after
+  the browser route timed out on the third file. Files handed off this way still land
+  byte-exact — verify with `git hash-object` afterwards, same as any deploy.

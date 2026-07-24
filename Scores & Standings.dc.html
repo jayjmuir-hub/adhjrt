@@ -888,9 +888,25 @@ class Component extends DCLogic {
     if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
     const ageGroups = await api.getAgeGroups();
     const firstComp = ageGroups.find((a) => a.hasStandings) || ageGroups[0];
-    this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: firstComp && firstComp.id }, () => {
+    const propAge = this.props.age;
+    const linked = propAge && ageGroups.find((a) => a.id === propAge && a.hasStandings);
+    this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: linked ? propAge : (firstComp && firstComp.id) }, () => {
       this.loadPublic();
     });
+  }
+
+  componentDidUpdate(prevProps) {
+    // Keep the public standings in sync with the age group chosen in the
+    // homepage Fixtures section (passed in as the `age` prop). Guarded so it
+    // only reacts to a real change, never overrides a manual pick, ignores
+    // festival-only groups that have no standings, and only in the public view.
+    const a = this.props.age;
+    if (a && a !== (prevProps && prevProps.age) && a !== this.state.selectedAgeId && this.state.view === 'public') {
+      const grp = (this.state.ageGroups || []).find((g) => g.id === a);
+      if (grp && grp.hasStandings) {
+        this.setState({ selectedAgeId: a }, () => this.loadPublic());
+      }
+    }
   }
 
   async loadPublic() {

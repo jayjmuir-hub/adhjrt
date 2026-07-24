@@ -175,6 +175,20 @@ every social share preview).
   in Netlify does not remove the Sheet row. To remove a registration, delete
   the sheet row.
 - Netlify Identity is *not* used; auth is the custom bcrypt + HMAC system above.
+- **`.dc.html` templates only bind what `renderVals()` returns.** Raw
+  `this.state.X` is not directly bindable — every value used as `{{ X }}` in the
+  markup must be re-exported from `renderVals()` (it re-lists state by name, e.g.
+  `fixtureTeamFilter: fxFilter`). A `{{ X }}` that isn't returned silently
+  resolves to empty. (This broke the Fixtures→Results link until `fxSelectedId`
+  was added to the return.)
+- **`style-hover` / `style-before` / `style-after` generate a single-class
+  pseudo rule with NO `!important`.** So a `style-hover` that changes a property
+  also set inline in the base `style=""` (e.g. `box-shadow`) is silently
+  overridden — inline wins. Put `!important` inside the `style-hover` value to
+  make it apply. (Why the button hover-glow did nothing at first.)
+- **`dc-import` forwards its attributes to the imported component as reactive
+  props.** The child reads `this.props.X` and gets `componentDidUpdate(prevProps)`
+  on change — the channel the homepage uses to drive the embedded Scores app.
 
 ---
 
@@ -289,6 +303,31 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
   (type-to-add chips) stored on the draw as `pitches`; each match's pitch is a
   dropdown of those pitches (editor rows + score-entry tab).
 
+
+---
+
+## Design refresh (branch `design/meet-organisers`, not yet on `main`)
+
+A visual pass lives on this branch. Every push to a branch auto-publishes to a
+free, password-protected Netlify **branch-preview URL** that updates on each
+commit (only `main` spends the 15 credits) — use it to show Jay before merging.
+
+- **Logo** is now transparent `assets/crest.png` (white background + the white
+  badge circles behind the nav/about/organiser crests removed), from a high-def
+  original.
+- **Format section** rebuilt as two day-cards ("Day 01/02" watermark, date
+  pills, MINI & MIDI / YOUTH, age chips still driven by `groupsSaturday/Sunday`).
+- **About-section crest animates.** At rest it's the flat logo bat; on
+  scroll-into-view the bat cross-fades to a shaded realistic version
+  (`crest-bat-real.png`) and flies a two-direction loop across the photo, then
+  lands (also `crest-shield.png` + `crest-bat.png`). Pure CSS keyframes + a small
+  head-script that adds `.play` via IntersectionObserver; a local `.cstage` clip
+  stops the flight ever adding a page scrollbar; fails safe to a static crest and
+  honours `prefers-reduced-motion`.
+- **Results follows Fixtures.** Homepage passes `age="{{ fxSelectedId }}"` to the
+  embedded `<dc-import name="Scores & Standings">`; the scores component syncs its
+  public `selectedAgeId` in `componentDidUpdate` (public view + groups that have
+  standings only; never overrides a manual pick).
 ---
 
 ## Outstanding

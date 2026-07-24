@@ -61,8 +61,41 @@
      click anywhere opens the picker, not just the small default icon area
      (pseudo-element sizing can't be expressed as an inline style). */
   input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer}
+  /* about-section crest: bat flies a loop when the section scrolls into view, then lands */
+  .crest-anim{position:absolute;inset:0}
+  .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .crest-anim .cbase{z-index:1}
+  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 5s cubic-bezier(.45,.05,.4,1) .5s 1 both;animation-play-state:paused}
+  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 5s ease-in-out .5s 1 both;animation-play-state:paused}
+  .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
+  @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}16%{transform:scaleX(1) scaleY(1)}17%{transform:scaleX(1) scaleY(1)}20.5%{transform:scaleX(.72) scaleY(1.16)}24.0%{transform:scaleX(1) scaleY(1)}27.5%{transform:scaleX(.72) scaleY(1.16)}31.0%{transform:scaleX(1) scaleY(1)}34.5%{transform:scaleX(.72) scaleY(1.16)}38.0%{transform:scaleX(1) scaleY(1)}41.5%{transform:scaleX(.72) scaleY(1.16)}45.0%{transform:scaleX(1) scaleY(1)}48.5%{transform:scaleX(.72) scaleY(1.16)}52.0%{transform:scaleX(1) scaleY(1)}55.5%{transform:scaleX(.72) scaleY(1.16)}59.0%{transform:scaleX(1) scaleY(1)}62.5%{transform:scaleX(.72) scaleY(1.16)}66.0%{transform:scaleX(1) scaleY(1)}69.5%{transform:scaleX(.72) scaleY(1.16)}73.0%{transform:scaleX(1) scaleY(1)}76.5%{transform:scaleX(.72) scaleY(1.16)}80.0%{transform:scaleX(1) scaleY(1)}83.5%{transform:scaleX(.72) scaleY(1.16)}87%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
+  @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}12%{transform:translate(0,0) rotate(0deg) scale(1)}17%{transform:translate(0,2.5%) rotate(0deg) scale(1.01)}24%{transform:translate(-8%,-14%) rotate(-10deg) scale(1.02)}34%{transform:translate(20%,-37%) rotate(9deg) scale(.95)}45%{transform:translate(50%,-28%) rotate(16deg) scale(.9)}56%{transform:translate(57%,-3%) rotate(6deg) scale(.88)}66%{transform:translate(37%,12%) rotate(-8deg) scale(.9)}76%{transform:translate(10%,4%) rotate(-2deg) scale(.95)}85%{transform:translate(0,-2.5%) rotate(2deg) scale(1)}92%{transform:translate(0,0) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
+  @media (prefers-reduced-motion:reduce){.crest-anim .cf,.crest-anim .cfl{animation:none}}
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
+<script>
+  /* Start the about-section bat animation when it scrolls into view.
+     Fails safe: if anything goes wrong the crest simply stays complete and static. */
+  (function(){
+    function arm(host){
+      if(host.__armed)return; host.__armed=1;
+      if('IntersectionObserver' in window){
+        var io=new IntersectionObserver(function(es){
+          for(var i=0;i<es.length;i++){ if(es[i].isIntersecting){ host.classList.add('play'); io.disconnect(); break; } }
+        },{threshold:0.35});
+        io.observe(host);
+      } else { host.classList.add('play'); }
+    }
+    function scan(){ var h=document.querySelector('.crest-anim'); if(h){arm(h);return true;} return false; }
+    function boot(){
+      if(scan())return;
+      var mo=new MutationObserver(function(){ if(scan()) mo.disconnect(); });
+      try{ mo.observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+      setTimeout(function(){ try{mo.disconnect();}catch(e){} scan(); },10000);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  })();
+</script>
 </helmet>
 
 <div style="min-width:1200px;overflow:hidden;background:#F3F1ED">
@@ -208,8 +241,11 @@
     </div>
     <div style="position:relative" data-reveal>
       <!-- shard accent tile -->
-      <div style="position:absolute;top:-26px;left:-26px;width:118px;height:118px;display:flex;align-items:center;justify-content:center;z-index:2">
-        <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
+      <div style="position:absolute;top:-26px;left:-26px;width:118px;height:118px;z-index:2">
+        <div class="crest-anim">
+          <img class="cbase" src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest">
+          <div class="cf"><div class="cfl"><img src="assets/crest-bat.png" alt=""></div></div>
+        </div>
       </div>
       <div style="border-radius:18px;overflow:hidden;height:460px;box-shadow:0 20px 50px rgba(0,0,0,.2)">
         <img src="assets/action-lineout.png" alt="Abu Dhabi Harlequins youth players contest a lineout" style="width:100%;height:100%;object-fit:cover;object-position:center 22%">

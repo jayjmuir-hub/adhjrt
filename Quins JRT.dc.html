@@ -30,24 +30,6 @@
     });
   }
 </script>
-<script>
-(function(){
-  var H="7013b28fe072456105fbc60af5609a56c1d64ead2accf6f33d34f5237552ec1b";
-  function passed(){try{return sessionStorage.getItem('jrt_gate_ok')==='1';}catch(e){return false;}}
-  function removeGate(){var g=document.getElementById('jrtGate');if(g&&g.parentNode)g.parentNode.removeChild(g);document.documentElement.style.overflow='';}
-  if(passed()){document.addEventListener('DOMContentLoaded',removeGate);setTimeout(removeGate,0);return;}
-  document.documentElement.style.overflow='hidden';
-  async function sha(s){if(window.crypto&&crypto.subtle){var b=new TextEncoder().encode(s);var d=await crypto.subtle.digest('SHA-256',b);return Array.prototype.map.call(new Uint8Array(d),function(x){return('0'+x.toString(16)).slice(-2)}).join('');}return null;}
-  document.addEventListener('submit',async function(ev){
-    var t=ev.target;if(!t||t.id!=='jrtGateForm')return;ev.preventDefault();
-    var i=document.getElementById('jrtGateInput'),err=document.getElementById('jrtGateErr'),card=document.getElementById('jrtGateCard');
-    var h=null;try{h=await sha(i.value);}catch(_){h=null;}
-    if(h===H){try{sessionStorage.setItem('jrt_gate_ok','1');}catch(_){}var g=document.getElementById('jrtGate');document.documentElement.style.overflow='';if(g){g.style.transition='opacity .5s';g.style.opacity='0';setTimeout(function(){if(g.parentNode)g.parentNode.removeChild(g);},520);}}
-    else{if(err)err.textContent=(h===null)?'Could not verify — please try again.':'Incorrect password — try again.';if(i){i.value='';i.focus();}if(card){var n=0,seq=[-8,8,-6,6,-3,3,0];(function sh(){card.style.transform='translateX('+seq[n]+'px)';if(++n<seq.length)setTimeout(sh,55);else card.style.transform='';})();}}
-  },true);
-  document.addEventListener('DOMContentLoaded',function(){var i=document.getElementById('jrtGateInput');if(i)setTimeout(function(){i.focus();},150);});
-})();
-</script>
 
 
 <meta name="description" content="The Abu Dhabi Harlequins Junior Rugby Tournament (ADH JRT) is a two-day youth rugby festival on 7-8 November 2026 at Zayed Sports City, Abu Dhabi. Age groups U6 to U18, boys and girls.">
@@ -84,26 +66,6 @@
 </helmet>
 
 <div style="min-width:1200px;overflow:hidden;background:#F3F1ED">
-  <!-- ============ PRE-LAUNCH GATE (temporary, cosmetic) ============ -->
-  <div id="jrtGate" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(8,8,10,.62);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-family:'Barlow',sans-serif">
-    <div id="jrtGateCard" style="position:relative;width:440px;max-width:92vw;background:rgba(16,16,19,.94);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:44px 40px 38px;text-align:center;box-shadow:0 40px 120px rgba(0,0,0,.6);overflow:hidden">
-      <div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#E11B22 0 42%,#fff 42% 58%,#17A34A 58%)"></div>
-      <img src="assets/crest.jpeg" alt="Abu Dhabi Harlequins crest" style="width:74px;height:74px;object-fit:contain;border-radius:12px;background:#fff;padding:5px;margin:6px auto 20px;display:block;box-shadow:0 8px 24px rgba(0,0,0,.5)">
-      <div style="color:#3bd070;font-family:'Barlow Semi Condensed';font-weight:800;letter-spacing:2px;font-size:12px;text-transform:uppercase">AD Harlequins Junior Rugby Tournament</div>
-      <div style="font-family:'Anton';font-size:44px;line-height:.95;text-transform:uppercase;color:#fff;margin:12px 0 10px">Almost <span style="color:#E11B22">match day</span></div>
-      <div style="color:#b7bcc6;font-size:15px;line-height:1.55;max-width:320px;margin:0 auto 8px">The site isn&rsquo;t quite ready for the public yet. Enter the password to take an early look.</div>
-      <div id="jrtGateErr" style="color:#ff5b60;font-size:13px;font-weight:600;height:18px;margin-bottom:6px"></div>
-      <form id="jrtGateForm" style="display:flex;gap:10px">
-        <input id="jrtGateInput" type="password" placeholder="Password" autocomplete="off" style="flex:1;background:#0c0c0e;border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:14px 16px;color:#fff;font-size:15px;font-family:'Barlow';outline:none">
-        <button type="submit" style="background:#E11B22;color:#fff;border:none;border-radius:10px;padding:0 22px;font-family:'Barlow Semi Condensed';font-weight:800;font-size:15px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 22px rgba(225,27,34,.45)">Enter</button>
-      </form>
-      <div style="margin-top:22px;color:#6b7280;font-family:'Barlow Semi Condensed';font-weight:700;letter-spacing:1.5px;font-size:11px;text-transform:uppercase">Sat 7 &amp; Sun 8 November 2026 &middot; Zayed Sports City</div>
-    </div>
-  </div>
-
-
-
-
 
   <!-- ============ HEADER ============ -->
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">

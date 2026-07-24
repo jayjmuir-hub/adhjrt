@@ -76,6 +76,32 @@
   .crest-anim.play .breal{animation-play-state:running}
   @keyframes batmorph{0%{opacity:0}7%{opacity:0}11%{opacity:1}41%{opacity:1}44%{opacity:0}56%{opacity:0}60%{opacity:1}90%{opacity:1}93%{opacity:0}100%{opacity:0}}
   @media (prefers-reduced-motion:reduce){.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}}
+  /* FORMAT age-group cards */
+  .fmt-head{max-width:680px;margin-bottom:46px}
+  .fmt-eyebrow{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.22em;font-size:13px;color:#ff5b60;display:flex;align-items:center}
+  .fmt-eyebrow .rule{display:inline-block;height:4px;width:54px;background:#17A34A;margin-right:14px;border-radius:2px}
+  .fmt-head h2{font-family:'Anton';font-size:clamp(36px,5.9vw,72px);line-height:.95;text-transform:uppercase;margin:16px 0 0;color:#fff}
+  .fmt-head p{color:#aeb4bf;font-size:18px;line-height:1.6;margin-top:18px;max-width:640px}
+  .fmt-head p b{color:#fff}
+  .fmt-days{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .fmt-day{background:#121216;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:32px 32px 32px 36px;position:relative;overflow:hidden;transition:transform .25s,border-color .25s}
+  .fmt-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#E11B22}
+  .fmt-day.sun::before{background:#17A34A}
+  .fmt-day:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.24)}
+  .fmt-daytag{font-family:'Anton';font-size:14px;letter-spacing:.14em;color:#0a0a0b;background:#fff;display:inline-block;padding:6px 12px;border-radius:6px}
+  .fmt-day.sun .fmt-daytag{background:#17A34A;color:#fff}
+  .fmt-day h3{font-family:'Anton';font-size:clamp(26px,3.2vw,38px);text-transform:uppercase;margin:16px 0 6px;color:#fff}
+  .fmt-sub{color:#8c8c93;font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+  .fmt-grps{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .fmt-grp{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.04em;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#d7d7db;cursor:pointer;transition:.2s}
+  .fmt-day:hover .fmt-grp{border-color:rgba(255,255,255,.2)}
+  .fmt-grp:hover{background:#E11B22;border-color:#E11B22;color:#fff}
+  .fmt-day.sun .fmt-grp:hover{background:#17A34A;border-color:#17A34A}
+  .fmt-numbg{position:absolute;right:-4px;top:-24px;font-family:'Anton';color:rgba(255,255,255,.05);pointer-events:none;display:flex;align-items:baseline;gap:10px;line-height:1}
+  .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
+  .fmt-numbg .n{font-size:150px}
+  @media(max-width:760px){.fmt-days{grid-template-columns:1fr}}
+
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
 <script>
@@ -262,50 +288,31 @@
   <section id="format" style="background:#0C0C0E;color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
     <div style="max-width:1200px;margin:0 auto;padding:100px 32px">
-      <div style="text-align:center;margin-bottom:60px" data-reveal>
-        <div style="font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:14px">The format</div>
-        <h2 style="font-family:'Anton';font-size:clamp(36px,5.9vw,72px);line-height:0.95;text-transform:uppercase">Find your age group</h2>
+      <div class="fmt-head" data-reveal>
+        <div class="fmt-eyebrow"><span class="rule"></span>The format</div>
+        <h2>Find your age group</h2>
+        <p>15 age groups across two days. Younger groups play tag and non-contact; older groups move into full contact under UAERF age-grade laws. <b>U6 to U18 &middot; boys &amp; girls.</b></p>
       </div>
-      <div data-reveal style="text-align:center;padding:2px 0 0">
-        <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(23,163,74,0.14);border:1px solid rgba(23,163,74,0.4);padding:8px 18px;border-radius:100px;margin-bottom:10px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e"></span>
-          <span style="font-weight:800;letter-spacing:1.5px;color:#3bd070;font-size:13px">U6 TO U18 &middot; BOYS &amp; GIRLS</span>
-        </div>
-        <p style="max-width:580px;margin:18px auto 0;color:#aeb4bf;font-size:18px">15 age groups across two days. Younger age groups play tag and non-contact formats; older groups move into full contact under UAERF age-grade laws.</p>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:50px">
-        <div data-reveal>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#E11B22"></div>
-            <div style="font-family:'Anton';font-size:clamp(20px,2.6vw,31px);text-transform:uppercase;letter-spacing:.5px">Saturday</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="fmt-days">
+        <div class="fmt-day" data-reveal>
+          <div class="fmt-numbg"><span class="w">Day</span><span class="n">01</span></div>
+          <span class="fmt-daytag">Saturday 7 Nov</span>
+          <h3>Mini &amp; Midi</h3>
+          <div class="fmt-sub">U6 &ndash; U12 &middot; plus U12 Girls</div>
+          <div class="fmt-grps">
             <sc-for list="{{ groupsSaturday }}" as="g" hint-placeholder-count="8">
-              <div onClick="{{ g.onJump }}" style="background:#151517;border:1px solid rgba(255,255,255,0.08);border-left:3px solid {{ g.tint }};border-radius:10px;padding:10px 16px;cursor:pointer;transition:background .15s ease" style-hover="background:#1c1c1f">
-                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-                  <div style="font-family:'Anton';font-size:16px;letter-spacing:.3px">{{ g.name }}</div>
-                  <div style="font-size:10px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ g.comp }}</div>
-                </div>
-                <p style="color:#8a8f99;font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.desc }}</p>
-              </div>
+              <div onClick="{{ g.onJump }}" class="fmt-grp">{{ g.name }}</div>
             </sc-for>
           </div>
         </div>
-        <div data-reveal>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-            <div style="width:10px;height:10px;border-radius:50%;background:#17A34A"></div>
-            <div style="font-family:'Anton';font-size:clamp(20px,2.6vw,31px);text-transform:uppercase;letter-spacing:.5px">Sunday</div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="fmt-day sun" data-reveal>
+          <div class="fmt-numbg"><span class="w">Day</span><span class="n">02</span></div>
+          <span class="fmt-daytag">Sunday 8 Nov</span>
+          <h3>Youth</h3>
+          <div class="fmt-sub">U13 &ndash; U18 &middot; boys &amp; girls</div>
+          <div class="fmt-grps">
             <sc-for list="{{ groupsSunday }}" as="g" hint-placeholder-count="7">
-              <div onClick="{{ g.onJump }}" style="background:#151517;border:1px solid rgba(255,255,255,0.08);border-left:3px solid {{ g.tint }};border-radius:10px;padding:10px 16px;cursor:pointer;transition:background .15s ease" style-hover="background:#1c1c1f">
-                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
-                  <div style="font-family:'Anton';font-size:16px;letter-spacing:.3px">{{ g.name }}</div>
-                  <div style="font-size:10px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ g.comp }}</div>
-                </div>
-                <p style="color:#8a8f99;font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.desc }}</p>
-              </div>
+              <div onClick="{{ g.onJump }}" class="fmt-grp">{{ g.name }}</div>
             </sc-for>
           </div>
         </div>

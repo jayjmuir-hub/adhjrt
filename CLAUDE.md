@@ -55,7 +55,9 @@ netlify-forms.html         decoy file — Netlify's crawler scans it at deploy t
 support.js, deck-stage.js, doc-page.js, image-slot.js, local-backend.js
                            framework/runtime support — do not edit
 netlify/functions/         all backend (see below)
-assets/                    crest.jpeg, action shots, venue map, sponsor logos
+assets/                    crest.jpeg, crest.png (+crest-bat/-shield), action
+                           shots, venue map, sponsor logos, organisers.jpg
+                           (the "Run by volunteers" group photo)
 ```
 
 `scores-data.js` computes standings, tie-breaks and brackets **in the browser**
@@ -306,11 +308,14 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
 
 ---
 
-## Design refresh (branch `design/meet-organisers`, not yet on `main`)
+## Design refresh (merged to `main` 24 Jul 2026 — live)
 
-A visual pass lives on this branch. Every push to a branch auto-publishes to a
-free, password-protected Netlify **branch-preview URL** that updates on each
-commit (only `main` spends the 15 credits) — use it to show Jay before merging.
+A visual pass, now live. To preview a branch before merging, **open a PR** — that
+triggers a free, password-protected Netlify **deploy-preview** at
+`deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` (only merging to
+`main` spends the 15 credits). NB: this site has no per-branch deploy URL, so
+`<branch>--…netlify.app` 404s — use the PR deploy-preview. The whole site is
+also behind a site-wide Netlify password, so previews prompt for it too.
 
 - **Logo** is now transparent `assets/crest.png` (white background + the white
   badge circles behind the nav/about/organiser crests removed), from a high-def
@@ -328,6 +333,20 @@ commit (only `main` spends the 15 credits) — use it to show Jay before merging
   embedded `<dc-import name="Scores & Standings">`; the scores component syncs its
   public `selectedAgeId` in `componentDidUpdate` (public view + groups that have
   standings only; never overrides a manual pick).
+- **Single-pool Fixtures width fix.** `fixturePoolsGridStyle` caps a lone pool at
+  `minmax(0,560px)` and centres it, instead of one `1fr` column stretching the
+  full section; two-or-more pools unchanged.
+- **Organisers photo is now `assets/organisers.jpg`**, referenced by filename —
+  it used to be a ~168 KB inline base64 `data:` blob in `Quins JRT.dc.html`. That
+  blob bloated the homepage to ~300 KB, which is **too large for the GitHub MCP
+  write tools to move** (`get_file_contents`/`create_or_update_file` hit a
+  ~25k-token ceiling; a helper subagent can push a ~133 KB text file fine, but
+  not 300 KB, and binary can't go through those tools at all). With the photo
+  extracted the homepage is ~133 KB text and pushes normally via the bridge.
+  **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/` files
+  or the file becomes unpushable again. Binary assets (images) still can't go via
+  the write tools; add them by uploading through GitHub's web UI (or browser
+  `file_upload`).
 ---
 
 ## Outstanding

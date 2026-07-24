@@ -71,7 +71,11 @@
   .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
   @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}7%{transform:scaleX(1) scaleY(1)}9%{transform:scaleX(1) scaleY(1)}12.2%{transform:scaleX(.72) scaleY(1.16)}15.4%{transform:scaleX(1) scaleY(1)}18.6%{transform:scaleX(.72) scaleY(1.16)}21.8%{transform:scaleX(1) scaleY(1)}25%{transform:scaleX(.72) scaleY(1.16)}28.2%{transform:scaleX(1) scaleY(1)}31.4%{transform:scaleX(.72) scaleY(1.16)}34.6%{transform:scaleX(1) scaleY(1)}37.8%{transform:scaleX(.72) scaleY(1.16)}41%{transform:scaleX(1) scaleY(1)}44%{transform:scaleX(1) scaleY(1)}57%{transform:scaleX(1) scaleY(1)}59%{transform:scaleX(1) scaleY(1)}62.2%{transform:scaleX(.72) scaleY(1.16)}65.4%{transform:scaleX(1) scaleY(1)}68.6%{transform:scaleX(.72) scaleY(1.16)}71.8%{transform:scaleX(1) scaleY(1)}75%{transform:scaleX(.72) scaleY(1.16)}78.2%{transform:scaleX(1) scaleY(1)}81.4%{transform:scaleX(.72) scaleY(1.16)}84.6%{transform:scaleX(1) scaleY(1)}87.8%{transform:scaleX(.72) scaleY(1.16)}94%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
   @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}7%{transform:translate(0%,0%) rotate(0deg) scale(1)}9.16%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}12.76%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}18.88%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}25%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}29.68%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}34%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}37.96%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}40.84%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}43%{transform:translate(0%,0%) rotate(0deg) scale(1)}57%{transform:translate(0%,0%) rotate(0deg) scale(1)}59.16%{transform:translate(4%,6%) rotate(2deg) scale(1.01)}62.76%{transform:translate(40%,90%) rotate(10deg) scale(1.02)}68.88%{transform:translate(170%,150%) rotate(6deg) scale(0.95)}75%{transform:translate(330%,120%) rotate(-14deg) scale(0.9)}79.68%{transform:translate(410%,20%) rotate(-10deg) scale(0.88)}84%{transform:translate(320%,-20%) rotate(8deg) scale(0.9)}87.96%{transform:translate(140%,-18%) rotate(10deg) scale(0.93)}90.84%{transform:translate(26%,-6%) rotate(5deg) scale(0.97)}93%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
-  @media (prefers-reduced-motion:reduce){.crest-anim .cf,.crest-anim .cfl{animation:none}}
+  .crest-anim .cfl img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .crest-anim .breal{opacity:0;animation:batmorph 13s linear .5s infinite;animation-play-state:paused}
+  .crest-anim.play .breal{animation-play-state:running}
+  @keyframes batmorph{0%{opacity:0}7%{opacity:0}11%{opacity:1}41%{opacity:1}44%{opacity:0}56%{opacity:0}60%{opacity:1}90%{opacity:1}93%{opacity:0}100%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}}
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
 <script>
@@ -245,7 +249,7 @@
       <div class="cstage">
         <div class="crest-anim">
           <img class="cbase" src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest">
-          <div class="cf"><div class="cfl"><img src="assets/crest-bat.png" alt=""></div></div>
+          <div class="cf"><div class="cfl"><img class="bflat" src="assets/crest-bat.png" alt=""><img class="breal" src="assets/crest-bat-real.png" alt=""></div></div>
         </div>
       </div>
       <div style="border-radius:18px;overflow:hidden;height:460px;box-shadow:0 20px 50px rgba(0,0,0,.2)">

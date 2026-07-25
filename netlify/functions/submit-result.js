@@ -13,7 +13,7 @@
 // same SESSION_SECRET as the other auth functions.
 
 const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
-const { scoringFor, totalFor, loadRules } = require('./_scoring');
+const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
 
 const WALKOVER_SCORE = 20;
 
@@ -30,6 +30,18 @@ exports.handler = async (event) => {
     const agId = matchId.split(':')[0];
     if (!hasAgeGroupAccess(session, agId)) {
       return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'You can only enter scores for your own age group.' }) };
+    }
+
+    /* U6 and U7 are non-competitive festival groups: no scores, no standings.
+       The manager area hides score entry for them entirely, but that was the
+       ONLY thing stopping a result being stored - a POST straight to this
+       endpoint was accepted with 200 OK and written to the blob, where it sat
+       as data no screen would ever show. Enforce it here too.
+
+       Clearing is deliberately still allowed: a stray result stored before this
+       check existed has to remain removable. */
+    if (FESTIVAL_AGE_IDS.includes(agId) && data.clear !== true) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'This age group is a festival — no scores are kept for it.' }) };
     }
 
     const store = blobStore('results');

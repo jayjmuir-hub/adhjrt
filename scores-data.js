@@ -803,7 +803,23 @@ export function minutesToDisplay(mins) { return fmtTime(mins); }
 
 export async function saveDraw(agId, draw, session) {
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
-  const payload = { pools: draw.pools, slots: draw.slots, knockout: draw.knockout, pitches: draw.pitches || [] };
+  /* teamNames MUST be in this list. It is an allow-list, not a passthrough, so
+     anything missing here is dropped before the request is even sent - the
+     server stores whatever it is handed and never sees the field.
+
+     Leaving it out meant the map written by "Import registered teams" lived
+     only in the editor's memory and vanished on save. Every code that is not in
+     the hardcoded nine-name TEAM_NAMES fallback then rendered as a raw code on
+     the public standings: a pool read "AD Harlequins 1, DS2, Dubai Hurricanes 1,
+     DW1". With real registrations that is roughly half of every pool showing
+     parents a code instead of a club name. */
+  const payload = {
+    pools: draw.pools,
+    slots: draw.slots,
+    knockout: draw.knockout,
+    pitches: draw.pitches || [],
+    teamNames: draw.teamNames || {},
+  };
   const r = await tryFetchJson('/.netlify/functions/save-schedule-override', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },

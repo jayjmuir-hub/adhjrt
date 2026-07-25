@@ -25,6 +25,12 @@ const TRIES_ONLY = ['tries'];
 const TRIES_CONV = ['tries', 'conversions'];
 const FULL       = ['tries', 'conversions', 'penalties', 'drops'];
 
+/* Non-competitive festival age groups: no scores kept, no standings, no
+   knockout. Mirrors hasStandings:false in AGE_GROUPS in scores-data.js - keep
+   the two in step. Lives here because this is the backend's age-group rules
+   module and submit-result.js needs it to refuse a result outright. */
+const FESTIVAL_AGE_IDS = ['u6', 'u7'];
+
 const BY_AGE = {
   u6: TRIES_ONLY, u7: TRIES_ONLY, u8: TRIES_ONLY,
   u9: TRIES_ONLY, u10: TRIES_ONLY, u11: TRIES_ONLY,
@@ -80,4 +86,4 @@ function cleanRules(input) {
   return out;
 }
 
-module.exports = { POINTS, scoringFor, totalFor, BY_AGE, loadRules, cleanRules, VALID };
+module.exports = { POINTS, scoringFor, totalFor, BY_AGE, loadRules, cleanRules, VALID, FESTIVAL_AGE_IDS };

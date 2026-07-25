@@ -2097,7 +2097,14 @@ class Component extends DCLogic {
       isAdminAll: !!(session && session.ageGroupId === '*'),
       adminAgeOptions: s.ageGroups,
       adminSelectedAgeId: s.adminSelectedAgeId || '',
-      onAdminAgeChange: (e) => { const id = e.target.value; this.setState({ adminSelectedAgeId: id }, () => this.loadAdmin(id)); },
+      onAdminAgeChange: (e) => {
+        const id = e.target.value;
+        /* The import review list is state, built for one age group. The summary
+           line above it is computed live, so leaving the panel open across a
+           change showed one group's count over another group's rows. Close it;
+           re-opening rebuilds against the group you are now on. */
+        this.setState({ adminSelectedAgeId: id, importOpen: false, importRows: [], importNote: '' }, () => this.loadAdmin(id));
+      },
 
       adminSelectedHasStandings, showScoresTabButton: adminSelectedHasStandings,
       isFestivalAdminGroup: !!(adminAgeMeta && !adminAgeMeta.hasStandings),

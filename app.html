@@ -449,7 +449,15 @@ const canScore = (s, agId) =>
 const ageName = (id) => (S.ageGroups.find(a => a.id === id) || {}).name || id;
 /* Teams are stored as codes (ADH1). Rows and tables show the code because
    space is tight; anywhere with room shows the readable name. */
-const tName = (code) => (api.teamLabel ? api.teamLabel(code) : code) || code || '';
+/* Codes are only unique WITHIN an age group, so teamLabel wants to know which
+   one. Default to whatever is being browsed; teamLabel falls back safely when
+   that is the wrong guess (it refuses to name a code two loaded draws disagree
+   about, rather than naming the wrong club). */
+const tName = (code, agId) =>
+  (api.teamLabel ? api.teamLabel(code, agId || S.browseId) : code) || code || '';
+/* The short form for the standings column and the bracket, where a full club
+   name does not fit. */
+const tShort = (code) => (api.teamShort ? api.teamShort(code) : code) || code || '';
 
 function phase(){
   const n = Date.now();
@@ -601,7 +609,7 @@ function comingSoon(what, agId){
 /* Codes are used in every row and table because they fit; this is where they
    are spelled out. Shown under Fixtures and Tables, not on Today. */
 function teamKeyCard(){
-  const list = (api.teamKey ? api.teamKey() : []);
+  const list = (api.teamKey ? api.teamKey(S.browseId) : []);
   if (!list.length) return '';
   /* Only explain codes that are actually visible. A custom draw carries full
      club names everywhere, so there is no code to decode and the card drops out
@@ -842,7 +850,7 @@ function viewTables(){
     return `<div class="sec-t">${esc(p.name)}</div><div class="card"><div class="tscroll"><table>
       <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>+/−</th><th>Pts</th></tr></thead>
       <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${sameTeam(t.team, S.team)?'me':''}">
-        <td>${i+1}</td><td>${esc(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
+        <td>${i+1}</td><td>${esc(tShort(t.team))}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
         <td>${t.PF}</td><td>${t.PA}</td><td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table></div>
       <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · +/- points difference · Pts league points. On a narrow phone PF and PA (points for and against) are hidden to make the table fit; turn the phone sideways to see them. The position and team columns stay put if you do need to scroll.</div>
     </div>`;

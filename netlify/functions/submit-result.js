@@ -19,6 +19,40 @@ const { readGroup, writeGroup } = require('./_results');
 
 const WALKOVER_SCORE = 20;
 
+/* Netlify Blobs has no compare-and-set - a write is a plain overwrite of the
+   whole object. Splitting results one blob per age group (see _results.js)
+   means a save can now only ever collide with another save in the SAME group,
+   which on a tournament day is one manager plus maybe an organiser. The window
+   that remains is: both read the group, both write, and the second write -
+   which never saw the first one's score - silently drops it.
+
+   Closing it properly needs an atomic compare-and-set the platform doesn't
+   offer, so do the next best thing: write, then read the group back and check
+   our own entry actually survived. If it didn't, someone overwrote us - read
+   the CURRENT group, merge our score into that, write again. Three attempts,
+   then give up and TELL the manager it didn't save. Returning a false OK is the
+   one outcome that must never happen: a score reported as saved but missing
+   isn't noticed until the standings are wrong.
+
+   `submittedAt` is the fingerprint checked for - it is our own timestamp, so
+   finding it back proves OUR write is the one that stuck, not merely that
+   somebody stored something for this match.
+
+   Cost: one extra blob read per save. At ~600 matches over two days, nothing. */
+const SAVE_ATTEMPTS = 3;
+
+async function writeAndVerify(store, agId, apply, isDone) {
+  for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
+    const results = await readGroup(store, agId);
+    apply(results);
+    await writeGroup(store, agId, results);
+    const after = await readGroup(store, agId);
+    if (isDone(after)) return true;
+    console.warn(`submit-result: ${agId} write did not stick (attempt ${attempt} of ${SAVE_ATTEMPTS}) - retrying`);
+  }
+  return false;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
@@ -50,15 +84,20 @@ exports.handler = async (event) => {
        readGroup returns only this age group's results, so a save here can never
        clobber a manager saving a different group at the same moment. */
     const store = blobStore('results');
-    const results = await readGroup(store, agId);
 
     /* Clearing has to REMOVE the entry, not write zeros. A 0-0 draw is a real
        rugby result worth two league points each, so an emptied form saved as
        0-0 would quietly award points for a match that was never played. */
     if (data.clear === true) {
-      if (results[matchId]) {
-        delete results[matchId];
-        await writeGroup(store, agId, results);
+      const existing = await readGroup(store, agId);
+      if (!existing[matchId]) return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
+      const gone = await writeAndVerify(
+        store, agId,
+        (r) => { delete r[matchId]; },
+        (r) => !r[matchId],
+      );
+      if (!gone) {
+        return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'Could not confirm the result was cleared. Reload and try again.' }) };
       }
       return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
     }
@@ -82,7 +121,7 @@ exports.handler = async (event) => {
     const homeTotal = wo === 'home' ? WALKOVER_SCORE : wo === 'away' ? 0 : totalFor(agId, homeParts, rules);
     const awayTotal = wo === 'away' ? WALKOVER_SCORE : wo === 'home' ? 0 : totalFor(agId, awayParts, rules);
 
-    results[matchId] = {
+    const entry = {
       homeScore: homeTotal,
       awayScore: awayTotal,
       homeTries: wo === 'home' ? 4 : wo === 'away' ? 0 : (homeParts.tries || 0),
@@ -99,8 +138,27 @@ exports.handler = async (event) => {
       spiritNomineeAway: (data.spiritNomineeAway || '').trim() || null,
       submittedBy: session.username, submittedAt: new Date().toISOString(),
     };
-    await writeGroup(store, agId, results);
-    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+
+    const saved = await writeAndVerify(
+      store, agId,
+      (r) => { r[matchId] = entry; },
+      (r) => !!r[matchId] && r[matchId].submittedAt === entry.submittedAt,
+    );
+    if (!saved) {
+      return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'Could not confirm the score was saved. Reload the match and enter it again.' }) };
+    }
+
+    /* Hand the STORED figures back so the screen can show the manager what the
+       server actually holds, rather than echoing what they typed. The totals
+       are computed here from the tries and kicks, so this is also the only
+       place the real score exists before the next fetch. */
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        ok: true,
+        stored: { homeScore: entry.homeScore, awayScore: entry.awayScore, walkover: entry.walkover },
+      }),
+    };
   } catch (err) {
     console.error('submit-result error:', err);
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Server error.' }) };

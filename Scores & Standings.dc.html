@@ -1433,7 +1433,12 @@ class Component extends DCLogic {
     const { api, session, drafts } = this.state;
     const res = await api.submitResult(id, drafts[id] || {}, session);
     if (res.ok) {
-      this.setState((s) => ({ savedIds: { ...s.savedIds, [id]: 'Saved ✓ ' + new Date().toLocaleTimeString() }, toast: 'Score saved.' }));
+      /* Echo the SERVER's stored figures, not the form's. submit-result.js
+         computes the totals and reads the write back before answering, so this
+         is confirmation the score is really in the store. */
+      const stored = res.stored ? `${res.stored.homeScore}–${res.stored.awayScore}` : '';
+      const mark = 'Saved ✓ ' + (stored ? stored + ' · ' : '') + new Date().toLocaleTimeString();
+      this.setState((s) => ({ savedIds: { ...s.savedIds, [id]: mark }, toast: stored ? `Score saved: ${stored}.` : 'Score saved.' }));
       await this.loadAdmin();
       setTimeout(() => this.setState({ toast: '' }), 2500);
     } else {

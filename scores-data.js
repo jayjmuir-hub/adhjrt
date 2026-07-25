@@ -461,7 +461,9 @@ function computeStandings(draw, store) {
       const group = list.slice(i, j + 1);
       if (group.length > 1) {
         const mini = miniStat(group.map((g) => g.team), pool.id);
-        group.sort((x, y) => {
+        /* Named, because the coin-toss check below has to ask the SAME question
+           the sort just asked: "did anything separate these two?" */
+        const byMini = (x, y) => {
           if (group.length === 2) { // head-to-head (count-back)
             const d = (mini[y.team].pts - mini[x.team].pts); if (d) return d;
           }
@@ -469,9 +471,30 @@ function computeStandings(draw, store) {
           if (mm) return mm;
           const mf = mini[y.team].PF - mini[x.team].PF; if (mf) return mf;
           return mini[x.team].PA - mini[y.team].PA;
-        });
-        // still identical → coin toss
-        group.forEach((g, k) => { if (k > 0 && g.P > 0 && ['pts', 'margin', 'PF', 'PA'].every((key) => group[k][key] === group[k - 1][key])) g.coinToss = true; });
+        };
+        group.sort(byMini);
+        /* Still level after the mini-league → nothing in the rules separates
+           them and the organiser tosses a coin.
+
+           The old check re-compared pts/margin/PF/PA, which are identical for
+           every member of this group BY CONSTRUCTION — that is how the group
+           was formed — so it was always true. Two teams the head-to-head had
+           in fact separated still got badged COIN TOSS. And it started at
+           k = 1, so in a tied pair only the SECOND team was marked, reading as
+           though the first had won something.
+
+           Ask byMini instead — 0 means the tie-breaks could not split them —
+           and badge the whole level run, first team included. `P > 0` on every
+           member keeps unplayed teams (all zeros, so trivially "tied") out of
+           it. */
+        let a = 0;
+        while (a < group.length) {
+          let b = a; while (b + 1 < group.length && byMini(group[b + 1], group[a]) === 0) b++;
+          if (b > a && group.slice(a, b + 1).every((g) => g.P > 0)) {
+            for (let k = a; k <= b; k++) group[k].coinToss = true;
+          }
+          a = b + 1;
+        }
       }
       out.push(...group); i = j + 1;
     }

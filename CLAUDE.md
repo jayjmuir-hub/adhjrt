@@ -79,7 +79,8 @@ read files "just to understand the code." Map:
 - Match-day app → `app.html` (add `scores-data.js` only if the change touches
   data or permissions).
 - A backend change → the one file in `netlify/functions/` plus `_auth.js` (and
-  `_scoring.js` / `_publish.js` / `_teams.js` only if that area is involved).
+  `_scoring.js` / `_publish.js` / `_teams.js` / `_results.js` only if that area
+  is involved).
 - A scores/fixtures change → also check **"Shipped, don't rebuild"** below
   first, so you don't redo something that already exists.
 
@@ -100,8 +101,9 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `organizer-signup.js` | shared invite code; first organiser account auto-approved |
 | `organizer-login.js` | as above |
 | `accounts-admin.js` | organiser-only: list / approve / reject / revoke; can also create an already-approved manager login directly (`action:'create'`) |
-| `get-results.js` | public read of all match results |
-| `submit-result.js` | write one result; re-verifies role + age group from the token |
+| `get-results.js` | public read of all match results (merges every age group's blob) |
+| `submit-result.js` | write one result; re-verifies role + age group from the token; write-and-verify retry |
+| `_results.js` | results storage layout — one blob per age group, legacy merge (see Results storage below) |
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
@@ -111,8 +113,9 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `get-my-registrations.js` | manager: own age group only (teams + players, medical notes included); organiser/`*` admin: all groups — group always comes from the signed token, never the request |
 | `submission-created.js` | fires on every Netlify Forms submission; appends a row to the matching Sheet |
 
-Storage: **Netlify Blobs** (`results`, `accounts`, schedule overrides) plus two
-**Google Sheets** for registrations.
+Storage: **Netlify Blobs** (`results` — one blob per age group, see **Results
+storage** below; `accounts`; schedule overrides) plus two **Google Sheets** for
+registrations.
 
 Permissions are always re-checked server-side from the signed token — never
 trust an age group or role sent by the browser (`submit-result.js` derives the
@@ -266,6 +269,42 @@ parent contact details.
   issue, or public file.
 - First-organiser-auto-approved means the account list is worth auditing —
   flag anything unexpected rather than fixing it silently.
+
+---
+
+## Results storage (changed 25 Jul 2026 — the old layout is gone)
+
+Match results live in the `results` Blobs store, **one JSON object per age
+group**, key `ag:<ageGroupId>`, results keyed by match id inside it. All of it
+goes through `_results.js` — `readGroup` / `writeGroup` / `readAll`. Nothing
+else should touch the store directly.
+
+- **Why it was split.** Everything used to sit in one object under the key
+  `all`. Blobs has no compare-and-set, so a write is a whole-object overwrite:
+  two managers in two different age groups saving in the same second both read
+  `all`, both wrote it back, and the second one — which had never seen the
+  first's score — silently deleted it. With 15 groups scoring at once on a
+  tournament day that was the single biggest match-day risk.
+- **The legacy `all` key is read-only.** `readGroup` falls back to the matching
+  slice of `all` when a group blob doesn't exist yet, and `readAll` layers the
+  per-group blobs over it. Nothing writes or deletes `all` — it is the pre-split
+  history and stays as a safety net. Don't "tidy" it away.
+- **Same-group collisions are handled by write-and-verify.** `submit-result.js`
+  writes, reads the group back, and looks for its own `submittedAt`. If it
+  isn't there, someone overwrote it — re-read, merge, write again, three
+  attempts, then return **409 and an error the manager can see**. Never return
+  `ok:true` without that read-back: a score reported as saved but missing isn't
+  noticed until the standings are wrong. The reply carries `stored:{homeScore,
+  awayScore,walkover}` and both score screens display those figures rather than
+  echoing the form.
+- **U6 and U7 refuse scores at the API**, not just in the UI (`FESTIVAL_AGE_IDS`
+  in `_scoring.js`). Clearing stays allowed so results stored before that check
+  existed can still be removed.
+- **Knockout results are cleared when their matchup is replaced.** Knockout
+  match ids are stable (`u16b:CUP`), so regenerating a bracket used to leave the
+  old score attached to a slot now holding two different teams.
+  `clearResultsFor(ids)` in `Scores & Standings.dc.html` handles it, and only
+  for slots whose teams actually changed.
 
 ---
 

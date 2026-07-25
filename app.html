@@ -1092,7 +1092,15 @@ function openMatch(id){
       payload[side + k.charAt(0).toUpperCase() + k.slice(1)] = Number(($(`${side}-${k}`)||{}).value || 0);
     }));
     const res = await api.submitResult(m.id, payload, S.session);
-    if (res.ok) { closeSheet(); toast('Result saved'); await afterWrite(); }
+    /* Read the score back off the SERVER's reply, not off the form. The server
+       computes the totals and confirms the write landed before it answers
+       (submit-result.js), so showing its figures is the manager's proof the
+       score is actually stored — not just that the button was pressed. */
+    if (res.ok) {
+      closeSheet();
+      toast(res.stored ? `Saved ${res.stored.homeScore}–${res.stored.awayScore}` : 'Result saved');
+      await afterWrite();
+    }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
   };
 }

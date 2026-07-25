@@ -50,11 +50,29 @@ function nextTeamCode(club, ageGroup, rows) {
   const clubKey = norm(club);
   const ageKey = norm(ageGroup);
 
-  const existing = (rows || []).filter(
-    (r) => norm(r[1]) === clubKey && norm(r[3]) === ageKey
-  ).length;
+  /* Go one past the HIGHEST number already issued to this club in this age
+     group, rather than counting how many rows it has.
 
-  return `${prefix}${existing + 1}`;
+     Counting breaks the moment a row is removed. Take a group holding ADH1,
+     ADH2 and ADH3: withdraw ADH2 and delete the row, the count drops to 2, and
+     the next Harlequins entry is issued ADH3 - which already exists. The team
+     code is the team's identity in the draw, the standings, the knockout and
+     every match id, so a duplicate silently puts one team in two pools with a
+     full set of fixtures in each.
+
+     Reading the number back out of the existing codes also means a code an
+     organiser corrected by hand in the sheet is respected, instead of being
+     recounted from scratch. */
+  const numbers = (rows || [])
+    .filter((r) => norm(r[1]) === clubKey && norm(r[3]) === ageKey)
+    .map((r) => {
+      const m = String(r[2] || '').trim().match(/^([A-Za-z]+)(\d+)$/);
+      if (!m || m[1].toUpperCase() !== prefix) return 0;
+      return parseInt(m[2], 10) || 0;
+    });
+
+  const highest = numbers.length ? Math.max(...numbers) : 0;
+  return `${prefix}${highest + 1}`;
 }
 
 module.exports = { clubPrefix, nextTeamCode, CLUB_PREFIXES };

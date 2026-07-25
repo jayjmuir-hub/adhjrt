@@ -197,14 +197,17 @@ share preview.
 - **`dc-import` forwards its attributes to the imported component as reactive
   props.** The child reads `this.props.X` and gets `componentDidUpdate(prevProps)`
   on change — the channel the homepage uses to drive the embedded Scores app.
-- **Fixtures mix team NAMES and team CODES, and it is not obvious.**
-  `getFixtures()` runs pool teams through `teamLabel()`, so `pool[].home/away`
-  come back as readable names ("AD Harlequins 1"), while `knockout[].home/away`
-  and every `standings.tables[]` row stay raw codes ("ADH1"). Anything comparing
-  a team from one source against a team from another must normalise through
-  `teamLabel()` first — a plain `===` silently matches nothing and the UI just
-  looks empty. This is exactly what broke "follow my team" in `/app`; the fix
-  there is the `sameTeam()` helper in `app.html`.
+- **Fixtures and standings do not speak the same language.** `getFixtures()`
+  runs BOTH pool teams and knockout slots through `teamLabel()` (knockout was
+  added 25 Jul 2026), so everything it returns is a readable name
+  ("AD Harlequins 1"). `getStandings()` does NOT: `pools[].teams` and every
+  `tables[]` row come back as the raw draw string, which is a code ("ADH1") on
+  a default draw. Anything comparing a team from one source against a team from
+  the other must normalise through `teamLabel()` first — a plain `===`
+  silently matches nothing and the UI just looks empty rather than erroring.
+  This is exactly what broke "follow my team" in `/app`; the fix there is the
+  `sameTeam()` helper in `app.html`. `teamLabel()` is idempotent, so applying it
+  to something already resolved is safe.
 - **`/app` holds TWO age groups at once** — `S.ageId` (the group you follow,
   feeding the Today tab via `S.followFx`) and `S.browseId` (the pill you tapped,
   feeding Fixtures/Tables via `S.fixtures`). They are deliberately separate; one
@@ -216,12 +219,26 @@ share preview.
 
 ## The match-day app (`/app`)
 
-Club Hub-style phone app: bottom tab bar (Today / Fixtures / Tables / More),
+Club Hub-style phone app: bottom tab bar (Today / Fixtures / Results / Tables /
+More — Results became its own tab 25 Jul 2026),
 top nav on desktop above 820px, bottom sheets for match detail and score entry.
 JRT palette, Anton + Barlow.
 
 - Reads through `scores-data.js` — publishing, permissions and "coming soon"
   behave exactly as on the website.
+- **Fixtures is the schedule, Results is the scores.** Fixtures deliberately
+  does not show a scoreline; a played match carries a "Full time" chip instead,
+  and tapping the row still opens the result. Do not add scores back to the
+  Fixtures rows — having them in two places is what the Results tab replaced.
+- **The standings table is tuned to fit a phone.** The position and team columns
+  are `position:sticky` (a pinned cell needs its row tint restated or it scrolls
+  past as plain white), and below 430px PF and PA are hidden and cell padding
+  tightens. Keep the team column narrow: this is why the app shows team CODES in
+  the table while showing full names in fixture rows.
+- **Two age groups are live at once:** `S.ageId` (followed, feeds Today via
+  `S.followFx`) and `S.browseId` (the pill you tapped, feeds Fixtures / Results /
+  Tables via `S.fixtures`). A match opened from either derives its own age group
+  from the match id via `ageOfMatch()`, the same way the backend does.
 - Sign-in tries `manager-login` then `organizer-login` — different endpoints,
   different localStorage keys; an organiser session is marked `isOrganizer`
   rather than carrying a `role` field. Check all three shapes when testing a

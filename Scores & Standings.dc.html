@@ -1546,13 +1546,18 @@ class Component extends DCLogic {
         return;
       }
       const want = prefOf(r);
+      /* A club can ask for a pool this draw does not have - the entry form
+         offers A to D, the draw might only run A and B. Place them, but say so
+         rather than silently pretending they had no preference. */
+      const asked = String(r.preferredPool || '').match(/[A-D]/i);
+      const unavailable = !!(asked && !want);
       let poolId = want || smallest();
       let moved = false;
       // Honour the preference unless it would leave the pools lopsided by two
       // or more. Then move the latest of them, and say so.
       if (want && load[want] - load[smallest()] >= 2) { poolId = smallest(); moved = true; }
       load[poolId] += 1;
-      rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId, flag: inDraw ? 'in' : 'new', moved, skip: false });
+      rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId, flag: inDraw ? 'in' : 'new', moved, unavailable, skip: false });
     });
 
     rows.forEach((row) => {
@@ -1562,13 +1567,18 @@ class Component extends DCLogic {
     });
 
     const movedCount = rows.filter((r) => r.moved).length;
-    this.setState({
-      importRows: rows,
-      importMode: mode,
-      importNote: movedCount
-        ? (movedCount + ' team' + (movedCount === 1 ? ' was' : 's were') + ' moved off their preferred pool to keep the pools even. Change them below if you would rather not.')
-        : '',
-    });
+    const unavailCount = rows.filter((r) => r.unavailable).length;
+    const notes = [];
+    if (movedCount) {
+      notes.push(movedCount + ' team' + (movedCount === 1 ? ' was' : 's were')
+        + ' moved off their preferred pool to keep the pools even. Change them below if you would rather not.');
+    }
+    if (unavailCount) {
+      notes.push(unavailCount + ' team' + (unavailCount === 1 ? '' : 's')
+        + ' asked for a pool this draw does not have, so ' + (unavailCount === 1 ? 'it was' : 'they were')
+        + ' placed in the smallest pool. Add that pool first if you want to honour the request.');
+    }
+    this.setState({ importRows: rows, importMode: mode, importNote: notes.join(' ') });
   }
 
   onImportMode(mode) {
@@ -1964,7 +1974,11 @@ class Component extends DCLogic {
     const importRowsView = (s.importRows || []).map((r) => ({
       code: r.code,
       name: r.name || r.club,
-      pref: r.pref || 'No preference',
+      pref: r.pref
+        ? (/^\s*[A-D]\s*$/i.test(r.pref)
+            ? ('Wants Pool ' + r.pref.trim().toUpperCase() + (r.unavailable ? ' (not in this draw)' : ''))
+            : String(r.pref))
+        : 'No preference',
       poolId: r.poolId,
       poolOptions: importPoolOpts,
       isSkipped: !!r.skip,
@@ -2198,7 +2212,10 @@ class Component extends DCLogic {
       importReplaceBlocked: importResults,
       importReplaceStyle: importModeBtn((s.importMode || 'add') === 'replace'),
       importAddStyle: importModeBtn((s.importMode || 'add') !== 'replace'),
-      importConfirmLabel: 'Import ' + importRowsView.filter((r) => !r.isSkipped).length + ' teams',
+      importConfirmLabel: (() => {
+        const n = importRowsView.filter((r) => !r.isSkipped).length;
+        return 'Import ' + n + (n === 1 ? ' team' : ' teams');
+      })(),
       onOpenImport: () => this.onOpenImport(),
       onImportModeReplace: () => this.onImportMode('replace'),
       onImportModeAdd: () => this.onImportMode('add'),

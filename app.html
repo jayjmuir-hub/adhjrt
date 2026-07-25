@@ -771,12 +771,30 @@ function viewMore(){
 }
 
 /* ---------------- interactions ---------------- */
+/* Fifteen age-group pills do not fit across a phone, so the selected one is
+   usually off to the right and you had to scroll to find out where you were.
+   Centre it in its scroller after every render.
+
+   Done by setting scrollLeft rather than scrollIntoView(): scrollIntoView also
+   scrolls the nearest vertical scroller, which on this layout is the page, so
+   it would jump the whole screen. The row is rebuilt by every render anyway
+   (innerHTML resets scrollLeft to 0), so this never fights a manual scroll. */
+function centreActivePill(){
+  const row = document.querySelector('.pill-row');
+  if (!row) return;
+  const on = row.querySelector('.pill.on');
+  if (!on) return;
+  const target = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+  row.scrollLeft = Math.max(0, target);
+}
+
 function wire(){
   document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => load(b.dataset.age));
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
   document.querySelectorAll('[data-fxtab]').forEach(b => b.onclick = () => { S.fxTab = b.dataset.fxtab; render(); window.scrollTo(0,0); });
+  centreActivePill();
 }
 
 function act(a){

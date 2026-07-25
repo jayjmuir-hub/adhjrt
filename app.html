@@ -215,11 +215,20 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
 .row small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .row .chev{margin-left:auto}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
-       bottom:calc(env(safe-area-inset-bottom) + 96px);background:var(--ink);color:#fff;
+/* The toast used to slide up 120px from off-screen. It sits above the tab bar
+   on z-index 80 (the bar is 45), so for the first fraction of a second of that
+   travel it covered the Fixtures and Tables labels. It now fades in with a 10px
+   lift, so it never crosses the bar. Anchored at the bottom, a message long
+   enough to wrap grows upwards, away from the bar, not down over it. */
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);opacity:0;
+       pointer-events:none;
+       bottom:calc(env(safe-area-inset-bottom) + 100px);background:var(--ink);color:#fff;
        padding:12px 20px;border-radius:100px;font-weight:600;font-size:14px;z-index:80;
-       transition:transform .3s;box-shadow:var(--shadow);max-width:88vw;text-align:center}
-.toast.on{transform:translateX(-50%) translateY(0)}
+       transition:transform .22s ease-out,opacity .22s ease-out;
+       box-shadow:var(--shadow);max-width:88vw;text-align:center;line-height:1.35}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+/* No tab bar on desktop, so it can sit lower. */
+@media(min-width:820px){ .toast{bottom:calc(env(safe-area-inset-bottom) + 28px)} }
 .spin{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 /* team card + chips */
 .tcard{background:var(--ink);color:#fff;border-radius:var(--radius);padding:18px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--shadow)}

@@ -7,12 +7,16 @@
 // a signed-in manager.
 
 const { blobStore } = require('./_auth');
+const { readAll } = require('./_results');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
+    /* Merges the per-age-group blobs over the legacy 'all' blob — see
+       _results.js. The response shape is unchanged: one flat object keyed by
+       matchId, exactly as every caller already expects. */
     const store = blobStore('results');
-    const results = (await store.get('all', { type: 'json' })) || {};
+    const results = await readAll(store);
     return { statusCode: 200, body: JSON.stringify({ ok: true, results }) };
   } catch (err) {
     console.error('get-results error:', err);

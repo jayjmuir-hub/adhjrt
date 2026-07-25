@@ -8,12 +8,14 @@
 // see hasAgeGroupAccess in _auth.js). Never trust the client for this
 // check; it's re-verified here from the signed token.
 //
-// Results are stored in Netlify Blobs as one JSON object keyed by
-// matchId, shared by every reader (see get-results.js). Requires the
-// same SESSION_SECRET as the other auth functions.
+// Results are stored in Netlify Blobs, one JSON object per AGE GROUP,
+// keyed by matchId inside it — see _results.js for the storage layout and
+// why it is split that way. Requires the same SESSION_SECRET as the other
+// auth functions.
 
 const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
+const { readGroup, writeGroup } = require('./_results');
 
 const WALKOVER_SCORE = 20;
 
@@ -44,8 +46,11 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'This age group is a festival — no scores are kept for it.' }) };
     }
 
+    /* Results are stored one blob per age group — see _results.js for why.
+       readGroup returns only this age group's results, so a save here can never
+       clobber a manager saving a different group at the same moment. */
     const store = blobStore('results');
-    const results = (await store.get('all', { type: 'json' })) || {};
+    const results = await readGroup(store, agId);
 
     /* Clearing has to REMOVE the entry, not write zeros. A 0-0 draw is a real
        rugby result worth two league points each, so an emptied form saved as
@@ -53,7 +58,7 @@ exports.handler = async (event) => {
     if (data.clear === true) {
       if (results[matchId]) {
         delete results[matchId];
-        await store.setJSON('all', results);
+        await writeGroup(store, agId, results);
       }
       return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
     }
@@ -94,7 +99,7 @@ exports.handler = async (event) => {
       spiritNomineeAway: (data.spiritNomineeAway || '').trim() || null,
       submittedBy: session.username, submittedAt: new Date().toISOString(),
     };
-    await store.setJSON('all', results);
+    await writeGroup(store, agId, results);
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (err) {
     console.error('submit-result error:', err);

@@ -802,9 +802,13 @@ function openFollow(){
 function openTeamPick(){
   const teams = teamsInAge();
   if (!teams.length) { toast('Following ' + ageName(S.ageId)); return; }
+  /* "All teams" leads. It is the option someone reaches for when they are
+     backing out of a team choice, and hunting for it under a list of nine
+     clubs is the wrong way round. Matches the age chooser, which also flags
+     what you are on now. */
   openSheet('Choose your team', `<div class="card">
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${esc(t)}</small></div>${ICON.chev}</button>`).join('')}
-      <button class="row" data-pick-team=""><div><b>All teams</b><small>Follow the whole age group</small></div>${ICON.chev}</button>
+      <button class="row" data-pick-team=""><div><b>All teams</b><small>${!S.team ? 'Currently following' : 'Follow the whole age group'}</small></div>${ICON.chev}</button>
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${S.team === t ? 'Currently following' : esc(t)}</small></div>${ICON.chev}</button>`).join('')}
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();

@@ -17,7 +17,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
 /* ============================================================
@@ -55,7 +55,9 @@ header.top{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
 .brand{display:flex;align-items:center;gap:12px;text-align:left;padding:0;color:inherit}
 .brand:active{opacity:.7}
 .top-t,.top-s{display:block}
-.crest{width:38px;height:38px;border-radius:9px;background:#fff;padding:3px;flex:none}
+/* No white tile: the crest is a transparent PNG and sits straight on the bar,
+   the same treatment the homepage uses since the design refresh. */
+.crest{width:38px;height:38px;border-radius:9px;flex:none}
 .crest img{width:100%;height:100%;object-fit:contain;display:block}
 .top-t{font-family:'Anton';font-size:18px;letter-spacing:.5px;line-height:1}
 .top-s{font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px}
@@ -93,8 +95,11 @@ main{padding:16px}
 /* ---------- building blocks ---------- */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);
       border:1px solid var(--line);overflow:hidden}
+/* The site marks every section with a short green rule before the label
+   (.fmt-eyebrow .rule on the homepage). Same device, scaled to a phone. */
 .sec-t{font-family:'Anton';font-size:19px;text-transform:uppercase;letter-spacing:.4px;
-       margin:22px 2px 10px;color:var(--ink)}
+       margin:22px 2px 10px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.sec-t::before{content:"";flex:none;width:26px;height:4px;border-radius:2px;background:var(--green)}
 .sec-t:first-child{margin-top:4px}
 .muted{color:var(--muted)}
 .hero{background:linear-gradient(135deg,var(--ink),#1d1d22);color:#fff;border-radius:var(--radius);
@@ -122,7 +127,10 @@ main{padding:16px}
 .pill-row::-webkit-scrollbar{display:none}
 .pill{flex:none;padding:8px 14px;border-radius:100px;font-weight:700;font-size:13px;
       border:1.5px solid var(--line);background:#fff;color:var(--muted);white-space:nowrap}
+/* Red for day one, green for day two — the same coding the homepage format
+   cards use for Saturday and Sunday. */
 .pill.on{background:var(--red);border-color:var(--red);color:#fff}
+.pill.on.sun{background:var(--green);border-color:var(--green)}
 
 /* match rows */
 .mrow{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;
@@ -215,11 +223,20 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
 .row small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .row .chev{margin-left:auto}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
-       bottom:calc(env(safe-area-inset-bottom) + 96px);background:var(--ink);color:#fff;
+/* The toast used to slide up 120px from off-screen. It sits above the tab bar
+   on z-index 80 (the bar is 45), so for the first fraction of a second of that
+   travel it covered the Fixtures and Tables labels. It now fades in with a 10px
+   lift, so it never crosses the bar. Anchored at the bottom, a message long
+   enough to wrap grows upwards, away from the bar, not down over it. */
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);opacity:0;
+       pointer-events:none;
+       bottom:calc(env(safe-area-inset-bottom) + 100px);background:var(--ink);color:#fff;
        padding:12px 20px;border-radius:100px;font-weight:600;font-size:14px;z-index:80;
-       transition:transform .3s;box-shadow:var(--shadow);max-width:88vw;text-align:center}
-.toast.on{transform:translateX(-50%) translateY(0)}
+       transition:transform .22s ease-out,opacity .22s ease-out;
+       box-shadow:var(--shadow);max-width:88vw;text-align:center;line-height:1.35}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+/* No tab bar on desktop, so it can sit lower. */
+@media(min-width:820px){ .toast{bottom:calc(env(safe-area-inset-bottom) + 28px)} }
 .spin{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 /* team card + chips */
 .tcard{background:var(--ink);color:#fff;border-radius:var(--radius);padding:18px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
@@ -248,6 +265,41 @@ tr.me td{background:#fffdf4;font-weight:800}
             border:1.5px solid var(--line);background:#fff;color:var(--muted)}
 .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 
+/* ---- carried over from the main site ---------------------------------- */
+
+/* Barlow Semi Condensed is the site's voice for small uppercase labels:
+   eyebrows, day sub-labels, the age chips on the format cards. Anton stays
+   for display type and numbers, Barlow for body copy. */
+.hero-k,.tcard-k,.tcard-cta,.cd span,.kick span,.tile span,.pool-h,.chip,
+.cs-pill,.pill,.btn,label,th,.daytag-d{
+  font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif}
+/* Semi Condensed runs narrow, so the site opens the tracking up to match. */
+.hero-k,.tcard-k,.pool-h,.cs-pill,.tile span{letter-spacing:.14em}
+.pill{letter-spacing:.03em}
+.btn{letter-spacing:.1em}
+/* Score-entry labels are sentence case, not micro-caps — leave them Barlow. */
+.sb-row label{font-family:'Barlow',system-ui,sans-serif;letter-spacing:0}
+
+/* Day tag, from the homepage format cards: a solid day marker in the day's
+   colour, then the date in the eyebrow voice. */
+.daytag{display:flex;align-items:center;gap:10px;margin:0 2px 12px}
+.daytag-n{font-family:'Anton';font-size:12px;letter-spacing:.14em;color:#fff;
+          background:var(--red);padding:5px 10px;border-radius:6px}
+.daytag.sun .daytag-n{background:var(--green)}
+.daytag-d{font-weight:700;text-transform:uppercase;font-size:12px;color:var(--muted)}
+
+/* Venue map, opened full width in a sheet. */
+.vmap{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
+
+/* The site fades sections up as they arrive. Same idea on a tab change only,
+   never on a data refresh — a manager entering scores should not watch the
+   screen animate every time a result lands. */
+@keyframes appFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.main-anim{animation:appFadeUp .22s ease-out both}
+@media(prefers-reduced-motion:reduce){.main-anim{animation:none}}
+
+::selection{background:var(--red);color:#fff}
+
 </style>
 </head>
 <body>
@@ -259,7 +311,7 @@ tr.me td{background:#fffdf4;font-weight:800}
       <!-- Tapping the crest returns to Today, the app's home screen — the
            convention people already expect from a logo in an app header. -->
       <button class="brand" id="goHome" aria-label="Back to Today">
-        <span class="crest"><img src="/assets/crest.jpeg" alt=""></span>
+        <span class="crest"><img src="/assets/crest.png" alt=""></span>
         <span>
           <span class="top-t">ADH JRT</span>
           <span class="top-s">MATCH DAY</span>
@@ -311,6 +363,7 @@ const orgApi = await import('/organizer-data.js');
 const DAY1 = '2026-11-07', DAY2 = '2026-11-08';
 const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g'];
 const dayOf = (agId) => SATURDAY.includes(agId) ? DAY1 : DAY2;
+const isSat = (agId) => SATURDAY.includes(agId);
 
 const KICKOFF = new Date(DAY1 + 'T08:00:00+04:00');
 const END     = new Date(DAY2 + 'T20:00:00+04:00');
@@ -334,7 +387,9 @@ const S = {
   view:'today', session:null, ageGroups:[],
   ageId:null, team:null,        // what you follow
   browseId:null,                // what Fixtures/Tables are showing
-  fixtures:null, standings:null,
+  fixtures:null, standings:null,// the BROWSED age group
+  followFx:null,                // the FOLLOWED age group — what Today reports on
+  fxTab:'fixtures',             // Fixtures tab shows 'fixtures' or 'results'
   onlyMine:true,                // Fixtures filter when a team is followed
 };
 
@@ -417,7 +472,13 @@ function teamsInAge(){
   (st.pools || []).forEach(p => (p.teams || []).forEach(t => out.add(t)));
   return [...out].sort();
 }
-const isMine = (m) => !!(S.team && (m.home === S.team || m.away === S.team));
+/* getFixtures() returns POOL teams as readable names (it runs them through
+   teamLabel) but knockout slots — and the standings tables — as codes. The
+   followed team is stored as a code, so `m.home === S.team` was never true for
+   a pool match: following a team quietly emptied the app. Normalise both sides
+   through teamLabel, which maps a code to its name and leaves a name alone. */
+const sameTeam = (a, b) => !!(a && b) && (a === b || tName(a) === tName(b));
+const isMine = (m) => !!(S.team && (sameTeam(m.home, S.team) || sameTeam(m.away, S.team)));
 
 /* ---------------- chrome ---------------- */
 function paintRole(){
@@ -434,7 +495,7 @@ function buildNav(){
     `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${t.label}</button>`).join('');
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
 }
-function go(v){ S.view = v; buildNav(); render(); window.scrollTo(0,0); }
+function go(v){ S.view = v; buildNav(); render(true); window.scrollTo(0,0); }
 $('goHome').onclick = () => { closeSheet(); go('today'); };
 
 /* ---------------- sheet ---------------- */
@@ -443,22 +504,68 @@ function openSheet(title, html){
   $('sheet').classList.add('on'); $('scrim').classList.add('on');
 }
 function closeSheet(){ $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+const sheetOpen = () => $('sheet').classList.contains('on');
 $('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
 
-/* ---------------- data ---------------- */
+/* ---------------- data ----------------
+   Two age groups are in play at once: the one you are BROWSING (S.browseId,
+   set by the pills on Fixtures/Tables) and the one you FOLLOW (S.ageId, what
+   the Today tab reports on). They used to share a single fixtures slot, so
+   looking at another age group emptied Today until the page was reloaded.
+   They are held separately now. */
 async function load(agId){
   S.browseId = agId;
   S.fixtures = null; S.standings = null;
   render();
   const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
+  if (S.browseId !== agId) return;          // a newer pill won the race
   S.fixtures = fx; S.standings = st;
+  if (agId === S.ageId) S.followFx = fx;    // one fetch serves both tabs
+  render();
+}
+
+/* Today's own copy — only needed once you browse away from what you follow. */
+async function loadFollowData(){
+  const id = S.ageId;
+  if (!id) { S.followFx = null; return; }
+  const fx = await api.getFixtures(id);
+  if (S.ageId !== id) return;
+  S.followFx = fx;
+  render();
+}
+
+/* Match-day background poll. Unlike load() it never blanks the screen first:
+   it fetches, then swaps, so nothing you are reading turns into a spinner. */
+async function refresh(){
+  const bid = S.browseId, aid = S.ageId;
+  const jobs = [];
+  if (bid) jobs.push(Promise.all([api.getFixtures(bid), api.getStandings(bid)]).then(([fx, st]) => {
+    if (S.browseId !== bid) return;
+    S.fixtures = fx; S.standings = st;
+    if (bid === S.ageId) S.followFx = fx;
+  }));
+  if (aid && aid !== bid) jobs.push(api.getFixtures(aid).then((fx) => {
+    if (S.ageId === aid) S.followFx = fx;
+  }));
+  await Promise.all(jobs);
   render();
 }
 
 /* ---------------- shared bits ---------------- */
 function pills(){
   return `<div class="pill-row">${S.ageGroups.map(a =>
-    `<button class="pill ${a.id===S.browseId?'on':''}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
+    `<button class="pill ${a.id===S.browseId?'on':''} ${isSat(a.id)?'':'sun'}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
+}
+
+/* Which of the two days this age group plays on. The app has always known
+   (dayOf drives the countdown) but never showed it. */
+function dayTag(agId){
+  if (!agId) return '';
+  const sat = isSat(agId);
+  return `<div class="daytag ${sat?'':'sun'}">
+      <span class="daytag-n">DAY ${sat?'01':'02'}</span>
+      <span class="daytag-d">${sat?'Saturday 7 November':'Sunday 8 November'}</span>
+    </div>`;
 }
 function comingSoon(what, agId){
   return `<div class="card"><div class="empty">
@@ -490,17 +597,24 @@ function matchRow(m, agId){
 }
 
 /* ---------------- Today ---------------- */
-function render(){
+/* animate=true only on a deliberate tab change. A data refresh re-renders too,
+   and animating that would make the screen twitch every time a score lands. */
+function render(animate){
   paintRole();
   const m = $('main');
   m.innerHTML = S.view==='today' ? viewToday()
               : S.view==='fixtures' ? viewFixtures()
               : S.view==='tables' ? viewTables() : viewMore();
+  if (animate) {
+    m.classList.remove('main-anim');
+    void m.offsetWidth;            // force a reflow so the animation restarts
+    m.classList.add('main-anim');
+  }
   wire();
 }
 
 function followCard(){
-  const following = S.team || (S.ageId ? ageName(S.ageId) : null);
+  const following = S.team ? tName(S.team) : (S.ageId ? ageName(S.ageId) : null);
   if (!following) {
     return `<button class="tcard" data-act="follow" style="width:100%;text-align:left">
       <div class="tcard-k">Get started</div>
@@ -509,8 +623,9 @@ function followCard(){
     </button>`;
   }
 
-  const fx = S.fixtures && S.browseId === S.ageId ? S.fixtures : null;
-  const all = fx && !fx.awaitingPublication ? (fx.pool || []).concat(fx.knockout || []) : [];
+  const fx = S.followFx;
+  const all = fx && !fx.awaitingPublication
+    ? (fx.pool || []).concat((fx.knockout || []).filter(k => k.home || k.away)) : [];
   const mine = S.team ? all.filter(isMine) : all;
   const next = mine.find(m => !m.result);
   const last = [...mine].reverse().find(m => m.result);
@@ -518,9 +633,9 @@ function followCard(){
   let inner = '';
   if (next) {
     const at = kickoffAt(next, S.ageId);
-    const opp = S.team ? (next.home === S.team ? next.away : next.home) : `${next.home} v ${next.away}`;
+    const opp = S.team ? (sameTeam(next.home, S.team) ? next.away : next.home) : `${next.home} v ${next.away}`;
     inner = `<div class="tcard-m" style="margin-top:12px">
-        <strong style="color:#fff">${S.team ? 'v ' + esc(opp) : esc(opp)}</strong><br>
+        <strong style="color:#fff">${S.team ? 'v ' + esc(tName(opp)) : esc(opp)}</strong><br>
         ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
       </div>${at && untilText(at) ? `<div class="kick"><div style="flex:none;padding-left:14px;padding-right:14px"><b>${esc(untilText(at))}</b></div></div>` : ''}`;
   } else if (fx && fx.awaitingPublication) {
@@ -531,15 +646,27 @@ function followCard(){
 
   const lastLine = last
     ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
-         Last: ${esc(last.home)} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(last.away)}</div>` : '';
+         Last: ${esc(tName(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tName(last.away))}</div>` : '';
 
   return `<div class="tcard">
     <button class="tcard-cta" data-act="follow">Change</button>
     <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
     <div class="tcard-n">${esc(following)}</div>
-    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(tName(S.team))} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
+    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(S.team)} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
     ${inner}${lastLine}
   </div>`;
+}
+
+/* Rewrites only the four digit cells. The rest of the tab — and every button
+   on it — survives untouched between seconds. */
+function tickCountdown(){
+  if (!$('cd-d')) return;
+  const diff = Math.max(0, KICKOFF.getTime() - Date.now());
+  const p2 = (v) => String(v).padStart(2,'0');
+  $('cd-d').textContent = Math.floor(diff/86400000);
+  $('cd-h').textContent = p2(Math.floor(diff/3600000)%24);
+  $('cd-m').textContent = p2(Math.floor(diff/60000)%60);
+  $('cd-s').textContent = p2(Math.floor(diff/1000)%60);
 }
 
 function viewToday(){
@@ -555,8 +682,8 @@ function viewToday(){
       <div class="hero-h">Two big days<br>of junior rugby</div>
       <div class="hero-p">Zayed Sports City, Abu Dhabi &middot; Gate 16</div>
       <div class="cd">
-        <div><b>${d}</b><span>DAYS</span></div><div><b>${String(h).padStart(2,'0')}</b><span>HRS</span></div>
-        <div><b>${String(mi).padStart(2,'0')}</b><span>MIN</span></div><div><b>${String(se).padStart(2,'0')}</b><span>SEC</span></div>
+        <div><b id="cd-d">${d}</b><span>DAYS</span></div><div><b id="cd-h">${String(h).padStart(2,'0')}</b><span>HRS</span></div>
+        <div><b id="cd-m">${String(mi).padStart(2,'0')}</b><span>MIN</span></div><div><b id="cd-s">${String(se).padStart(2,'0')}</b><span>SEC</span></div>
       </div></div>`;
   } else if (p === 'during') {
     const day = Date.now() < new Date(DAY2+'T00:00:00+04:00').getTime() ? 1 : 2;
@@ -578,8 +705,11 @@ function viewToday(){
       <a class="row" href="/#register"><div><b>Enter a team or player</b><small>Registration is open on the tournament website</small></div>${ICON.chev}</a>
     </div>`;
 
-  const fx = S.fixtures && S.browseId === S.ageId ? S.fixtures : null;
-  const live = fx && !fx.awaitingPublication ? (fx.pool || []) : [];
+  const fx = S.followFx;
+  /* Knockout matches belong here too — on finals day the card above was
+     naming a semi-final that these lists then refused to show. */
+  const live = fx && !fx.awaitingPublication
+    ? (fx.pool || []).concat((fx.knockout || []).filter(k => k.home || k.away)) : [];
   const mineList = S.team ? live.filter(isMine) : live;
   const upcoming = mineList.filter(m => !m.result).slice(0, 4);
   const recent = mineList.filter(m => m.result).slice(-3).reverse();
@@ -590,18 +720,41 @@ function viewToday(){
   return hero + followCard() + (p === 'before' && !more ? practical : more + (p==='before' ? practical : ''));
 }
 
-/* ---------------- Fixtures ---------------- */
+/* ---------------- Fixtures & Results ---------------- */
+/* Played matches, most recent first. Every score is already on its fixture
+   row, but after a game people want "what just happened" without reading past
+   every match still to come. Honours the same team filter as Fixtures. */
+function resultsList(fx, showFilter){
+  let all = (fx.pool || []).concat((fx.knockout || []).filter(k => k.home || k.away));
+  if (showFilter && S.onlyMine) all = all.filter(isMine);
+  const played = all.filter(m => m.result).reverse();
+  if (!played.length) return `<div class="card"><div class="empty">
+      <b>No results yet</b>
+      <div>Scores appear here as soon as the age group managers enter them.</div>
+    </div></div>`;
+  return `<div class="card">${played.map(m => matchRow(m, S.browseId)).join('')}</div>`;
+}
+
 function viewFixtures(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Fixtures</div>${pills()}`;
+  const results = S.fxTab === 'results';
+  const head = `<div class="sec-t">${results ? 'Results' : 'Fixtures'}</div>${pills()}${dayTag(S.browseId)}`;
   if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
-  if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
+  if (fx.awaitingPublication) return head + comingSoon(results ? 'Results' : 'Fixtures', S.browseId);
+
+  /* Two independent switches: WHAT you are looking at, and WHOSE matches. */
+  const modeSeg = `<div class="seg">
+      <button data-fxtab="fixtures" class="${!results?'on':''}">Fixtures</button>
+      <button data-fxtab="results" class="${results?'on':''}">Results</button>
+    </div>`;
 
   const showFilter = S.team && S.browseId === S.ageId;
   const seg = showFilter ? `<div class="seg">
-      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(S.team)}</button>
+      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(tName(S.team))}</button>
       <button data-seg="all" class="${!S.onlyMine?'on':''}">All matches</button>
     </div>` : '';
+
+  if (results) return head + modeSeg + seg + resultsList(fx, showFilter) + teamKeyCard();
 
   let pool = fx.pool || [];
   if (showFilter && S.onlyMine) pool = pool.filter(isMine);
@@ -614,7 +767,7 @@ function viewFixtures(){
     `<div class="pool-h">${esc(k)}</div>${byPool[k].map(m=>matchRow(m,S.browseId)).join('')}`).join('');
 
   const ko = (fx.knockout || []).filter(k => k.home || k.away);
-  return head + seg
+  return head + modeSeg + seg
     + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
     + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId)).join('')}</div>` : '')
     + teamKeyCard();
@@ -623,7 +776,7 @@ function viewFixtures(){
 /* ---------------- Tables ---------------- */
 function viewTables(){
   const st = S.standings;
-  const head = `<div class="sec-t">Tables</div>${pills()}`;
+  const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}`;
   if (!st) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
   if (!st.ageGroup.hasStandings) return head +
@@ -639,7 +792,7 @@ function viewTables(){
     const rows = st.tables[p.id] || [];
     return `<div class="sec-t">${esc(p.name)}</div><div class="card"><div class="tscroll"><table>
       <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>+/−</th><th>Pts</th></tr></thead>
-      <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${t.team===S.team?'me':''}">
+      <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${sameTeam(t.team, S.team)?'me':''}">
         <td>${i+1}</td><td>${esc(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
         <td>${t.PF}</td><td>${t.PA}</td><td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table></div>
       <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · PF/PA points for and against · Pts league points. Scroll the table sideways for more columns.</div>
@@ -654,6 +807,7 @@ function viewMore(){
       <div class="row"><div><b>Zayed Sports City</b><small>Abu Dhabi &middot; enter via Gate 16</small></div></div>
       <div class="row"><div><b>Pitches A, B, C &amp; D</b><small>Follow the Quins signage from the Tennis Centre</small></div></div>
       <div class="row"><div><b>Sat 7 &amp; Sun 8 November 2026</b><small>Pools kick off 8:00am</small></div></div>
+      <button class="row" data-act="venuemap"><div><b>Pitch map</b><small>The venue layout, as on the website</small></div>${ICON.chev}</button>
     </div>
 
     <div class="sec-t">Following</div><div class="card">
@@ -678,11 +832,30 @@ function viewMore(){
 }
 
 /* ---------------- interactions ---------------- */
+/* Fifteen age-group pills do not fit across a phone, so the selected one is
+   usually off to the right and you had to scroll to find out where you were.
+   Centre it in its scroller after every render.
+
+   Done by setting scrollLeft rather than scrollIntoView(): scrollIntoView also
+   scrolls the nearest vertical scroller, which on this layout is the page, so
+   it would jump the whole screen. The row is rebuilt by every render anyway
+   (innerHTML resets scrollLeft to 0), so this never fights a manual scroll. */
+function centreActivePill(){
+  const row = document.querySelector('.pill-row');
+  if (!row) return;
+  const on = row.querySelector('.pill.on');
+  if (!on) return;
+  const target = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+  row.scrollLeft = Math.max(0, target);
+}
+
 function wire(){
   document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => load(b.dataset.age));
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
+  document.querySelectorAll('[data-fxtab]').forEach(b => b.onclick = () => { S.fxTab = b.dataset.fxtab; render(); window.scrollTo(0,0); });
+  centreActivePill();
 }
 
 function act(a){
@@ -690,6 +863,10 @@ function act(a){
   if (a === 'signin')  return signIn();
   if (a === 'signout') { api.logout(); try{orgApi.logout();}catch(e){} S.session=null; render(); toast('Signed out'); return; }
   if (a === 'tools')   { location.href = '/scores'; return; }
+  if (a === 'venuemap') return openSheet('Venue map',
+    `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
+     <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">
+       Zayed Sports City, Abu Dhabi · enter via Gate 16.</p>`);
 }
 
 /* Two-stage: age group always, then narrow to a team once the draw exists. */
@@ -708,13 +885,17 @@ function openFollow(){
 function openTeamPick(){
   const teams = teamsInAge();
   if (!teams.length) { toast('Following ' + ageName(S.ageId)); return; }
+  /* "All teams" leads. It is the option someone reaches for when they are
+     backing out of a team choice, and hunting for it under a list of nine
+     clubs is the wrong way round. Matches the age chooser, which also flags
+     what you are on now. */
   openSheet('Choose your team', `<div class="card">
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(t)}</b><small>${esc(tName(t))}</small></div>${ICON.chev}</button>`).join('')}
-      <button class="row" data-pick-team=""><div><b>All teams</b><small>Follow the whole age group</small></div>${ICON.chev}</button>
+      <button class="row" data-pick-team=""><div><b>All teams</b><small>${!S.team ? 'Currently following' : 'Follow the whole age group'}</small></div>${ICON.chev}</button>
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${S.team === t ? 'Currently following' : esc(t)}</small></div>${ICON.chev}</button>`).join('')}
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
-    toast(S.team ? 'Following ' + S.team : 'Following ' + ageName(S.ageId));
+    toast(S.team ? 'Following ' + tName(S.team) : 'Following ' + ageName(S.ageId));
   });
 }
 
@@ -744,15 +925,32 @@ function signIn(){
   };
 }
 
+/* Every match id is "<ageGroupId>:<pool>:<i>-<j>" — the same convention the
+   backend uses to re-derive permissions. Reading the age group off the id is
+   what lets a match opened from Today be scored against its OWN group rather
+   than whatever the Fixtures tab happens to be showing. */
+const ageOfMatch = (id) => String(id || '').split(':')[0];
+
 function findMatch(id){
-  const fx = S.fixtures; if (!fx) return null;
-  return (fx.pool || []).concat(fx.knockout || []).find(m => m.id === id) || null;
+  for (const fx of [S.fixtures, S.followFx]) {
+    if (!fx) continue;
+    const m = (fx.pool || []).concat(fx.knockout || []).find(x => x.id === id);
+    if (m) return m;
+  }
+  return null;
 }
 
 function openMatch(id){
   const m = findMatch(id); if (!m) return;
-  const r = m.result, mayScore = canScore(S.session, S.browseId);
-  const at = kickoffAt(m, S.browseId);
+  const agId = ageOfMatch(m.id) || S.browseId;
+  const r = m.result, mayScore = canScore(S.session, agId);
+  const at = kickoffAt(m, agId);
+
+  /* After a write, refresh whichever loaded copy this match belongs to. */
+  const afterWrite = async () => {
+    if (agId === S.browseId) await load(agId);
+    else if (agId === S.ageId) await loadFollowData();
+  };
 
   const head = `<div class="card" style="margin-bottom:16px">
       <div class="row"><div><b>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')}</b>
@@ -768,7 +966,7 @@ function openMatch(id){
      never shown a conversions box for a kick that does not exist at that age.
      The total updates as you type — nobody adds up 5s, 2s and 3s under
      pressure at a pitch — and the server recomputes it from the same rules. */
-  const parts = api.scoringFor(S.browseId);
+  const parts = api.scoringFor(agId);
   const sideInputs = (side, label) => `
     <div class="scoreblock">
       <div class="sb-head"><span>${esc(label)}</span><b id="tot-${side}">0</b></div>
@@ -800,7 +998,7 @@ function openMatch(id){
   const recalc = () => {
     const wo = $('wo').value;
     ['home','away'].forEach(side => {
-      const t = wo ? (wo === side ? 20 : 0) : api.scoreTotal(S.browseId, readSide(side));
+      const t = wo ? (wo === side ? 20 : 0) : api.scoreTotal(agId, readSide(side));
       $('tot-' + side).textContent = t;
     });
     const off = !!$('wo').value;
@@ -818,7 +1016,7 @@ function openMatch(id){
     if (!confirm('Clear this result? The match goes back to unplayed and the pool table is recalculated.')) return;
     $('sclr').textContent = 'Clearing…';
     const res = await api.clearResult(m.id, S.session);
-    if (res.ok) { closeSheet(); toast('Result cleared'); await load(S.browseId); }
+    if (res.ok) { closeSheet(); toast('Result cleared'); await afterWrite(); }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not clear.')}</div>`; $('sclr').textContent = 'Clear result'; }
   };
 
@@ -838,7 +1036,7 @@ function openMatch(id){
       payload[side + k.charAt(0).toUpperCase() + k.slice(1)] = Number(($(`${side}-${k}`)||{}).value || 0);
     }));
     const res = await api.submitResult(m.id, payload, S.session);
-    if (res.ok) { closeSheet(); toast('Result saved'); await load(S.browseId); }
+    if (res.ok) { closeSheet(); toast('Result saved'); await afterWrite(); }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
   };
 }
@@ -848,19 +1046,38 @@ function openMatch(id){
   S.session = resolveSession();
   // Live scoring rules decide which inputs the score form offers.
   if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
-  S.ageGroups = (await api.getAgeGroups()).filter(a => a.hasStandings);
+  /* U6 and U7 are festival groups (hasStandings:false). They still have
+     fixtures, still have a manager who has to enter scores, and are still
+     followed by parents — so they belong in the app. Filtering them out here
+     locked their managers out of it completely and left the Tables tab's own
+     "festival age group" message unreachable. Only public STANDINGS hide
+     them, and viewTables already handles that. */
+  S.ageGroups = await api.getAgeGroups();
   loadFollow();
 
   const mgrAge = S.session && S.session.ageGroupId !== '*' ? S.session.ageGroupId : null;
   if (mgrAge && S.ageGroups.some(a => a.id === mgrAge)) S.ageId = mgrAge;
-  if (!S.ageId || !S.ageGroups.some(a => a.id === S.ageId)) S.ageId = (S.ageGroups[0]||{}).id;
+  if (!S.ageId || !S.ageGroups.some(a => a.id === S.ageId))
+    S.ageId = (S.ageGroups.find(a => a.hasStandings) || S.ageGroups[0] || {}).id;
 
   buildNav();
   await load(S.ageId);
 
-  // Countdown ticks; during the tournament also pull fresh scores.
-  setInterval(() => { if (S.view === 'today') render(); }, 1000);
-  setInterval(() => { if (phase() === 'during') load(S.browseId); }, 60000);
+  /* The countdown used to be driven by re-rendering the whole Today tab every
+     second, which threw away and rebuilt every button on it — a tap landing in
+     the wrong frame hit an element that no longer existed and did nothing.
+     Now only the digits are written, and a full render happens once, when the
+     phase actually changes (before -> during -> after). */
+  let lastPhase = phase();
+  setInterval(() => {
+    const p = phase();
+    if (p !== lastPhase) { lastPhase = p; render(); return; }
+    if (p === 'before' && S.view === 'today') tickCountdown();
+  }, 1000);
+
+  /* Match-day polling, skipped while a sheet is open so a score being typed is
+     never disturbed. */
+  setInterval(() => { if (phase() === 'during' && !sheetOpen()) refresh(); }, 60000);
 })();
 </script>
 </body>

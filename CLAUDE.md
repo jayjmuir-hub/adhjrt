@@ -286,6 +286,35 @@ is the PUBLISHED copy and the only thing the public sees.
   tell placeholder pools from real fixtures.
 - The draft draw object also carries a `pitches` array (set in the editor) —
   rides in the same blob, no schema change needed.
+- It also carries an optional **`teamNames`** map (`{ ADH1: 'AD Harlequins' }`),
+  written by the fixture editor's "Import registered teams". Same trick as
+  `pitches`: it rides in the blob, `publish-schedule` copies it to the public
+  copy, and no Netlify function needed changing. This is what lets the public
+  site show club names while the draw itself stores short codes — a parent
+  never has to touch `get-registrations`, which is organiser-only and sits next
+  to children's data.
+
+## Team codes and names — the rule
+
+**Codes are the identity, names are the display.** `pools[].teams` holds a code
+(`ADH1`); `draw.teamNames` turns it into a club name.
+
+- `teamLabel(code, agId)` resolves: the draw's `teamNames`, then an unambiguous
+  match across loaded draws, then the hardcoded `TEAM_NAMES`, then the raw
+  string. Always shortens "Abu Dhabi" to "AD". **Idempotent** — safe to apply
+  to a value that is already a name.
+- `teamShort(code)` is the code itself.
+- **Full names** go everywhere with row width: homepage fixtures, app match
+  rows and match sheet, `/scores` pool fixtures and results, editor chips.
+- **Codes** go in the two places a name does not fit: the app's pinned standings
+  column and the knockout bracket cells. The team key card is their legend.
+- **`DRAW_NAMES` is keyed per age group and must stay that way.** `_teams.js`
+  numbers teams *within* an age group, so `ADH1` in U16B and `ADH1` in U14B are
+  different teams. A single global code lookup would silently show one club's
+  name on another club's fixture. Where two loaded draws disagree about a code,
+  `teamLabel` declines to name it rather than guessing.
+- Full design, edge cases and decisions: the project doc
+  `claude/spec-import-registered-teams.md`.
 
 ---
 

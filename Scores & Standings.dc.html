@@ -1667,7 +1667,7 @@ class Component extends DCLogic {
         const q = r.rank <= this._advance(st);
         return {
           ...r,
-          team: (s.api ? s.api.teamLabel(r.team) : r.team),
+          team: (s.api ? s.api.teamLabel(r.team, s.selectedAgeId) : r.team),
           marginText: (r.margin > 0 ? '+' : '') + r.margin,
           rankColor: q ? '#3bd070' : '#7f8794',
           rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
@@ -1685,7 +1685,7 @@ class Component extends DCLogic {
         const r = g.result || {};
         const hasScore = r.homeScore != null;
         return {
-          home: g.home || 'TBD', away: g.away || 'TBD',
+          home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
           homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
           awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
           homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
@@ -1707,7 +1707,7 @@ class Component extends DCLogic {
       const db = st.doubleBracket;
       const awardRow = (g, tier, color) => {
         const ready = !!(g.winner && g.home && g.away);
-        return { tier, color, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+        return { tier, color, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
       };
       awardsSummary = [
         awardRow(db.top.cup, 'Cup', '#f5c518'),
@@ -1746,7 +1746,7 @@ class Component extends DCLogic {
         const B = st.tables[st.pools[1].id] || [];
         const ordinal = (n) => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
         const mk = (seed, row, poolLabel, bracket) => (!row ? null : {
-          seed, team: row.team, poolLabel, rankLabel: ordinal(row.rank), bracket,
+          seed, team: this._tn(row.team), poolLabel, rankLabel: ordinal(row.rank), bracket,
           bracketColor: bracket === 'Top Bracket' ? '#3bd070' : '#E11B22',
         });
         knockoutSeeds = [
@@ -1773,7 +1773,7 @@ class Component extends DCLogic {
           const g = rnd.games[0] || {};
           const meta = tierMeta[rnd.round];
           const ready = !!(g.winner && g.home && g.away);
-          return { ...meta, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+          return { ...meta, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
         })
         .map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
     }
@@ -2241,12 +2241,25 @@ class Component extends DCLogic {
     };
   }
 
+  /* Every team string that reaches the screen goes through teamLabel: it maps
+     a code to its club name and shortens "Abu Dhabi" to "AD". The brackets,
+     the knockout seeding list and the awards cards were printing the raw draw
+     value, which is why they read "Abu Dhabi Harlequins 1" while the pool
+     fixtures on the same page read "AD Harlequins 1". Compare on the RAW value
+     and only label on the way out - winner/home identity checks must not be
+     done on display strings. */
+  _tn(v) {
+    const api = this.state.api;
+    if (!v) return v;
+    return (api && api.teamLabel) ? api.teamLabel(v, this.state.selectedAgeId) : v;
+  }
+
   _fmtMatch(g) {
     const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
     const r = g.result || {};
     const hasScore = r.homeScore != null;
     return {
-      home: g.home || 'TBD', away: g.away || 'TBD',
+      home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
       homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
       awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
       homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),

@@ -57,8 +57,50 @@ const TEAM_NAMES = {
   ADSB1:'AD Small Blacks 1',
 };
 
-export function teamLabel(code) {
-  return (TEAM_NAMES[code] || code || '').replace(/Abu Dhabi/gi, 'AD');
+/* Names that arrived with a draw (draw.teamNames, written by the fixture
+   editor's "Import registered teams"). Keyed by AGE GROUP, because _teams.js
+   numbers teams within an age group: ADH1 in U16B and ADH1 in U14B are
+   different teams. One global code->name map would silently collide. */
+const DRAW_NAMES = Object.create(null);
+
+function rememberDrawNames(agId, draw) {
+  if (agId && draw && draw.teamNames) DRAW_NAMES[agId] = draw.teamNames;
+}
+
+/* Best effort for callers with no age group to hand: answer only if every
+   loaded draw that knows this code agrees on the name. Better to fall through
+   to the bare code than to confidently name the wrong club. */
+function nameAcrossDraws(code) {
+  let found = null;
+  for (const agId in DRAW_NAMES) {
+    const n = DRAW_NAMES[agId][code];
+    if (!n) continue;
+    if (found && found !== n) return null;
+    found = n;
+  }
+  return found;
+}
+
+/* The readable name. Pass agId whenever you have it. Resolution order: the
+   draw's own map, then an unambiguous match across loaded draws, then the
+   hardcoded TEAM_NAMES, then the raw string. Always shortens "Abu Dhabi" to
+   "AD". Idempotent, so it is safe on a value that is already a name. */
+export function teamLabel(code, agId) {
+  if (!code) return '';
+  const fromDraw = (agId && DRAW_NAMES[agId] && DRAW_NAMES[agId][code]) || nameAcrossDraws(code);
+  return String(fromDraw || TEAM_NAMES[code] || code).replace(/Abu Dhabi/gi, 'AD');
+}
+
+/* The short form, for the two places a full name does not fit: the app's
+   pinned standings column and the knockout bracket cells.
+
+   Normally this is just the code. But a draw built by hand holds full club
+   names in the same slot, and those must still be shortened - otherwise the
+   standings table reads "Abu Dhabi Harlequins 1" while every fixture row on
+   the same screen reads "AD Harlequins 1". The replace is a no-op on a real
+   code, so this is safe either way. */
+export function teamShort(code) {
+  return String(code || '').replace(/Abu Dhabi/gi, 'AD');
 }
 /* Mirrors netlify/functions/_scoring.js so the entry forms can build
    themselves. The server re-derives the total from these same rules, so this
@@ -109,8 +151,12 @@ export function scoreTotal(ageGroupId, parts) {
   }, 0);
 }
 
-export function teamKey() {
-  return Object.keys(TEAM_NAMES).map((c) => ({ code: c, name: TEAM_NAMES[c] }));
+/* The code->name legend. Uses the draw's own names for that age group when it
+   has them, so the key describes the teams actually playing rather than the
+   hardcoded placeholder clubs. */
+export function teamKey(agId) {
+  const map = (agId && DRAW_NAMES[agId]) || TEAM_NAMES;
+  return Object.keys(map).map((c) => ({ code: c, name: teamLabel(c, agId) }));
 }
 
 const ALL9 = ['ADH1', 'DE1', 'DS1', 'DH1', 'BAR1', 'AAA1', 'DD1', 'DT1', 'ADSB1'];
@@ -343,8 +389,13 @@ function buildDefaultDraw(ag) {
 // Resolves the effective draw for an age group: a saved override if one
 // exists, else the deterministic default built from AGE_GROUPS config.
 async function resolveDraw(ag, override) {
-  if (override && Array.isArray(override.pools) && Array.isArray(override.slots)) return override;
-  return buildDefaultDraw(ag);
+  const draw = (override && Array.isArray(override.pools) && Array.isArray(override.slots))
+    ? override
+    : buildDefaultDraw(ag);
+  /* Single choke point: every path that resolves a draw records its name map,
+     so teamLabel can answer for this age group from here on. */
+  rememberDrawNames(ag.id, draw);
+  return draw;
 }
 
 function slotsForPool(draw, poolId) {
@@ -592,7 +643,7 @@ export async function getSchedule(agId) {
 
   const pools = draw.pools.map((p) => {
     const slots = slotsForPool(draw, p.id);
-    const games = slots.map((s) => ({ home: teamLabel(s.home), away: teamLabel(s.away), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id) }));
+    const games = slots.map((s) => ({ home: teamLabel(s.home, ag.id), away: teamLabel(s.away, ag.id), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id) }));
     return { id: p.id, name: p.name, games };
   });
 
@@ -684,7 +735,7 @@ export async function getFixtures(agId) {
   const draw = await resolveDraw(ag, override);
   const pool = draw.slots.map((fx) => ({
     ...fx, ageGroupId: ag.id, stage: 'pool',
-    home: teamLabel(fx.home), away: teamLabel(fx.away),
+    home: teamLabel(fx.home, ag.id), away: teamLabel(fx.away, ag.id),
     poolName: (draw.pools.find((p) => p.id === fx.poolId) || {}).name,
     time: fmtTime(fx.startMins), result: store[fx.id] || null,
   })).sort((a, b) => a.startMins - b.startMins);
@@ -698,7 +749,7 @@ export async function getFixtures(agId) {
        teamLabel maps a code to its name AND shortens "Abu Dhabi" for any club,
        and is idempotent, so it is safe to apply to either form. Display only:
        the fixture editor reads getDraw(), not this. */
-    home: s.home ? teamLabel(s.home) : null, away: s.away ? teamLabel(s.away) : null,
+    home: s.home ? teamLabel(s.home, ag.id) : null, away: s.away ? teamLabel(s.away, ag.id) : null,
     pitch: s.pitch || 'TBD',
     result: store[s.id] || null,
   }));

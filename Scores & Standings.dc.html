@@ -618,6 +618,54 @@
             <sc-if value="{{ editorLoaded }}" hint-placeholder-val="{{ false }}">
               <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Drag a team from a pool's roster onto another pool to move it, or onto a match slot's Home/Away box to assign it there. Edit kickoff time directly — the list re-sorts by time automatically.</p>
               <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7f8794">Registered teams</div>
+                    <div style="font-size:13px;color:#aeb4bf;margin-top:5px;line-height:1.5">{{ importSummary }}</div>
+                  </div>
+                  <button onClick="{{ onOpenImport }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:9px 15px;border-radius:8px;cursor:pointer;white-space:nowrap">Review &amp; import</button>
+                </div>
+
+                <sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,0.1);padding-top:16px">
+
+                    <div style="display:flex;gap:8px;margin-bottom:12px">
+                      <button onClick="{{ onImportModeAdd }}" style="{{ importAddStyle }}">Add the missing ones</button>
+                      <button onClick="{{ onImportModeReplace }}" style="{{ importReplaceStyle }}">Replace the pools</button>
+                    </div>
+
+                    <sc-if value="{{ importReplaceBlocked }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:rgba(201,134,26,0.12);border:1px solid rgba(201,134,26,0.35);border-radius:9px;padding:11px 14px;color:#f0b45a;font-size:12.5px;line-height:1.55;margin-bottom:12px">Replace is unavailable: this age group already has results. Swapping teams under recorded scores would leave a match describing a game that was never played. Add the missing ones still works.</div>
+                    </sc-if>
+
+                    <sc-if value="{{ importNoteShow }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:rgba(201,134,26,0.12);border:1px solid rgba(201,134,26,0.35);border-radius:9px;padding:11px 14px;color:#f0b45a;font-size:12.5px;line-height:1.55;margin-bottom:12px">{{ importNote }}</div>
+                    </sc-if>
+
+                    <sc-if value="{{ importRowsEmpty }}" hint-placeholder-val="{{ true }}">
+                      <div style="padding:22px;text-align:center;color:#7f8794;font-size:13px">Nothing to import for this age group yet.</div>
+                    </sc-if>
+
+                    <sc-for list="{{ importRowsView }}" as="row" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid rgba(255,255,255,0.07);flex-wrap:wrap">
+                        <span style="background:#fff;color:#0a0a0b;font-family:'Anton';font-size:12px;letter-spacing:.08em;padding:4px 8px;border-radius:5px;white-space:nowrap">{{ row.code }}</span>
+                        <span style="font-weight:600;font-size:13.5px;flex:1;min-width:120px">{{ row.name }}</span>
+                        <span style="{{ row.flagStyle }}">{{ row.flagText }}</span>
+                        <span style="font-size:11.5px;color:#7f8794;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">{{ row.pref }}</span>
+                        <select value="{{ row.poolId }}" onChange="{{ row.onPoolChange }}" style="width:104px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 6px;color:#fff;font-size:12px;color-scheme:dark"><sc-for list="{{ row.poolOptions }}" as="po"><option value="{{ po.id }}">{{ po.name }}</option></sc-for></select>
+                      </div>
+                    </sc-for>
+
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
+                      <button onClick="{{ onConfirmImport }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:11px 20px;border-radius:9px;cursor:pointer">{{ importConfirmLabel }}</button>
+                      <button onClick="{{ onCancelImport }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:10px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+                      <span style="color:#7f8794;font-size:12px;line-height:1.5;flex:1;min-width:200px">This only fills the editor. Nothing changes for anyone until <strong style="color:#fff">Save draw</strong>, and nothing is public until <strong style="color:#fff">Publish</strong>.</span>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px">
                 <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7f8794;margin-bottom:8px">Pitches for this age group</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
                   <sc-for list="{{ pitchChips }}" as="pc" hint-placeholder-count="3">
@@ -856,6 +904,7 @@ class Component extends DCLogic {
     regSearch: '', regPSort: 'playerName', regPDir: 'asc', regTSort: 'club', regTDir: 'asc', regExpanded: {},
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
     newTeamInputs: {},
+    importOpen: false, importMode: 'add', importRows: [], importNote: '',
     modal: null, modalValue: '',
   };
 
@@ -1423,6 +1472,155 @@ class Component extends DCLogic {
     }
   }
 
+  /* ---- Import registered teams -----------------------------------------
+     Builds the pools from the Team Registrations sheet: the codes that were
+     actually issued by _teams.js, seated by the pool preference each club was
+     actually asked for on the entry form.
+
+     Reads ONLY club / teamName / ageGroup / preferredPool. The coach and
+     manager contact columns sit in the very same rows and must never be
+     copied into a draw; player rows are not touched at all. */
+  importSourceTeams() {
+    const s = this.state;
+    const meta = (s.ageGroups || []).find((a) => a.id === s.editorAgeId);
+    const nm = ((meta && meta.name) || '').trim().toLowerCase();
+    if (!nm) return [];
+    return (s.regTeams || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
+  }
+
+  /* Replacing the pools under recorded scores would orphan them - the results
+     are keyed to match ids, so the match would end up describing a game
+     between teams that never played it. */
+  importHasResults() {
+    const f = this.state.fixtures;
+    if (!f) return false;
+    return [...(f.pool || []), ...(f.knockout || [])].some((m) => m.result && m.result.homeScore != null);
+  }
+
+  async onOpenImport() {
+    if (!this.state.regLoaded) await this.loadMyRegistrations();
+    this.buildImportRows(this.state.importMode || 'add');
+    this.setState({ importOpen: true });
+  }
+
+  buildImportRows(mode) {
+    const s = this.state;
+    const draw = s.editorDraw;
+    if (!draw) return;
+    const pools = draw.pools || [];
+    const poolIds = pools.map((p) => p.id);
+    if (!poolIds.length) {
+      this.setState({ importRows: [], importMode: mode, importNote: 'Add a pool first, then import.' });
+      return;
+    }
+
+    const existing = new Set();
+    pools.forEach((p) => (p.teams || []).forEach((t) => existing.add(t)));
+
+    const src = this.importSourceTeams();
+    // How many teams each club has HERE, so a club with one entry is not
+    // needlessly numbered in its display name.
+    const perClub = {};
+    src.forEach((r) => { const c = String(r.club || '').trim(); perClub[c] = (perClub[c] || 0) + 1; });
+
+    // In "add" mode the pools already hold teams, so start from their real load.
+    const load = {};
+    poolIds.forEach((id) => { load[id] = 0; });
+    if (mode === 'add') pools.forEach((p) => { load[p.id] = (p.teams || []).length; });
+
+    const prefOf = (r) => {
+      const m = String(r.preferredPool || '').match(/[A-D]/i);
+      const id = m ? m[0].toUpperCase() : '';
+      return poolIds.indexOf(id) >= 0 ? id : '';
+    };
+    const smallest = () => poolIds.slice()
+      .sort((a, b) => load[a] - load[b] || poolIds.indexOf(a) - poolIds.indexOf(b))[0];
+
+    const rows = [];
+    src.forEach((r) => {
+      const code = String(r.teamName || '').trim();
+      if (!code) return;
+      const inDraw = existing.has(code);
+      if (mode === 'add' && inDraw) {
+        rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId: '', flag: 'in', moved: false, skip: true });
+        return;
+      }
+      const want = prefOf(r);
+      /* A club can ask for a pool this draw does not have - the entry form
+         offers A to D, the draw might only run A and B. Place them, but say so
+         rather than silently pretending they had no preference. */
+      const asked = String(r.preferredPool || '').match(/[A-D]/i);
+      const unavailable = !!(asked && !want);
+      let poolId = want || smallest();
+      let moved = false;
+      // Honour the preference unless it would leave the pools lopsided by two
+      // or more. Then move the latest of them, and say so.
+      if (want && load[want] - load[smallest()] >= 2) { poolId = smallest(); moved = true; }
+      load[poolId] += 1;
+      rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId, flag: inDraw ? 'in' : 'new', moved, unavailable, skip: false });
+    });
+
+    rows.forEach((row) => {
+      const club = row.club.replace(/\b(RFC|Rugby Football Club|Rugby Club)\b/gi, '').replace(/\s+/g, ' ').trim();
+      const n = (row.code.match(/(\d+)$/) || [])[1];
+      row.name = (perClub[row.club] > 1 && n) ? (club + ' ' + n) : club;
+    });
+
+    const movedCount = rows.filter((r) => r.moved).length;
+    const unavailCount = rows.filter((r) => r.unavailable).length;
+    const notes = [];
+    if (movedCount) {
+      notes.push(movedCount + ' team' + (movedCount === 1 ? ' was' : 's were')
+        + ' moved off their preferred pool to keep the pools even. Change them below if you would rather not.');
+    }
+    if (unavailCount) {
+      notes.push(unavailCount + ' team' + (unavailCount === 1 ? '' : 's')
+        + ' asked for a pool this draw does not have, so ' + (unavailCount === 1 ? 'it was' : 'they were')
+        + ' placed in the smallest pool. Add that pool first if you want to honour the request.');
+    }
+    this.setState({ importRows: rows, importMode: mode, importNote: notes.join(' ') });
+  }
+
+  onImportMode(mode) {
+    if (mode === 'replace' && this.importHasResults()) return;
+    this.buildImportRows(mode);
+  }
+
+  onImportRowPool(code, poolId) {
+    this.setState((s) => ({
+      importRows: (s.importRows || []).map((r) => (r.code === code ? { ...r, poolId, moved: false } : r)),
+    }));
+  }
+
+  onConfirmImport() {
+    const s = this.state;
+    const draw = s.editorDraw;
+    if (!draw) return;
+    const mode = s.importMode || 'add';
+    const rows = (s.importRows || []).filter((r) => !r.skip && r.poolId);
+
+    // The name map rides inside the draw, exactly the way `pitches` does, so
+    // publish-schedule carries it to the public copy with no backend change.
+    const names = { ...(draw.teamNames || {}) };
+    rows.forEach((r) => { if (r.name) names[r.code] = r.name; });
+
+    const pools = (draw.pools || []).map((p) => {
+      const teams = mode === 'replace' ? [] : [...(p.teams || [])];
+      rows.forEach((r) => { if (r.poolId === p.id && teams.indexOf(r.code) < 0) teams.push(r.code); });
+      return { ...p, teams };
+    });
+
+    this.setState({
+      editorDraw: { ...draw, pools, teamNames: names },
+      importOpen: false,
+      editorMsg: 'Imported ' + rows.length + ' team' + (rows.length === 1 ? '' : 's') + ' into the editor.'
+        + (mode === 'replace' ? ' Press "Regenerate from pool" on each pool to rebuild its matches.' : '')
+        + ' Nothing is saved until you press Save draw.',
+    });
+  }
+
+  onCancelImport() { this.setState({ importOpen: false }); }
+
   toggleRegTeam(key) {
     this.setState((s) => ({ regExpanded: { ...s.regExpanded, [key]: !s.regExpanded[key] } }));
   }
@@ -1479,7 +1677,7 @@ class Component extends DCLogic {
         const q = r.rank <= this._advance(st);
         return {
           ...r,
-          team: (s.api ? s.api.teamLabel(r.team) : r.team),
+          team: (s.api ? s.api.teamLabel(r.team, s.selectedAgeId) : r.team),
           marginText: (r.margin > 0 ? '+' : '') + r.margin,
           rankColor: q ? '#3bd070' : '#7f8794',
           rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
@@ -1497,7 +1695,7 @@ class Component extends DCLogic {
         const r = g.result || {};
         const hasScore = r.homeScore != null;
         return {
-          home: g.home || 'TBD', away: g.away || 'TBD',
+          home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
           homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
           awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
           homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
@@ -1519,7 +1717,7 @@ class Component extends DCLogic {
       const db = st.doubleBracket;
       const awardRow = (g, tier, color) => {
         const ready = !!(g.winner && g.home && g.away);
-        return { tier, color, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+        return { tier, color, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
       };
       awardsSummary = [
         awardRow(db.top.cup, 'Cup', '#f5c518'),
@@ -1558,7 +1756,7 @@ class Component extends DCLogic {
         const B = st.tables[st.pools[1].id] || [];
         const ordinal = (n) => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
         const mk = (seed, row, poolLabel, bracket) => (!row ? null : {
-          seed, team: row.team, poolLabel, rankLabel: ordinal(row.rank), bracket,
+          seed, team: this._tn(row.team), poolLabel, rankLabel: ordinal(row.rank), bracket,
           bracketColor: bracket === 'Top Bracket' ? '#3bd070' : '#E11B22',
         });
         knockoutSeeds = [
@@ -1585,7 +1783,7 @@ class Component extends DCLogic {
           const g = rnd.games[0] || {};
           const meta = tierMeta[rnd.round];
           const ready = !!(g.winner && g.home && g.away);
-          return { ...meta, ready, winner: ready ? g.winner : null, runnerUp: ready ? (g.winner === g.home ? g.away : g.home) : null };
+          return { ...meta, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
         })
         .map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
     }
@@ -1760,6 +1958,40 @@ class Component extends DCLogic {
       };
     }) : [];
 
+    // ---- registered-teams import ----
+    const importAgeMeta = (s.ageGroups || []).find((a) => a.id === s.editorAgeId);
+    const importSrc = this.importSourceTeams();
+    const importPrefCount = importSrc.filter((r) => /[A-D]/i.test(String(r.preferredPool || ''))).length;
+    const importResults = this.importHasResults();
+    const importPoolOpts = ((s.editorDraw && s.editorDraw.pools) || []).map((p) => ({ id: p.id, name: p.name }));
+    const importSummary = importSrc.length
+      ? (importSrc.length + ' registered for ' + ((importAgeMeta && importAgeMeta.name) || 'this age group')
+         + ' · ' + importPrefCount + ' with a pool preference')
+      : 'No team registrations found for this age group yet.';
+    const importModeBtn = (on) => 'flex:1;padding:11px 14px;border-radius:9px;font-weight:700;font-size:13px;'
+      + 'cursor:pointer;color:#fff;border:1.5px solid ' + (on ? '#E11B22' : 'rgba(255,255,255,0.16)')
+      + ';background:' + (on ? 'rgba(225,27,34,0.12)' : 'transparent');
+    const importRowsView = (s.importRows || []).map((r) => ({
+      code: r.code,
+      name: r.name || r.club,
+      pref: r.pref
+        ? (/^\s*[A-D]\s*$/i.test(r.pref)
+            ? ('Wants Pool ' + r.pref.trim().toUpperCase() + (r.unavailable ? ' (not in this draw)' : ''))
+            : String(r.pref))
+        : 'No preference',
+      poolId: r.poolId,
+      poolOptions: importPoolOpts,
+      isSkipped: !!r.skip,
+      flagText: r.skip ? 'Already in draw' : (r.moved ? 'Moved' : (r.flag === 'in' ? 'In draw' : 'New')),
+      flagStyle: 'font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;'
+        + 'padding:3px 8px;border-radius:100px;white-space:nowrap;'
+        + (r.skip ? 'background:rgba(255,255,255,0.08);color:#8c8c93'
+          : r.moved ? 'background:rgba(201,134,26,0.22);color:#f0b45a'
+          : r.flag === 'in' ? 'background:rgba(255,255,255,0.1);color:#9aa0aa'
+          : 'background:rgba(23,163,74,0.2);color:#4ade80'),
+      onPoolChange: (e) => this.onImportRowPool(r.code, e.target.value),
+    }));
+
     // ---- fixture editor ----
     const knockoutRosterGroups = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => ({
       id: pool.id, name: pool.name,
@@ -1879,7 +2111,14 @@ class Component extends DCLogic {
       isAdminAll: !!(session && session.ageGroupId === '*'),
       adminAgeOptions: s.ageGroups,
       adminSelectedAgeId: s.adminSelectedAgeId || '',
-      onAdminAgeChange: (e) => { const id = e.target.value; this.setState({ adminSelectedAgeId: id }, () => this.loadAdmin(id)); },
+      onAdminAgeChange: (e) => {
+        const id = e.target.value;
+        /* The import review list is state, built for one age group. The summary
+           line above it is computed live, so leaving the panel open across a
+           change showed one group's count over another group's rows. Close it;
+           re-opening rebuilds against the group you are now on. */
+        this.setState({ adminSelectedAgeId: id, importOpen: false, importRows: [], importNote: '' }, () => this.loadAdmin(id));
+      },
 
       adminSelectedHasStandings, showScoresTabButton: adminSelectedHasStandings,
       isFestivalAdminGroup: !!(adminAgeMeta && !adminAgeMeta.hasStandings),
@@ -1962,6 +2201,26 @@ class Component extends DCLogic {
       bulkBusy: s.bulkBusy,
       bulkMsg: s.bulkMsg,
       poolCards, knockoutRosterGroups,
+
+      importOpen: !!s.importOpen,
+      importBusy: !!s.regBusy,
+      importSummary,
+      importNote: s.importNote || '',
+      importNoteShow: !!(s.importNote || ''),
+      importRowsView,
+      importRowsEmpty: !importRowsView.length,
+      importReplaceBlocked: importResults,
+      importReplaceStyle: importModeBtn((s.importMode || 'add') === 'replace'),
+      importAddStyle: importModeBtn((s.importMode || 'add') !== 'replace'),
+      importConfirmLabel: (() => {
+        const n = importRowsView.filter((r) => !r.isSkipped).length;
+        return 'Import ' + n + (n === 1 ? ' team' : ' teams');
+      })(),
+      onOpenImport: () => this.onOpenImport(),
+      onImportModeReplace: () => this.onImportMode('replace'),
+      onImportModeAdd: () => this.onImportMode('add'),
+      onConfirmImport: () => this.onConfirmImport(),
+      onCancelImport: () => this.onCancelImport(),
       knockoutRosterDragOver: (e) => e.preventDefault(),
       onSaveDraw: () => this.onSaveDraw(),
       onResetDraw: () => this.onResetDraw(),
@@ -2006,12 +2265,25 @@ class Component extends DCLogic {
     };
   }
 
+  /* Every team string that reaches the screen goes through teamLabel: it maps
+     a code to its club name and shortens "Abu Dhabi" to "AD". The brackets,
+     the knockout seeding list and the awards cards were printing the raw draw
+     value, which is why they read "Abu Dhabi Harlequins 1" while the pool
+     fixtures on the same page read "AD Harlequins 1". Compare on the RAW value
+     and only label on the way out - winner/home identity checks must not be
+     done on display strings. */
+  _tn(v) {
+    const api = this.state.api;
+    if (!v) return v;
+    return (api && api.teamLabel) ? api.teamLabel(v, this.state.selectedAgeId) : v;
+  }
+
   _fmtMatch(g) {
     const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
     const r = g.result || {};
     const hasScore = r.homeScore != null;
     return {
-      home: g.home || 'TBD', away: g.away || 'TBD',
+      home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
       homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
       awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
       homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),

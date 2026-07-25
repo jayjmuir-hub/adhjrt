@@ -417,7 +417,7 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    Tigers, Small Blacks) auto-split Pool A/B, kickoffs from 08:00, pitches
    default "TBD" until an organiser sets them via the pitch picker. Everything
    else waits on this.
-2. **Results nav link.** Line ~66 of `Quins JRT.dc.html` is still
+2. **Results nav link.** Line ~152 of `Quins JRT.dc.html` is still
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for "View live scores" — only once the draw is real, or placeholder
    pools go public.
@@ -427,10 +427,9 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)
-5. **`/app` header crest sits on a white tile.** `.crest` in `app.html` still
-   carries `background:#fff;padding:3px`, left over from when the crest was a
-   white-background JPEG. Now that it is the transparent PNG, dropping those two
-   properties would match the homepage's treatment. Purely a design call.
+
+(The `/app` header crest white-tile cleanup that used to be item 5 is done —
+`background:#fff;padding:3px` is gone from `.crest` in `app.html`.)
 
 ---
 

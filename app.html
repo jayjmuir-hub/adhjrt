@@ -55,7 +55,9 @@ header.top{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
 .brand{display:flex;align-items:center;gap:12px;text-align:left;padding:0;color:inherit}
 .brand:active{opacity:.7}
 .top-t,.top-s{display:block}
-.crest{width:38px;height:38px;border-radius:9px;background:#fff;padding:3px;flex:none}
+/* No white tile: the crest is a transparent PNG and sits straight on the bar,
+   the same treatment the homepage uses since the design refresh. */
+.crest{width:38px;height:38px;border-radius:9px;flex:none}
 .crest img{width:100%;height:100%;object-fit:contain;display:block}
 .top-t{font-family:'Anton';font-size:18px;letter-spacing:.5px;line-height:1}
 .top-s{font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px}
@@ -344,7 +346,8 @@ const S = {
   ageId:null, team:null,        // what you follow
   browseId:null,                // what Fixtures/Tables are showing
   fixtures:null, standings:null,// the BROWSED age group
-  followFx:null,                // the FOLLOWED age group â€” what Today reports on
+  followFx:null,                // the FOLLOWED age group — what Today reports on
+  fxTab:'fixtures',             // Fixtures tab shows 'fixtures' or 'results'
   onlyMine:true,                // Fixtures filter when a team is followed
 };
 
@@ -428,7 +431,7 @@ function teamsInAge(){
   return [...out].sort();
 }
 /* getFixtures() returns POOL teams as readable names (it runs them through
-   teamLabel) but knockout slots â€” and the standings tables â€” as codes. The
+   teamLabel) but knockout slots — and the standings tables — as codes. The
    followed team is stored as a code, so `m.home === S.team` was never true for
    a pool match: following a team quietly emptied the app. Normalise both sides
    through teamLabel, which maps a code to its name and leaves a name alone. */
@@ -479,7 +482,7 @@ async function load(agId){
   render();
 }
 
-/* Today's own copy â€” only needed once you browse away from what you follow. */
+/* Today's own copy — only needed once you browse away from what you follow. */
 async function loadFollowData(){
   const id = S.ageId;
   if (!id) { S.followFx = null; return; }
@@ -594,8 +597,8 @@ function followCard(){
   </div>`;
 }
 
-/* Rewrites only the four digit cells. The rest of the tab â€” and every button
-   on it â€” survives untouched between seconds. */
+/* Rewrites only the four digit cells. The rest of the tab — and every button
+   on it — survives untouched between seconds. */
 function tickCountdown(){
   if (!$('cd-d')) return;
   const diff = Math.max(0, KICKOFF.getTime() - Date.now());
@@ -643,7 +646,7 @@ function viewToday(){
     </div>`;
 
   const fx = S.followFx;
-  /* Knockout matches belong here too â€” on finals day the card above was
+  /* Knockout matches belong here too — on finals day the card above was
      naming a semi-final that these lists then refused to show. */
   const live = fx && !fx.awaitingPublication
     ? (fx.pool || []).concat((fx.knockout || []).filter(k => k.home || k.away)) : [];
@@ -657,18 +660,41 @@ function viewToday(){
   return hero + followCard() + (p === 'before' && !more ? practical : more + (p==='before' ? practical : ''));
 }
 
-/* ---------------- Fixtures ---------------- */
+/* ---------------- Fixtures & Results ---------------- */
+/* Played matches, most recent first. Every score is already on its fixture
+   row, but after a game people want "what just happened" without reading past
+   every match still to come. Honours the same team filter as Fixtures. */
+function resultsList(fx, showFilter){
+  let all = (fx.pool || []).concat((fx.knockout || []).filter(k => k.home || k.away));
+  if (showFilter && S.onlyMine) all = all.filter(isMine);
+  const played = all.filter(m => m.result).reverse();
+  if (!played.length) return `<div class="card"><div class="empty">
+      <b>No results yet</b>
+      <div>Scores appear here as soon as the age group managers enter them.</div>
+    </div></div>`;
+  return `<div class="card">${played.map(m => matchRow(m, S.browseId)).join('')}</div>`;
+}
+
 function viewFixtures(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Fixtures</div>${pills()}`;
+  const results = S.fxTab === 'results';
+  const head = `<div class="sec-t">${results ? 'Results' : 'Fixtures'}</div>${pills()}`;
   if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
-  if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
+  if (fx.awaitingPublication) return head + comingSoon(results ? 'Results' : 'Fixtures', S.browseId);
+
+  /* Two independent switches: WHAT you are looking at, and WHOSE matches. */
+  const modeSeg = `<div class="seg">
+      <button data-fxtab="fixtures" class="${!results?'on':''}">Fixtures</button>
+      <button data-fxtab="results" class="${results?'on':''}">Results</button>
+    </div>`;
 
   const showFilter = S.team && S.browseId === S.ageId;
   const seg = showFilter ? `<div class="seg">
       <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(tName(S.team))}</button>
       <button data-seg="all" class="${!S.onlyMine?'on':''}">All matches</button>
     </div>` : '';
+
+  if (results) return head + modeSeg + seg + resultsList(fx, showFilter) + teamKeyCard();
 
   let pool = fx.pool || [];
   if (showFilter && S.onlyMine) pool = pool.filter(isMine);
@@ -681,7 +707,7 @@ function viewFixtures(){
     `<div class="pool-h">${esc(k)}</div>${byPool[k].map(m=>matchRow(m,S.browseId)).join('')}`).join('');
 
   const ko = (fx.knockout || []).filter(k => k.home || k.away);
-  return head + seg
+  return head + modeSeg + seg
     + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
     + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId)).join('')}</div>` : '')
     + teamKeyCard();
@@ -750,6 +776,7 @@ function wire(){
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
+  document.querySelectorAll('[data-fxtab]').forEach(b => b.onclick = () => { S.fxTab = b.dataset.fxtab; render(); window.scrollTo(0,0); });
 }
 
 function act(a){
@@ -811,7 +838,7 @@ function signIn(){
   };
 }
 
-/* Every match id is "<ageGroupId>:<pool>:<i>-<j>" â€” the same convention the
+/* Every match id is "<ageGroupId>:<pool>:<i>-<j>" — the same convention the
    backend uses to re-derive permissions. Reading the age group off the id is
    what lets a match opened from Today be scored against its OWN group rather
    than whatever the Fixtures tab happens to be showing. */
@@ -934,7 +961,7 @@ function openMatch(id){
   if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
   /* U6 and U7 are festival groups (hasStandings:false). They still have
      fixtures, still have a manager who has to enter scores, and are still
-     followed by parents â€” so they belong in the app. Filtering them out here
+     followed by parents — so they belong in the app. Filtering them out here
      locked their managers out of it completely and left the Tables tab's own
      "festival age group" message unreachable. Only public STANDINGS hide
      them, and viewTables already handles that. */
@@ -950,7 +977,7 @@ function openMatch(id){
   await load(S.ageId);
 
   /* The countdown used to be driven by re-rendering the whole Today tab every
-     second, which threw away and rebuilt every button on it â€” a tap landing in
+     second, which threw away and rebuilt every button on it — a tap landing in
      the wrong frame hit an element that no longer existed and did nothing.
      Now only the digits are written, and a full render happens once, when the
      phase actually changes (before -> during -> after). */

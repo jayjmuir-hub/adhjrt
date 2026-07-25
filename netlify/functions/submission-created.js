@@ -163,7 +163,17 @@ exports.handler = async (event) => {
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range,
-      valueInputOption: 'USER_ENTERED',
+      /* RAW, not USER_ENTERED. USER_ENTERED tells Sheets to parse each value
+         as if a human had typed it, which did two bad things:
+           1. a leading "+" starts a formula, so "+971501234567" was evaluated
+              and stored as the number 971501234567 - the country-code prefix
+              silently vanished from every phone number.
+           2. the registration form is public, so anything a registrant typed
+              beginning with "=" landed as a LIVE formula in a sheet holding
+              children's names, DOBs and medical notes. IMPORTDATA/IMPORTXML in
+              a free-text box could pull that data out to an external URL.
+         RAW stores exactly what was submitted, as text. */
+      valueInputOption: 'RAW',
       requestBody: { values },
     });
 

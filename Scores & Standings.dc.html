@@ -992,6 +992,11 @@ class Component extends DCLogic {
     this.setState({ fixtures, drafts, adminSelectedAgeId: ageId });
     this.loadEditor(ageId);
     this.loadSpiritAward(ageId);
+    /* The fixture editor's "Registered teams" panel reads the same regTeams
+       the Registrations sub-tab does. Loading them only when that sub-tab was
+       opened meant anyone going straight to Edit fixtures was told there were
+       no registrations at all. Load once per session, whichever way in. */
+    if (!this.state.regLoaded && !this.state.regBusy) this.loadMyRegistrations();
   }
 
   async loadSpiritAward(agId) {
@@ -1610,11 +1615,30 @@ class Component extends DCLogic {
       return { ...p, teams };
     });
 
+    /* Replacing the rosters invalidates every existing match slot - they still
+       name the teams that were in those pools before. Left alone, the draw
+       reads as matches between teams that are no longer in the pool, while the
+       teams just imported have no matches at all. So rebuild the slots here.
+
+       Safe to do without asking: "replace" is refused outright once any result
+       exists (see importHasResults), so this can never discard a recorded
+       score. "Add" is left alone - it appends to pools that may already have
+       been played, and regenerating there WOULD destroy results. */
+    let slots = draw.slots || [];
+    if (mode === 'replace' && s.api) {
+      slots = pools.reduce(
+        (acc, p) => acc.concat(s.api.regeneratePoolSlots(s.editorAgeId, p.id, p.teams || [])),
+        []
+      );
+    }
+
     this.setState({
-      editorDraw: { ...draw, pools, teamNames: names },
+      editorDraw: { ...draw, pools, teamNames: names, slots },
       importOpen: false,
       editorMsg: 'Imported ' + rows.length + ' team' + (rows.length === 1 ? '' : 's') + ' into the editor.'
-        + (mode === 'replace' ? ' Press "Regenerate from pool" on each pool to rebuild its matches.' : '')
+        + (mode === 'replace'
+            ? ' Pool matches rebuilt to match the new rosters.'
+            : ' Press "Regenerate from pool" on any pool you changed to rebuild its matches.')
         + ' Nothing is saved until you press Save draw.',
     });
   }
@@ -1961,13 +1985,18 @@ class Component extends DCLogic {
     // ---- registered-teams import ----
     const importAgeMeta = (s.ageGroups || []).find((a) => a.id === s.editorAgeId);
     const importSrc = this.importSourceTeams();
-    const importPrefCount = importSrc.filter((r) => /[A-D]/i.test(String(r.preferredPool || ''))).length;
+    /* Must be a whole-string match on a single pool letter. /[A-D]/i matched
+       any a-d ANYWHERE, so "No preferenCe" counted as a stated preference and
+       the header always read "N of N with a pool preference". Same pattern the
+       per-row label below already uses. */
+    const importPrefCount = importSrc.filter((r) => /^\s*[A-D]\s*$/i.test(String(r.preferredPool || ''))).length;
     const importResults = this.importHasResults();
     const importPoolOpts = ((s.editorDraw && s.editorDraw.pools) || []).map((p) => ({ id: p.id, name: p.name }));
     const importSummary = importSrc.length
       ? (importSrc.length + ' registered for ' + ((importAgeMeta && importAgeMeta.name) || 'this age group')
          + ' · ' + importPrefCount + ' with a pool preference')
-      : 'No team registrations found for this age group yet.';
+      : (s.regLoaded ? 'No team registrations found for this age group yet.'
+                     : 'Checking the registration sheet…');
     const importModeBtn = (on) => 'flex:1;padding:11px 14px;border-radius:9px;font-weight:700;font-size:13px;'
       + 'cursor:pointer;color:#fff;border:1.5px solid ' + (on ? '#E11B22' : 'rgba(255,255,255,0.16)')
       + ';background:' + (on ? 'rgba(225,27,34,0.12)' : 'transparent');

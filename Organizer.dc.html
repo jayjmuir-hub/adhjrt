@@ -487,7 +487,10 @@ class Component extends DCLogic {
     const { tab, teams, players } = this.state;
     const rows = tab === 'teams' ? this._filteredTeams() : this._filteredPlayers();
     const headers = tab === 'teams'
-      ? ['Submitted At', 'Club', 'Team Name', 'Age Group', 'Head Coach Name', 'Head Coach Email', 'Head Coach Mobile', 'Manager Name', 'Manager Email', 'Manager Mobile', 'Num Players', 'Notes']
+      // 'Preferred Pool' was missing here while the value row below writes
+      // r.preferredPool in 5th position — so every column from Head Coach Name
+      // onward sat under the wrong heading, and Notes had no heading at all.
+      ? ['Submitted At', 'Club', 'Team Name', 'Age Group', 'Preferred Pool', 'Head Coach Name', 'Head Coach Email', 'Head Coach Mobile', 'Manager Name', 'Manager Email', 'Manager Mobile', 'Num Players', 'Notes']
       : ['Submitted At', 'Player Name', 'DOB', 'Club', 'Age Group', 'Parent Name', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent', 'Play-Up Consent'];
     const lines = [headers.join(',')];
     rows.forEach((r) => {

@@ -1604,14 +1604,36 @@ class Component extends DCLogic {
     const mode = s.importMode || 'add';
     const rows = (s.importRows || []).filter((r) => !r.skip && r.poolId);
 
+    /* A team code has to appear in exactly ONE pool - it is the team's identity
+       in the standings, the knockout and every match id. Two registration rows
+       can carry the same code: the sheet has no uniqueness constraint, a code
+       can be edited by hand, and two clubs registering in the same moment can
+       both be issued one. Left unguarded the same code lands in two pools with
+       a full set of fixtures in each, so the team appears in two tables and
+       results attach to whichever match id was written last.
+
+       The old check was `teams.indexOf(r.code) < 0`, which only looked inside
+       the pool being built - it never saw the code sitting in a different one. */
+    const claimed = new Set();
+    if (mode !== 'replace') {
+      (draw.pools || []).forEach((p) => (p.teams || []).forEach((t) => claimed.add(t)));
+    }
+    const dupCodes = [];
+    const usableRows = [];
+    rows.forEach((r) => {
+      if (claimed.has(r.code)) { dupCodes.push(r.code); return; }
+      claimed.add(r.code);
+      usableRows.push(r);
+    });
+
     // The name map rides inside the draw, exactly the way `pitches` does, so
     // publish-schedule carries it to the public copy with no backend change.
     const names = { ...(draw.teamNames || {}) };
-    rows.forEach((r) => { if (r.name) names[r.code] = r.name; });
+    usableRows.forEach((r) => { if (r.name) names[r.code] = r.name; });
 
     const pools = (draw.pools || []).map((p) => {
       const teams = mode === 'replace' ? [] : [...(p.teams || [])];
-      rows.forEach((r) => { if (r.poolId === p.id && teams.indexOf(r.code) < 0) teams.push(r.code); });
+      usableRows.forEach((r) => { if (r.poolId === p.id && teams.indexOf(r.code) < 0) teams.push(r.code); });
       return { ...p, teams };
     });
 
@@ -1635,10 +1657,20 @@ class Component extends DCLogic {
     this.setState({
       editorDraw: { ...draw, pools, teamNames: names, slots },
       importOpen: false,
-      editorMsg: 'Imported ' + rows.length + ' team' + (rows.length === 1 ? '' : 's') + ' into the editor.'
+      editorMsg: 'Imported ' + usableRows.length + ' team' + (usableRows.length === 1 ? '' : 's') + ' into the editor.'
         + (mode === 'replace'
             ? ' Pool matches rebuilt to match the new rosters.'
             : ' Press "Regenerate from pool" on any pool you changed to rebuild its matches.')
+        /* Never skip one silently - a duplicate code means two rows in the
+           registration sheet are fighting over one identity, and only an
+           organiser can decide which is which. */
+        + (dupCodes.length
+            ? ' SKIPPED ' + dupCodes.length + ' duplicate team code'
+              + (dupCodes.length === 1 ? '' : 's') + ' (' + dupCodes.join(', ') + ')'
+              + ' — that code is already in this draw, so the entry was left out.'
+              + ' Two registrations are sharing a code: fix the Team Name column'
+              + ' in the Team Registrations sheet, then import again.'
+            : '')
         + ' Nothing is saved until you press Save draw.',
     });
   }

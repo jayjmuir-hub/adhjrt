@@ -17,7 +17,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
 /* ============================================================
@@ -95,8 +95,11 @@ main{padding:16px}
 /* ---------- building blocks ---------- */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);
       border:1px solid var(--line);overflow:hidden}
+/* The site marks every section with a short green rule before the label
+   (.fmt-eyebrow .rule on the homepage). Same device, scaled to a phone. */
 .sec-t{font-family:'Anton';font-size:19px;text-transform:uppercase;letter-spacing:.4px;
-       margin:22px 2px 10px;color:var(--ink)}
+       margin:22px 2px 10px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.sec-t::before{content:"";flex:none;width:26px;height:4px;border-radius:2px;background:var(--green)}
 .sec-t:first-child{margin-top:4px}
 .muted{color:var(--muted)}
 .hero{background:linear-gradient(135deg,var(--ink),#1d1d22);color:#fff;border-radius:var(--radius);
@@ -124,7 +127,10 @@ main{padding:16px}
 .pill-row::-webkit-scrollbar{display:none}
 .pill{flex:none;padding:8px 14px;border-radius:100px;font-weight:700;font-size:13px;
       border:1.5px solid var(--line);background:#fff;color:var(--muted);white-space:nowrap}
+/* Red for day one, green for day two — the same coding the homepage format
+   cards use for Saturday and Sunday. */
 .pill.on{background:var(--red);border-color:var(--red);color:#fff}
+.pill.on.sun{background:var(--green);border-color:var(--green)}
 
 /* match rows */
 .mrow{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;
@@ -259,6 +265,41 @@ tr.me td{background:#fffdf4;font-weight:800}
             border:1.5px solid var(--line);background:#fff;color:var(--muted)}
 .seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 
+/* ---- carried over from the main site ---------------------------------- */
+
+/* Barlow Semi Condensed is the site's voice for small uppercase labels:
+   eyebrows, day sub-labels, the age chips on the format cards. Anton stays
+   for display type and numbers, Barlow for body copy. */
+.hero-k,.tcard-k,.tcard-cta,.cd span,.kick span,.tile span,.pool-h,.chip,
+.cs-pill,.pill,.btn,label,th,.daytag-d{
+  font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif}
+/* Semi Condensed runs narrow, so the site opens the tracking up to match. */
+.hero-k,.tcard-k,.pool-h,.cs-pill,.tile span{letter-spacing:.14em}
+.pill{letter-spacing:.03em}
+.btn{letter-spacing:.1em}
+/* Score-entry labels are sentence case, not micro-caps — leave them Barlow. */
+.sb-row label{font-family:'Barlow',system-ui,sans-serif;letter-spacing:0}
+
+/* Day tag, from the homepage format cards: a solid day marker in the day's
+   colour, then the date in the eyebrow voice. */
+.daytag{display:flex;align-items:center;gap:10px;margin:0 2px 12px}
+.daytag-n{font-family:'Anton';font-size:12px;letter-spacing:.14em;color:#fff;
+          background:var(--red);padding:5px 10px;border-radius:6px}
+.daytag.sun .daytag-n{background:var(--green)}
+.daytag-d{font-weight:700;text-transform:uppercase;font-size:12px;color:var(--muted)}
+
+/* Venue map, opened full width in a sheet. */
+.vmap{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
+
+/* The site fades sections up as they arrive. Same idea on a tab change only,
+   never on a data refresh — a manager entering scores should not watch the
+   screen animate every time a result lands. */
+@keyframes appFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.main-anim{animation:appFadeUp .22s ease-out both}
+@media(prefers-reduced-motion:reduce){.main-anim{animation:none}}
+
+::selection{background:var(--red);color:#fff}
+
 </style>
 </head>
 <body>
@@ -322,6 +363,7 @@ const orgApi = await import('/organizer-data.js');
 const DAY1 = '2026-11-07', DAY2 = '2026-11-08';
 const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g'];
 const dayOf = (agId) => SATURDAY.includes(agId) ? DAY1 : DAY2;
+const isSat = (agId) => SATURDAY.includes(agId);
 
 const KICKOFF = new Date(DAY1 + 'T08:00:00+04:00');
 const END     = new Date(DAY2 + 'T20:00:00+04:00');
@@ -453,7 +495,7 @@ function buildNav(){
     `<button data-go="${t.id}" class="${S.view===t.id?'on':''}">${t.label}</button>`).join('');
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
 }
-function go(v){ S.view = v; buildNav(); render(); window.scrollTo(0,0); }
+function go(v){ S.view = v; buildNav(); render(true); window.scrollTo(0,0); }
 $('goHome').onclick = () => { closeSheet(); go('today'); };
 
 /* ---------------- sheet ---------------- */
@@ -512,7 +554,18 @@ async function refresh(){
 /* ---------------- shared bits ---------------- */
 function pills(){
   return `<div class="pill-row">${S.ageGroups.map(a =>
-    `<button class="pill ${a.id===S.browseId?'on':''}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
+    `<button class="pill ${a.id===S.browseId?'on':''} ${isSat(a.id)?'':'sun'}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
+}
+
+/* Which of the two days this age group plays on. The app has always known
+   (dayOf drives the countdown) but never showed it. */
+function dayTag(agId){
+  if (!agId) return '';
+  const sat = isSat(agId);
+  return `<div class="daytag ${sat?'':'sun'}">
+      <span class="daytag-n">DAY ${sat?'01':'02'}</span>
+      <span class="daytag-d">${sat?'Saturday 7 November':'Sunday 8 November'}</span>
+    </div>`;
 }
 function comingSoon(what, agId){
   return `<div class="card"><div class="empty">
@@ -544,12 +597,19 @@ function matchRow(m, agId){
 }
 
 /* ---------------- Today ---------------- */
-function render(){
+/* animate=true only on a deliberate tab change. A data refresh re-renders too,
+   and animating that would make the screen twitch every time a score lands. */
+function render(animate){
   paintRole();
   const m = $('main');
   m.innerHTML = S.view==='today' ? viewToday()
               : S.view==='fixtures' ? viewFixtures()
               : S.view==='tables' ? viewTables() : viewMore();
+  if (animate) {
+    m.classList.remove('main-anim');
+    void m.offsetWidth;            // force a reflow so the animation restarts
+    m.classList.add('main-anim');
+  }
   wire();
 }
 
@@ -678,7 +738,7 @@ function resultsList(fx, showFilter){
 function viewFixtures(){
   const fx = S.fixtures;
   const results = S.fxTab === 'results';
-  const head = `<div class="sec-t">${results ? 'Results' : 'Fixtures'}</div>${pills()}`;
+  const head = `<div class="sec-t">${results ? 'Results' : 'Fixtures'}</div>${pills()}${dayTag(S.browseId)}`;
   if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (fx.awaitingPublication) return head + comingSoon(results ? 'Results' : 'Fixtures', S.browseId);
 
@@ -716,7 +776,7 @@ function viewFixtures(){
 /* ---------------- Tables ---------------- */
 function viewTables(){
   const st = S.standings;
-  const head = `<div class="sec-t">Tables</div>${pills()}`;
+  const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}`;
   if (!st) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
   if (!st.ageGroup.hasStandings) return head +
@@ -747,6 +807,7 @@ function viewMore(){
       <div class="row"><div><b>Zayed Sports City</b><small>Abu Dhabi &middot; enter via Gate 16</small></div></div>
       <div class="row"><div><b>Pitches A, B, C &amp; D</b><small>Follow the Quins signage from the Tennis Centre</small></div></div>
       <div class="row"><div><b>Sat 7 &amp; Sun 8 November 2026</b><small>Pools kick off 8:00am</small></div></div>
+      <button class="row" data-act="venuemap"><div><b>Pitch map</b><small>The venue layout, as on the website</small></div>${ICON.chev}</button>
     </div>
 
     <div class="sec-t">Following</div><div class="card">
@@ -802,6 +863,10 @@ function act(a){
   if (a === 'signin')  return signIn();
   if (a === 'signout') { api.logout(); try{orgApi.logout();}catch(e){} S.session=null; render(); toast('Signed out'); return; }
   if (a === 'tools')   { location.href = '/scores'; return; }
+  if (a === 'venuemap') return openSheet('Venue map',
+    `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
+     <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">
+       Zayed Sports City, Abu Dhabi · enter via Gate 16.</p>`);
 }
 
 /* Two-stage: age group always, then narrow to a team once the draw exists. */

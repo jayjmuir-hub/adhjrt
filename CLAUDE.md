@@ -162,9 +162,9 @@ London Harlequins magenta/blue. Fonts: Anton (display), Barlow (body).
 **Two crest files exist — use the right one.** `assets/crest.png` is the current
 transparent-background logo: the homepage nav/about/organiser crests and the
 homepage `og:image`/`twitter:image`. `assets/crest.jpeg` is the older
-white-background version, still used by `/scores` (favicon + social images) and
-the `/app` header. Both are real files. Check which one a page already uses
-before changing a reference — a broken crest reference once killed every social
+white-background version. As of 25 Jul 2026 nothing references it: the homepage,
+`/scores` and `/app` all use `crest.png`. It is kept only as the original.
+Check what a page actually uses before changing a reference — a broken crest reference once killed every social
 share preview.
 
 ---
@@ -197,6 +197,20 @@ share preview.
 - **`dc-import` forwards its attributes to the imported component as reactive
   props.** The child reads `this.props.X` and gets `componentDidUpdate(prevProps)`
   on change — the channel the homepage uses to drive the embedded Scores app.
+- **Fixtures mix team NAMES and team CODES, and it is not obvious.**
+  `getFixtures()` runs pool teams through `teamLabel()`, so `pool[].home/away`
+  come back as readable names ("AD Harlequins 1"), while `knockout[].home/away`
+  and every `standings.tables[]` row stay raw codes ("ADH1"). Anything comparing
+  a team from one source against a team from another must normalise through
+  `teamLabel()` first — a plain `===` silently matches nothing and the UI just
+  looks empty. This is exactly what broke "follow my team" in `/app`; the fix
+  there is the `sameTeam()` helper in `app.html`.
+- **`/app` holds TWO age groups at once** — `S.ageId` (the group you follow,
+  feeding the Today tab via `S.followFx`) and `S.browseId` (the pill you tapped,
+  feeding Fixtures/Tables via `S.fixtures`). They are deliberately separate; one
+  shared slot meant browsing another group blanked Today. A match opened from
+  either place derives its own age group from the match id (`ageOfMatch()`), the
+  same way the backend does.
 
 ---
 
@@ -367,11 +381,10 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)
-5. **Crest inconsistent across pages.** The homepage moved to the transparent
-   `assets/crest.png`; `/scores` (favicon + `og:image`/`twitter:image`) and the
-   `/app` header still point at the old white-background `assets/crest.jpeg`.
-   Cosmetic, nothing is broken. Batch it into the next production deploy rather
-   than spending 15 credits on it alone.
+5. **`/app` header crest sits on a white tile.** `.crest` in `app.html` still
+   carries `background:#fff;padding:3px`, left over from when the crest was a
+   white-background JPEG. Now that it is the transparent PNG, dropping those two
+   properties would match the homepage's treatment. Purely a design call.
 
 ---
 

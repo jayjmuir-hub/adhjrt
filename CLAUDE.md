@@ -406,8 +406,7 @@ also behind a site-wide Netlify password, so previews prompt for it too.
   it used to be a ~168 KB inline base64 `data:` blob that bloated
   `Quins JRT.dc.html` to ~300 KB. Extracted, the homepage is ~133 KB.
   **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/`
-  files. It keeps the page light, and it keeps the file inside the limits of the
-  fallback write path (see "How Claude writes to GitHub" below).
+  files. It keeps the page light and the `.dc.html` fast to load.
 ---
 
 ## Outstanding
@@ -435,13 +434,13 @@ also behind a site-wide Netlify password, so previews prompt for it too.
 
 ## How Claude writes to GitHub (rewritten 25 Jul 2026)
 
-**Primary path: real `git` on Jay's PC, driven through the desktop bridge.**
-Fallback: the local GitHub MCP server. Never the account-level "GitHub
-Integration" connector — that one is OAuth/read-only and 403s on every write,
-because Anthropic's GitHub app can't write to a PUBLIC repo by design. It is
-only good for reading.
+**The only write path: real `git` on Jay's PC, driven through the desktop
+bridge.** There is no MCP-server fallback — see the tombstone in §2 below. Never
+use the account-level "GitHub Integration" connector either — that one is
+OAuth/read-only and 403s on every write, because Anthropic's GitHub app can't
+write to a PUBLIC repo by design. It is only good for reading.
 
-### 1. Primary — local git via Desktop Commander (use this)
+### 1. Local git via Desktop Commander (this is how writes happen)
 
 Jay's PC (`jay-pc`) has a clone at `C:\Users\jayjm\GitHub\adhjrt`, remote
 `origin` over HTTPS, credential helper = Git Credential Manager with the
@@ -451,10 +450,10 @@ Commander MCP extension exposes a real shell on his machine as
 Cowork task started "On your computer" (verified from a cloud session,
 25 Jul 2026 — pushed and deleted a test branch).
 
-Why it's the primary path: git moves bytes on disk and over the git protocol, so
-file content never passes through the model's context window. That means **any
-file size, and binary files (images) included** — the two things the MCP write
-tools cannot do.
+Why git: it moves bytes on disk and over the git protocol, so file content never
+passes through the model's context window. That means **any file size, and
+binary files (images) included** — the two things a text-through-context
+transfer could never do.
 
 Typical run:
 
@@ -469,27 +468,16 @@ cmd /c "cd /d C:\Users\jayjm\GitHub\adhjrt && set GIT_TERMINAL_PROMPT=0 && git c
   `edit_block` over retyping a whole file.
 - Verify with `git log`/`git ls-remote`, not `raw.githubusercontent.com`.
 
-### 2. Fallback — the local GitHub MCP server
+### 2. The removed GitHub MCP server — do not re-add or use it
 
-If Desktop Commander isn't available on the bridged PC, the GitHub MCP server
-tools (`mcp__remote-devices__github__create_or_update_file`, `push_files`,
-`create_branch`, …) still work from any session. Their limits, measured:
-
-- Any tool result coming back into context is capped ~25k tokens (~100 KB), so a
-  300 KB file can't even be read back.
-- Writing requires holding the whole file as a string parameter — circular with
-  the read limit for big files.
-- **Text only.** Probe: `content:"SGk="` stored the literal text `SGk=`, not
-  decoded bytes. Images cannot go through at any size.
-- A helper sub-agent (its own fresh context) can push a ~133 KB text file
-  byte-perfect in one call — the workaround for large *text* files.
-
-That server needs Node.js and a `repo`-scoped PAT sitting in the desktop app's
-config file. **With the git path working it is redundant** — prefer removing it
-and the token rather than maintaining a live write credential in a config file.
-Never ask Jay for the raw token, never accept it pasted into chat, and never
-print the config file's contents (it echoes the token — this has happened once;
-the fix is to rotate the token at github.com/settings/tokens).
+A local GitHub MCP server (tools `mcp__remote-devices__github__*`) once sat here
+as a write fallback. It was **removed on 25 Jul 2026**: git covers every case,
+and the server meant a live `repo`-scoped write token sitting in
+`claude_desktop_config.json`, which is exactly what we didn't want. Its tools may
+still surface in a session's deferred-tool list — **ignore them. They will fail
+(the token is gone and the server entry is deleted) and must not be reinstated.**
+Standing rule regardless: never print `claude_desktop_config.json`, never ask Jay
+for a raw token, never accept one pasted into chat.
 
 ### 3. Setting up a new PC
 
@@ -533,6 +521,6 @@ Everything here is per-machine. On a new personal PC, in order:
   re-merge. Branch fresh off current `main` — don't reopen old feature branches
   (`design/meet-organisers` PR #4, `fix/single-pool-width` PR #5 are both done).
 - **`raw.githubusercontent.com` serves stale copies for minutes** and ignores
-  cache-busting params. Verify with plain `git` or `github__get_file_contents`.
+  cache-busting params. Verify with plain `git`.
 - **The whole Netlify site sits behind a site-wide password**, so previews prompt
   for it too. That is Jay's setting, not a fault.

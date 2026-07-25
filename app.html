@@ -193,12 +193,14 @@ tr.me td:nth-child(1),tr.me td:nth-child(2){background:#fffdf4}
   .tscroll th:nth-child(8),.tscroll td:nth-child(8){display:none}
   .tscroll th,.tscroll td{padding-left:4px;padding-right:4px}
 }
-.keygrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-@media(max-width:420px){ .keygrid{grid-template-columns:1fr} }
-.keyrow{display:flex;align-items:center;gap:10px;background:#fff;padding:11px 13px}
-.keycode{flex:none;min-width:52px;text-align:center;background:var(--ink);color:#fff;font-family:'Anton';
-         font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px}
-.keyname{font-size:13.5px;color:var(--text)}
+/* Was nine full-width rows — on a phone, taller than the table it was there
+   to explain. Now a wrapped row of small chips. */
+.keygrid{display:flex;flex-wrap:wrap;gap:6px;background:#fff;padding:11px 12px}
+.keyrow{display:inline-flex;align-items:center;gap:6px;background:var(--paper);
+        border:1px solid var(--line);border-radius:100px;padding:3px 10px 3px 3px}
+.keycode{flex:none;text-align:center;background:var(--ink);color:#fff;font-family:'Anton';
+         font-size:10.5px;letter-spacing:.4px;padding:3px 6px;border-radius:5px}
+.keyname{font-size:11.5px;color:var(--text);white-space:nowrap}
 
 /* forms + sheet */
 .sheet-scrim{position:fixed;inset:0;background:rgba(12,12,14,.5);z-index:60;opacity:0;
@@ -601,8 +603,20 @@ function comingSoon(what, agId){
 function teamKeyCard(){
   const list = (api.teamKey ? api.teamKey() : []);
   if (!list.length) return '';
+  /* Only explain codes that are actually visible. A custom draw carries full
+     club names everywhere, so there is no code to decode and the card drops out
+     entirely rather than listing nine codes that appear nowhere. */
+  const shown = new Set();
+  const fx = S.fixtures;
+  if (fx) (fx.pool || []).concat(fx.knockout || []).forEach(m => {
+    if (m.home) shown.add(m.home);
+    if (m.away) shown.add(m.away);
+  });
+  ((S.standings || {}).pools || []).forEach(p => (p.teams || []).forEach(t => shown.add(t)));
+  const used = list.filter(k => shown.has(k.code));
+  if (!used.length) return '';
   return `<div class="sec-t">Team key</div><div class="card"><div class="keygrid">
-    ${list.map(k => `<div class="keyrow"><span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></div>`).join('')}
+    ${used.map(k => `<span class="keyrow"><span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></span>`).join('')}
   </div></div>`;
 }
 
@@ -618,7 +632,7 @@ function matchRow(m, agId, hideScore){
     + (r && hideScore ? `<span class="chip chip-ft">Full time</span>` : '');
   return `<button class="mrow ${mine?'mine':''}" data-match="${esc(m.id)}">
     <div><div class="mtime">${esc(m.time || '')}</div><div class="mpitch">${esc(m.pitch || 'TBD')}</div></div>
-    <div><div class="mteams">${esc(m.home || 'TBD')} <span class="muted">v</span> ${esc(m.away || 'TBD')}</div>
+    <div><div class="mteams">${esc(m.home ? tName(m.home) : 'TBD')} <span class="muted">v</span> ${esc(m.away ? tName(m.away) : 'TBD')}</div>
       <div class="mmeta">${meta}</div></div>
     <div>${r && !hideScore ? `<span class="mscore">${r.homeScore}&ndash;${r.awayScore}</span>` : ICON.chev}</div>
   </button>`;
@@ -987,8 +1001,8 @@ function openMatch(id){
   };
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home||'TBD')} v ${esc(m.away||'TBD')}</b>
-        <small>${esc(m.home?tName(m.home):'TBD')} v ${esc(m.away?tName(m.away):'TBD')}<br>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
+      <div class="row"><div><b>${esc(m.home?tName(m.home):'TBD')} v ${esc(m.away?tName(m.away):'TBD')}</b>
+        <small>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
         <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
     </div>`;
@@ -1013,12 +1027,12 @@ function openMatch(id){
     </div>`;
 
   openSheet('Enter score', head + `<div id="scErr"></div>
-    ${sideInputs('home', m.home || 'Home')}
-    ${sideInputs('away', m.away || 'Away')}
+    ${sideInputs('home', m.home ? tName(m.home) : 'Home')}
+    ${sideInputs('away', m.away ? tName(m.away) : 'Away')}
     <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
-      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home||'Home')} awarded the match</option>
-      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away||'Away')} awarded the match</option>
+      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tName(m.home):'Home')} awarded the match</option>
+      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tName(m.away):'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
     <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>
     ${r ? `<button class="btn btn-o" id="sclr" style="margin-top:10px;color:#c0392b">Clear result</button>

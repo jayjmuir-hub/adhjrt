@@ -1174,14 +1174,46 @@ class Component extends DCLogic {
   onRemoveKnockoutSlot(slotId) {
     this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: (s.editorDraw.knockout || []).filter((sl) => sl.id !== slotId) } }));
   }
+  /* Knockout slot ids are STABLE - u16b:CUP, u16b:TSF1 - while pool slot ids
+     carry a timestamp and change on every rebuild. So a score recorded against
+     the Cup Final stays keyed to "u16b:CUP" even after the bracket is rebuilt
+     with two different teams in that final, and the new final then shows as
+     already played, with someone else's score against it.
+
+     Only ever called for slots whose matchup actually changed, or that the
+     organiser has explicitly asked to clear. Best effort per id: one failure
+     must not stop the rest, and the draw edit still stands either way. */
+  async clearResultsFor(ids) {
+    const { api, session } = this.state;
+    if (!api || !session || !ids || !ids.length) return 0;
+    let cleared = 0;
+    for (const id of ids) {
+      try { const r = await api.clearResult(id, session); if (!r || r.ok !== false) cleared++; }
+      catch (e) { console.warn('could not clear result for', id, e && e.message); }
+    }
+    return cleared;
+  }
+
   async onRegenerateKnockout() {
-    this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
+    this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits, and clears the score of any knockout match whose teams change.', async () => {
       const fresh = await this.state.api.autoKnockoutSlots(this.state.editorAgeId, this.state.session);
+      const before = this.state.editorDraw.knockout || [];
+      /* Reseeding reuses the same slot ids, so a stale score would silently
+         reattach to a different matchup. Clear only the ones that actually
+         changed - a final whose teams are unchanged keeps its result. */
+      const changed = before
+        .filter((sl) => { const f = fresh.find((x) => x.id === sl.id); return !f || f.home !== sl.home || f.away !== sl.away; })
+        .map((sl) => sl.id);
+      await this.clearResultsFor(changed);
       this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: fresh } }));
     });
   }
   onClearKnockout() {
-    this.confirmModal('Clear all knockout matches for this age group? You can generate them again from the standings afterwards. (Remember to Save changes.)', () => {
+    this.confirmModal('Clear all knockout matches for this age group, and any scores already recorded against them? You can generate them again from the standings afterwards. (Remember to Save changes.)', async () => {
+      /* Without this the scores stay in the store keyed to ids that come back
+         the moment the bracket is regenerated. */
+      const ids = (this.state.editorDraw.knockout || []).map((sl) => sl.id);
+      await this.clearResultsFor(ids);
       this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: [] } }));
     });
   }

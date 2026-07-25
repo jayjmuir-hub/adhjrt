@@ -92,8 +92,16 @@ export function teamLabel(code, agId) {
 }
 
 /* The short form, for the two places a full name does not fit: the app's
-   pinned standings column and the knockout bracket cells. */
-export function teamShort(code) { return code || ''; }
+   pinned standings column and the knockout bracket cells.
+
+   Normally this is just the code. But a draw built by hand holds full club
+   names in the same slot, and those must still be shortened - otherwise the
+   standings table reads "Abu Dhabi Harlequins 1" while every fixture row on
+   the same screen reads "AD Harlequins 1". The replace is a no-op on a real
+   code, so this is safe either way. */
+export function teamShort(code) {
+  return String(code || '').replace(/Abu Dhabi/gi, 'AD');
+}
 /* Mirrors netlify/functions/_scoring.js so the entry forms can build
    themselves. The server re-derives the total from these same rules, so this
    copy only decides which inputs are shown — it can never change a score. */

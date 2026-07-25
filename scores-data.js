@@ -692,7 +692,13 @@ export async function getFixtures(agId) {
   const knockoutSlots = resolveKnockout(ag, draw, override, tables, store);
   const knockout = knockoutSlots.map((s) => ({
     id: s.id, stage: 'knockout', round: s.round,
-    home: s.home || null, away: s.away || null,
+    /* Pool teams are run through teamLabel() a few lines up; knockout slots
+       were not. With a draw that carries full club names, the pool rows read
+       "AD Harlequins 1" while the knockout read "Abu Dhabi Harlequins 1".
+       teamLabel maps a code to its name AND shortens "Abu Dhabi" for any club,
+       and is idempotent, so it is safe to apply to either form. Display only:
+       the fixture editor reads getDraw(), not this. */
+    home: s.home ? teamLabel(s.home) : null, away: s.away ? teamLabel(s.away) : null,
     pitch: s.pitch || 'TBD',
     result: store[s.id] || null,
   }));

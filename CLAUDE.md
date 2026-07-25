@@ -157,9 +157,15 @@ conceded → mini-league for 3+ → coin toss.
 ## Brand
 
 Black base, red `#E11B22`, green `#17A34A`, white. From the Akuma kit — **not**
-London Harlequins magenta/blue. Fonts: Anton (display), Barlow (body). Crest at
-`assets/crest.jpeg` (there is no `crest.png` — a broken reference once broke
-every social share preview).
+London Harlequins magenta/blue. Fonts: Anton (display), Barlow (body).
+
+**Two crest files exist — use the right one.** `assets/crest.png` is the current
+transparent-background logo: the homepage nav/about/organiser crests and the
+homepage `og:image`/`twitter:image`. `assets/crest.jpeg` is the older
+white-background version, still used by `/scores` (favicon + social images) and
+the `/app` header. Both are real files. Check which one a page already uses
+before changing a reference — a broken crest reference once killed every social
+share preview.
 
 ---
 
@@ -337,16 +343,11 @@ also behind a site-wide Netlify password, so previews prompt for it too.
   `minmax(0,560px)` and centres it, instead of one `1fr` column stretching the
   full section; two-or-more pools unchanged.
 - **Organisers photo is now `assets/organisers.jpg`**, referenced by filename —
-  it used to be a ~168 KB inline base64 `data:` blob in `Quins JRT.dc.html`. That
-  blob bloated the homepage to ~300 KB, which is **too large for the GitHub MCP
-  write tools to move** (`get_file_contents`/`create_or_update_file` hit a
-  ~25k-token ceiling; a helper subagent can push a ~133 KB text file fine, but
-  not 300 KB, and binary can't go through those tools at all). With the photo
-  extracted the homepage is ~133 KB text and pushes normally via the bridge.
-  **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/` files
-  or the file becomes unpushable again. Binary assets (images) still can't go via
-  the write tools; add them by uploading through GitHub's web UI (or browser
-  `file_upload`).
+  it used to be a ~168 KB inline base64 `data:` blob that bloated
+  `Quins JRT.dc.html` to ~300 KB. Extracted, the homepage is ~133 KB.
+  **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/`
+  files. It keeps the page light, and it keeps the file inside the limits of the
+  fallback write path (see "How Claude writes to GitHub" below).
 ---
 
 ## Outstanding
@@ -366,77 +367,114 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)
+5. **Crest inconsistent across pages.** The homepage moved to the transparent
+   `assets/crest.png`; `/scores` (favicon + `og:image`/`twitter:image`) and the
+   `/app` header still point at the old white-background `assets/crest.jpeg`.
+   Cosmetic, nothing is broken. Batch it into the next production deploy rather
+   than spending 15 credits on it alone.
 
 ---
 
-## How Claude writes to GitHub (verified 23 Jul 2026)
+## How Claude writes to GitHub (rewritten 25 Jul 2026)
 
-There is ONE thing that can write to this repo: a **local GitHub MCP server**
-running on Jay's PC through the desktop app. It is NOT the account-level
-"GitHub Integration" connector — that one is OAuth/read-only and 403s on every
-write, because Anthropic's GitHub app can't write to a PUBLIC repo by design.
-Ignore that connector for writes; it's only good for reading.
+**Primary path: real `git` on Jay's PC, driven through the desktop bridge.**
+Fallback: the local GitHub MCP server. Never the account-level "GitHub
+Integration" connector — that one is OAuth/read-only and 403s on every write,
+because Anthropic's GitHub app can't write to a PUBLIC repo by design. It is
+only good for reading.
 
-**How the write path is built (do this once per PC Jay uses):**
-1. Node.js installed on the PC (provides `npx`). Check with `node --version`;
-   if missing, install the LTS from nodejs.org. The desktop config points at
-   the full Windows path `C:\Program Files\nodejs\npx.cmd` (a bare `npx` throws
-   `spawn npx ENOENT`).
-2. A classic **`repo`-scoped** personal access token (currently the token named
-   **"Claude Access2"** on Jay's GitHub — regenerate it on
-   github.com/settings/tokens when it expires; the value is only shown once).
-3. The desktop app's config file (Settings → Developer → Edit Config — the JSON
-   with `coworkUserFilesPath`/`preferences`) gets an `mcpServers` block:
-   ```json
-   "mcpServers": {
-     "github": {
-       "command": "C:\\Program Files\\nodejs\\npx.cmd",
-       "args": ["-y", "@modelcontextprotocol/server-github"],
-       "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "<the token>" }
-     }
-   }
-   ```
-4. **Fully quit the app from the system tray and reopen** — config only reloads
-   on a real restart.
+### 1. Primary — local git via Desktop Commander (use this)
 
-**Reachability — the correction to the old notes:** once set up, the write
-tools appear as `mcp__remote-devices__github__*` (`create_branch`,
-`create_or_update_file`, `push_files`, `create_pull_request`, …) and are
-reachable from **any** session, cloud or on-computer, as long as the desktop
-app is running on a configured PC and the device bridge is connected. Cloud
-sessions are NOT inherently read-only — the write goes through the bridge to
-the local server. (Verified: created a branch and committed a file to `adhjrt`
-from a cloud session on 23 Jul 2026.) If those tools aren't in the tool list,
-the app isn't running / isn't configured on the bridged PC — fall back to
-handing files to Jay, don't conclude writing is impossible.
+Jay's PC (`jay-pc`) has a clone at `C:\Users\jayjm\GitHub\adhjrt`, remote
+`origin` over HTTPS, credential helper = Git Credential Manager with the
+credential already cached. A **cloud** session can drive it: the Desktop
+Commander MCP extension exposes a real shell on his machine as
+`mcp__remote-devices__Desktop_Commander__start_process`. This does NOT require a
+Cowork task started "On your computer" (verified from a cloud session,
+25 Jul 2026 — pushed and deleted a test branch).
 
-**What's safe to push:** it's about authorship, not size. Content Claude wrote
-this session is safe to push at any size the tool accepts (Claude is the source
-of those bytes). Reproducing an existing large file from memory risks a drifted
-character — for those, fetch exact bytes first with
-`github__get_file_contents` (or plain `git`) rather than retyping, or hand the
-file to Jay to upload.
+Why it's the primary path: git moves bytes on disk and over the git protocol, so
+file content never passes through the model's context window. That means **any
+file size, and binary files (images) included** — the two things the MCP write
+tools cannot do.
 
-**Deploy steps:**
-1. Edit in the sandbox; validate (`node --check` the DC script, tag balance for
-   `sc-if`/`sc-for`).
-2. Push with `create_or_update_file` (one file) or `push_files` (several in one
-   commit) to `owner: jayjmuir-hub, repo: adhjrt`.
-3. **Pushing to `main` deploys to production and spends 15 Netlify credits** —
-   show the diff and get a yes first (see project instructions). Docs-only or
-   non-live-site commits: put `[skip ci]` in the message so no deploy/credits.
-   Branches are free — use them freely.
-4. Verify: read the pushed file back (`github__get_file_contents` or `git`),
-   and for a live deploy confirm Netlify reached `ready` (site id
+Typical run:
+
+```
+cmd /c "cd /d C:\Users\jayjm\GitHub\adhjrt && set GIT_TERMINAL_PROMPT=0 && git checkout main && git pull && git checkout -b feat/thing && git add -A && git commit -m "msg" && git push -u origin feat/thing"
+```
+
+- Always `set GIT_TERMINAL_PROMPT=0` — a missing credential then fails fast
+  instead of hanging the session on an invisible prompt.
+- Edit files on his machine with Desktop Commander `edit_block` (surgical, cheap)
+  or `write_file`, or the `mcp__remote-devices__Filesystem__*` tools. Prefer
+  `edit_block` over retyping a whole file.
+- Verify with `git log`/`git ls-remote`, not `raw.githubusercontent.com`.
+
+### 2. Fallback — the local GitHub MCP server
+
+If Desktop Commander isn't available on the bridged PC, the GitHub MCP server
+tools (`mcp__remote-devices__github__create_or_update_file`, `push_files`,
+`create_branch`, …) still work from any session. Their limits, measured:
+
+- Any tool result coming back into context is capped ~25k tokens (~100 KB), so a
+  300 KB file can't even be read back.
+- Writing requires holding the whole file as a string parameter — circular with
+  the read limit for big files.
+- **Text only.** Probe: `content:"SGk="` stored the literal text `SGk=`, not
+  decoded bytes. Images cannot go through at any size.
+- A helper sub-agent (its own fresh context) can push a ~133 KB text file
+  byte-perfect in one call — the workaround for large *text* files.
+
+That server needs Node.js and a `repo`-scoped PAT sitting in the desktop app's
+config file. **With the git path working it is redundant** — prefer removing it
+and the token rather than maintaining a live write credential in a config file.
+Never ask Jay for the raw token, never accept it pasted into chat, and never
+print the config file's contents (it echoes the token — this has happened once;
+the fix is to rotate the token at github.com/settings/tokens).
+
+### 3. Setting up a new PC
+
+Everything here is per-machine. On a new personal PC, in order:
+
+1. Install **Git for Windows** (git-scm.com, defaults — includes Git Credential
+   Manager).
+2. Install the **Claude desktop app**, sign in.
+3. In the app: **Settings → Extensions** → install **Desktop Commander** (and
+   **Filesystem** if direct file editing is wanted; grant it the `GitHub`
+   folder). These are app extensions, not hand-written config.
+4. In the app: **Settings** → give the device a distinct name (this one is
+   `jay-pc`) so a session can tell which machine it is bridged to.
+5. **Quit the app from the system tray and reopen** — extensions and config only
+   load on a real restart.
+6. Clone to the same path shape so commands don't change:
+   `mkdir %USERPROFILE%\GitHub` then
+   `git clone https://github.com/jayjmuir-hub/adhjrt.git` inside it.
+7. **Jay primes the push credential once, by hand** — Git Credential Manager
+   opens a browser sign-in window that a session cannot drive. Push any throwaway
+   branch, approve the window; every later push is silent.
+
+### 4. Deploy rules (unchanged, and they matter)
+
+1. Edit, then validate (`node --check` the DC script; tag balance for `sc-if` /
+   `sc-for`).
+2. **Pushing to `main` deploys to production and spends 15 Netlify credits** —
+   show the diff and get a yes first. Docs-only or non-live-site commits: put
+   `[skip ci]` in the message so no deploy runs and no credits are spent.
+3. Branches are free. To preview one, **open a PR** — that gives a
+   password-protected deploy-preview at
+   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app`. This site has no
+   per-branch deploy URL, so `<branch>--….netlify.app` 404s.
+4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
-**Merge-conflict trap:** earlier features were squash-merged into `main`. A
-branch still carrying pre-squash commits will conflict on re-merge. Don't
-reopen old feature branches — branch fresh off current `main`.
+### 5. Traps
 
-**`raw.githubusercontent.com` serves stale cached copies for minutes** and
-ignores cache-buster params — verify with plain `git`/`git hash-object` or
-`github__get_file_contents`, never raw.githubusercontent.
-
-**Per-PC reminder:** this setup lives on each machine, so a new PC needs the
-Node + token + config steps above once before writing works from it.
+- **Merge conflicts from squash-merges.** Earlier features were squash-merged
+  into `main`; a branch still carrying pre-squash commits will conflict on
+  re-merge. Branch fresh off current `main` — don't reopen old feature branches
+  (`design/meet-organisers` PR #4, `fix/single-pool-width` PR #5 are both done).
+- **`raw.githubusercontent.com` serves stale copies for minutes** and ignores
+  cache-busting params. Verify with plain `git` or `github__get_file_contents`.
+- **The whole Netlify site sits behind a site-wide password**, so previews prompt
+  for it too. That is Jay's setting, not a fault.

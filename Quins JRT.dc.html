@@ -116,9 +116,22 @@
      !important throughout: these elements are styled inline and inline wins over
      a stylesheet rule without it (same trap as style-hover, see CLAUDE.md). */
   @media(max-width:760px){
-    .hdr-row{flex-wrap:wrap!important;justify-content:center!important;gap:12px!important;padding:12px 16px!important}
-    .hdr-nav{flex-wrap:wrap!important;justify-content:center!important;gap:10px 16px!important}
-    .hdr-nav a{font-size:14px!important}
+    /* Header stays ONE line. Wrapping the links made everything reachable but
+       took three lines, and the header is sticky - so a quarter of the screen
+       was permanently covered. Collapse behind a button instead. */
+    .hdr-row{padding:10px 16px!important}
+    .hdr-toggle{display:inline-flex!important;align-items:center}
+    .hdr-nav{display:none!important}
+    /* Open: a full-width panel under the header, links stacked. */
+    .hdr-row[data-nav-open="true"]{flex-wrap:wrap!important}
+    .hdr-row[data-nav-open="true"] .hdr-nav{
+      display:flex!important;flex-direction:column!important;align-items:stretch!important;
+      width:100%!important;gap:2px!important;margin-top:10px!important;
+      border-top:1px solid rgba(255,255,255,0.12)!important;padding-top:10px!important}
+    .hdr-row[data-nav-open="true"] .hdr-nav a{font-size:16px!important;padding:11px 4px!important;display:block!important}
+    /* The two Register buttons sit inside the nav; let them fill the panel. */
+    .hdr-row[data-nav-open="true"] .hdr-nav > div{width:100%!important;margin-top:6px!important}
+    .hdr-row[data-nav-open="true"] .hdr-nav > div a{text-align:center!important}
     /* Multi-column sections collapse to one. m-stack-2 keeps two abreast so the
        four headline stats still read as a set rather than a long list. */
     .m-stack{grid-template-columns:1fr!important;gap:34px!important;padding-left:20px!important;padding-right:20px!important}
@@ -126,6 +139,13 @@
     /* A 520px floor cannot fit a 390px screen - it alone would keep the page
        scrolling sideways after the wrapper was fixed. */
     .m-nofloor{min-width:0!important}
+    /* Decoration and duplicated copy, both actively harmful on a phone: the
+       shard cluster is positioned at fixed px offsets from the right for a
+       1200px canvas, so at 390px it lands on top of the date and venue - green
+       text on a green shard. The three organiser names appear again lower down
+       under "The people behind it", and in the hero they push the date and
+       headline most of the way off the screen. */
+    .m-hide{display:none!important}
   }
 
 </style>
@@ -161,7 +181,7 @@
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">
     <!-- red->green signature line -->
     <div style="height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
-    <div class="hdr-row" style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
+    <div class="hdr-row" data-nav-open="{{ navOpenAttr }}" style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
       <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
         <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
           <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
@@ -171,7 +191,12 @@
           <span style="font-size:10px;letter-spacing:2px;color:#2fbf5f;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
         </div>
       </a>
-      <nav class="hdr-nav" style="display:flex;align-items:center;gap:24px">
+      <!-- Shown only under 760px (see .hdr-toggle in the mobile block). -->
+      <button class="hdr-toggle" onClick="{{ toggleNav }}" aria-label="{{ navToggleLabel }}" aria-expanded="{{ navOpenAttr }}" style="display:none;background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:9px;color:#fff;font-size:22px;line-height:1;padding:7px 12px;cursor:pointer">{{ navToggleIcon }}</button>
+      <!-- onClick on the NAV, not each link: a tap on any link bubbles up and
+           closes the panel, so you are not left staring at an open menu after
+           jumping to a section. -->
+      <nav class="hdr-nav" onClick="{{ closeNav }}" style="display:flex;align-items:center;gap:24px">
         <a href="#about" style="color:#EDEDED;font-weight:600;font-size:15px">About</a>
         <a href="#format" style="color:#EDEDED;font-weight:600;font-size:15px">Format</a>
         <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
@@ -194,7 +219,7 @@
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,#0C0C0E 34%,rgba(12,12,14,0.55) 100%);pointer-events:none"></div>
 
     <!-- geometric camo shard cluster (right) -->
-    <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+    <div class="m-hide" style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
       <div style="position:absolute;top:60px;right:120px;width:260px;height:220px;background:#E11B22;clip-path:polygon(0 30%,55% 0,100% 45%,60% 100%,15% 80%);opacity:.92;animation:floatY 8s ease-in-out infinite"></div>
       <div style="position:absolute;top:150px;right:60px;width:200px;height:260px;background:#17A34A;clip-path:polygon(20% 0,100% 25%,80% 100%,0 75%);opacity:.9;animation:floatY 10s ease-in-out .6s infinite"></div>
       <div style="position:absolute;top:40px;right:300px;width:120px;height:150px;background:#fff;clip-path:polygon(0 20%,100% 0,70% 100%);opacity:.9"></div>
@@ -206,7 +231,7 @@
     </div>
 
     <div style="position:relative;max-width:1200px;margin:0 auto;padding:94px 32px 108px">
-      <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:24px;animation:fadeUp .6s cubic-bezier(.2,.7,.2,1) both">
+      <div class="m-hide" style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:24px;animation:fadeUp .6s cubic-bezier(.2,.7,.2,1) both">
         <div>
           <div style="font-family:'Anton';font-size:20px;letter-spacing:.3px">Terry Rooke</div>
           <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#3bd070;text-transform:uppercase;margin-top:2px">Tournament Director</div>
@@ -1191,6 +1216,11 @@ class Component extends DCLogic {
   state = {
     days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '',
     ctaToast: '',
+    /* Mobile nav. The links wrap onto three lines on a phone, and the header is
+       position:sticky, so leaving them visible parks a quarter of the screen
+       permanently over the content. Collapsed behind a button instead; CSS owns
+       the breakpoint, this owns open/closed. */
+    navOpen: false,
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
     /* True only when a send FAILED, as opposed to a field being invalid. The
@@ -1678,6 +1708,13 @@ class Component extends DCLogic {
       onBackdropPlayer: () => this.closePlayerModal(),
       onPlayerFirstName: (e) => this.setPlayerField('playerFirstName', e.target.value),
       onPlayerLastName: (e) => this.setPlayerField('playerLastName', e.target.value),
+      /* Mobile nav. The attribute drives the CSS; the CSS owns the breakpoint,
+         so on desktop navOpen is simply ignored. */
+      navOpenAttr: this.state.navOpen ? 'true' : 'false',
+      navToggleIcon: this.state.navOpen ? '\u2715' : '\u2630',
+      navToggleLabel: this.state.navOpen ? 'Close menu' : 'Open menu',
+      toggleNav: () => this.setState((s) => ({ navOpen: !s.navOpen })),
+      closeNav: () => { if (this.state.navOpen) this.setState({ navOpen: false }); },
       onPlayerDobDay: (e) => this.setPlayerDobPart('dobDay', e.target.value),
       onPlayerDobMonth: (e) => this.setPlayerDobPart('dobMonth', e.target.value),
       onPlayerDobYear: (e) => this.setPlayerDobPart('dobYear', e.target.value),

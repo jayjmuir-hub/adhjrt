@@ -783,6 +783,12 @@
                       <option value="{{ ag }}">{{ ag }}</option>
                     </sc-for>
                   </select>
+                  <!-- Says the format and the squad size the moment a group is
+                       picked, so a coach is not left guessing why the roster
+                       stops at 12 in one group and 18 in another. -->
+                  <sc-if value="{{ teamFormatInfoShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:7px;font-size:12px;color:#8b93a3;font-weight:600">{{ teamFormatInfo }}</div>
+                  </sc-if>
                 </div>
               </div>
 
@@ -800,9 +806,9 @@
                 <div>
                   <div style="display:flex;align-items:baseline;justify-content:space-between">
                     <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">NUMBER OF PLAYERS</label>
-                    <span style="font-size:11px;font-weight:700;color:#7f8794">max 15</span>
+                    <span style="font-size:11px;font-weight:700;color:#7f8794">max {{ squadCap }}</span>
                   </div>
-                  <input type="number" min="1" max="15" value="{{ teamForm.numPlayers }}" onInput="{{ onTeamNumPlayers }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <input type="number" min="1" max="{{ squadCap }}" value="{{ teamForm.numPlayers }}" onInput="{{ onTeamNumPlayers }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
               </div>
 
@@ -858,7 +864,7 @@
               <div>
                 <div style="display:flex;align-items:baseline;justify-content:space-between">
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYERS</label>
-                  <span style="font-size:12px;font-weight:700;color:{{ teamPlayerCountColor }}">{{ teamPlayerCount }} / 15</span>
+                  <span style="font-size:12px;font-weight:700;color:{{ teamPlayerCountColor }}">{{ teamPlayerCount }} / {{ squadCap }}</span>
                 </div>
                 <button onClick="{{ onAddPlayer }}" disabled="{{ addPlayerDisabled }}" style="{{ addPlayerStyle }}">+ Add player</button>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
@@ -1087,23 +1093,39 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
 // "double" age groups spanning two cut-off ages each (there's no separate
 // U15 or U17 competition) — so age 14 is entirely normal for U16, and 16
 // is entirely normal for U18, not a play-up case.
+/* `format` is how many a side, `squad` is the most players a club may register
+   for that group. Both from the 2025 tournament and expected to hold for 2026.
+
+   squad is a MAXIMUM, and it is what the entry form caps at. It used to be a
+   flat 15 for every group, which was wrong at both ends: a U7 club could enter
+   three more than a 7s squad allows, and every 12s group - U11, U12, U14B, U16B,
+   U18B - was blocked three players SHORT of its real squad of 18. The button
+   simply stopped working at fifteen, and typing 18 into the count box silently
+   rewrote it to 15.
+
+   All four girls' groups play 7s with a squad of 12, including U16G and U18G,
+   which is why they differ from the boys' groups of the same age. */
 const AGE_GROUP_INFO = [
-  { id: 'u6', name: 'U6 Tag', ages: [5] },
-  { id: 'u7', name: 'U7 Tag', ages: [6] },
-  { id: 'u8', name: 'U8 Tag', ages: [7] },
-  { id: 'u9', name: 'U9 Mixed Contact', ages: [8] },
-  { id: 'u10', name: 'U10 Mixed Contact', ages: [9] },
-  { id: 'u11', name: 'U11 Mixed Contact', ages: [10] },
-  { id: 'u12', name: 'U12 Mixed Contact', ages: [11] },
-  { id: 'u12g', name: 'U12G QR', ages: [11] },
-  { id: 'u13', name: 'U13 Mixed Contact', ages: [12] },
-  { id: 'u14b', name: 'U14B Contact', ages: [13] },
-  { id: 'u14g', name: 'U14G QR', ages: [13] },
-  { id: 'u16b', name: 'U16B Contact', ages: [14, 15] },
-  { id: 'u16g', name: 'U16G Contact', ages: [14, 15] },
-  { id: 'u18b', name: 'U18B Contact', ages: [16, 17] },
-  { id: 'u18g', name: 'U18G Contact', ages: [16, 17] },
+  { id: 'u6', name: 'U6 Tag', ages: [5], format: '7s', squad: 12 },
+  { id: 'u7', name: 'U7 Tag', ages: [6], format: '7s', squad: 12 },
+  { id: 'u8', name: 'U8 Tag', ages: [7], format: '7s', squad: 12 },
+  { id: 'u9', name: 'U9 Mixed Contact', ages: [8], format: '7s', squad: 12 },
+  { id: 'u10', name: 'U10 Mixed Contact', ages: [9], format: '10s', squad: 15 },
+  { id: 'u11', name: 'U11 Mixed Contact', ages: [10], format: '12s', squad: 18 },
+  { id: 'u12', name: 'U12 Mixed Contact', ages: [11], format: '12s', squad: 18 },
+  { id: 'u12g', name: 'U12G QR', ages: [11], format: '7s', squad: 12 },
+  { id: 'u13', name: 'U13 Mixed Contact', ages: [12], format: '10s', squad: 15 },
+  { id: 'u14b', name: 'U14B Contact', ages: [13], format: '12s', squad: 18 },
+  { id: 'u14g', name: 'U14G QR', ages: [13], format: '7s', squad: 12 },
+  { id: 'u16b', name: 'U16B Contact', ages: [14, 15], format: '12s', squad: 18 },
+  { id: 'u16g', name: 'U16G Contact', ages: [14, 15], format: '7s', squad: 12 },
+  { id: 'u18b', name: 'U18B Contact', ages: [16, 17], format: '12s', squad: 18 },
+  { id: 'u18g', name: 'U18G Contact', ages: [16, 17], format: '7s', squad: 12 },
 ];
+/* The largest squad in the tournament. Used as the cap BEFORE an age group is
+   chosen, so the form never blocks a club that is filling the roster in first -
+   it tightens to the real number the moment they pick their group. */
+const MAX_SQUAD_ANY_GROUP = Math.max(...AGE_GROUP_INFO.map((g) => g.squad));
 // The next-younger group in each stream — the group actually one step
 // below in the real competition structure, not just "one year younger"
 // (e.g. U16B's previous group is U14B, since there's no U15B).
@@ -1161,7 +1183,7 @@ function encodeFormData(data) {
   return Object.keys(data).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data[k] == null ? '' : data[k])).join('&');
 }
 
-const MAX_TEAM_PLAYERS = 15;
+
 // Pools a coach can ask for. "No preference" is deliberately included so a
 // mandatory field does not force a meaningless answer from clubs that don't
 // mind — the requests that do come in are then real ones worth honouring.
@@ -1340,7 +1362,7 @@ class Component extends DCLogic {
 
   setTeamField(field, val) { this.setState((s) => ({ teamForm: { ...s.teamForm, [field]: val } })); }
   setTeamNumPlayers(val) {
-    let n = val === '' ? '' : Math.max(1, Math.min(MAX_TEAM_PLAYERS, parseInt(val, 10) || 1));
+    let n = val === '' ? '' : Math.max(1, Math.min(this._squadCap(this.state.teamForm), parseInt(val, 10) || 1));
     this.setTeamField('numPlayers', n === '' ? '' : String(n));
   }
   setPlayerField(field, val) {
@@ -1427,9 +1449,17 @@ class Component extends DCLogic {
     };
   }
 
+  /* The squad cap for whichever group is currently selected. Falls back to the
+     largest squad in the tournament while nothing is selected, so a club that
+     types its roster before picking a group is never blocked. */
+  _squadCap(form) {
+    const g = AGE_GROUP_INFO_BY_NAME[(form || {}).ageGroup];
+    return g ? g.squad : MAX_SQUAD_ANY_GROUP;
+  }
+
   addTeamPlayer() {
     this.setState((s) => {
-      if (s.teamForm.players.length >= MAX_TEAM_PLAYERS) return {};
+      if (s.teamForm.players.length >= this._squadCap(s.teamForm)) return {};
       return { teamForm: { ...s.teamForm, players: [...s.teamForm.players, { firstName: '', lastName: '', dob: '' }] } };
     });
   }
@@ -1477,6 +1507,17 @@ class Component extends DCLogic {
     const f = this.state.teamForm;
     if (!effClub(f) || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
       this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });
+      return;
+    }
+    /* Only reachable by picking a SMALLER age group after filling the roster -
+       the Add button and the count box both cap at the selected group. Rather
+       than silently dropping the extra players, say which ones have to go. */
+    const cap = this._squadCap(f);
+    if (f.players.length > cap) {
+      const over = f.players.length - cap;
+      this.setState({
+        teamError: `${f.ageGroup} squads are a maximum of ${cap} players and you have listed ${f.players.length}. Please remove ${over}.`,
+      });
       return;
     }
     this.setState({ teamSubmitting: true, teamError: '' });
@@ -1627,7 +1668,16 @@ class Component extends DCLogic {
       onRemove: () => this.removeTeamPlayer(idx),
     }));
     const teamPlayerCount = this.state.teamForm.players.length;
-    const atMax = teamPlayerCount >= MAX_TEAM_PLAYERS;
+    const squadCap = this._squadCap(this.state.teamForm);
+    const atMax = teamPlayerCount >= squadCap;
+    /* Switching to a SMALLER group after adding players leaves the roster over
+       the cap. Deliberately does not delete the rows they typed - it shows the
+       count in red and blocks submission until they remove some. */
+    const overCap = teamPlayerCount > squadCap;
+    const teamFormatInfo = (() => {
+      const g = AGE_GROUP_INFO_BY_NAME[this.state.teamForm.ageGroup];
+      return g ? `${g.name} plays ${g.format} — squad of ${g.squad}` : '';
+    })();
 
     const teamAgeGroupOptions = AGE_GROUP_INFO.map((g) => g.name);
 
@@ -1670,7 +1720,10 @@ class Component extends DCLogic {
       teamAgeGroupOptions,
       teamPlayerRows,
       teamPlayerCount,
-      teamPlayerCountColor: atMax ? '#ff6b6b' : '#7f8794',
+      squadCap,
+      teamFormatInfo,
+      teamFormatInfoShow: !!teamFormatInfo,
+      teamPlayerCountColor: (atMax || overCap) ? '#ff6b6b' : '#7f8794',
       addPlayerDisabled: atMax,
       addPlayerStyle: 'margin-top:10px;width:100%;background:' + (atMax ? 'rgba(255,255,255,0.05)' : 'rgba(225,27,34,0.14)') + ';color:' + (atMax ? '#5a616d' : '#ff8a8f') + ';border:1px solid ' + (atMax ? 'rgba(255,255,255,0.08)' : 'rgba(225,27,34,0.4)') + ';font-weight:700;font-size:14px;padding:10px;border-radius:9px;cursor:' + (atMax ? 'default' : 'pointer'),
       onAddPlayer: () => this.addTeamPlayer(),

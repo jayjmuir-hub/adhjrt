@@ -152,6 +152,25 @@ almost certainly a mistake.
 - Spirit of Rugby award applies to U14 and up.
 - Match id format: `<ageGroupId>:<poolId>:<i>-<j>` e.g. `u14b:A:0-1`.
 
+**Playing format and squad size per group** (2025, expected to hold for 2026),
+carried on `AGE_GROUP_INFO` in `Quins JRT.dc.html` as `format` and `squad`:
+
+| Format | Squad | Groups |
+|---|---|---|
+| 7s | 12 | u6, u7, u8, u9, **and all four girls' groups** — u12g, u14g, u16g, u18g |
+| 10s | 15 | u10, u13 |
+| 12s | 18 | u11, u12, u14b, u16b, u18b |
+
+`squad` is a MAXIMUM and it is what the entry form caps at — per group, via
+`_squadCap()`. It used to be a flat `MAX_TEAM_PLAYERS = 15`, wrong at both ends:
+7s clubs could enter three more than allowed, and **every 12s group was blocked
+three players short of a legal squad** — the Add button just stopped at fifteen
+and typing 18 into the count box silently rewrote it to 15. Do not reintroduce a
+single cap. Before a group is picked the cap is `MAX_SQUAD_ANY_GROUP` (18) so a
+club filling the roster first is never blocked; it tightens on selection, and
+`submitTeam` refuses a roster over the cap rather than dropping the extra
+players. Note the girls' groups differ from the boys' groups of the same age.
+
 Scoring: 4 win/walkover, 2 draw, 0 loss. Walkover recorded 20–0 with 4 tries.
 Tie-breaks in order: points difference → most points → head-to-head → least
 conceded → mini-league for 3+ → coin toss.

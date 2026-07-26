@@ -199,6 +199,15 @@ share preview.
 
 ## Gotchas found the hard way
 
+- **The homepage's outer wrapper must carry NO width bound.** It has now been
+  wrong in both directions. It started as `min-width:1200px`, which forced a
+  1200px canvas onto phones — the site rendered zoomed out and the registration
+  modal came out tiny. `2b8fd97` swapped it for `max-width:1200px;margin:0 auto`,
+  which fixed the phone and left the site as a 1200px column with black gutters
+  on every desktop wider than that. Neither belongs there: every section caps its
+  own content with its own `margin:0 auto`, so the backgrounds run edge to edge
+  and the text stays readable. `test-layout.js` holds the line on the wrapper,
+  on each section capping itself, and on the phone fix surviving.
 - **Netlify form detection is off by default** — forms must be enabled *and* a
   fresh deploy run afterwards; the crawler only scans at deploy time.
 - **Google Sheets tab is not called `Sheet1`.** Both functions look up the

@@ -175,7 +175,17 @@
 </script>
 </helmet>
 
-<div style="max-width:1200px;margin:0 auto;overflow:hidden;background:#F3F1ED">
+<!-- The page fills the screen. Every section below caps its OWN content
+     (1200 / 1100 / 1000 / 900 / 640, each with margin:0 auto) and carries its own
+     background, so section backgrounds run edge to edge and the text stays
+     centred and readable on a wide monitor.
+
+     Do not put a max-width back on this element. It was min-width:1200px, which
+     forced a 1200px canvas onto phones; 2b8fd97 fixed that by making it
+     max-width:1200px, which fixed the phone and left a 1200px column of site
+     sitting in black gutters on every desktop. Neither bound belongs here.
+     overflow:hidden stays - the hero shards are positioned outside the box. -->
+<div style="overflow:hidden;background:#F3F1ED">
 
   <!-- ============ HEADER ============ -->
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">

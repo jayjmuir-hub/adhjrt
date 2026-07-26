@@ -1247,6 +1247,13 @@ function sanitizeUaePhone(val) { return val.replace(/\D/g, '').slice(0, 9); }
 class Component extends DCLogic {
   state = {
     days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '',
+    /* The PITCHES stat. 18 is Saturday's count in the 2025 layout and is only a
+       starting value: componentDidMount replaces it with the live count from the
+       venue layout, so changing the pitches in the back office changes this number
+       too. It was hardcoded to 16, which was wrong and had no way of ever noticing.
+       Saturday is the busier day; Sunday runs 10. test-venue.js asserts this
+       fallback still equals the layout's day-one count. */
+    pitchCount: 18,
     ctaToast: '',
     /* Mobile nav. The links wrap onto three lines on a phone, and the header is
        position:sticky, so leaving them visible parks a quarter of the screen
@@ -1272,9 +1279,13 @@ class Component extends DCLogic {
 
   async loadFixtureData() {
     const api = await import(new URL('scores-data.js', document.baseURI).href);
+    /* loadVenue() falls back to the layout built into scores-data.js if the
+       endpoint cannot be reached, so this never leaves the stat blank. */
+    const venue = await api.loadVenue();
     const all = await api.getAgeGroups();
     const first = all[0];
-    this.setState({ fxApi: api, fxAgeGroups: all, fxSelectedId: first && first.id }, () => {
+    const pitchCount = (venue && venue.day1 && venue.day1.pitches.length) || this.state.pitchCount;
+    this.setState({ fxApi: api, fxAgeGroups: all, pitchCount, fxSelectedId: first && first.id }, () => {
       if (first) this.loadSchedule(first.id);
     });
   }
@@ -1830,7 +1841,7 @@ class Component extends DCLogic {
       statClubs: Math.round(20 * sp) + '+',
       statPlayers: Math.round(3000 * sp) + '+',
       statGroups: String(Math.round(15 * sp)),
-      statPitches: String(Math.round(16 * sp)),
+      statPitches: String(Math.round(this.state.pitchCount * sp)),
       days: this.state.days,
       hours: this.state.hours,
       mins: this.state.mins,

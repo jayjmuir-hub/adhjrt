@@ -23,6 +23,7 @@ first, every session.)
 | `/scores` | `Scores & Standings.dc.html` |
 | `/organizer` | `Organizer.dc.html` |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
+| `/legal` | `legal.html` — Legal & Privacy page (disclaimer, privacy, photography). Plain static file like `app.html`, not a DC component. Linked from the homepage footer. |
 
 Edit the `.dc.html` file, push, done. There is no bundling step to look for — an
 earlier version used an inliner that produced `index.html`; that's gone.

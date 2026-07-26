@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Legal & Privacy page for adhjrt.com. Plain static file (like app.html),
+  served at /legal via a netlify.toml rewrite. Not a DC component.
+
+  The binding participation waiver should be a signed tick-box at REGISTRATION;
+  this page only states the risk in summary. Update "Last updated" on any change.
+-->
+<title>Legal &amp; Privacy | Abu Dhabi Harlequins Junior Rugby Tournament</title>
+<meta name="description" content="Disclaimer, privacy and photography notice for the Abu Dhabi Harlequins Junior Rugby Tournament (ADH JRT), Zayed Sports City, 7-8 November 2026.">
+<meta name="robots" content="all">
+<link rel="canonical" href="https://adhjrt.com/legal">
+<link rel="icon" type="image/png" href="assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0C0C0E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Barlow',system-ui,sans-serif;color:#1b1c22;background:#F3F1ED;-webkit-font-smoothing:antialiased;line-height:1.62}
+  a{color:#c8161d;text-decoration:none}
+  a:hover{color:#9c1015;text-decoration:underline}
+  ::selection{background:#E11B22;color:#fff}
+
+  .topbar{background:#0C0C0E;color:#fff;padding:16px 24px}
+  .topbar-in{max-width:860px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;color:#fff}
+  .brand img{width:34px;height:34px;object-fit:contain}
+  .brand .wm{display:flex;flex-direction:column;line-height:1}
+  .brand .wm b{font-family:'Anton';font-size:19px;letter-spacing:.5px}
+  .brand .wm span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9aa0ab;margin-top:3px}
+  .back{color:#EDEDED;font-weight:700;font-size:13px;background:rgba(255,255,255,0.08);padding:8px 15px;border-radius:100px;white-space:nowrap;transition:background .18s}
+  .back:hover{background:rgba(255,255,255,0.18);text-decoration:none}
+
+  .hero{background:#0C0C0E;color:#fff;padding:26px 24px 52px}
+  .hero-in{max-width:860px;margin:0 auto}
+  .eyebrow{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.22em;font-size:13px;color:#ff5b60;display:flex;align-items:center}
+  .eyebrow .rule{display:inline-block;height:4px;width:48px;background:#17A34A;margin-right:14px;border-radius:2px}
+  .hero h1{font-family:'Anton';font-size:clamp(38px,7vw,64px);line-height:.96;text-transform:uppercase;margin:16px 0 0}
+  .hero p.sub{color:#aeb4bf;font-size:17px;margin-top:16px;max-width:640px}
+  .updated{margin-top:18px;font-size:13px;color:#7f8590}
+  .jump{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .jump a{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:#fff;border:1px solid rgba(255,255,255,.22);padding:8px 16px;border-radius:100px;transition:border-color .18s,background .18s}
+  .jump a:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.5);text-decoration:none}
+
+  main{max-width:860px;margin:0 auto;padding:8px 24px 20px}
+  .card{background:#fff;border:1px solid #e4e0d8;border-radius:16px;padding:clamp(24px,4vw,48px);margin-top:-26px;box-shadow:0 24px 60px -30px rgba(0,0,0,.35)}
+  .lead{font-size:17px;color:#3c3e46}
+
+  section.block{scroll-margin-top:20px;padding-top:30px;margin-top:30px;border-top:1px solid #ece8e0}
+  section.block:first-of-type{border-top:0;margin-top:22px;padding-top:6px}
+  h2.sec{font-family:'Anton';font-size:clamp(24px,3.4vw,34px);line-height:1.04;text-transform:uppercase;display:flex;align-items:baseline;gap:12px}
+  h2.sec .n{color:#E11B22;font-size:.82em}
+  p{margin:11px 0;color:#2c2e35}
+  p .k{font-weight:800;color:#14151A}
+  ul{margin:10px 0 10px 4px;padding-left:22px}
+  li{margin:6px 0;color:#2c2e35}
+  strong{color:#14151A}
+  .callout{background:#fbeced;border-left:4px solid #E11B22;border-radius:6px;padding:13px 17px;margin:16px 0;font-size:15.5px}
+  .callout.green{background:#e9f7ee;border-left-color:#17A34A}
+  .toplink{display:inline-block;margin-top:14px;font-size:13px;font-weight:700;color:#8a8f99}
+
+  footer{background:#060606;color:#8a8f99;padding:40px 24px 38px;margin-top:42px}
+  .foot-in{max-width:860px;margin:0 auto}
+  .foot-top{display:flex;align-items:center;gap:12px;color:#fff;margin-bottom:12px}
+  .foot-top img{width:32px;height:32px;object-fit:contain}
+  .foot-top b{font-family:'Anton';font-size:18px}
+  .foot-links{display:flex;flex-wrap:wrap;gap:8px 20px;margin:14px 0 18px}
+  .foot-links a{color:#b9bdc6;font-size:14px}
+  .foot-bar{border-top:1px solid rgba(255,255,255,.08);padding-top:16px;font-size:13px;display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;align-items:center}
+
+  @media (max-width:560px){.topbar-in .brand .wm span{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/">
+      <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
+      <span class="wm"><b>AD HARLEQUINS</b><span>Junior Rugby Tournament</span></span>
+    </a>
+    <a class="back" href="/">&larr; Back to site</a>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="eyebrow"><span class="rule"></span>The small print</div>
+    <h1>Legal &amp; Privacy</h1>
+    <p class="sub">Using this site, taking part in the Tournament, and how we handle the information you give us.</p>
+    <div class="updated">Last updated: 26 July 2026</div>
+    <div class="jump">
+      <a href="#terms">Disclaimer &amp; Participation</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#photography">Photography</a>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="card">
+
+    <p class="lead">This page is published by <strong>Abu Dhabi Harlequins</strong> ("ADH", "Quins", "we", "us"), organiser of the Abu Dhabi Harlequins Junior Rugby Tournament ("the Tournament") at Zayed Sports City, Abu Dhabi on 7&ndash;8 November 2026. It applies to this website (<strong>adhjrt.com</strong>) and to taking part in the Tournament.</p>
+
+    <!-- ===================== DISCLAIMER & PARTICIPATION ===================== -->
+    <section class="block" id="terms">
+      <h2 class="sec"><span class="n">1.</span> Disclaimer &amp; Participation</h2>
+
+      <p><span class="k">Website.</span> This site is provided for general information in good faith. Fixtures, kick-off times, live scores and standings are entered by volunteers on match day and shown "as is" &mdash; they may be delayed, contain errors, or change, and are not an official record. We may change or cancel any part of the Tournament (for weather, safety or reasons beyond our control) without liability.</p>
+
+      <p><span class="k">Rugby is a contact sport.</span> It carries an inherent risk of injury. Participation is voluntary and at the participant's own risk. Every player must be fit to take part, and the parent or guardian is responsible for deciding whether it is appropriate for their child to play.</p>
+
+      <div class="callout">To the fullest extent permitted by law, ADH and our volunteers, officials, coaches, sponsors and the venue are not liable for injury, loss or damage arising from the Tournament, except where liability cannot be excluded by law. Personal belongings are brought at the owner's risk.</div>
+
+      <p><span class="k">Medical.</span> First aid is provided at the event. Parents, guardians and team managers must disclose any relevant medical condition, allergy or medication for each player at registration. In an emergency, if a parent cannot be reached, we may act on qualified medical advice.</p>
+
+      <p><span class="k">Supervision.</span> Children remain the responsibility of their parent, guardian or registered team manager at all times at the venue, including between and after matches. We do not provide general childcare.</p>
+
+      <p><span class="k">Governing law.</span> This page and any related dispute are governed by the laws of the Emirate of Abu Dhabi and the applicable federal laws of the United Arab Emirates.</p>
+
+      <a class="toplink" href="#">&uarr; Back to top</a>
+    </section>
+
+    <!-- ===================== PRIVACY ===================== -->
+    <section class="block" id="privacy">
+      <h2 class="sec"><span class="n">2.</span> Privacy</h2>
+
+      <p>Abu Dhabi Harlequins is responsible for the personal information collected through the Tournament. For any privacy request, contact <a href="mailto:admin@adhjrt.com">admin@adhjrt.com</a>.</p>
+
+      <p><span class="k">What we collect:</span> player name, date of birth, age group and any medical/welfare notes a parent provides; parent, team manager and coach contact details; and the email and a securely hashed password for scores/organiser accounts.</p>
+
+      <div class="callout green">Information about a child is provided by their parent, guardian or manager &mdash; not from the child directly &mdash; and is used only to run the Tournament safely. We never use it for marketing and never publish it on the public site.</div>
+
+      <p><span class="k">Who can see it:</span> organisers, to run the event; and an age-group manager for <em>their own group only</em> (including medical notes, for player welfare). Permissions are checked on our server for every request.</p>
+
+      <p><span class="k">Where it's held:</span> we use reputable third-party providers to host the site, store registrations and send confirmation emails; some may process data outside the UAE. We do not sell your information or share it for advertising, and we handle it in line with applicable UAE data protection law.</p>
+
+      <p><span class="k">Keeping &amp; removing it:</span> we keep registration information for as long as reasonably required to run and follow up the Tournament and to meet any legal obligations, then delete it. You can ask to see, correct or delete your or your child's information at <a href="mailto:admin@adhjrt.com">admin@adhjrt.com</a>.</p>
+
+      <a class="toplink" href="#">&uarr; Back to top</a>
+    </section>
+
+    <!-- ===================== PHOTOGRAPHY ===================== -->
+    <section class="block" id="photography">
+      <h2 class="sec"><span class="n">3.</span> Photography</h2>
+      <p>The Tournament is a public event where photos and video are taken and may be used to promote the Tournament and junior rugby &mdash; on this site, on social media and in event materials. If you'd prefer images clearly identifying your child not be used, or want one removed, contact <a href="mailto:admin@adhjrt.com">admin@adhjrt.com</a>. We can't control photos taken by other members of the public.</p>
+      <p style="color:#6b6e77;font-size:14px;margin-top:18px">Questions: <a href="mailto:admin@adhjrt.com">admin@adhjrt.com</a> &middot; Abu Dhabi Harlequins, Zayed Sports City, Abu Dhabi, UAE.</p>
+      <a class="toplink" href="#">&uarr; Back to top</a>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-top">
+      <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
+      <b>AD HARLEQUINS</b>
+    </div>
+    <p style="max-width:420px;font-size:14px">A community youth rugby festival run by volunteers.</p>
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="/scores">Live scores</a>
+      <a href="/app">Match-day app</a>
+      <a href="/legal">Legal &amp; Privacy</a>
+    </div>
+    <div class="foot-bar">
+      <span>&copy; 2026 Abu Dhabi Harlequins.</span>
+      <span>Zayed Sports City &middot; Abu Dhabi, UAE</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

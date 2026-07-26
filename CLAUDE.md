@@ -110,6 +110,7 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `_publish.js` | draft/published keys, publish permission rule |
 | `venue-layout.js` | GET (public) the pitch and day layout; `?usage=1` adds per-pitch fixture counts (organisers); POST saves or resets it (organisers only) |
 | `_venue.js` | `DEFAULT_VENUE` (pitches per day + which groups play each day), `loadVenue()`, `mergeVenue()`, `validateVenue()`, `venueWarnings()`, `countPitchUsage()` |
+| `submit-result.js` | also **clears** one result with `{ clear: true }` — the only removal path, and what the clean-up panel loops |
 | `_teams.js` | club prefixes and team code generation |
 | `_email.js` | confirmation emails via Microsoft Graph |
 | `get-registrations.js` | organiser-only; reads both Google Sheets |
@@ -353,6 +354,75 @@ else should touch the store directly.
   old score attached to a slot now holding two different teams.
   `clearResultsFor(ids)` in `Scores & Standings.dc.html` handles it, and only
   for slots whose teams actually changed.
+
+---
+
+## Clearing the rehearsal data (added 26 Jul 2026)
+
+The tournament was rehearsed on the real site — **255 invented teams, 3,825
+invented players, 415 invented results, all 15 groups published** — which is how
+most of the bugs since fixed were found. It has to come back out, and the
+"Clear the rehearsal data" card in `/scores` → Manager area does the part that
+needs code.
+
+**The cleanup handle for the sheets: phone `971500000000`.** It is on every
+invented row and no real one. Filter any phone column on it and delete.
+Jay's original 22 Jul test rows are at row 2 of each sheet.
+
+### Three rules the panel follows
+
+1. **Nothing is deleted in one shot.** Removal goes one match at a time through
+   `clearResult()` → `submit-result.js` `{ clear: true }`, so each removal is
+   written, read back and confirmed by the same write-and-verify path a real score
+   uses. No bulk "empty the blob" endpoint was added, deliberately: it would be
+   faster and far easier to get catastrophically wrong.
+2. **It refuses to run on 7–8 November.** `isTournamentDayNow()` reads the dates
+   off the **venue layout**, so the guard follows the tournament if the dates move.
+   It is a UI guard on the browser's clock, not a security boundary — but what it
+   protects against is a mis-click on match morning, and for that it is right.
+   Orphan removal is *not* gated: it changes nothing anyone can see.
+3. **The destructive actions need a word typed** — the age group id, or `ALL`. A
+   confirm dialog is muscle memory by the fifth press; typing is not. A near miss
+   is refused and says what was typed.
+
+### Two things it deliberately does not do
+
+- **It does not touch the Google Sheets.** Those hold children's names, dates of
+  birth and medical notes, the deletion is irreversible, and it is Jay's hand on
+  that one.
+- **It does not unpublish.** "Unpublish all" already exists in the same view and is
+  reversible; a second way to do it is a second way to get it wrong.
+
+### What it shows, and why the counts matter
+
+`allResults()` enumerates **every stored id**, including **orphans** — ids no
+current fixture refers to, left when a pool was regenerated and its matches were
+re-minted. Counting from the current draw alone misses those, which is exactly how
+they accumulated unnoticed (it was an open finding for weeks).
+
+An age group whose draw fails to read reports orphans as **unknown, never 0**. Zero
+is the number that invites someone to press *Remove all* believing nothing is at
+risk.
+
+**Delete every saved draw** removes each group's override so it falls back to the
+auto-generated draw. Worth doing once the invented registrations are out of the
+sheets, because until then every saved draw names teams that no longer exist.
+
+### The safety net nobody should rely on but everybody should know about
+
+The legacy `all` blob is **never written and never deleted** (see `_results.js`). A
+group's own blob takes precedence, so a cleared result *stays* cleared — but the
+original recording survives in `all`. This operation is recoverable by anyone with
+blob access, which is a large part of why it is safe to offer at all.
+
+### A bug the test found
+
+`runClear()` originally set its outcome message and *then* refreshed the inventory.
+The refresh blanks the message on the way in, so the only thing telling you whether
+the removal worked — including "3 could not be removed" — was silently erased. The
+refresh now happens first and the message is set last. `test-cleanup.js` caught it;
+five injected faults proved that file, including a `Remove orphans` that quietly
+removed every result in the group.
 
 ---
 
@@ -737,9 +807,14 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    Venue above) — but **every slot is still "TBD" at 08:00** until someone works
    through the editor age group by age group. That is now data entry, not code.
    Step 5 (one set of pitch names) is the only code left.
-4. **Sponsors** placeholder — when artwork arrives, a comment directly above
+4. **The rehearsal data is still live.** All 15 groups published showing invented
+   clubs, 415 invented results, 4,080 invented sheet rows. The tooling to clear the
+   results and the saved draws exists (see Clearing the rehearsal data above);
+   unpublishing and the sheet rows are Jay's to press. Until this is done a coach
+   visiting adhjrt.com sees fiction.
+5. **Sponsors** placeholder — when artwork arrives, a comment directly above
    the section gives the exact `<img>` tag to swap in.
-5. **Deploy cost** — every production deploy costs 15 Netlify credits
+6. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)

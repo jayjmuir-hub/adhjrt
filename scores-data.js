@@ -1323,6 +1323,41 @@ export async function getMyRegistrations(session) {
 // feedback.
 /* Removes a result entirely, so the match goes back to unplayed. Distinct
    from saving 0-0, which is a real draw worth two league points each. */
+/* ============================================================
+   CLEARING TEST DATA
+   ------------------------------------------------------------
+   The tournament was rehearsed end to end on real infrastructure: 255 invented
+   teams, 3,825 invented players and 415 invented results, with all 15 age groups
+   published. That is what surfaced most of the bugs now fixed. It also means the
+   live site is currently showing fiction, and it has to come back out.
+
+   allResults() exists so the clean-up can enumerate EVERY stored result id,
+   including ORPHANS — ids left behind when a pool was regenerated and its
+   matches were re-minted with new ids. Reading the current draw would miss those
+   entirely, which is exactly how they came to accumulate unnoticed.
+
+   Nothing here deletes anything by itself. Removal goes one match at a time
+   through clearResult() -> submit-result.js, so it uses the same write-and-verify
+   path as a real score: each removal is written, read back and confirmed. A bulk
+   endpoint that emptied a blob in one shot would be faster and much easier to get
+   catastrophically wrong.
+
+   Worth knowing before pressing anything: the legacy 'all' blob is never written
+   and never deleted (see netlify/functions/_results.js). A group's own blob takes
+   precedence over it, so a cleared result STAYS cleared — but the original
+   recording of it survives in 'all'. This operation is recoverable by anyone with
+   blob access, which is a large part of why it is safe to offer at all. */
+export async function allResults() {
+  return readStore();
+}
+
+/* The age group a match id belongs to. Every id is `<ageGroupId>:...`, which is
+   also how the backend derives the group it re-checks permission against — see
+   submit-result.js. Kept here so the clean-up and the app agree. */
+export function ageGroupOfMatch(matchId) {
+  return String(matchId || '').split(':')[0];
+}
+
 export async function clearResult(matchId, session) {
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
   const r = await tryFetchJson('/.netlify/functions/submit-result', {

@@ -668,11 +668,40 @@ of repeating the three-shape session test. There are three session shapes and th
 file already records that missing one silently hid the Publish button; a second copy
 was one more place for that to happen again.
 
-### Not built yet
+### The homepage PITCHES stat comes from the layout (added 26 Jul 2026)
 
-Step 5 of `claude/spec-pitches-and-clash-detection.md`: one set of pitch names. The
-homepage still says **"16 PITCHES"** and the app says "Pitches A, B, C & D"; the real
-counts are **18 on Saturday and 10 on Sunday**.
+The headline stat used to be a literal, `Math.round(16 * sp)`, against a real
+Saturday count of 18. Wrong in the one place a club is most likely to read it, and
+nothing in the codebase could have noticed, because the number had no connection to
+the layout that knows the answer.
+
+`Quins JRT.dc.html` now carries `pitchCount: 18` in state as a written-down fallback
+— Saturday, the busier day — and `loadFixtureData()` awaits `api.loadVenue()` and
+replaces it with `venue.day1.pitches.length`. `loadVenue()` already falls back to the
+layout built into `scores-data.js` when the endpoint is unreachable, so the stat is
+never blank. **Change the pitches in the Venue & days back office and the homepage
+number changes too, with no deploy.**
+
+`test-venue.js` holds the fallback to the layout's day-one count and refuses a
+literal in `statPitches`. If the default layout ever changes, that test tells you to
+change the fallback with it.
+
+**"Pitches A, B, C & D"** on the homepage and in `app.html` is deliberately left
+alone. A, B, C and D are the real block letters at Zayed Sports City (A1x, B1x,
+C4/C5, D1–D5), so that line is wayfinding, not a count.
+
+### Dialogs in the Venue & days panel (added 26 Jul 2026)
+
+`Organizer.dc.html` had three `window.confirm()` calls. It now has the same
+`confirmModal(message, onConfirm, opts)` the Scores page uses — confirm-only, no
+prompt variant — and `test-venue-panel.js` leaves `window.confirm` as a **trap that
+throws**, so a handler cannot quietly go back to it.
+
+Two things the pattern buys, beyond looking like the rest of the site: the confirm
+button says what it does (`Remove pitch`, `Move to Sun`, `Reset the layout`) rather
+than `OK`, and nothing reaches the server until the dialog is answered — which is why
+`doResetVenue()` is now a pair, the handler that asks and `reallyResetVenue()` that
+does it.
 
 ---
 

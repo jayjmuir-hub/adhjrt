@@ -438,6 +438,23 @@
     </div>
   </sc-if>
 
+  <!-- The same confirm dialog the Scores page uses. This panel used to call the
+       browser's own confirm(), which looked nothing like the rest of the site and
+       froze the page for anything driving it. Confirm-only: nothing here asks for
+       typed input. white-space:pre-line is what renders the blank lines in the
+       messages, which are what make a long warning readable. -->
+  <sc-if value="{{ isModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
+      <div style="background:#151517;border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+        <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4;white-space:pre-line">{{ modalTitle }}</div>
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
@@ -466,6 +483,9 @@ class Component extends DCLogic {
     venue: null, venueSaved: null, venueUsage: null,
     vLoaded: false, vBusy: false, vError: '', vSuccess: '',
     vNewPitch: { day1: '', day2: '' },
+    /* The confirm dialog. null when closed; otherwise
+       { title, onConfirm, okLabel?, wide? }. */
+    modal: null,
     showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
     showLoginPass: false, showSignupPass: false, showSignupCode: false, showCpCurrent: false, showCpNew: false,
   };
@@ -623,6 +643,22 @@ class Component extends DCLogic {
     this.setState((s) => ({ vNewPitch: { ...s.vNewPitch, [dayId]: '' } }));
   }
 
+  /* opts: { okLabel, wide }. The confirm button says what it does — "Remove
+     pitch" reads very differently from "OK" on a dialog that lists the fixtures
+     about to be stranded. */
+  confirmModal(message, onConfirm, opts) {
+    this.setState({ modal: { title: message, onConfirm, ...(opts || {}) } });
+  }
+  closeModal() { this.setState({ modal: null }); }
+  submitModal() {
+    const { modal } = this.state;
+    if (!modal) return;
+    // Close FIRST, so a handler that awaits the server cannot leave the dialog
+    // sitting open over its own success message.
+    this.closeModal();
+    modal.onConfirm();
+  }
+
   removePitch(dayId, name) {
     const used = ((this.state.venueUsage || {})[dayId] || {})[name] || 0;
     const groups = Object.keys(((this.state.venue || {})[dayId] || {}).groups || {})
@@ -630,13 +666,14 @@ class Component extends DCLogic {
     let msg = `Remove ${name} from this day?`;
     if (used) msg += `\n\n${used} saved match${used === 1 ? '' : 'es'} are on it. Those will be left on a pitch that no longer exists and will need moving.`;
     if (groups.length) msg += `\n\nIt is currently ticked for: ${groups.map((a) => a.toUpperCase()).join(', ')}.`;
-    if (!window.confirm(msg)) return;
-    this.editVenue((v) => {
-      v[dayId].pitches = v[dayId].pitches.filter((p) => p !== name);
-      Object.keys(v[dayId].groups).forEach((ag) => {
-        v[dayId].groups[ag] = (v[dayId].groups[ag] || []).filter((p) => p !== name);
+    this.confirmModal(msg, () => {
+      this.editVenue((v) => {
+        v[dayId].pitches = v[dayId].pitches.filter((p) => p !== name);
+        Object.keys(v[dayId].groups).forEach((ag) => {
+          v[dayId].groups[ag] = (v[dayId].groups[ag] || []).filter((p) => p !== name);
+        });
       });
-    });
+    }, { okLabel: 'Remove pitch', wide: true });
   }
 
   /* Moving a group to the other day CLEARS its pitches, because the two days
@@ -648,13 +685,19 @@ class Component extends DCLogic {
     const from = ['day1', 'day2'].find((d) => ageId in (v[d].groups || {}));
     if (from === dayId) return;
     const had = from ? (v[from].groups[ageId] || []) : [];
-    if (had.length && !window.confirm(
-      `Move ${ageId.toUpperCase()} to ${v[dayId].label}?\n\nIts ${had.length} pitch${had.length === 1 ? '' : 'es'} on ${v[from].label} (${had.join(', ')}) will be cleared — that day has different pitches. Its saved fixtures keep whatever pitch they were given until you change them.`
-    )) return;
-    this.editVenue((nv) => {
-      ['day1', 'day2'].forEach((d) => { delete nv[d].groups[ageId]; });
-      nv[dayId].groups[ageId] = [];
-    });
+    const move = () => {
+      this.editVenue((nv) => {
+        ['day1', 'day2'].forEach((d) => { delete nv[d].groups[ageId]; });
+        nv[dayId].groups[ageId] = [];
+      });
+    };
+    // Nothing to lose, nothing to ask: a group with no pitches yet just moves.
+    if (!had.length) { move(); return; }
+    this.confirmModal(
+      `Move ${ageId.toUpperCase()} to ${v[dayId].label}?\n\nIts ${had.length} pitch${had.length === 1 ? '' : 'es'} on ${v[from].label} (${had.join(', ')}) will be cleared — that day has different pitches. Its saved fixtures keep whatever pitch they were given until you change them.`,
+      move,
+      { okLabel: `Move to ${v[dayId].short || v[dayId].label}`, wide: true }
+    );
   }
 
   toggleGroupPitch(ageId, dayId, name) {
@@ -732,8 +775,15 @@ class Component extends DCLogic {
     }
   }
 
-  async doResetVenue() {
-    if (!window.confirm('Put the pitch names, days and pitch assignments back to the 2025 layout?\n\nAny changes you have made here are discarded. Saved fixtures keep whatever pitch they were given.')) return;
+  doResetVenue() {
+    this.confirmModal(
+      'Put the pitch names, days and pitch assignments back to the 2025 layout?\n\nAny changes you have made here are discarded. Saved fixtures keep whatever pitch they were given.',
+      () => this.reallyResetVenue(),
+      { okLabel: 'Reset the layout', wide: true }
+    );
+  }
+
+  async reallyResetVenue() {
     this.setState({ vBusy: true, vError: '', vSuccess: '' });
     const res = await this.state.api.resetVenue();
     if (res.ok && res.venue) {
@@ -978,6 +1028,13 @@ class Component extends DCLogic {
       tabVenueStyle: s.tab === 'venue' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
+
+      isModalOpen: !!s.modal,
+      modalTitle: s.modal ? s.modal.title : '',
+      modalOkLabel: (s.modal && s.modal.okLabel) || 'OK',
+      modalMaxWidth: (s.modal && s.modal.wide) ? '560px' : '380px',
+      onModalCancel: () => this.closeModal(),
+      onModalConfirm: () => this.submitModal(),
 
       ...this.venueVals(s),
 

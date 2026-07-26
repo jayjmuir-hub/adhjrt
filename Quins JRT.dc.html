@@ -101,6 +101,32 @@
   .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
   .fmt-numbg .n{font-size:150px}
   @media(max-width:760px){.fmt-days{grid-template-columns:1fr}}
+  /* MOBILE. The page used to sit in a wrapper with min-width:1200px, so a phone
+     was served the desktop layout and scrolled sideways ~810px. Confirmed on a
+     real handset: every Register button and the App link sat off the right edge,
+     and the registration modal - which is position:fixed and correctly sized at
+     max-width:600px;width:100% - rendered tiny, because the whole 1200px page
+     was being scaled down to fit the screen. One floor, both symptoms.
+
+     Removing it is not enough on its own: .hdr-row and .hdr-nav are both flex
+     with no wrap, so the nav cannot shrink below its text width and pushes the
+     header wide instead, putting the sideways scroll straight back. Both have to
+     wrap, which is why they are tagged.
+
+     !important throughout: these elements are styled inline and inline wins over
+     a stylesheet rule without it (same trap as style-hover, see CLAUDE.md). */
+  @media(max-width:760px){
+    .hdr-row{flex-wrap:wrap!important;justify-content:center!important;gap:12px!important;padding:12px 16px!important}
+    .hdr-nav{flex-wrap:wrap!important;justify-content:center!important;gap:10px 16px!important}
+    .hdr-nav a{font-size:14px!important}
+    /* Multi-column sections collapse to one. m-stack-2 keeps two abreast so the
+       four headline stats still read as a set rather than a long list. */
+    .m-stack{grid-template-columns:1fr!important;gap:34px!important;padding-left:20px!important;padding-right:20px!important}
+    .m-stack-2{grid-template-columns:1fr 1fr!important;padding-left:20px!important;padding-right:20px!important}
+    /* A 520px floor cannot fit a 390px screen - it alone would keep the page
+       scrolling sideways after the wrapper was fixed. */
+    .m-nofloor{min-width:0!important}
+  }
 
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
@@ -129,13 +155,13 @@
 </script>
 </helmet>
 
-<div style="min-width:1200px;overflow:hidden;background:#F3F1ED">
+<div style="max-width:1200px;margin:0 auto;overflow:hidden;background:#F3F1ED">
 
   <!-- ============ HEADER ============ -->
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">
     <!-- red->green signature line -->
     <div style="height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
-    <div style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
+    <div class="hdr-row" style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
       <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
         <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
           <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
@@ -145,7 +171,7 @@
           <span style="font-size:10px;letter-spacing:2px;color:#2fbf5f;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
         </div>
       </a>
-      <nav style="display:flex;align-items:center;gap:24px">
+      <nav class="hdr-nav" style="display:flex;align-items:center;gap:24px">
         <a href="#about" style="color:#EDEDED;font-weight:600;font-size:15px">About</a>
         <a href="#format" style="color:#EDEDED;font-weight:600;font-size:15px">Format</a>
         <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
@@ -227,7 +253,7 @@
   <!-- ============ STAT STRIP (red->green signature) ============ -->
   <section id="stats" data-count style="position:relative;background:linear-gradient(90deg,#E11B22,#E11B22 40%,#17A34A);overflow:hidden">
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 1.5px,transparent 1.5px 8px);pointer-events:none"></div>
-    <div style="position:relative;max-width:1200px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(4,1fr)">
+    <div class="m-stack-2" style="position:relative;max-width:1200px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(4,1fr)">
       <div style="padding:34px 20px;text-align:center;border-right:1px solid rgba(255,255,255,0.25)">
         <div style="font-family:'Anton';font-size:clamp(30px,4.6vw,54px);color:#fff;line-height:1">{{ statClubs }}</div>
         <div style="color:rgba(255,255,255,0.88);font-weight:700;letter-spacing:1px;font-size:13px;margin-top:4px">CLUBS</div>
@@ -248,7 +274,7 @@
   </section>
 
   <!-- ============ ABOUT ============ -->
-  <section id="about" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
+  <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
     <div data-reveal>
       <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>
       <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;color:#0C0C0E">Rugby the way it should be</h2>
@@ -394,7 +420,7 @@
         <sc-if value="{{ hasBracket }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-wrap:wrap;gap:48px;justify-content:center">
             <sc-for list="{{ bracketList }}" as="br" hint-placeholder-count="2">
-              <div style="flex:1;min-width:520px;max-width:600px">
+              <div class="m-nofloor" style="flex:1;min-width:520px;max-width:600px">
                 <div style="font-weight:800;letter-spacing:1.5px;color:#7a808c;font-size:12px;text-transform:uppercase;margin-bottom:16px;text-align:center">{{ br.title }}</div>
                 <div style="display:flex;align-items:stretch;justify-content:center">
                   <div style="display:flex;flex-direction:column;justify-content:space-between;height:176px;width:220px;flex:none">
@@ -516,7 +542,7 @@
 
   <!-- ============ VENUE ============ -->
   <section id="venue" style="background:#EDEBE6">
-    <div style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+    <div class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
       <div style="border-radius:18px;overflow:hidden;height:420px;box-shadow:0 20px 50px rgba(0,0,0,.18);background:#fff" data-reveal>
         <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" style="width:100%;height:100%;object-fit:contain;background:#fff">
       </div>
@@ -629,7 +655,7 @@
 
   <!-- ============ FOOTER ============ -->
   <footer style="background:#060606;color:#8a8f99;padding:60px 32px 40px">
-    <div style="max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px">
+    <div class="m-stack" style="max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px">
       <div>
         <div style="display:flex;align-items:center;gap:14px;color:#fff;margin-bottom:16px">
           <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center">

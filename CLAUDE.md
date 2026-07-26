@@ -186,6 +186,19 @@ share preview.
 - **Netlify Forms and the Sheets are separate stores** — deleting a submission
   in Netlify does not remove the Sheet row. To remove a registration, delete
   the sheet row.
+- **Date of birth is stored as `yyyy-mm-dd`, and that shape is load-bearing.**
+  The organiser's Registrations tab reconciles a club's roster against parent
+  registrations on an exact string match of name + DOB, so a different format on
+  either side makes every player read "no parent registration". The player form
+  therefore uses three dropdowns (day / month by NAME / year) feeding
+  `composeDob()`, which is the only thing that decides the value — not a native
+  `<input type="date">`, whose displayed order follows the device locale and
+  shows `mm/dd/yyyy` to a UAE parent on a US-English phone, where a day/month
+  swap is silent. `composeDob` also refuses impossible dates (31 February)
+  rather than letting `new Date` roll them forward to a birthday nobody typed,
+  and `fmtDobLong()` echoes the stored date back with the month spelled out so a
+  transposition is visible at the moment it is made. The team form's roster rows
+  still use a native date input — deliberate, coaches fill those in on a desktop.
 - **A failed registration must fail loudly.** Both forms post through
   `postRegistration()` in `Quins JRT.dc.html`, which throws on status ≥ 400;
   the caller then shows an error and, critically, **leaves the filled form

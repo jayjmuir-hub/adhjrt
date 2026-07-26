@@ -897,7 +897,31 @@
 
               <div>
                 <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">DATE OF BIRTH</label>
-                <input type="date" value="{{ playerForm.dob }}" onInput="{{ onPlayerDob }}" onClick="{{ onDobClick }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;cursor:pointer;position:relative">
+                <!-- Three dropdowns rather than <input type="date">. A native date
+                     field shows whichever order the DEVICE locale dictates, which for a
+                     UAE parent on a US-English phone is mm/dd/yyyy - and a day/month
+                     swap there is silent. A spelled-out month cannot be transposed, and
+                     it reads the same on every device. -->
+                <div style="display:grid;grid-template-columns:1fr 1.7fr 1.1fr;gap:8px;margin-top:6px">
+                  <select value="{{ playerForm.dobDay }}" onChange="{{ onPlayerDobDay }}" required aria-label="Day of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 10px;color:#fff;font-size:15px">
+                    <option value="">Day</option>
+                    <sc-for list="{{ dobDayOptions }}" as="d" hint-placeholder-count="31"><option value="{{ d }}">{{ d }}</option></sc-for>
+                  </select>
+                  <select value="{{ playerForm.dobMonth }}" onChange="{{ onPlayerDobMonth }}" required aria-label="Month of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 10px;color:#fff;font-size:15px">
+                    <option value="">Month</option>
+                    <sc-for list="{{ dobMonthOptions }}" as="m" hint-placeholder-count="12"><option value="{{ m.v }}">{{ m.n }}</option></sc-for>
+                  </select>
+                  <select value="{{ playerForm.dobYear }}" onChange="{{ onPlayerDobYear }}" required aria-label="Year of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 10px;color:#fff;font-size:15px">
+                    <option value="">Year</option>
+                    <sc-for list="{{ dobYearOptions }}" as="y" hint-placeholder-count="19"><option value="{{ y }}">{{ y }}</option></sc-for>
+                  </select>
+                </div>
+                <sc-if value="{{ playerDobConfirm }}" hint-placeholder-val="">
+                  <div style="margin-top:7px;font-size:13px;color:#3bd070;font-weight:700">{{ playerDobConfirm }}</div>
+                </sc-if>
+                <sc-if value="{{ playerDobImpossible }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:7px;font-size:13px;color:#ff6b6b;font-weight:700">That date doesn't exist &mdash; please check the day and month.</div>
+                </sc-if>
                 <sc-if value="{{ playerAgeText }}" hint-placeholder-val="">
                   <div style="margin-top:7px;font-size:13px;color:#8b93a3;font-weight:600">Age at tournament (7 Nov 2026): {{ playerAgeText }}</div>
                 </sc-if>
@@ -1123,8 +1147,40 @@ const emptyTeamForm = () => ({
   managerName: '', managerEmail: '', managerPhone: '',
   numPlayers: '', notes: '', players: [],
 });
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+/* Wide enough for U6 (born ~2020) through U18 (born ~2008) with room either
+   side, newest first because that is where most of the entries land. */
+const DOB_YEARS = Array.from({ length: 19 }, (_, i) => String(2022 - i));
+const DOB_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1));
+
+/* Assembles yyyy-mm-dd from the three parts, or '' while any is missing.
+
+   The stored SHAPE must not change. The organiser's Registrations tab
+   reconciles a club's roster against parent registrations on an exact string
+   match of name + date of birth, and both sides hold yyyy-mm-dd. Emit anything
+   else and every player reads "no parent registration". So the three dropdowns
+   are presentation only - this is the one function that decides the value.
+
+   Returns '' for an impossible date (31 February) rather than letting the
+   browser roll it forward to 3 March, which would store a DOB nobody typed. */
+function composeDob(d, m, y) {
+  if (!d || !m || !y) return '';
+  const day = Number(d), mon = Number(m), yr = Number(y);
+  const probe = new Date(yr, mon - 1, day);
+  if (probe.getFullYear() !== yr || probe.getMonth() !== mon - 1 || probe.getDate() !== day) return '';
+  return `${yr}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+/* Spelled out, so a day/month transposition is obvious the moment it is made -
+   which is the whole reason for the dropdowns. */
+function fmtDobLong(dobStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dobStr || '');
+  if (!m) return '';
+  return `${Number(m[3])} ${MONTH_NAMES[Number(m[2]) - 1]} ${m[1]}`;
+}
+
 const emptyPlayerForm = () => ({
-  playerFirstName: '', playerLastName: '', dob: '', club: '', clubOther: '', ageGroup: '',
+  playerFirstName: '', playerLastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '', club: '', clubOther: '', ageGroup: '',
   parentFirstName: '', parentLastName: '', parentEmail: '', parentPhone: '',
   emergencySame: false, emergencyFirstName: '', emergencyLastName: '', emergencyPhone: '',
   medicalNotes: '', consent: false, playUpConsent: false,
@@ -1286,6 +1342,19 @@ class Component extends DCLogic {
         playerForm.emergencyLastName = s.playerForm.parentLastName;
         playerForm.emergencyPhone = s.playerForm.parentPhone;
       }
+      const playerError = s.playerError && (s.playerSendFailed || this._playerFormError(playerForm)) ? s.playerError : '';
+      return { playerForm, playerError };
+    });
+  }
+
+  /* One dropdown changed: store the part, then recompose the whole. Mirrors
+     setPlayerField's side effects that matter here - a changed date of birth
+     invalidates any play-up consent already given, because the gap it was
+     agreeing to may no longer be the same gap. */
+  setPlayerDobPart(part, val) {
+    this.setState((s) => {
+      const playerForm = { ...s.playerForm, [part]: val, playUpConsent: false };
+      playerForm.dob = composeDob(playerForm.dobDay, playerForm.dobMonth, playerForm.dobYear);
       const playerError = s.playerError && (s.playerSendFailed || this._playerFormError(playerForm)) ? s.playerError : '';
       return { playerForm, playerError };
     });
@@ -1609,8 +1678,19 @@ class Component extends DCLogic {
       onBackdropPlayer: () => this.closePlayerModal(),
       onPlayerFirstName: (e) => this.setPlayerField('playerFirstName', e.target.value),
       onPlayerLastName: (e) => this.setPlayerField('playerLastName', e.target.value),
-      onPlayerDob: (e) => this.setPlayerField('dob', e.target.value),
-      onDobClick: (e) => { if (typeof e.target.showPicker === 'function') { try { e.target.showPicker(); } catch (err) {} } },
+      onPlayerDobDay: (e) => this.setPlayerDobPart('dobDay', e.target.value),
+      onPlayerDobMonth: (e) => this.setPlayerDobPart('dobMonth', e.target.value),
+      onPlayerDobYear: (e) => this.setPlayerDobPart('dobYear', e.target.value),
+      dobDayOptions: DOB_DAYS,
+      dobMonthOptions: MONTH_NAMES.map((n, i) => ({ v: String(i + 1).padStart(2, '0'), n })),
+      dobYearOptions: DOB_YEARS,
+      /* Echoes the stored date back with the month in words. This is the check
+         on a transposition: "7 November 2015" reads unmistakably differently
+         from "11 July 2015". */
+      playerDobConfirm: this.state.playerForm.dob ? fmtDobLong(this.state.playerForm.dob) : '',
+      /* All three chosen but composeDob refused them - 31 February and friends. */
+      playerDobImpossible: !!(this.state.playerForm.dobDay && this.state.playerForm.dobMonth
+        && this.state.playerForm.dobYear && !this.state.playerForm.dob),
       onPlayerClub: (e) => this.setPlayerField('club', e.target.value),
       playerClubIsOther: this.state.playerForm.club === '__other__',
       playerClubOtherVal: this.state.playerForm.clubOther,

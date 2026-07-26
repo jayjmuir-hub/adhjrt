@@ -151,6 +151,131 @@ export function scoreTotal(ageGroupId, parts) {
   }, 0);
 }
 
+/* ============================================================
+   THE VENUE — which pitches exist on each day, and which age groups play
+   on which day.
+   ------------------------------------------------------------
+   Which day a group plays used to be a hardcoded array called SATURDAY inside
+   app.html, and it was wrong: U12G was on Saturday and U18B/U18G were missing
+   from it, so both fell through to Sunday. That list is gone. An age group is
+   now on Saturday because Saturday is where the layout gives it pitches, so the
+   two facts cannot disagree.
+
+   ⚠️ DEFAULT_VENUE MUST MATCH netlify/functions/_venue.js's DEFAULT_VENUE.
+   The same table has to exist on both sides: the server reads it to answer
+   /venue-layout, and this copy is what the offline/local fallback and the very
+   first paint use before that fetch resolves. test-venue.js compares the two and
+   fails if they drift.
+
+   Read off Pitch maps_Final.pdf (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
+   26 July 2026 as the same running order for 2026. The sub-pitch letters
+   (B1A..B1D, D3A/D3B and so on) are OURS — the map draws the boxes inside one
+   outline without naming them, so these have to match the printed pitch flags.
+   ============================================================ */
+export const DEFAULT_VENUE = {
+  day1: {
+    date: '2026-11-07',
+    label: 'Saturday 7 November',
+    short: 'Sat',
+    pitches: ['D5A', 'D5B', 'D4A', 'D4B', 'D3A', 'D3B', 'D2', 'D1',
+      'C4', 'C5', 'B1A', 'B1B', 'B1C', 'B1D', 'A1A', 'A1B', 'A1C', 'A1D'],
+    groups: {
+      u6:   ['D4A', 'D4B', 'D5A', 'D5B'],   // morning
+      u7:   ['D4A', 'D4B', 'D5A', 'D5B'],   // afternoon, the same four
+      u8:   ['B1A', 'B1B', 'B1C', 'B1D'],
+      u9:   ['A1A', 'A1B', 'A1C', 'A1D'],
+      u10:  ['C5'],
+      u11:  ['C4'],
+      u12:  ['D3A', 'D3B'],
+      u18b: ['D2'],
+      u18g: ['D1'],
+    },
+  },
+  day2: {
+    date: '2026-11-08',
+    label: 'Sunday 8 November',
+    short: 'Sun',
+    pitches: ['D3', 'D2', 'D1', 'C4A', 'C4B', 'C5', 'B1A', 'B1B', 'A1A', 'A1B'],
+    groups: {
+      u12g: ['B1A', 'B1B'],
+      u13:  ['C4A', 'C4B'],
+      u14b: ['D3'],
+      u14g: ['A1A', 'A1B'],
+      u16b: ['D2', 'D1'],
+      u16g: ['C5'],
+    },
+  },
+};
+
+/* The live layout once fetched. Until then every reader below answers from
+   DEFAULT_VENUE, so nothing ever waits on a config fetch and nothing is ever
+   undefined. loadVenue() is called once at start-up by whoever cares. */
+let LIVE_VENUE = null;
+
+export function venue() { return LIVE_VENUE || DEFAULT_VENUE; }
+
+export async function loadVenue() {
+  if (LIVE_VENUE) return LIVE_VENUE;
+  const r = await tryFetchJson('/.netlify/functions/venue-layout');
+  if (r.real && r.json && r.json.ok && r.json.venue) LIVE_VENUE = r.json.venue;
+  else LIVE_VENUE = DEFAULT_VENUE;
+  return LIVE_VENUE;
+}
+
+/* 'day1' | 'day2' | null. Null means the layout does not list this age group at
+   all — a configuration problem worth showing rather than papering over. Listed
+   with an EMPTY pitch array still counts as being on that day: "which day" and
+   "which pitches" are separate questions, and a group can be scheduled for
+   Sunday before anyone has decided where it plays. */
+export function dayIdOfAgeGroup(agId) {
+  const v = venue();
+  if (v.day1 && v.day1.groups && v.day1.groups[agId]) return 'day1';
+  if (v.day2 && v.day2.groups && v.day2.groups[agId]) return 'day2';
+  return null;
+}
+
+/* The yyyy-mm-dd date an age group plays on. A group missing from the layout
+   falls back to day 1 rather than returning nothing: this feeds the date
+   arithmetic behind the countdown, and a null here would read as "kick-off in
+   NaN minutes". Day 1 is the safe wrong answer — it is the earlier of the two,
+   so a countdown built on it expires rather than sitting in the future forever. */
+export function dayOfAgeGroup(agId) {
+  const v = venue();
+  const d = dayIdOfAgeGroup(agId) || 'day1';
+  return (v[d] && v[d].date) || DEFAULT_VENUE[d].date;
+}
+
+export function isDayOne(agId) { return dayIdOfAgeGroup(agId) === 'day1'; }
+
+/* 'Saturday 7 November', or 'Sat' with short=true. Headings, and the day pill on
+   the app's age-group picker. */
+export function dayLabelOfAgeGroup(agId, short) {
+  const v = venue();
+  const d = dayIdOfAgeGroup(agId) || 'day1';
+  const day = v[d] || DEFAULT_VENUE[d];
+  return short ? (day.short || '') : (day.label || '');
+}
+
+/* The pitches this age group is allowed to use, in the order the layout lists
+   them. This is what the Fixture Editor's pitch dropdowns offer — a manager can
+   only pick from their own group's pitches. */
+export function pitchesForAgeGroup(agId) {
+  const d = dayIdOfAgeGroup(agId);
+  if (!d) return [];
+  const list = venue()[d].groups[agId];
+  return Array.isArray(list) ? list.slice() : [];
+}
+
+/* Every pitch running on the day this age group plays. Not offered to managers;
+   the clash check needs it to report a pool sitting on a pitch that exists but
+   is not in its own group's allocation. */
+export function pitchesOnDayOf(agId) {
+  const d = dayIdOfAgeGroup(agId);
+  if (!d) return [];
+  const day = venue()[d];
+  return Array.isArray(day.pitches) ? day.pitches.slice() : [];
+}
+
 /* The code->name legend. Uses the draw's own names for that age group when it
    has them, so the key describes the teams actually playing rather than the
    hardcoded placeholder clubs. */

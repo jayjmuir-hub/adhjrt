@@ -108,6 +108,8 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
+| `venue-layout.js` | GET (public): the pitch and day layout. No write path yet — see Venue below |
+| `_venue.js` | `DEFAULT_VENUE` (pitches per day + which groups play each day), `loadVenue()`, `mergeVenue()` |
 | `_teams.js` | club prefixes and team code generation |
 | `_email.js` | confirmation emails via Microsoft Graph |
 | `get-registrations.js` | organiser-only; reads both Google Sheets |
@@ -145,7 +147,9 @@ almost certainly a mistake.
 
 `u6 u7 u8 u9 u10 u11 u12 u12g u13 u14b u14g u16b u16g u18b u18g`
 
-- Saturday: U6–U12 plus U12G. Sunday: U13–U18.
+- Which day each group plays comes from the **venue layout**, not a list — see
+  the Venue section below. Saturday is U6–U12 plus **U18B and U18G**; Sunday is
+  U13–U16 plus **U12G**. Do not write that split down anywhere else.
 - `u6`/`u7` are festival only — `hasStandings: false`, no table, hidden from
   public standings tabs (but available in the Manager area).
 - `u16b`/`u16g` use a special double-bracket knockout.
@@ -386,6 +390,75 @@ is the PUBLISHED copy and the only thing the public sees.
   `teamNamesFromRegistrations()` is the single source of the naming rule and the
   import review table reads it too, so the two cannot drift.
 
+## Venue — pitches and days (added 26 Jul 2026)
+
+**Which day an age group plays is derived from where it has pitches.** It is not
+a separate list, and it must never become one again.
+
+The layout is `DEFAULT_VENUE`: for each of the two days, a `date`, a `label`, and
+a list of named `pitches`, plus `groups` mapping each age group to the pitches it
+is allowed to use. An age group is on Saturday because Saturday is where it has
+pitches — so the day and the pitch allocation cannot contradict each other.
+
+Read off `Pitch maps_Final.pdf` (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
+26 Jul 2026 as the same running order for 2026:
+
+| | Pitches | Groups |
+|---|---|---|
+| **Saturday** | 18 — D5A/B, D4A/B, D3A/B, D2, D1, C4, C5, B1A–D, A1A–D | u6, u7, u8, u9, u10, u11, u12, u18b, u18g |
+| **Sunday** | 10 — D3, D2, D1, C4A/B, C5, B1A/B, A1A/B | u12g, u13, u14b, u14g, u16b, u16g |
+
+- **D4 and D5 are time-shared on Saturday** — U5/6 in the morning, U7 in the
+  afternoon. `u6` and `u7` therefore hold the *same four* pitches. This needs no
+  special case: it is two pools on one pitch at different times.
+- Sub-pitch letters (`B1A`–`B1D`, `D3A`/`D3B`, …) are **ours**. The map draws the
+  boxes inside one outline without naming them, so these have to match whatever
+  goes on the printed pitch flags.
+- The homepage claims **"16 PITCHES"**. The real counts are 18 and 10.
+
+### Where it lives, and the duplication you must respect
+
+| Copy | Why it exists |
+|---|---|
+| `netlify/functions/_venue.js` | the server's answer, and what `venue-layout.js` serves |
+| `scores-data.js` (`export const DEFAULT_VENUE`) | the front end's offline fallback and its answer before any fetch resolves |
+| `Quins JRT.dc.html` (`AGE_GROUP_CARDS[].day`) | the public "Find your age group" cards; the page has no build step and no import of the data layer |
+
+Three copies is not a mistake, it is the cost of having no build step. **`test-venue.js`
+compares all three and fails if any drifts** — proven against three deliberately
+injected errors. Change one, change them all, run the test.
+
+### Reading it
+
+From `scores-data.js`: `loadVenue()` once at start-up, then the synchronous
+`venue()`, `dayIdOfAgeGroup()`, `dayOfAgeGroup()` (yyyy-mm-dd), `isDayOne()`,
+`dayLabelOfAgeGroup(id, short)`, `pitchesForAgeGroup()` and `pitchesOnDayOf()`.
+All of them answer from the built-in default until the fetch lands, so **nothing
+ever waits on a config fetch and nothing is ever undefined**. A group missing from
+the layout returns `null` from `dayIdOfAgeGroup()` but still gets day 1 from
+`dayOfAgeGroup()` — the countdown does date arithmetic on it and a null would
+render "kick-off in NaN minutes".
+
+### What was wrong before
+
+`app.html` had `const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g']`
+and the homepage cards had the same two errors. So **U12G was shown on Saturday
+and U18B/U18G on Sunday — both the opposite of the truth, on the public site,
+with registration open.** The array is gone. If you find yourself typing a list
+of age groups next to a day, stop.
+
+### Not built yet
+
+`venue-layout.js` is **GET only**. There is no write path, so the blob is always
+absent and every reader gets the default. The organiser editor is Step 2 of
+`claude/spec-pitches-and-clash-detection.md`, along with pool-level pitch and
+start time, and the weekend clash check. `mergeVenue()` is already written and
+tested and **replaces a day wholesale rather than merging field by field** —
+merging pitch lists would make removing a pitch impossible, because the default
+would keep putting it back.
+
+---
+
 ## Team codes and names — the rule
 
 **Codes are the identity, names are the display.** `pools[].teams` holds a code
@@ -512,9 +585,14 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for "View live scores" — only once the draw is real, or placeholder
    pools go public.
-3. **Sponsors** placeholder — when artwork arrives, a comment directly above
+3. **Pitches and clash detection.** The layout now exists (see Venue above) but
+   nothing uses it yet: no pool has a pitch or its own start time, every pool
+   still kicks off at 08:00, and nothing checks whether two age groups have been
+   handed the same pitch at the same time. Steps 2–5 of
+   `claude/spec-pitches-and-clash-detection.md`.
+4. **Sponsors** placeholder — when artwork arrives, a comment directly above
    the section gives the exact `<img>` tag to swap in.
-4. **Deploy cost** — every production deploy costs 15 Netlify credits
+5. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)

@@ -348,8 +348,8 @@
         <div class="fmt-day" data-reveal>
           <div class="fmt-numbg"><span class="w">Day</span><span class="n">01</span></div>
           <span class="fmt-daytag">Saturday 7 Nov</span>
-          <h3>Mini &amp; Midi</h3>
-          <div class="fmt-sub">U6 &ndash; U12 &middot; plus U12 Girls</div>
+          <h3>Mini, Midi &amp; Colts</h3>
+          <div class="fmt-sub">U6 &ndash; U12 &middot; plus U18 boys &amp; girls</div>
           <div class="fmt-grps">
             <sc-for list="{{ groupsSaturday }}" as="g" hint-placeholder-count="8">
               <div onClick="{{ g.onJump }}" class="fmt-grp">{{ g.name }}</div>
@@ -359,8 +359,8 @@
         <div class="fmt-day sun" data-reveal>
           <div class="fmt-numbg"><span class="w">Day</span><span class="n">02</span></div>
           <span class="fmt-daytag">Sunday 8 Nov</span>
-          <h3>Youth</h3>
-          <div class="fmt-sub">U13 &ndash; U18 &middot; boys &amp; girls</div>
+          <h3>Youth &amp; Girls</h3>
+          <div class="fmt-sub">U12 Girls &middot; U13 &ndash; U16 boys &amp; girls</div>
           <div class="fmt-grps">
             <sc-for list="{{ groupsSunday }}" as="g" hint-placeholder-count="7">
               <div onClick="{{ g.onJump }}" class="fmt-grp">{{ g.name }}</div>
@@ -1161,6 +1161,16 @@ function fmtAge(a) {
   return `${y}, ${m}`;
 }
 
+/* ⚠️ The `day` on each card is what parents read on the public site, and it MUST
+   agree with the venue layout — DEFAULT_VENUE in scores-data.js and
+   netlify/functions/_venue.js, where an age group's day comes from which day it
+   has pitches on. It did not: U12G said Saturday and U18B/U18G said Sunday, the
+   exact opposite of the 2025 pitch map in both cases, with registration already
+   open. test-venue.js now compares this table against the layout.
+
+   This page has no build step and no import of the data layer, so the day is
+   written out here rather than derived. If the layout is ever changed in the back
+   office, this table has to be edited to match — the test is what catches it. */
 const AGE_GROUP_CARDS = [
   { age: 'U6', name: 'U6 Tag', band: 'Tag', day: 'Saturday', comp: 'Festival · no standings', desc: 'Non-contact tag rugby. Pure fun — everyone plays, everyone wins.', tint: '#E11B22' },
   { age: 'U7', name: 'U7 Tag', band: 'Tag', day: 'Saturday', comp: 'Festival · no standings', desc: 'Non-contact tag in a relaxed festival format. No pressure, all smiles.', tint: '#E11B22' },
@@ -1169,14 +1179,14 @@ const AGE_GROUP_CARDS = [
   { age: 'U10', name: 'U10 Mixed Contact', band: 'Mixed Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Mixed contact rugby developing the full game across the day.', tint: '#E11B22' },
   { age: 'U11', name: 'U11 Mixed Contact', band: 'Mixed Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Mixed contact with rolling squads and competitive pools.', tint: '#E11B22' },
   { age: 'U12', name: 'U12 Mixed Contact', band: 'Mixed Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Mixed contact, two pools building towards the finals series.', tint: '#E11B22' },
-  { age: 'U12G', name: 'U12G QR', band: 'Quick Rip', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls quick rip — fast, phase-based rugby with no contact.', tint: '#E11B22' },
+  { age: 'U12G', name: 'U12G QR', band: 'Quick Rip', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls quick rip — fast, phase-based rugby with no contact.', tint: '#17A34A' },
   { age: 'U13', name: 'U13 Mixed Contact', band: 'Mixed Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Mixed contact with competitive pools and a full finals series.', tint: '#17A34A' },
   { age: 'U14B', name: 'U14B Contact', band: 'Boys Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Boys contact rugby — pools into a full finals series.', tint: '#17A34A' },
   { age: 'U14G', name: 'U14G QR', band: 'Quick Rip', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls quick rip — fast, fun and one of the fastest-growing formats.', tint: '#17A34A' },
   { age: 'U16B', name: 'U16B Contact', band: 'Boys Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Boys contact — a showpiece bracket with referees and managers.', tint: '#17A34A' },
   { age: 'U16G', name: 'U16G Contact', band: 'Girls Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls contact rugby, competitive pools leading to finals.', tint: '#17A34A' },
-  { age: 'U18B', name: 'U18B Contact', band: 'Boys Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Boys colts — the oldest boys age group, full contact format.', tint: '#17A34A' },
-  { age: 'U18G', name: 'U18G Contact', band: 'Girls Contact', day: 'Sunday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls colts contact rugby, pools into a finals series.', tint: '#17A34A' },
+  { age: 'U18B', name: 'U18B Contact', band: 'Boys Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Boys colts — the oldest boys age group, full contact format.', tint: '#E11B22' },
+  { age: 'U18G', name: 'U18G Contact', band: 'Girls Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls colts contact rugby, pools into a finals series.', tint: '#E11B22' },
 ];
 
 function encodeFormData(data) {

@@ -380,13 +380,25 @@ const api = await import('/scores-data.js');
 const orgApi = await import('/organizer-data.js');
 
 /* ---------------- tournament facts ----------------
-   Which day an age group plays is fixed and published on the website. Knowing
-   it lets a fixture's kick-off minutes become a real date, which is what makes
-   "kick-off in 24 minutes" possible rather than just showing "09:20". */
-const DAY1 = '2026-11-07', DAY2 = '2026-11-08';
-const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g'];
-const dayOf = (agId) => SATURDAY.includes(agId) ? DAY1 : DAY2;
-const isSat = (agId) => SATURDAY.includes(agId);
+   Which day an age group plays lets a fixture's kick-off minutes become a real
+   date, which is what makes "kick-off in 24 minutes" possible rather than just
+   showing "09:20".
+
+   This used to be a hardcoded list here called SATURDAY, and it was WRONG — it
+   had U12G on Saturday and left U18B and U18G off it entirely, so both fell
+   through to Sunday. It now comes from the venue layout in the shared data
+   layer, where an age group is on Saturday because Saturday is where it has
+   pitches. One source of truth, and an organiser can change it in the back
+   office without a deploy.
+
+   loadVenue() is awaited at start-up (see the boot block at the bottom of this
+   file). Before it resolves these readers answer from the built-in default, so
+   nothing here can ever be undefined or block on a config fetch. */
+await api.loadVenue();
+
+const DAY1 = api.venue().day1.date, DAY2 = api.venue().day2.date;
+const dayOf = (agId) => api.dayOfAgeGroup(agId);
+const isSat = (agId) => api.isDayOne(agId);
 
 const KICKOFF = new Date(DAY1 + 'T08:00:00+04:00');
 const END     = new Date(DAY2 + 'T20:00:00+04:00');
@@ -590,13 +602,15 @@ function pills(){
 }
 
 /* Which of the two days this age group plays on. The app has always known
-   (dayOf drives the countdown) but never showed it. */
+   (dayOf drives the countdown) but never showed it. The date text comes from the
+   venue layout rather than being typed here, so moving a day in the back office
+   moves it on this tag too. */
 function dayTag(agId){
   if (!agId) return '';
   const sat = isSat(agId);
   return `<div class="daytag ${sat?'':'sun'}">
       <span class="daytag-n">DAY ${sat?'01':'02'}</span>
-      <span class="daytag-d">${sat?'Saturday 7 November':'Sunday 8 November'}</span>
+      <span class="daytag-d">${esc(api.dayLabelOfAgeGroup(agId))}</span>
     </div>`;
 }
 function comingSoon(what, agId){

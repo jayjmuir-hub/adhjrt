@@ -666,20 +666,22 @@
               </div>
 
               <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7f8794;margin-bottom:8px">Pitches for this age group</div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-                  <sc-for list="{{ pitchChips }}" as="pc" hint-placeholder-count="3">
-                    <div style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:5px 6px 5px 14px;font-size:13px;font-weight:700">
-                      <span style="white-space:nowrap">{{ pc.name }}</span>
-                      <button onClick="{{ pc.onRemove }}" aria-label="Remove pitch" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:14px;padding:2px 5px">&times;</button>
-                    </div>
-                  </sc-for>
-                  <sc-if value="{{ pitchesEmpty }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:#7f8794;align-self:center">No pitches added yet &mdash; add them below, then pick one per match.</span></sc-if>
+                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7f8794">Your pitches &mdash; {{ venueDayLabel }}</div>
+                  <div style="font-size:11px;color:#5a616d;font-weight:600">{{ venuePitchCount }} set by the organisers</div>
                 </div>
-                <div style="display:flex;gap:8px">
-                  <input value="{{ newPitchValue }}" onInput="{{ onNewPitchInput }}" onKeyDown="{{ onNewPitchKey }}" placeholder="Add a pitch (e.g. Pitch 1)" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px">
-                  <button onClick="{{ onAddPitch }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">+ Add pitch</button>
-                </div>
+                <sc-if value="{{ venuePitchesEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:12.5px;color:#f5c518;line-height:1.6">No pitches have been assigned to this age group yet. An organiser sets them in the <strong>Venue &amp; days</strong> tab of the organiser back office.</div>
+                </sc-if>
+                <sc-for list="{{ pitchUsageRows }}" as="pu" hint-placeholder-count="3">
+                  <div style="display:flex;gap:10px;align-items:baseline;padding:4px 0;border-top:1px solid rgba(255,255,255,0.06)">
+                    <span style="width:64px;flex:none;font-size:13px;font-weight:800;color:#fff">{{ pu.name }}</span>
+                    <span style="font-size:12px;font-weight:600;color:{{ pu.color }};line-height:1.5">{{ pu.detail }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ legacyPitchesShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:10px;font-size:12px;color:#f5c518;line-height:1.6">Also in this saved draw, but <strong>not in the venue layout</strong>: {{ legacyPitchList }}. Still selectable so nothing loses its pitch, but ask an organiser to add or rename it so clash checking can see it.</div>
+                </sc-if>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-width:0">
                 <sc-for list="{{ poolCards }}" as="pool" hint-placeholder-count="2">
@@ -691,6 +693,28 @@
                       </div>
                       <button onClick="{{ pool.onRemovePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:11px;padding:5px 10px;border-radius:7px;cursor:pointer">Delete pool</button>
                     </div>
+
+                    <!-- A pool is a pitch's day: set it once here, every match follows -->
+                    <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+                      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+                        <label style="display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Pitch
+                          <select value="{{ pool.poolPitchVal }}" onChange="{{ pool.onPoolPitchChange }}" disabled="{{ pool.poolTimingDisabled }}" style="width:110px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 6px;color:#fff;font-size:12.5px;font-weight:700;color-scheme:dark">
+                            <sc-for list="{{ pool.poolPitchOptions }}" as="ppo"><option value="{{ ppo }}">{{ ppo }}</option></sc-for>
+                          </select>
+                        </label>
+                        <label style="display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">First kick-off
+                          <input type="time" value="{{ pool.poolStartVal }}" onInput="{{ pool.onPoolStartChange }}" disabled="{{ pool.poolTimingDisabled }}" style="width:104px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12.5px;font-weight:700;color-scheme:dark">
+                        </label>
+                        <div style="flex:1;min-width:150px;font-size:11.5px;font-weight:600;color:{{ pool.poolRunColor }};line-height:1.5;padding-bottom:3px">{{ pool.poolRunLabel }}</div>
+                      </div>
+                      <sc-if value="{{ pool.poolPitchIsMixed }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:11.5px;color:#f5c518;margin-top:7px;line-height:1.5">These matches are on <strong>different pitches</strong> — pick one above to put the whole pool together, or leave them and set each match below.</div>
+                      </sc-if>
+                      <sc-if value="{{ pool.poolWarnShow }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:11.5px;color:{{ pool.poolRunColor }};margin-top:7px;line-height:1.5">{{ pool.poolWarn }}</div>
+                      </sc-if>
+                    </div>
+
                     <div onDragOver="{{ pool.onDragOverZone }}" onDrop="{{ pool.onDropZone }}" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:10px;margin-bottom:10px;min-height:44px">
                       <sc-for list="{{ pool.teamChips }}" as="chip" hint-placeholder-count="5">
                         <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 6px 6px 14px;font-size:13px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">
@@ -897,7 +921,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     drafts: {}, savedIds: {},
     publishState: null, publishBusy: false,
-    bulkBusy: false, bulkMsg: '', newPitchInput: '',
+    bulkBusy: false, bulkMsg: '',
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
@@ -935,6 +959,11 @@ class Component extends DCLogic {
   async componentDidMount() {
     const api = await import(new URL('scores-data.js', document.baseURI).href);
     if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
+    /* The venue layout decides which pitches this age group may use and which
+       day it plays. Both readers answer from the built-in default until this
+       resolves, so a slow fetch delays nothing - it just means the very first
+       paint could offer the default pitch list. */
+    if (api.loadVenue) { try { await api.loadVenue(); } catch (e) {} }
     const ageGroups = await api.getAgeGroups();
     const firstComp = ageGroups.find((a) => a.hasStandings) || ageGroups[0];
     const propAge = this.props.age;
@@ -1043,6 +1072,150 @@ class Component extends DCLogic {
     const mins = this.state.api.timeToMinutes(hhmm);
     this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
   }
+
+  /* ---------------- A POOL IS A PITCH'S DAY ----------------
+     A pool is already a run of matches SLOT_MINS apart, which is exactly what
+     one pitch does for a stretch of the day. So rather than setting a pitch on
+     ~430 individual slots, set it once per pool - roughly 40 across the weekend -
+     and push it down onto that pool's matches.
+
+     NOTHING NEW IS STORED. Both values are DERIVED FROM THE SLOTS and setting
+     one rewrites them. That is deliberate:
+       - the public fixtures page, the standings and the app keep reading
+         slot.pitch and slot.startMins exactly as before, so no reader changes;
+       - the saveDraw() allow-list needs no new field (the trap that lost
+         teamNames once already);
+       - an old saved draw needs no migration - it displays correctly because
+         the display is computed from what it already holds;
+       - and the pool header can never disagree with the fixtures underneath it,
+         because there is only one copy of the fact.
+     Per-match overrides keep working; changing the pool's pitch overwrites them
+     after asking. */
+
+  /* The pitch a pool is on: the single pitch all its matches share, 'TBD' if
+     none is set, or '' when they disagree (a per-match override). '' makes the
+     dropdown show "Mixed", which is honest rather than picking one to display. */
+  poolPitchOf(poolId, draw) {
+    const d = draw || this.state.editorDraw;
+    if (!d) return 'TBD';
+    const vals = new Set((d.slots || []).filter((sl) => sl.poolId === poolId)
+      .map((sl) => (sl.pitch || 'TBD')));
+    if (!vals.size) return 'TBD';
+    if (vals.size > 1) return '';
+    return [...vals][0];
+  }
+
+  /* When a pool starts: the earliest of its matches. Null for an empty pool -
+     there is nothing to schedule, and 08:00 would be a made-up answer. */
+  poolStartOf(poolId, draw) {
+    const d = draw || this.state.editorDraw;
+    const mins = (d && d.slots || []).filter((sl) => sl.poolId === poolId).map((sl) => sl.startMins);
+    return mins.length ? Math.min(...mins) : null;
+  }
+
+  poolSlotCount(poolId, draw) {
+    const d = draw || this.state.editorDraw;
+    return ((d && d.slots) || []).filter((sl) => sl.poolId === poolId).length;
+  }
+
+  /* Re-times one pool's matches from `startMins`, SLOT_MINS apart, keeping the
+     order they are already in. */
+  _retimePool(draw, poolId, startMins) {
+    const step = this.state.api.slotLengthMins();
+    const ordered = (draw.slots || []).filter((sl) => sl.poolId === poolId)
+      .slice().sort((a, b) => a.startMins - b.startMins);
+    const times = new Map();
+    ordered.forEach((sl, i) => times.set(sl.id, startMins + i * step));
+    return { ...draw, slots: draw.slots.map((sl) => (times.has(sl.id) ? { ...sl, startMins: times.get(sl.id) } : sl)) };
+  }
+
+  /* Where a pitch is free in THIS age group: 08:00 if nothing else is on it,
+     otherwise straight after the last pool already there. Only ever a
+     SUGGESTION - the start box stays editable, because the 2025 map has pitches
+     deliberately left idle between age groups (D4/D5 change over at midday). */
+  suggestedStartFor(poolId, pitch, draw) {
+    const { api } = this.state;
+    const d = draw || this.state.editorDraw;
+    if (!d || !pitch || pitch === 'TBD') return api.dayStartMins();
+    let end = api.dayStartMins();
+    (d.pools || []).forEach((p) => {
+      if (p.id === poolId) return;
+      if (this.poolPitchOf(p.id, d) !== pitch) return;
+      const st = this.poolStartOf(p.id, d);
+      if (st == null) return;
+      const e = api.poolEndMins(st, this.poolSlotCount(p.id, d));
+      if (e > end) end = e;
+    });
+    return end;
+  }
+
+  /* True when this pool would overlap another pool of the same age group on the
+     same pitch. The cross-age-group version of this is Step 4. */
+  poolOverlapsInGroup(poolId, pitch, startMins, draw) {
+    const { api } = this.state;
+    const d = draw || this.state.editorDraw;
+    if (!d || !pitch || pitch === 'TBD' || startMins == null) return null;
+    const end = api.poolEndMins(startMins, this.poolSlotCount(poolId, d));
+    for (const p of (d.pools || [])) {
+      if (p.id === poolId) continue;
+      if (this.poolPitchOf(p.id, d) !== pitch) continue;
+      const st = this.poolStartOf(p.id, d);
+      if (st == null) continue;
+      const e = api.poolEndMins(st, this.poolSlotCount(p.id, d));
+      if (startMins < e && st < end) return { pool: p, startMins: st, endMins: e };
+    }
+    return null;
+  }
+
+  onPoolPitchChange(poolId, val) {
+    const { api, editorDraw } = this.state;
+    if (!editorDraw) return;
+    const pool = (editorDraw.pools || []).find((p) => p.id === poolId);
+    const count = this.poolSlotCount(poolId);
+    if (!count) return;   // an empty pool has nothing to put on a pitch
+
+    const current = this.poolPitchOf(poolId);
+    const apply = () => {
+      this.setState((s) => {
+        let d = { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.poolId === poolId ? { ...sl, pitch: val } : sl)) };
+        return { editorDraw: d };
+      }, () => this._offerStartMove(poolId, val));
+    };
+
+    /* Only ask when there is something to lose. `current === ''` means the
+       matches are on DIFFERENT pitches, so somebody set one by hand. */
+    if (current === '') {
+      const list = [...new Set((editorDraw.slots || []).filter((sl) => sl.poolId === poolId).map((sl) => sl.pitch || 'TBD'))];
+      this.confirmModal(`${pool.name}'s matches are on different pitches (${list.join(', ')}). Put all ${count} of them on ${val}?`, apply);
+      return;
+    }
+    apply();
+  }
+
+  /* Called after a pitch change: if the pool now overlaps another pool of the
+     same age group on that pitch, offer to move it to the first free slot.
+     An offer, not a rule - a manager may be mid-way through a rearrangement. */
+  _offerStartMove(poolId, pitch) {
+    const { api, editorDraw } = this.state;
+    if (!editorDraw || !pitch || pitch === 'TBD') return;
+    const start = this.poolStartOf(poolId);
+    const clash = this.poolOverlapsInGroup(poolId, pitch, start);
+    if (!clash) return;
+    const suggested = this.suggestedStartFor(poolId, pitch);
+    if (suggested === start) return;
+    const pool = (editorDraw.pools || []).find((p) => p.id === poolId);
+    this.confirmModal(
+      `${pitch} is already busy with ${clash.pool.name} until ${api.minutesToDisplay(clash.endMins)}. `
+      + `Move ${pool.name} to start at ${api.minutesToDisplay(suggested)}?`,
+      () => this.setState((s) => ({ editorDraw: this._retimePool(s.editorDraw, poolId, suggested) })),
+    );
+  }
+
+  onPoolStartChange(poolId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    if (mins == null || isNaN(mins)) return;
+    this.setState((s) => ({ editorDraw: this._retimePool(s.editorDraw, poolId, mins) }));
+  }
   // Live pitch edit from the "Enter scores" tab (a quicker path than the
   // full Fixture Editor for just re-assigning a pitch on matchday). Saves
   // straight into the underlying draw via saveDraw, same store as the
@@ -1072,9 +1245,15 @@ class Component extends DCLogic {
   }
   onAddSlot(poolId) {
     this.setState((s) => {
+      const step = s.api.slotLengthMins();
       const poolSlotsList = s.editorDraw.slots.filter((sl) => sl.poolId === poolId);
-      const lastMins = poolSlotsList.length ? Math.max(...poolSlotsList.map((sl) => sl.startMins)) : 8 * 60 - 20;
-      const newSlot = { id: `${s.editorAgeId}:${poolId}:new${Date.now()}`, poolId, home: '', away: '', startMins: lastMins + 20, pitch: 'TBD' };
+      const lastMins = poolSlotsList.length ? Math.max(...poolSlotsList.map((sl) => sl.startMins)) : s.api.dayStartMins() - step;
+      /* A new match joins the pool's run: the pool's own pitch, one slot after
+         its last match. It used to default to 'TBD' regardless, so adding a
+         match to a pool that was already on C4 quietly created an unplaced
+         fixture. */
+      const pitch = this.poolPitchOf(poolId, s.editorDraw) || 'TBD';
+      const newSlot = { id: `${s.editorAgeId}:${poolId}:new${Date.now()}`, poolId, home: '', away: '', startMins: lastMins + step, pitch };
       return { editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots, newSlot] } };
     });
   }
@@ -1141,8 +1320,19 @@ class Component extends DCLogic {
     this.confirmModal("Regenerate this pool's match schedule from its current team list? This replaces all of this pool's match slots, and any scores already entered for them.", () => {
       const { api, editorDraw, editorAgeId } = this.state;
       const pool = editorDraw.pools.find((p) => p.id === poolId);
-      const fresh = api.regeneratePoolSlots(editorAgeId, poolId, pool.teams);
-      this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: [...s.editorDraw.slots.filter((sl) => sl.poolId !== poolId), ...fresh] } }));
+      /* Keep where the pool WAS. regeneratePoolSlots() rebuilds the fixtures
+         from scratch with every pitch on 'TBD' and the run starting at 08:00, so
+         without this a regenerate silently unplaced a pool that was already
+         scheduled on a pitch at a particular time. */
+      const keepPitch = this.poolPitchOf(poolId, editorDraw);
+      const keepStart = this.poolStartOf(poolId, editorDraw);
+      const fresh = api.regeneratePoolSlots(editorAgeId, poolId, pool.teams)
+        .map((sl) => (keepPitch ? { ...sl, pitch: keepPitch } : sl));
+      this.setState((s) => {
+        let d = { ...s.editorDraw, slots: [...s.editorDraw.slots.filter((sl) => sl.poolId !== poolId), ...fresh] };
+        if (keepStart != null) d = this._retimePool(d, poolId, keepStart);
+        return { editorDraw: d };
+      });
     });
   }
 
@@ -1247,18 +1437,14 @@ class Component extends DCLogic {
     if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     else window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  onAddPitch() {
-    const name = (this.state.newPitchInput || '').trim();
-    if (!name) return;
-    this.setState((s) => {
-      const cur = (s.editorDraw && s.editorDraw.pitches) || [];
-      if (cur.some((p) => p.toLowerCase() === name.toLowerCase())) return { newPitchInput: '' };
-      return { editorDraw: { ...s.editorDraw, pitches: [...cur, name] }, newPitchInput: '' };
-    });
-  }
-  onRemovePitch(name) {
-    this.setState((s) => ({ editorDraw: { ...s.editorDraw, pitches: ((s.editorDraw && s.editorDraw.pitches) || []).filter((p) => p !== name) } }));
-  }
+  /* onAddPitch()/onRemovePitch() used to live here: every age group typed its own
+     free-text pitch names into draw.pitches. That is gone. Pitch names and which
+     group may use which are now set once by an organiser in the Venue & days tab
+     of /organizer, and a manager picks from their own group's list. Free text
+     meant "C4", "Pitch C4" and "c4" were three different pitches to anything
+     trying to spot a clash. draw.pitches is still READ (see editorPitchList) so
+     an older saved draw's pitch does not vanish - it shows up flagged as not
+     being in the layout. */
   async onPublishAll() {
     this.confirmModal('Publish every age group that has a saved draw? Parents and coaches will see all of them on the public pages straight away.', async () => {
       const { api, session, ageGroups } = this.state;
@@ -1780,7 +1966,17 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state;
-    const agePitches = (s.editorDraw && s.editorDraw.pitches) || [];
+    /* WHICH PITCHES THIS AGE GROUP MAY USE.
+       The venue layout is the authority (set by an organiser in /organizer's
+       Venue & days tab). `legacyPitches` are names left in an older saved draw
+       from when each group typed its own: still offered so a saved fixture's
+       pitch does not vanish out from under it, but listed separately and flagged,
+       because the clash check can only reason about pitches in the layout. */
+    const venuePitches = (s.api && s.editorAgeId && s.api.pitchesForAgeGroup)
+      ? s.api.pitchesForAgeGroup(s.editorAgeId) : [];
+    const legacyPitches = ((s.editorDraw && s.editorDraw.pitches) || [])
+      .filter((p) => p && !venuePitches.includes(p));
+    const agePitches = [...venuePitches, ...legacyPitches];
     const pitchOptsFor = (cur) => Array.from(new Set(['TBD', ...agePitches, cur].filter((v) => v != null && v !== '')));
     const koListFinals = (s.fixtures && s.fixtures.knockout) || [];
     const isFinalKo = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
@@ -2143,8 +2339,37 @@ class Component extends DCLogic {
     }));
     const poolCards = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => {
       const slots = (s.editorDraw.slots || []).filter((sl) => sl.poolId === pool.id).sort((a, b) => a.startMins - b.startMins);
+
+      /* The pool's pitch and start time, both derived from its matches. See the
+         comment on poolPitchOf() for why nothing new is stored. */
+      const pPitch = this.poolPitchOf(pool.id);
+      const pStart = this.poolStartOf(pool.id);
+      const pEnd   = pStart == null ? null : s.api.poolEndMins(pStart, slots.length);
+      const clash  = this.poolOverlapsInGroup(pool.id, pPitch, pStart);
+      const unplaced = !slots.length ? '' : (!pPitch || pPitch === 'TBD' ? 'no pitch yet' : '');
+
       return {
         id: pool.id, name: pool.name,
+
+        // --- pitch + start time for the whole pool ---
+        poolPitchVal: pPitch,
+        // '' is the "Mixed" state: the matches are on different pitches.
+        poolPitchOptions: pPitch === '' ? ['', ...pitchOptsFor(null)] : pitchOptsFor(pPitch),
+        poolPitchIsMixed: pPitch === '',
+        onPoolPitchChange: (e) => { if (e.target.value !== '') this.onPoolPitchChange(pool.id, e.target.value); },
+        poolStartVal: pStart == null ? '' : s.api.minutesToTimeInput(pStart),
+        onPoolStartChange: (e) => this.onPoolStartChange(pool.id, e.target.value),
+        /* An empty pool has nothing to place, so both boxes are disabled rather
+           than silently doing nothing when used. */
+        poolTimingDisabled: !slots.length,
+        poolRunLabel: !slots.length
+          ? 'Add a match slot before giving this pool a pitch and a start time'
+          : `${slots.length} match${slots.length === 1 ? '' : 'es'} · ${s.api.minutesToDisplay(pStart)} – ${s.api.minutesToDisplay(pEnd)}`,
+        poolRunColor: clash ? '#ff8a8a' : (unplaced ? '#f5c518' : '#7f8794'),
+        poolWarn: clash
+          ? `Clashes with ${clash.pool.name} on ${pPitch} (${s.api.minutesToDisplay(clash.startMins)} – ${s.api.minutesToDisplay(clash.endMins)})`
+          : (unplaced ? 'This pool has no pitch yet — parents will see “TBD”.' : ''),
+        poolWarnShow: !!(clash || unplaced),
         onDragOverZone: (e) => e.preventDefault(),
         onDropZone: (e) => { e.preventDefault(); this.onPoolDropTeam(pool.id); },
         teamChips: pool.teams.map((t) => ({
@@ -2400,12 +2625,38 @@ class Component extends DCLogic {
       onJumpToCurrentMatch: () => this.onJumpToCurrentMatch(),
       hasScoreMatches: !!(s.fixtures && (((s.fixtures.pool || []).length + (s.fixtures.knockout || []).length) > 0)),
       onBackToMenu: () => this.onBackToMenu(),
-      pitchChips: agePitches.map((p) => ({ name: p, onRemove: () => this.onRemovePitch(p) })),
-      pitchesEmpty: agePitches.length === 0,
-      newPitchValue: s.newPitchInput || '',
-      onNewPitchInput: (e) => this.setState({ newPitchInput: e.target.value }),
-      onNewPitchKey: (e) => { if (e.key === 'Enter') this.onAddPitch(); },
-      onAddPitch: () => this.onAddPitch(),
+      /* The pitch panel is now READ-ONLY: it reports what the venue layout gives
+         this age group, and points at where to change it. A manager typing a new
+         pitch name here is exactly what made three spellings of C4 possible. */
+      venueDayLabel: (s.api && s.editorAgeId && s.api.dayLabelOfAgeGroup)
+        ? s.api.dayLabelOfAgeGroup(s.editorAgeId) : '',
+      venuePitchList: venuePitches.join(' · '),
+      venuePitchCount: venuePitches.length,
+      venuePitchesEmpty: venuePitches.length === 0,
+      legacyPitchList: legacyPitches.join(' · '),
+      legacyPitchesShow: legacyPitches.length > 0,
+      /* Per-pitch summary for this age group: which pools are on it and when.
+         An in-group clash check, in other words. The whole-weekend version
+         across all 15 age groups is the next piece of work. */
+      pitchUsageRows: venuePitches.map((name) => {
+        const on = ((s.editorDraw && s.editorDraw.pools) || [])
+          .filter((p) => this.poolPitchOf(p.id) === name)
+          .map((p) => {
+            const st = this.poolStartOf(p.id);
+            const n = this.poolSlotCount(p.id);
+            return { name: p.name, startMins: st, endMins: st == null ? null : s.api.poolEndMins(st, n) };
+          })
+          .sort((a, b) => (a.startMins || 0) - (b.startMins || 0));
+        const overlap = on.some((a, i) => on.some((c, j) =>
+          i !== j && a.startMins != null && c.startMins != null && a.startMins < c.endMins && c.startMins < a.endMins));
+        return {
+          name,
+          detail: on.length
+            ? on.map((o) => `${o.name} ${s.api.minutesToDisplay(o.startMins)}–${s.api.minutesToDisplay(o.endMins)}`).join('  ·  ')
+            : 'nothing on it yet',
+          color: overlap ? '#ff8a8a' : (on.length ? '#aeb4bf' : '#5a616d'),
+        };
+      }),
     };
   }
 

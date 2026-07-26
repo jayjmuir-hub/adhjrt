@@ -415,6 +415,21 @@ function findAg(id) { return AGE_GROUPS.find((a) => a.id === id); }
 const SLOT_MINS = 20; // 7 + 3 + 7 + 3
 const DAY_START_MINS = 8 * 60; // 8:00am
 
+/* Both are exported because the Fixture Editor needs the same numbers to lay a
+   pool out on a pitch: a pool is a run of matches SLOT_MINS apart, so its end
+   time is start + matches x SLOT_MINS, and a pitch with nothing on it starts at
+   DAY_START_MINS. Retyping 20 and 480 over there would let the editor's
+   arithmetic drift from the generator's. */
+export function slotLengthMins() { return SLOT_MINS; }
+export function dayStartMins() { return DAY_START_MINS; }
+
+/* The end of a run of `count` matches starting at `startMins`. Used for the
+   "08:00-10:00" label on a pool and for the overlap test - two pools clash when
+   they share a pitch and their [start, end) ranges intersect. */
+export function poolEndMins(startMins, count) {
+  return startMins + Math.max(0, count) * SLOT_MINS;
+}
+
 function orderNoBackToBack(teams) {
   const remaining = [];
   for (let i = 0; i < teams.length; i++) for (let j = i + 1; j < teams.length; j++) remaining.push([teams[i], teams[j]]);

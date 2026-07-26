@@ -487,13 +487,69 @@ Managers are refused server-side with a 403 that explains why.
   is what a change here is about to break. Organiser-only, since drafts are not
   public.
 
+### A pool is a pitch's day (added 26 Jul 2026)
+
+A pool is already a run of matches `SLOT_MINS` apart, which is what one pitch does
+for a stretch of the day. So the Fixture Editor sets the pitch and the first
+kick-off **once per pool** — about 40 across the weekend instead of ~430 slots —
+and pushes them down onto that pool's matches.
+
+**Nothing new is stored.** Both values are **derived from the slots**, and setting
+one rewrites them. That is deliberate, and it is the thing to preserve:
+
+- the public fixtures page, the standings and the app keep reading `slot.pitch`
+  and `slot.startMins` exactly as before — **no reader changed**;
+- `saveDraw()`'s allow-list needs no new field (the trap that lost `teamNames`);
+- an old saved draw needs **no migration** — it displays correctly because the
+  display is computed from what it already holds;
+- and the pool header can never disagree with the fixtures under it, because
+  there is only one copy of the fact.
+
+`poolPitchOf()` returns the single pitch all a pool's matches share, `'TBD'` if
+none, or `''` when they disagree — `''` renders as **Mixed**, which is honest
+rather than picking one to show. `poolStartOf()` is the earliest match, `null` for
+an empty pool. `slotLengthMins()`, `dayStartMins()` and `poolEndMins()` are
+exported from `scores-data.js` so the editor's arithmetic cannot drift from the
+generator's.
+
+- Changing a pool's pitch **overwrites per-match overrides**, after a confirm
+  naming the pitches involved. Changing the first kick-off re-times the run
+  20 minutes apart **in the order it is already in** — a hand-reordered pool
+  stays reordered.
+- Moving a pool onto a pitch another pool of the same age group is already using
+  **offers** to shift it to the first free time. An offer, not a rule: a manager
+  may be mid-rearrangement.
+- **Two pools on one pitch at different times is a time-share, not a clash** —
+  that is exactly how D4/D5 ran U6 then U7. Only overlapping ranges are reported,
+  and touching exactly (one ends 10:00, the next starts 10:00) is fine.
+- `+ Add match slot` inherits the pool's pitch and continues its run; it used to
+  default to `'TBD'` regardless, silently creating an unplaced fixture.
+- `Regenerate from pool` keeps the pool's pitch and start time. It rebuilds every
+  slot on `'TBD'` at 08:00, so without that a regenerate silently unplaced a pool.
+
+**The free-text pitch list is gone.** `onAddPitch()`/`onRemovePitch()` and the
+chips UI are deleted: every age group used to type its own names into
+`draw.pitches`, so `C4`, `Pitch C4` and `c4` were three different pitches to
+anything trying to spot a clash. The panel is now read-only — it reports the
+group's pitches from the layout, which pools are on each and when (an **in-group**
+clash check), and points at the Venue & days tab. `draw.pitches` is still *read* so
+an older draw's pitch does not vanish; those show separately, flagged as not in the
+layout.
+
+**`test-pool-pitch.js` exists because `validate-bindings.js` cannot see any of
+this.** Every new binding is `{{ pool.something }}` inside an `sc-for`, so its root
+identifier is the loop variable and the validator skips it by design. That test
+reads the `{{ pool.X }}` tokens out of the markup — scoped to the editor's loop,
+since the public section has its own loop also named `pool` — and asserts the pool
+card objects carry them. Proven against four injected faults, including a renamed
+binding.
+
 ### Not built yet
 
-Steps 3–5 of `claude/spec-pitches-and-clash-detection.md`: pitch and start time
-per **pool** in the Fixture Editor, the weekend **clash check**, and one set of
-pitch names on the homepage and in the app. Until then the layout exists and is
-editable but nothing consumes the pitch lists — every slot is still "TBD" and
-every pool still kicks off at 08:00.
+Steps 4–5 of `claude/spec-pitches-and-clash-detection.md`: the **whole-weekend**
+clash check across all 15 age groups (the in-group one above is local to the editor)
+and one set of pitch names on the homepage and in the app. The homepage still says
+"16 PITCHES"; the real counts are 18 and 10.
 
 ---
 
@@ -623,11 +679,12 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for "View live scores" — only once the draw is real, or placeholder
    pools go public.
-3. **Pitches and clash detection.** The layout exists and is editable in the back
-   office (see Venue above), but nothing consumes the pitch lists yet: no pool has
-   a pitch or its own start time, every pool still kicks off at 08:00, and nothing
-   checks whether two age groups have been handed the same pitch at the same time.
-   Steps 3–5 of `claude/spec-pitches-and-clash-detection.md`.
+3. **Pitches and clash detection.** The layout is editable and pools can now be
+   put on a pitch at a time (see Venue above), but **no age group has actually been
+   scheduled yet** — every slot is still "TBD" at 08:00 until someone works
+   through the editor. And nothing yet checks across age groups, so two groups can
+   still be handed the same pitch at the same time. Steps 4–5 of
+   `claude/spec-pitches-and-clash-detection.md`.
 4. **Sponsors** placeholder — when artwork arrives, a comment directly above
    the section gives the exact `<img>` tag to swap in.
 5. **Deploy cost** — every production deploy costs 15 Netlify credits

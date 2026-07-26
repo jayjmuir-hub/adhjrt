@@ -544,12 +544,65 @@ since the public section has its own loop also named `pool` — and asserts the 
 card objects carry them. Proven against four injected faults, including a renamed
 binding.
 
+### The whole-weekend clash check (added 26 Jul 2026)
+
+`weekendClashes(drawsByAge, ageNames)` in `scores-data.js` — **pure and
+synchronous** on purpose: no fetching, no session, no clock, so it can be tested
+exhaustively. `loadAllDraws(session)` does the fetching; `describeClash(c)` writes
+the sentence.
+
+It turns draws into **bookings**, of two kinds, because there are two kinds of
+fixture: a **pool** is one booking covering its whole run, and each **knockout
+match** is a booking of its own. Two bookings clash when they are on the same
+**day** and the same **pitch** and their `[start, end)` ranges **overlap**.
+
+Four things are deliberately NOT clashes, and each one is a test:
+
+| | Why |
+|---|---|
+| anything on `TBD` or blank | unscheduled is not conflicting; reported separately as still-to-place |
+| the same pitch at **different times** | that is a **time-share** — exactly how D4/D5 ran U5/6 then U7. A check that cries wolf here gets ignored. |
+| the same pitch name on **different days** | `D1`, `D2`, `B1A` and `A1A` exist on both days and are unrelated fields |
+| **touching exactly** — one ends 10:00, the next starts 10:00 | half-open ranges |
+
+Three ways a booking could have escaped, all closed and all tested:
+
+- **A per-match override.** A pool "on C4" with one match moved by hand to C5 is
+  booked as *two* bookings, one per pitch, each from its own earliest match. Treated
+  as one booking, the moved match would be invisible.
+- **Knockout matches.** They have their own pitch and time and are not in a pool.
+  A Cup Final on a pitch another group is using is a real clash.
+- **Case and spacing.** `' c4 '` and `'C4'` are the same pitch. The layout keeps
+  names canonical now, but a legacy `draw.pitches` name may not be.
+
+Two soft warnings ride along: `unplaced` (no pitch yet) and `offAllocation` (on a
+pitch the age group is not allocated in the layout).
+
+**What the check can see depends on who is asking, and the panel says so.** An
+organiser's token reads every group's **draft**; a manager's reads their own draft
+plus everyone else's **published** draw (`get-schedule-override` falls through to
+published when the token has no access). The manager's comparison is the right one —
+published is what people turn up for — but **two managers editing unsaved drafts
+cannot see each other**, and the UI states that rather than implying the check is
+exhaustive. A group that fails to read is named, not silently dropped.
+
+**Publishing warns, never blocks.** `onPublishDraw()` runs the check first and lists
+any clash involving that age group in the confirm, with the button reading **Publish
+anyway** instead of OK (`confirmModal(msg, fn, { okLabel, wide })`). If the check
+itself fails, publishing is still offered — a validator that cannot run must not
+become a validator that says no. On the morning of the tournament the person who
+needs to move a game must not be locked out.
+
+`isOrganizerSession()` is now **exported** and the Scores component uses it instead
+of repeating the three-shape session test. There are three session shapes and this
+file already records that missing one silently hid the Publish button; a second copy
+was one more place for that to happen again.
+
 ### Not built yet
 
-Steps 4–5 of `claude/spec-pitches-and-clash-detection.md`: the **whole-weekend**
-clash check across all 15 age groups (the in-group one above is local to the editor)
-and one set of pitch names on the homepage and in the app. The homepage still says
-"16 PITCHES"; the real counts are 18 and 10.
+Step 5 of `claude/spec-pitches-and-clash-detection.md`: one set of pitch names. The
+homepage still says **"16 PITCHES"** and the app says "Pitches A, B, C & D"; the real
+counts are **18 on Saturday and 10 on Sunday**.
 
 ---
 
@@ -679,12 +732,11 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for "View live scores" — only once the draw is real, or placeholder
    pools go public.
-3. **Pitches and clash detection.** The layout is editable and pools can now be
-   put on a pitch at a time (see Venue above), but **no age group has actually been
-   scheduled yet** — every slot is still "TBD" at 08:00 until someone works
-   through the editor. And nothing yet checks across age groups, so two groups can
-   still be handed the same pitch at the same time. Steps 4–5 of
-   `claude/spec-pitches-and-clash-detection.md`.
+3. **Nobody has actually been scheduled yet.** The layout is editable, pools can be
+   put on a pitch at a time, and the whole weekend can be checked for clashes (see
+   Venue above) — but **every slot is still "TBD" at 08:00** until someone works
+   through the editor age group by age group. That is now data entry, not code.
+   Step 5 (one set of pitch names) is the only code left.
 4. **Sponsors** placeholder — when artwork arrives, a comment directly above
    the section gives the exact `<img>` tag to swap in.
 5. **Deploy cost** — every production deploy costs 15 Netlify credits

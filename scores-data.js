@@ -430,6 +430,174 @@ export function poolEndMins(startMins, count) {
   return startMins + Math.max(0, count) * SLOT_MINS;
 }
 
+/* ============================================================
+   THE WHOLE-WEEKEND CLASH CHECK
+   ------------------------------------------------------------
+   Every age group's draw is edited on its own, in its own blob, by its own
+   manager. Nothing has ever looked across them — so two groups can be handed the
+   same pitch at the same time and the first anyone knows is two squads walking
+   onto D2 at 09:20.
+
+   This turns a set of draws into BOOKINGS and reports every overlap. Two kinds of
+   booking, because there are two kinds of fixture:
+
+     - a POOL, which is a run of matches SLOT_MINS apart on one pitch, so one
+       booking covering the whole run; and
+     - a KNOCKOUT match, which stands alone with its own pitch and time, so one
+       booking each.
+
+   Deliberately NOT a clash:
+     - anything on 'TBD' or no pitch. Unscheduled is not conflicting; it is
+       reported separately as something still to do.
+     - two bookings on one pitch at DIFFERENT times. That is a time-share, which
+       is exactly how D4/D5 ran U5/6 in the morning and U7 in the afternoon.
+     - bookings on different DAYS that happen to share a pitch name. B1A, D1 and
+       D2 exist on both days and are completely unrelated bookings.
+     - touching exactly: one ends 10:00, the next starts 10:00. Half-open ranges,
+       so [08:00,10:00) and [10:00,12:00) do not overlap.
+
+   Pure and synchronous on purpose — no fetching, no session, no clock — so it can
+   be tested exhaustively. loadAllDraws() below does the fetching.
+   ============================================================ */
+
+/* One age group's fixtures -> its bookings. */
+function bookingsForAge(agId, agName, draw, dayId) {
+  if (!draw) return [];
+  const out = [];
+  const clean = (p) => (typeof p === 'string' ? p.trim() : '');
+
+  (draw.pools || []).forEach((pool) => {
+    const slots = (draw.slots || []).filter((sl) => sl.poolId === pool.id);
+    if (!slots.length) return;
+    const pitches = [...new Set(slots.map((sl) => clean(sl.pitch) || 'TBD'))];
+    const startMins = Math.min(...slots.map((sl) => sl.startMins));
+
+    /* A pool whose matches were split across pitches by hand is not one booking.
+       Book each pitch separately, from its own earliest match, or a per-match move
+       would silently escape the check. */
+    if (pitches.length > 1) {
+      pitches.forEach((p) => {
+        const mine = slots.filter((sl) => (clean(sl.pitch) || 'TBD') === p);
+        out.push({
+          agId, agName, dayId, pitch: p, kind: 'pool',
+          label: `${pool.name} (part)`,
+          startMins: Math.min(...mine.map((sl) => sl.startMins)),
+          endMins: poolEndMins(Math.min(...mine.map((sl) => sl.startMins)), mine.length),
+          count: mine.length,
+        });
+      });
+      return;
+    }
+
+    out.push({
+      agId, agName, dayId, pitch: pitches[0], kind: 'pool', label: pool.name,
+      startMins, endMins: poolEndMins(startMins, slots.length), count: slots.length,
+    });
+  });
+
+  (draw.knockout || []).forEach((sl) => {
+    if (sl.startMins == null) return;
+    out.push({
+      agId, agName, dayId, pitch: clean(sl.pitch) || 'TBD', kind: 'knockout',
+      label: sl.round || 'Knockout match',
+      startMins: sl.startMins, endMins: poolEndMins(sl.startMins, 1), count: 1,
+    });
+  });
+
+  return out;
+}
+
+/* drawsByAge: { u11: draw, u13: draw, ... }. ageNames: { u11: 'U11 Mixed Contact' }.
+   Returns { bookings, clashes, unplaced, offAllocation, placedCount }.
+
+   `clashes` is every overlapping PAIR, once, sorted by day then pitch then time.
+   `unplaced` and `offAllocation` are the two soft warnings: something with no
+   pitch, and something on a pitch its age group is not allocated. Neither blocks
+   anything; both are things a human should look at. */
+export function weekendClashes(drawsByAge, ageNames) {
+  const v = venue();
+  const bookings = [];
+  Object.keys(drawsByAge || {}).forEach((agId) => {
+    const dayId = dayIdOfAgeGroup(agId);
+    if (!dayId) return;   // not in the layout at all; the Venue tab flags that
+    bookings.push(...bookingsForAge(agId, (ageNames || {})[agId] || agId.toUpperCase(),
+      drawsByAge[agId], dayId));
+  });
+
+  const placed = bookings.filter((b) => b.pitch && b.pitch !== 'TBD');
+  const key = (b) => b.dayId + '|' + b.pitch.toLowerCase();
+
+  const clashes = [];
+  const byPitch = new Map();
+  placed.forEach((b) => {
+    const k = key(b);
+    if (!byPitch.has(k)) byPitch.set(k, []);
+    byPitch.get(k).push(b);
+  });
+  byPitch.forEach((list) => {
+    const sorted = list.slice().sort((a, b) => a.startMins - b.startMins);
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        // Half-open ranges: touching exactly is not an overlap.
+        if (sorted[j].startMins >= sorted[i].endMins) break;   // sorted, so no later one can overlap either
+        clashes.push({
+          dayId: sorted[i].dayId,
+          dayLabel: (v[sorted[i].dayId] || {}).label || sorted[i].dayId,
+          pitch: sorted[i].pitch,
+          sameAgeGroup: sorted[i].agId === sorted[j].agId,
+          a: sorted[i], b: sorted[j],
+        });
+      }
+    }
+  });
+  clashes.sort((x, y) => (x.dayId < y.dayId ? -1 : x.dayId > y.dayId ? 1
+    : x.pitch.localeCompare(y.pitch) || x.a.startMins - y.a.startMins));
+
+  const unplaced = bookings.filter((b) => !b.pitch || b.pitch === 'TBD');
+
+  const offAllocation = placed.filter((b) => {
+    const allowed = pitchesForAgeGroup(b.agId).map((p) => p.toLowerCase());
+    return allowed.length > 0 && !allowed.includes(b.pitch.toLowerCase());
+  });
+
+  return { bookings, clashes, unplaced, offAllocation, placedCount: placed.length };
+}
+
+/* Plain English for one clash, e.g.
+   "Pitch C4 · Sunday — U13 Pool A (08:00 – 10:00) overlaps U16B Pool B (09:20 – 11:00)" */
+export function describeClash(c) {
+  const w = (b) => `${b.agName} ${b.label} (${fmtTime(b.startMins)} – ${fmtTime(b.endMins)})`;
+  return `Pitch ${c.pitch} · ${c.dayLabel} — ${w(c.a)} overlaps ${w(c.b)}`;
+}
+
+/* Fetches every age group's draw so weekendClashes() has something to chew on.
+   WHAT YOU GET DEPENDS ON WHO YOU ARE, and that is not a bug:
+     - an ORGANISER's token reads every group's DRAFT, so the check sees work in
+       progress across the whole tournament;
+     - a MANAGER's token reads their own draft and everyone else's PUBLISHED draw
+       (get-schedule-override falls through to the published copy when the token
+       has no access to that group's draft).
+   The manager's comparison is the right one anyway — published is what people are
+   turning up for — but two managers editing unsaved drafts cannot see each other.
+   Say so in the UI rather than implying the check is exhaustive. */
+export async function loadAllDraws(session) {
+  const ids = AGE_GROUPS.map((a) => a.id);
+  const names = {};
+  AGE_GROUPS.forEach((a) => { names[a.id] = a.name; });
+  const drawsByAge = {};
+  const failed = [];
+  await Promise.all(ids.map(async (id) => {
+    try {
+      const d = await getDraw(id, session);
+      if (d) drawsByAge[id] = d;
+    } catch (err) {
+      // One unreadable age group must not lose the other fourteen.
+      failed.push(id);
+    }
+  }));
+  return { drawsByAge, ageNames: names, failed };
+}
+
 function orderNoBackToBack(teams) {
   const remaining = [];
   for (let i = 0; i < teams.length; i++) for (let j = i + 1; j < teams.length; j++) remaining.push([teams[i], teams[j]]);
@@ -1037,7 +1205,7 @@ export function canPublishNow(session, publishState) {
    Check all of them — missing one silently hides the Publish button, which is
    exactly what happened the first time. The server re-checks properly from the
    signed token, so this is only about what the UI offers. */
-function isOrganizerSession(session) {
+export function isOrganizerSession(session) {
   if (!session) return false;
   return !!(
     session.isOrganizer ||

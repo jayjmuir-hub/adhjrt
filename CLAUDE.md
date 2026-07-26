@@ -108,8 +108,8 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
-| `venue-layout.js` | GET (public): the pitch and day layout. No write path yet — see Venue below |
-| `_venue.js` | `DEFAULT_VENUE` (pitches per day + which groups play each day), `loadVenue()`, `mergeVenue()` |
+| `venue-layout.js` | GET (public) the pitch and day layout; `?usage=1` adds per-pitch fixture counts (organisers); POST saves or resets it (organisers only) |
+| `_venue.js` | `DEFAULT_VENUE` (pitches per day + which groups play each day), `loadVenue()`, `mergeVenue()`, `validateVenue()`, `venueWarnings()`, `countPitchUsage()` |
 | `_teams.js` | club prefixes and team code generation |
 | `_email.js` | confirmation emails via Microsoft Graph |
 | `get-registrations.js` | organiser-only; reads both Google Sheets |
@@ -447,15 +447,53 @@ and U18B/U18G on Sunday — both the opposite of the truth, on the public site,
 with registration open.** The array is gone. If you find yourself typing a list
 of age groups next to a day, stop.
 
+### Editing it — the Venue & days tab (added 26 Jul 2026)
+
+`/organizer` has a fourth tab beside Teams / Players / Accounts. **Organisers
+only**: which day a group plays and which pitches it owns affect every other age
+group, so it is a tournament-wide decision, same reasoning as `scoring-rules.js`.
+Managers are refused server-side with a 403 that explains why.
+
+- `POST /venue-layout` `{ venue }` validates then saves to the `config` store at
+  key `venue`. `{ reset: true }` **deletes** the key rather than writing the
+  defaults back, so a later change to `DEFAULT_VENUE` reaches a reset site
+  instead of being masked by a stale copy of the old defaults.
+- `mergeVenue()` **replaces a day wholesale rather than merging field by field.**
+  Merging pitch lists would make removing a pitch impossible, because the default
+  would keep putting it back.
+- `validateVenue()` is the gate. Hard errors: an age group on **both** days (a
+  silent `dayIdOf()` coin-flip), on **neither** day (no date, broken countdown), a
+  pitch **not on that day**, or two pitches whose names differ only by case (the
+  clash check could not tell them apart). It also trims, drops blanks, and
+  canonicalises a group's pitch names to the day's spelling.
+- Deliberately **allowed**: an age group with an **empty** pitch list. "Which day"
+  and "which pitches" are separate decisions and the day has to be settable first.
+  Shown as a warning by `venueWarnings()`, not a block.
+- Also deliberately allowed: **two groups on the same pitch.** D4/D5 run U6 in the
+  morning and U7 in the afternoon — that is a time-share, and the Step 4 clash
+  check is what will tell them apart by time.
+- **The same rules run client-side** in `venueVals()`/`venueProblems()` so Save
+  can be disabled with the reason shown rather than bouncing off a 400. The server
+  is still the authority. `test-venue-panel.js` drives both and asserts they
+  **agree** — if they diverge, either Save goes green on something the server will
+  reject, or it bounces with no explanation.
+- Moving a group to the other day **clears its pitch assignment**, after a confirm
+  that names what is being cleared. The two days have different pitch lists and
+  silently keeping names that exist on both (`B1A`, `D2`, `D1`) would put a group
+  on a pitch nobody chose for it.
+- Removing a pitch **also unticks it from every group** on that day, and the
+  confirm first says how many saved matches are sitting on it —
+  `countPitchUsage()`, draft first and published as a fallback, because the draft
+  is what a change here is about to break. Organiser-only, since drafts are not
+  public.
+
 ### Not built yet
 
-`venue-layout.js` is **GET only**. There is no write path, so the blob is always
-absent and every reader gets the default. The organiser editor is Step 2 of
-`claude/spec-pitches-and-clash-detection.md`, along with pool-level pitch and
-start time, and the weekend clash check. `mergeVenue()` is already written and
-tested and **replaces a day wholesale rather than merging field by field** —
-merging pitch lists would make removing a pitch impossible, because the default
-would keep putting it back.
+Steps 3–5 of `claude/spec-pitches-and-clash-detection.md`: pitch and start time
+per **pool** in the Fixture Editor, the weekend **clash check**, and one set of
+pitch names on the homepage and in the app. Until then the layout exists and is
+editable but nothing consumes the pitch lists — every slot is still "TBD" and
+every pool still kicks off at 08:00.
 
 ---
 
@@ -585,11 +623,11 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    `href="#results"`. Change to `/scores` and swap the coming-soon standings
    preview for "View live scores" — only once the draw is real, or placeholder
    pools go public.
-3. **Pitches and clash detection.** The layout now exists (see Venue above) but
-   nothing uses it yet: no pool has a pitch or its own start time, every pool
-   still kicks off at 08:00, and nothing checks whether two age groups have been
-   handed the same pitch at the same time. Steps 2–5 of
-   `claude/spec-pitches-and-clash-detection.md`.
+3. **Pitches and clash detection.** The layout exists and is editable in the back
+   office (see Venue above), but nothing consumes the pitch lists yet: no pool has
+   a pitch or its own start time, every pool still kicks off at 08:00, and nothing
+   checks whether two age groups have been handed the same pitch at the same time.
+   Steps 3–5 of `claude/spec-pitches-and-clash-detection.md`.
 4. **Sponsors** placeholder — when artwork arrives, a comment directly above
    the section gives the exact `<img>` tag to swap in.
 5. **Deploy cost** — every production deploy costs 15 Netlify credits

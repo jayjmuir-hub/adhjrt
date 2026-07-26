@@ -172,3 +172,43 @@ export async function createManager({ name, username, password, ageGroupId }) {
   if (r.real) return r.json;
   return { ok: false, error: 'Creating logins needs the deployed site (not available in local preview).' };
 }
+
+/* -------- The venue: pitches per day, and which day each age group plays --------
+   Read is public (venue-layout.js GET); adding ?usage=1 with an organiser token
+   also returns how many saved match slots sit on each pitch, so the back office
+   can warn before a rename or a removal orphans real fixtures.
+
+   Writing is organiser-only and re-checked server-side. Managers are refused:
+   which day a group plays and which pitches it owns affect every other age
+   group, so it is a tournament-wide decision, not a per-group one.
+
+   There is no local-backend fallback for these. In local preview the read falls
+   back to the built-in defaults (the reader in scores-data.js does the same) and
+   saving reports that it needs the deployed site — rather than silently writing
+   to localStorage and letting someone think the layout is set when it is not. */
+export async function getVenue({ withUsage = false } = {}) {
+  const url = '/.netlify/functions/venue-layout' + (withUsage ? '?usage=1' : '');
+  const r = await tryFetchJson(url, { headers: withUsage ? authHeaders() : {} });
+  if (r.real && r.json && r.json.ok) return r.json;
+  return { ok: false, error: 'Could not load the venue layout.' };
+}
+
+export async function saveVenue(venue) {
+  const r = await tryFetchJson('/.netlify/functions/venue-layout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ venue }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Saving the venue layout needs the deployed site (not available in local preview).' };
+}
+
+export async function resetVenue() {
+  const r = await tryFetchJson('/.netlify/functions/venue-layout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ reset: true }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Resetting the venue layout needs the deployed site (not available in local preview).' };
+}

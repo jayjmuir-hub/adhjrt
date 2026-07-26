@@ -165,6 +165,7 @@
         <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
+        <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
       </div>
 
       <!-- filters -->
@@ -184,6 +185,104 @@
             </sc-for>
           </select>
           <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
+        </div>
+      </sc-if>
+
+      <!-- venue & days tab -->
+      <sc-if value="{{ isVenue }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+              <div style="flex:1;min-width:260px">
+                <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Venue &amp; days</div>
+                <p style="color:#7f8794;font-size:13px;margin:0;line-height:1.5">The pitches running on each day, and which day each age group plays. <b style="color:#aeb4bf">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
+                <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
+              </div>
+            </div>
+
+            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ vError }}</div></sc-if>
+            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:13px;font-weight:600">{{ vSuccess }}</div></sc-if>
+
+            <sc-if value="{{ vHasProblems }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:11px 13px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
+                <sc-for list="{{ vProblems }}" as="pr" hint-placeholder-count="2">
+                  <div style="color:#ff8a8a;font-size:13px;line-height:1.6">&bull; {{ pr }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ vHasWarnings }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:6px">Worth a look — you can still save</div>
+                <sc-for list="{{ vWarnings }}" as="wn" hint-placeholder-count="2">
+                  <div style="color:#f5c518;font-size:13px;line-height:1.6">&bull; {{ wn }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- one card per day: the pitch list -->
+          <sc-for list="{{ vDays }}" as="d" hint-placeholder-count="2">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+                <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:{{ d.tint }}">{{ d.label }}</div>
+                <div style="font-size:12px;color:#7f8794;font-weight:600">{{ d.summary }}</div>
+              </div>
+              <p style="color:#7f8794;font-size:12px;margin:0 0 12px;line-height:1.5">{{ d.hint }}</p>
+
+              <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+                <sc-for list="{{ d.pitchChips }}" as="pc" hint-placeholder-count="6">
+                  <span style="display:inline-flex;align-items:center;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.16);border-radius:999px;padding:6px 6px 6px 12px;font-size:12px;font-weight:700;color:#fff">
+                    {{ pc.name }}<span style="color:#7f8794;font-weight:600">{{ pc.usageLabel }}</span>
+                    <button onClick="{{ pc.onRemove }}" aria-label="Remove pitch" title="{{ pc.removeTitle }}" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:15px;line-height:1;padding:2px 6px">&times;</button>
+                  </span>
+                </sc-for>
+                <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#7f8794;align-self:center">No pitches on this day yet.</span></sc-if>
+              </div>
+
+              <div style="display:flex;gap:8px;max-width:420px">
+                <input value="{{ d.newPitch }}" onInput="{{ d.onNewPitchInput }}" onKeyDown="{{ d.onNewPitchKey }}" placeholder="Add a pitch (e.g. C4 or B1A)" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 12px;color:#fff;font-size:13px">
+                <button onClick="{{ d.onAddPitch }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">+ Add pitch</button>
+              </div>
+            </div>
+          </sc-for>
+
+          <!-- one row per age group: day selector + its pitches -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Age groups</div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Tick the pitches each group uses. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#aeb4bf">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
+
+            <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="15">
+              <div style="display:grid;grid-template-columns:190px 130px 1fr;gap:12px;align-items:start;padding:12px 0;border-top:1px solid rgba(255,255,255,0.07)">
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#fff">{{ g.name }}</div>
+                  <div style="font-size:11px;color:#5a616d;font-weight:600;letter-spacing:.4px">{{ g.id }}</div>
+                </div>
+                <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;color-scheme:dark">
+                  <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
+                    <option value="{{ dop.value }}">{{ dop.label }}</option>
+                  </sc-for>
+                </select>
+                <div>
+                  <div style="display:flex;gap:14px;flex-wrap:wrap">
+                    <sc-for list="{{ g.pitchToggles }}" as="pt" hint-placeholder-count="6">
+                      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:{{ pt.color }};cursor:pointer">
+                        <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:15px;height:15px;accent-color:#17A34A">
+                        {{ pt.name }}
+                      </label>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#f5c518;font-weight:600;margin-top:4px">No pitches chosen yet</div></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
         </div>
       </sc-if>
 
@@ -360,6 +459,13 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     tab: 'teams', search: '', clubFilter: '', ageFilter: '',
     teams: [], players: [], accounts: [],
+    /* The venue layout being edited. `venue` is the working copy the form
+       mutates; `venueSaved` is what the server last confirmed, so the Save
+       button can tell whether anything actually changed. Both null until the
+       tab is opened. */
+    venue: null, venueSaved: null, venueUsage: null,
+    vLoaded: false, vBusy: false, vError: '', vSuccess: '',
+    vNewPitch: { day1: '', day2: '' },
     showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
     showLoginPass: false, showSignupPass: false, showSignupCode: false, showCpCurrent: false, showCpNew: false,
   };
@@ -380,6 +486,265 @@ class Component extends DCLogic {
     const { api } = this.state;
     const accounts = await api.listAccounts();
     this.setState({ accounts });
+  }
+
+  /* Everything the Venue tab binds to, kept out of renderVals() so that method
+     stays readable. CLAUDE.md's binding trap applies here as much as anywhere:
+     a {{ token }} the markup uses but this does not return resolves silently to
+     empty. validate-bindings.js guards it. */
+  venueVals(s) {
+    const v = s.venue;
+    const problems = v ? this.venueProblems() : [];
+    const warnings = v ? this.venueLocalWarnings() : [];
+    const dirty = this.venueDirty();
+
+    const dayTint = { day1: '#E11B22', day2: '#17A34A' };
+    const days = !v ? [] : ['day1', 'day2'].map((id) => {
+      const day = v[id];
+      const usage = (s.venueUsage || {})[id] || {};
+      const groupCount = Object.keys(day.groups || {}).length;
+      return {
+        id,
+        label: day.label,
+        tint: dayTint[id],
+        summary: `${(day.pitches || []).length} pitch${(day.pitches || []).length === 1 ? '' : 'es'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${day.date}`,
+        hint: id === 'day1'
+          ? 'The 2025 map had 18 playing surfaces here — the big D1/D2 pitches, and the B1 and A1 areas each split into four small ones.'
+          : 'The 2025 map had 10 here. D4 and D5 are not used on Sunday.',
+        noPitches: !(day.pitches || []).length,
+        pitchChips: (day.pitches || []).map((name) => {
+          const used = usage[name] || 0;
+          return {
+            name,
+            // Blank rather than "· 0 matches": a nil count is noise on 18 chips.
+            usageLabel: used ? ` · ${used} match${used === 1 ? '' : 'es'}` : '',
+            removeTitle: used
+              ? `Remove ${name} — ${used} saved match${used === 1 ? '' : 'es'} are on it`
+              : `Remove ${name}`,
+            onRemove: () => this.removePitch(id, name),
+          };
+        }),
+        newPitch: (s.vNewPitch || {})[id] || '',
+        onNewPitchInput: (e) => this.setState((st) => ({ vNewPitch: { ...st.vNewPitch, [id]: e.target.value }, vError: '' })),
+        onNewPitchKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.addPitch(id); } },
+        onAddPitch: () => this.addPitch(id),
+      };
+    });
+
+    const groups = !v ? [] : MANAGER_AGE_GROUPS.map((g) => {
+      const dayId = ['day1', 'day2'].find((d) => g.id in (v[d].groups || {})) || '';
+      const chosen = dayId ? (v[dayId].groups[g.id] || []) : [];
+      return {
+        id: g.id,
+        name: g.name,
+        dayValue: dayId,
+        // "Not set" only appears when a group really is on neither day, which
+        // the problems list already flags as something to fix before saving.
+        dayOptions: (dayId ? [] : [{ value: '', label: 'Not set' }]).concat([
+          { value: 'day1', label: v.day1.short || 'Sat' },
+          { value: 'day2', label: v.day2.short || 'Sun' },
+        ]),
+        onDayChange: (e) => { const val = e.target.value; if (val) this.setGroupDay(g.id, val); },
+        pitchToggles: !dayId ? [] : (v[dayId].pitches || []).map((name) => ({
+          name,
+          on: chosen.includes(name),
+          color: chosen.includes(name) ? '#fff' : '#7f8794',
+          onToggle: () => this.toggleGroupPitch(g.id, dayId, name),
+        })),
+        noneChosen: !!dayId && !chosen.length,
+      };
+    });
+
+    return {
+      vDays: days,
+      vGroups: groups,
+      vBusy: s.vBusy,
+      vError: s.vError,
+      vSuccess: s.vSuccess,
+      vProblems: problems,
+      vHasProblems: problems.length > 0,
+      vWarnings: warnings,
+      vHasWarnings: warnings.length > 0,
+      vSaveDisabled: s.vBusy || !dirty || problems.length > 0,
+      vSaveLabel: s.vBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
+      vSaveStyle: (s.vBusy || !dirty || problems.length > 0)
+        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:#17A34A;color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+      onVenueSave: () => this.doSaveVenue(),
+      onVenueReset: () => this.doResetVenue(),
+    };
+  }
+
+  /* ---------------- Venue & days ----------------
+     Loaded the first time the tab is opened rather than on sign-in: it is one
+     more request and most visits to this page are about registrations. */
+  async loadVenue() {
+    if (this.state.vLoaded || this.state.vBusy) return;
+    this.setState({ vBusy: true, vError: '' });
+    const res = await this.state.api.getVenue({ withUsage: true });
+    if (res.ok && res.venue) {
+      this.setState({
+        venue: this.cloneVenue(res.venue),
+        venueSaved: this.cloneVenue(res.venue),
+        venueUsage: res.usage || null,
+        vLoaded: true, vBusy: false,
+      });
+    } else {
+      this.setState({ vBusy: false, vError: res.error || 'Could not load the venue layout.' });
+    }
+  }
+
+  /* A deep copy, so editing the working copy never mutates the saved one and
+     the "unsaved changes" comparison stays honest. */
+  cloneVenue(v) { return JSON.parse(JSON.stringify(v)); }
+
+  /* Every edit routes through here: it takes the working copy, hands it to the
+     mutator, and clears any stale success message so the screen never shows
+     "Saved" next to an unsaved change. */
+  editVenue(mutate) {
+    this.setState((s) => {
+      if (!s.venue) return {};
+      const next = this.cloneVenue(s.venue);
+      mutate(next);
+      return { venue: next, vSuccess: '', vError: '' };
+    });
+  }
+
+  addPitch(dayId) {
+    const name = (this.state.vNewPitch[dayId] || '').trim();
+    if (!name) return;
+    const existing = ((this.state.venue || {})[dayId] || {}).pitches || [];
+    // Case-insensitive: "c4" and "C4" being two pitches is never what anyone meant.
+    if (existing.some((p) => p.toLowerCase() === name.toLowerCase())) {
+      this.setState((s) => ({ vNewPitch: { ...s.vNewPitch, [dayId]: '' }, vError: `${name} is already on that day.` }));
+      return;
+    }
+    this.editVenue((v) => { v[dayId].pitches = [...v[dayId].pitches, name]; });
+    this.setState((s) => ({ vNewPitch: { ...s.vNewPitch, [dayId]: '' } }));
+  }
+
+  removePitch(dayId, name) {
+    const used = ((this.state.venueUsage || {})[dayId] || {})[name] || 0;
+    const groups = Object.keys(((this.state.venue || {})[dayId] || {}).groups || {})
+      .filter((ag) => (this.state.venue[dayId].groups[ag] || []).includes(name));
+    let msg = `Remove ${name} from this day?`;
+    if (used) msg += `\n\n${used} saved match${used === 1 ? '' : 'es'} are on it. Those will be left on a pitch that no longer exists and will need moving.`;
+    if (groups.length) msg += `\n\nIt is currently ticked for: ${groups.map((a) => a.toUpperCase()).join(', ')}.`;
+    if (!window.confirm(msg)) return;
+    this.editVenue((v) => {
+      v[dayId].pitches = v[dayId].pitches.filter((p) => p !== name);
+      Object.keys(v[dayId].groups).forEach((ag) => {
+        v[dayId].groups[ag] = (v[dayId].groups[ag] || []).filter((p) => p !== name);
+      });
+    });
+  }
+
+  /* Moving a group to the other day CLEARS its pitches, because the two days
+     have different pitch lists and silently keeping names that happen to exist
+     on both (B1A, D2 …) would put a group on a pitch nobody chose for it. */
+  setGroupDay(ageId, dayId) {
+    const v = this.state.venue;
+    if (!v) return;
+    const from = ['day1', 'day2'].find((d) => ageId in (v[d].groups || {}));
+    if (from === dayId) return;
+    const had = from ? (v[from].groups[ageId] || []) : [];
+    if (had.length && !window.confirm(
+      `Move ${ageId.toUpperCase()} to ${v[dayId].label}?\n\nIts ${had.length} pitch${had.length === 1 ? '' : 'es'} on ${v[from].label} (${had.join(', ')}) will be cleared — that day has different pitches. Its saved fixtures keep whatever pitch they were given until you change them.`
+    )) return;
+    this.editVenue((nv) => {
+      ['day1', 'day2'].forEach((d) => { delete nv[d].groups[ageId]; });
+      nv[dayId].groups[ageId] = [];
+    });
+  }
+
+  toggleGroupPitch(ageId, dayId, name) {
+    this.editVenue((v) => {
+      const cur = v[dayId].groups[ageId] || [];
+      v[dayId].groups[ageId] = cur.includes(name) ? cur.filter((p) => p !== name) : [...cur, name];
+    });
+  }
+
+  /* The same rules the server enforces, run locally so the Save button can be
+     disabled with the reason shown rather than bouncing off a 400. The SERVER is
+     still the authority — see validateVenue() in netlify/functions/_venue.js. */
+  venueProblems() {
+    const v = this.state.venue;
+    if (!v) return [];
+    const out = [];
+    ['day1', 'day2'].forEach((d) => {
+      const seen = new Set();
+      (v[d].pitches || []).forEach((p) => {
+        const k = p.toLowerCase();
+        if (seen.has(k)) out.push(`${v[d].label} lists "${p}" more than once.`);
+        seen.add(k);
+      });
+      Object.keys(v[d].groups || {}).forEach((ag) => {
+        (v[d].groups[ag] || []).forEach((p) => {
+          if (!seen.has(p.toLowerCase())) out.push(`${ag.toUpperCase()} is on "${p}", which is not a pitch on ${v[d].label}.`);
+        });
+      });
+    });
+    MANAGER_AGE_GROUPS.forEach((g) => {
+      const on1 = g.id in (v.day1.groups || {}), on2 = g.id in (v.day2.groups || {});
+      if (on1 && on2) out.push(`${g.name} is on both days — pick one.`);
+      if (!on1 && !on2) out.push(`${g.name} is not on either day.`);
+    });
+    return out;
+  }
+
+  venueLocalWarnings() {
+    const v = this.state.venue;
+    if (!v) return [];
+    const out = [];
+    ['day1', 'day2'].forEach((d) => {
+      if (!(v[d].pitches || []).length) out.push(`${v[d].label} has no pitches at all.`);
+      Object.keys(v[d].groups || {}).forEach((ag) => {
+        if (!(v[d].groups[ag] || []).length) {
+          const name = (MANAGER_AGE_GROUPS.find((g) => g.id === ag) || {}).name || ag.toUpperCase();
+          out.push(`${name} is on ${v[d].label} but has no pitches yet.`);
+        }
+      });
+    });
+    return out;
+  }
+
+  venueDirty() {
+    const { venue, venueSaved } = this.state;
+    if (!venue || !venueSaved) return false;
+    return JSON.stringify(venue) !== JSON.stringify(venueSaved);
+  }
+
+  async doSaveVenue() {
+    const problems = this.venueProblems();
+    if (problems.length) { this.setState({ vError: 'Fix the problems listed below first.' }); return; }
+    this.setState({ vBusy: true, vError: '', vSuccess: '' });
+    const res = await this.state.api.saveVenue(this.state.venue);
+    if (res.ok && res.venue) {
+      this.setState({
+        venue: this.cloneVenue(res.venue),
+        venueSaved: this.cloneVenue(res.venue),
+        vBusy: false,
+        vSuccess: 'Saved. The fixtures pages, the app and the public site all read this now.',
+      });
+    } else {
+      // Show the server's own list if it sent one — it is the authority.
+      this.setState({ vBusy: false, vError: (res.errors && res.errors.join(' ')) || res.error || 'Could not save the layout.' });
+    }
+  }
+
+  async doResetVenue() {
+    if (!window.confirm('Put the pitch names, days and pitch assignments back to the 2025 layout?\n\nAny changes you have made here are discarded. Saved fixtures keep whatever pitch they were given.')) return;
+    this.setState({ vBusy: true, vError: '', vSuccess: '' });
+    const res = await this.state.api.resetVenue();
+    if (res.ok && res.venue) {
+      this.setState({
+        venue: this.cloneVenue(res.venue),
+        venueSaved: this.cloneVenue(res.venue),
+        vBusy: false, vSuccess: 'Back to the built-in 2025 layout.',
+      });
+    } else {
+      this.setState({ vBusy: false, vError: res.error || 'Could not reset the layout.' });
+    }
   }
 
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
@@ -602,14 +967,19 @@ class Component extends DCLogic {
       onToggleCpNew: () => this.setState((st) => ({ showCpNew: !st.showCpNew })),
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
+      isVenue: s.tab === 'venue',
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),
+      showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
+      tabVenueStyle: s.tab === 'venue' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
+
+      ...this.venueVals(s),
 
       pendingAccounts: s.accounts.filter((a) => !a.approved).map((a) => ({
         ...a,

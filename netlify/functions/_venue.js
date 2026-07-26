@@ -128,4 +128,161 @@ function dayIdOf(venue, ageGroupId) {
   return null;
 }
 
-module.exports = { DEFAULT_VENUE, DAY_IDS, mergeVenue, loadVenue, dayIdOf };
+/* The 15 age group ids, taken from _scoring.js rather than typed again here.
+   That file already has to list every group (it decides what can be scored in
+   each), so borrowing it keeps the count in one place on the backend. */
+const AGE_IDS = Object.keys(require('./_scoring').BY_AGE);
+
+/* Checks a layout a human is trying to save. Returns { ok, errors, venue }.
+
+   Everything here is a HARD error — a layout that fails one of these makes some
+   part of the site wrong in a way nobody would notice until match day:
+
+     - an age group on both days      -> dayIdOf() silently picks day1
+     - an age group on neither day    -> it has no date, and the countdown breaks
+     - a pitch that is not on its day -> the fixture editor offers a pitch that
+                                         does not exist, and the clash check
+                                         cannot reason about it
+     - two pitches with the same name -> the clash check cannot tell them apart
+
+   Notably NOT an error: an age group with an empty pitch list. "Which day" and
+   "which pitches" are separate decisions and the day has to be settable first.
+   The back office shows that as a warning instead. */
+function validateVenue(input) {
+  const errors = [];
+  if (!input || typeof input !== 'object') return { ok: false, errors: ['No layout sent.'] };
+
+  const out = {};
+  for (const d of DAY_IDS) {
+    const src = input[d];
+    const def = DEFAULT_VENUE[d];
+    if (!src || typeof src !== 'object') { errors.push(`${def.label} is missing from the layout.`); continue; }
+    if (!Array.isArray(src.pitches)) { errors.push(`${def.label} has no list of pitches.`); continue; }
+    if (!src.groups || typeof src.groups !== 'object' || Array.isArray(src.groups)) {
+      errors.push(`${def.label} has no age groups.`); continue;
+    }
+
+    const pitches = src.pitches.map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
+    // Case-insensitive, because "C4" and "c4" being two pitches is never what
+    // anyone meant and it would split a clash check in half.
+    const seen = new Map();
+    pitches.forEach((p) => {
+      const k = p.toLowerCase();
+      if (seen.has(k)) errors.push(`${def.label} lists "${p}" more than once.`);
+      else seen.set(k, p);
+    });
+
+    const groups = {};
+    Object.keys(src.groups).forEach((ag) => {
+      if (!AGE_IDS.includes(ag)) { errors.push(`"${ag}" is not one of the 15 age groups.`); return; }
+      const list = Array.isArray(src.groups[ag]) ? src.groups[ag] : [];
+      const kept = [];
+      list.forEach((p) => {
+        const name = typeof p === 'string' ? p.trim() : '';
+        if (!name) return;
+        if (!seen.has(name.toLowerCase())) {
+          errors.push(`${ag.toUpperCase()} is assigned "${name}", which is not a pitch on ${def.label}.`);
+          return;
+        }
+        const canonical = seen.get(name.toLowerCase());
+        if (!kept.includes(canonical)) kept.push(canonical);
+      });
+      groups[ag] = kept;
+    });
+
+    out[d] = {
+      date:  typeof src.date === 'string' && src.date.trim() ? src.date.trim() : def.date,
+      label: typeof src.label === 'string' && src.label.trim() ? src.label.trim() : def.label,
+      short: typeof src.short === 'string' && src.short.trim() ? src.short.trim() : def.short,
+      pitches: [...seen.values()],
+      groups,
+    };
+  }
+
+  if (out.day1 && out.day2) {
+    AGE_IDS.forEach((ag) => {
+      const on1 = ag in out.day1.groups, on2 = ag in out.day2.groups;
+      if (on1 && on2) errors.push(`${ag.toUpperCase()} is on both days — pick one.`);
+      if (!on1 && !on2) errors.push(`${ag.toUpperCase()} is not on either day.`);
+    });
+  }
+
+  return errors.length ? { ok: false, errors } : { ok: true, errors: [], venue: out };
+}
+
+/* Age groups on a day with no pitches yet. Not an error, but the back office
+   says so, because a group with no pitches has nowhere for the fixture editor
+   to put its pools. */
+function venueWarnings(venue) {
+  const out = [];
+  for (const d of DAY_IDS) {
+    const day = venue[d];
+    if (!day) continue;
+    Object.keys(day.groups || {}).forEach((ag) => {
+      if (!day.groups[ag] || !day.groups[ag].length) {
+        out.push(`${ag.toUpperCase()} is on ${day.label} but has no pitches yet.`);
+      }
+    });
+    if (!day.pitches.length) out.push(`${day.label} has no pitches at all.`);
+  }
+  return out;
+}
+
+/* Called after a successful write so the instance that did the writing does not
+   go on serving the layout it just replaced. Other warm instances still hold
+   their own copy until they recycle — acceptable for a setting decided weeks
+   out, and the back office shows the server's reply rather than its own guess. */
+function setCachedVenue(venue) { CACHED = venue; }
+
+/* How many saved match slots sit on each pitch, per day.
+   -> { day1: { 'C4': 12, … }, day2: { … } }
+
+   The back office shows this next to each pitch chip, so removing or renaming a
+   pitch is not a silent way to leave twelve fixtures pointing at somewhere that
+   no longer exists. Reads the DRAFT for each age group and falls back to the
+   published copy, because the draft is what a change here is about to break. An
+   age group with neither is skipped: its auto-generated draw has every slot on
+   "TBD" and nothing is at risk.
+
+   Takes the blob store as an argument rather than reaching for _auth's, so it
+   can be tested against a fake store without the backend's dependencies.
+
+   The counts are NOT public — a draft is deliberately not public — so the caller
+   is responsible for checking the session first. */
+async function countPitchUsage(store, venue) {
+  const { draftKey, publishedKey } = require('./_publish');
+  const usage = { day1: {}, day2: {} };
+
+  const perGroup = await Promise.all(AGE_IDS.map(async (ag) => {
+    try {
+      const draft = await store.get(draftKey(ag), { type: 'json' });
+      if (draft) return { ag, schedule: draft };
+      const pub = await store.get(publishedKey(ag), { type: 'json' });
+      return { ag, schedule: pub && pub.schedule ? pub.schedule : null };
+    } catch (err) {
+      // One unreadable age group must not cost the whole count.
+      console.warn(`_venue: could not read the draw for ${ag} -`, err && err.message);
+      return { ag, schedule: null };
+    }
+  }));
+
+  perGroup.forEach(({ ag, schedule }) => {
+    if (!schedule) return;
+    const d = dayIdOf(venue, ag);
+    if (!d) return;
+    const slots = [...(schedule.slots || []), ...(schedule.knockout || [])];
+    slots.forEach((s) => {
+      const p = s && typeof s.pitch === 'string' ? s.pitch.trim() : '';
+      if (!p || p === 'TBD') return;
+      usage[d][p] = (usage[d][p] || 0) + 1;
+    });
+  });
+
+  return usage;
+}
+
+module.exports = {
+  DEFAULT_VENUE, DAY_IDS, AGE_IDS,
+  mergeVenue, loadVenue, dayIdOf,
+  validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
+};

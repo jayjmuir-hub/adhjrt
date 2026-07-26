@@ -185,6 +185,17 @@ share preview.
 - **Netlify Forms and the Sheets are separate stores** — deleting a submission
   in Netlify does not remove the Sheet row. To remove a registration, delete
   the sheet row.
+- **A failed registration must fail loudly.** Both forms post through
+  `postRegistration()` in `Quins JRT.dc.html`, which throws on status ≥ 400;
+  the caller then shows an error and, critically, **leaves the filled form
+  intact** so Submit retries it. Do not restore the old shape — it awaited
+  `fetch` inside a try/catch that swallowed the error and never looked at the
+  status, so a network drop *or* an undetected form (Netlify answers an unknown
+  form with a plain 404) showed the club a success screen for a registration
+  that was never stored. Nothing downstream would catch it: the confirmation
+  email comes from the same submission, and mail errors are swallowed too.
+  The check is deliberately lenient — only ≥ 400 or a thrown error fails, so a
+  followed redirect still counts as success.
 - Netlify Identity is *not* used; auth is the custom bcrypt + HMAC system above.
 - **`.dc.html` templates only bind what `renderVals()` returns.** Raw
   `this.state.X` is not directly bindable — every value used as `{{ X }}` in the
@@ -325,13 +336,22 @@ is the PUBLISHED copy and the only thing the public sees.
   tell placeholder pools from real fixtures.
 - The draft draw object also carries a `pitches` array (set in the editor) —
   rides in the same blob, no schema change needed.
-- It also carries an optional **`teamNames`** map (`{ ADH1: 'AD Harlequins' }`),
-  written by the fixture editor's "Import registered teams". Same trick as
-  `pitches`: it rides in the blob, `publish-schedule` copies it to the public
-  copy, and no Netlify function needed changing. This is what lets the public
-  site show club names while the draw itself stores short codes — a parent
-  never has to touch `get-registrations`, which is organiser-only and sits next
-  to children's data.
+- It also carries a **`teamNames`** map (`{ ADH1: 'AD Harlequins' }`). Same
+  trick as `pitches`: it rides in the blob, `publish-schedule` copies it to the
+  public copy, and no Netlify function needed changing. This is what lets the
+  public site show club names while the draw itself stores short codes — a
+  parent never has to touch `get-registrations`, which is organiser-only and
+  sits next to children's data.
+- **`teamNames` is rebuilt from the registrations on every save**, by
+  `withTeamNames()` in `Scores & Standings.dc.html` — every `api.saveDraw` call
+  site goes through it, so none can forget. It used to be written only by
+  "Import registered teams", which meant a draw built before the import existed,
+  or built by hand, carried an empty map and showed parents raw codes. Derived
+  entries win over what is already stored (nothing else authors the map —
+  `onRenameTeam` rewrites the CODE, not the display name), and an empty derived
+  map is a no-op so a failed registrations fetch can never blank the names.
+  `teamNamesFromRegistrations()` is the single source of the naming rule and the
+  import review table reads it too, so the two cannot drift.
 
 ## Team codes and names — the rule
 

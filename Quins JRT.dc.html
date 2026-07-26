@@ -1111,6 +1111,11 @@ class Component extends DCLogic {
     ctaToast: '',
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
+    /* True only when a send FAILED, as opposed to a field being invalid. The
+       reactive clear below wipes validation errors as soon as the form becomes
+       valid, which would erase a network error on the first keystroke - a
+       parent would see "we could not send this" flash and vanish. */
+    playerSendFailed: false,
   };
 
   componentDidMount() {
@@ -1209,7 +1214,7 @@ class Component extends DCLogic {
 
   openTeamModal() { this.setState({ teamModalOpen: true, teamSubmitted: false, teamError: '' }); document.body.style.overflow = 'hidden'; }
   closeTeamModal() { this.setState({ teamModalOpen: false }); document.body.style.overflow = ''; }
-  openPlayerModal() { this.setState({ playerModalOpen: true, playerSubmitted: false, playerError: '' }); document.body.style.overflow = 'hidden'; }
+  openPlayerModal() { this.setState({ playerModalOpen: true, playerSubmitted: false, playerError: '', playerSendFailed: false }); document.body.style.overflow = 'hidden'; }
   closePlayerModal() { this.setState({ playerModalOpen: false }); document.body.style.overflow = ''; }
 
   onClickRegisterTeam() {
@@ -1242,7 +1247,7 @@ class Component extends DCLogic {
       // Reactively clear a shown error the moment its underlying condition
       // resolves (e.g. checking the play-up consent box), instead of only
       // re-checking on the next Submit click.
-      const playerError = s.playerError && this._playerFormError(playerForm) ? s.playerError : '';
+      const playerError = s.playerError && (s.playerSendFailed || this._playerFormError(playerForm)) ? s.playerError : '';
       return { playerForm, playerError };
     });
   }
@@ -1255,7 +1260,7 @@ class Component extends DCLogic {
         playerForm.emergencyLastName = s.playerForm.parentLastName;
         playerForm.emergencyPhone = s.playerForm.parentPhone;
       }
-      const playerError = s.playerError && this._playerFormError(playerForm) ? s.playerError : '';
+      const playerError = s.playerError && (s.playerSendFailed || this._playerFormError(playerForm)) ? s.playerError : '';
       return { playerForm, playerError };
     });
   }
@@ -1312,6 +1317,37 @@ class Component extends DCLogic {
     this.setState((s) => ({ teamForm: { ...s.teamForm, players: s.teamForm.players.filter((_, i) => i !== idx) } }));
   }
 
+  /* Posts a registration and says plainly whether it landed.
+
+     Both forms used to `await fetch(...)` inside a try/catch that swallowed the
+     error, then show the success screen unconditionally. Two ways that lies to
+     a club:
+
+       - the network drops, the catch eats it, and they are told "we have your
+         team entry";
+       - nothing ever looked at the status. Netlify answers an unrecognised form
+         with a plain 404 (verified: 404, ok:false, no redirect), which is
+         exactly what happens if the form stops being detected at build. Every
+         submission would 404 and every club would be told it worked.
+
+     Neither leaves a trace the club could notice, because the confirmation
+     email is sent from the same submission they never made, and mail failures
+     are swallowed too. So a registration that vanished looks identical to one
+     that succeeded, right up to the moment someone is missing from the draw.
+
+     Deliberately lenient about what counts as success: any non-4xx/5xx reply
+     passes, including a followed redirect. Only a thrown error or an explicit
+     error status fails, so this can never turn a working submission into a
+     scary message. */
+  async postRegistration(fields) {
+    const res = await fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: encodeFormData(fields),
+    });
+    if (res.status >= 400) throw new Error('HTTP ' + res.status);
+  }
+
   async submitTeam() {
     const f = this.state.teamForm;
     if (!effClub(f) || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
@@ -1320,21 +1356,26 @@ class Component extends DCLogic {
     }
     this.setState({ teamSubmitting: true, teamError: '' });
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encodeFormData({
-          'form-name': 'team-registration',
-          club: effClub(f), 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
-          'head-coach-name': f.headCoachName, 'head-coach-email': f.headCoachEmail,
-          'head-coach-phone': f.headCoachPhone ? `+971${f.headCoachPhone}` : '',
-          'manager-name': f.managerName, 'manager-email': f.managerEmail,
-          'manager-phone': f.managerPhone ? `+971${f.managerPhone}` : '',
-          'num-players': f.numPlayers, notes: f.notes,
-          players: JSON.stringify(f.players.filter((p) => p.firstName.trim() || p.lastName.trim() || p.dob)),
-        }),
+      await this.postRegistration({
+        'form-name': 'team-registration',
+        club: effClub(f), 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
+        'head-coach-name': f.headCoachName, 'head-coach-email': f.headCoachEmail,
+        'head-coach-phone': f.headCoachPhone ? `+971${f.headCoachPhone}` : '',
+        'manager-name': f.managerName, 'manager-email': f.managerEmail,
+        'manager-phone': f.managerPhone ? `+971${f.managerPhone}` : '',
+        'num-players': f.numPlayers, notes: f.notes,
+        players: JSON.stringify(f.players.filter((p) => p.firstName.trim() || p.lastName.trim() || p.dob)),
       });
-    } catch (e) { /* NOTE(backend): swallow network errors in prototype — real deploy should surface a retry */ }
+    } catch (e) {
+      /* Keep teamForm intact - everything they typed is still on screen, so
+         "Submit" is all it takes to retry. Clearing it here would be the
+         cruellest possible response to a failed fifteen-player entry. */
+      this.setState({
+        teamSubmitting: false,
+        teamError: 'We could not send your entry — nothing has been registered. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com and we will enter it for you.',
+      });
+      return;
+    }
     this.setState({ teamSubmitting: false, teamSubmitted: true, teamForm: emptyTeamForm() });
   }
 
@@ -1345,23 +1386,28 @@ class Component extends DCLogic {
       this.setState({ playerError: err });
       return;
     }
-    this.setState({ playerSubmitting: true, playerError: '' });
+    this.setState({ playerSubmitting: true, playerError: '', playerSendFailed: false });
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encodeFormData({
-          'form-name': 'player-registration',
-          'player-first-name': f.playerFirstName, 'player-last-name': f.playerLastName, dob: f.dob, club: effClub(f), 'age-group': f.ageGroup,
-          'parent-first-name': f.parentFirstName, 'parent-last-name': f.parentLastName,
-          'parent-email': f.parentEmail, 'parent-phone': f.parentPhone ? `+971${f.parentPhone}` : '',
-          'emergency-first-name': f.emergencyFirstName, 'emergency-last-name': f.emergencyLastName,
-          'emergency-phone': f.emergencyPhone ? `+971${f.emergencyPhone}` : '',
-          'medical-notes': f.medicalNotes,
-          consent: f.consent ? 'Yes' : 'No', 'play-up-consent': f.playUpConsent ? 'Yes' : 'No',
-        }),
+      await this.postRegistration({
+        'form-name': 'player-registration',
+        'player-first-name': f.playerFirstName, 'player-last-name': f.playerLastName, dob: f.dob, club: effClub(f), 'age-group': f.ageGroup,
+        'parent-first-name': f.parentFirstName, 'parent-last-name': f.parentLastName,
+        'parent-email': f.parentEmail, 'parent-phone': f.parentPhone ? `+971${f.parentPhone}` : '',
+        'emergency-first-name': f.emergencyFirstName, 'emergency-last-name': f.emergencyLastName,
+        'emergency-phone': f.emergencyPhone ? `+971${f.emergencyPhone}` : '',
+        'medical-notes': f.medicalNotes,
+        consent: f.consent ? 'Yes' : 'No', 'play-up-consent': f.playUpConsent ? 'Yes' : 'No',
       });
-    } catch (e) { /* NOTE(backend): swallow network errors in prototype */ }
+    } catch (e) {
+      /* playerForm is left as it is, medical notes and consent tick included,
+         so a parent can retry without re-reading the declaration. */
+      this.setState({
+        playerSubmitting: false,
+        playerSendFailed: true,
+        playerError: 'We could not send this registration — nothing has been saved. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com.',
+      });
+      return;
+    }
     this.setState({ playerSubmitting: false, playerSubmitted: true, playerForm: emptyPlayerForm() });
   }
 

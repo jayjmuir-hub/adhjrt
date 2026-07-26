@@ -1062,6 +1062,7 @@ class Component extends DCLogic {
     } else {
       draw = { ...draw, slots: draw.slots.map((sl) => (sl.id === fxId ? { ...sl, pitch: val } : sl)) };
     }
+    draw = this.withTeamNames(draw);
     await api.saveDraw(ag, draw, session);
     if (this.state.editorAgeId === ag) this.setState({ editorDraw: draw });
     if (this.state.selectedAgeId === ag) this.loadPublic();
@@ -1295,7 +1296,7 @@ class Component extends DCLogic {
   async onSaveDraw() {
     const { api, editorDraw, editorAgeId, session } = this.state;
     this.setState({ editorBusy: true, editorMsg: '' });
-    const res = await api.saveDraw(editorAgeId, editorDraw, session);
+    const res = await api.saveDraw(editorAgeId, this.withTeamNames(editorDraw), session);
     if (res.ok) {
       this.setState({ editorBusy: false, editorMsg: 'Saved as a draft. Use Publish to make it public.' });
       this.loadAdmin(editorAgeId);
@@ -1368,7 +1369,7 @@ class Component extends DCLogic {
       this.setState({ editorBusy: true });
       const freshSlots = editorDraw.pools.flatMap((p) => api.regeneratePoolSlots(editorAgeId, p.id, p.teams));
       const freshKnockout = await api.autoKnockoutSlots(editorAgeId, session);
-      const nextDraw = { ...editorDraw, slots: freshSlots, knockout: freshKnockout };
+      const nextDraw = this.withTeamNames({ ...editorDraw, slots: freshSlots, knockout: freshKnockout });
       const res = await api.saveDraw(editorAgeId, nextDraw, session);
       this.setState({ editorDraw: nextDraw, editorBusy: false, editorMsg: res.ok ? 'Match times and bracket regenerated — your teams were kept.' : (res.error || 'Could not save.') });
       this.loadAdmin(editorAgeId);
@@ -1530,6 +1531,56 @@ class Component extends DCLogic {
     return (s.regTeams || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
   }
 
+  /* THE one place a team's display name is worked out, so the import review
+     table and the saved draw can never disagree.
+
+     Club name minus the RFC-style suffixes, numbered only when the club has
+     more than one side in THIS age group - "Abu Dhabi Harlequins 1" when they
+     entered three, plain "Barrelhouse" when they entered one.
+
+     Reads only club / teamName, exactly like importSourceTeams promises. */
+  teamNamesFromRegistrations() {
+    const src = this.importSourceTeams();
+    const perClub = {};
+    src.forEach((r) => { const c = String(r.club || '').trim(); perClub[c] = (perClub[c] || 0) + 1; });
+    const out = {};
+    src.forEach((r) => {
+      const code = String(r.teamName || '').trim();
+      /* Trim BEFORE the lookup. perClub is keyed on the trimmed club, so the
+         old code's `perClub[row.club]` on an untrimmed value silently missed
+         and left a club's sides unnumbered. */
+      const rawClub = String(r.club || '').trim();
+      const club = rawClub.replace(/\b(RFC|Rugby Football Club|Rugby Club)\b/gi, '').replace(/\s+/g, ' ').trim();
+      if (!code || !club) return;
+      const n = (code.match(/(\d+)$/) || [])[1];
+      out[code] = (perClub[rawClub] > 1 && n) ? (club + ' ' + n) : club;
+    });
+    return out;
+  }
+
+  /* Rebuild teamNames from the registrations on EVERY save.
+
+     "Import registered teams" was the only thing that ever wrote this map, so
+     a draw built before the import existed, or built by hand, carried an empty
+     one - and every code outside the hardcoded nine-name fallback then showed
+     a parent "DS2" instead of "Dubai Sharks 2". Fixing saveDraw's allow-list
+     stopped NEW imports losing the map, but did nothing for the fifteen draws
+     already saved without it; each would have to be re-imported by hand.
+
+     Note onRenameTeam rewrites the CODE, not the display name, so nothing else
+     authors this map and there is no hand-edited value to protect. Derived
+     entries therefore win, which also keeps a name in step with the sheet when
+     a club corrects its own spelling.
+
+     If the registrations have not loaded, the derived map is empty and this is
+     a no-op - a failed fetch can never blank the names. */
+  withTeamNames(draw) {
+    if (!draw) return draw;
+    const derived = this.teamNamesFromRegistrations();
+    if (!Object.keys(derived).length) return draw;
+    return { ...draw, teamNames: { ...(draw.teamNames || {}), ...derived } };
+  }
+
   /* Replacing the pools under recorded scores would orphan them - the results
      are keyed to match ids, so the match would end up describing a game
      between teams that never played it. */
@@ -1560,10 +1611,6 @@ class Component extends DCLogic {
     pools.forEach((p) => (p.teams || []).forEach((t) => existing.add(t)));
 
     const src = this.importSourceTeams();
-    // How many teams each club has HERE, so a club with one entry is not
-    // needlessly numbered in its display name.
-    const perClub = {};
-    src.forEach((r) => { const c = String(r.club || '').trim(); perClub[c] = (perClub[c] || 0) + 1; });
 
     // In "add" mode the pools already hold teams, so start from their real load.
     const load = {};
@@ -1602,11 +1649,10 @@ class Component extends DCLogic {
       rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId, flag: inDraw ? 'in' : 'new', moved, unavailable, skip: false });
     });
 
-    rows.forEach((row) => {
-      const club = row.club.replace(/\b(RFC|Rugby Football Club|Rugby Club)\b/gi, '').replace(/\s+/g, ' ').trim();
-      const n = (row.code.match(/(\d+)$/) || [])[1];
-      row.name = (perClub[row.club] > 1 && n) ? (club + ' ' + n) : club;
-    });
+    /* Same helper the save path uses, so the name shown in the review table is
+       exactly the name that ends up in the draw. */
+    const nameByCode = this.teamNamesFromRegistrations();
+    rows.forEach((row) => { row.name = nameByCode[row.code] || ''; });
 
     const movedCount = rows.filter((r) => r.moved).length;
     const unavailCount = rows.filter((r) => r.unavailable).length;

@@ -1289,15 +1289,35 @@ class Component extends DCLogic {
 
   async loadFixtureData() {
     const api = await import(new URL('scores-data.js', document.baseURI).href);
-    /* loadVenue() falls back to the layout built into scores-data.js if the
-       endpoint cannot be reached, so this never leaves the stat blank. */
-    const venue = await api.loadVenue();
+
+    /* The fixtures panel goes up FIRST and does not wait for the venue layout.
+       It used to: the layout was awaited before getAgeGroups(), which put a
+       decorative count-up number in front of the thing people came for. The
+       fetch has no timeout, so a /venue-layout call that HANGS rather than fails
+       would have left the whole Schedule section on its placeholder for as long
+       as the browser's own fetch timeout. Nothing here needs the layout. */
     const all = await api.getAgeGroups();
     const first = all[0];
-    const pitchCount = (venue && venue.day1 && venue.day1.pitches.length) || this.state.pitchCount;
-    this.setState({ fxApi: api, fxAgeGroups: all, pitchCount, fxSelectedId: first && first.id }, () => {
+    this.setState({ fxApi: api, fxAgeGroups: all, fxSelectedId: first && first.id }, () => {
       if (first) this.loadSchedule(first.id);
     });
+
+    /* Then the PITCHES stat, on its own. loadVenue() already falls back to the
+       layout built into scores-data.js when the endpoint cannot be reached, so
+       the catch is only for a caller that never got the function at all - an
+       offline visitor holding an old cached copy of the module. Either way the
+       written-down fallback stands and nothing above is affected.
+
+       `typeof === number` rather than a truthiness test: a day with no pitches
+       is a warning in _venue.js, not an error, so an organiser CAN save zero -
+       and zero is the honest number to show if they do. */
+    try {
+      const venue = api.loadVenue ? await api.loadVenue() : null;
+      const n = venue && venue.day1 && (venue.day1.pitches || []).length;
+      if (typeof n === 'number') this.setState({ pitchCount: n });
+    } catch (e) {
+      console.warn('could not read the venue layout for the pitch count:', e && e.message);
+    }
   }
 
   jumpToFixture(ageId) {

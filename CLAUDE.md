@@ -1140,13 +1140,43 @@ Everything here is per-machine. On a new personal PC, in order:
    opens a browser sign-in window that a session cannot drive. Push any throwaway
    branch, approve the window; every later push is silent.
 
-### 4. Deploy rules (unchanged, and they matter)
+### 4. Deploy rules — and `dev` is where work goes now
+
+**Since 27 Jul 2026 there is a long-lived `dev` branch. Commit there, not to
+`main`.** `main` is what is deployed; `dev` is where changes accumulate until
+Jay says merge. The point is money: a production deploy costs **15 credits
+whatever its size**, so ten changes batched into one merge cost 15 and ten
+merges cost 150.
+
+Working shape:
+
+1. Work on `dev`. Push freely — a branch costs nothing and does not deploy.
+2. **Do NOT put `[skip ci]` on `dev` commits.** It is pointless there (a branch
+   does not deploy) and actively harmful: it suppresses the deploy-preview build
+   too, and it survives a fast-forward, so a `[skip ci]` tip merged into `main`
+   lands the code and quietly does not deploy.
+3. To show Jay a change before it goes live, **open a PR from `dev`** — that
+   builds a free password-protected preview at
+   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app`. Note an agent
+   **cannot** create the PR: there is no `gh` CLI on either machine and the
+   GitHub connector is read-only. Jay has to click the green **Create pull
+   request** button. `.../pull/new/<branch>` is the FORM, not a PR — never hand
+   over a preview link as though one already exists.
+4. When Jay says merge: `git checkout main && git merge --ff-only dev &&
+   git push origin main`. Check the tip commit for `[skip ci]` first. Keep it a
+   fast-forward — `main` has no merge commits and the history is linear.
+5. Verify the deploy reached `ready` (Netlify site id
+   `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
+6. After merging, bring `dev` back up: `git checkout dev && git merge --ff-only
+   main`. Do not delete `dev`.
+
+### 4b. Deploy rules (unchanged, and they matter)
 
 1. Edit, then validate (`node --check` the DC script; tag balance for `sc-if` /
-   `sc-for`).
+   `sc-for`), and run `powershell tests/runall.ps1`.
 2. **Pushing to `main` deploys to production and spends 15 Netlify credits** —
-   show the diff and get a yes first. Docs-only or non-live-site commits: put
-   `[skip ci]` in the message so no deploy runs and no credits are spent.
+   show the diff and get a yes first. A docs-only commit that has to go straight
+   to `main` takes `[skip ci]` so no deploy runs; on `dev` it is never needed.
 3. Branches are free. To preview one, **open a PR** — that gives a
    password-protected deploy-preview at
    `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app`. This site has no

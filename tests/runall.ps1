@@ -20,7 +20,8 @@ $failed = @()
 # here never runs again, and nothing will tell you.
 $tests = @(
   'test-registration.js',
-  'test-registration-panel.js'
+  'test-registration-panel.js',
+  'test-venue-map.js'
 )
 
 Write-Host ''

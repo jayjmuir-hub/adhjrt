@@ -33,14 +33,29 @@ const NEEDED = [
   'Quins JRT.dc.html',
   'Organizer.dc.html',
   path.join('netlify', 'functions', '_registration.js'),
+  path.join('netlify', 'functions', '_venue.js'),
+  path.join('netlify', 'functions', '_scoring.js'),
+  path.join('netlify', 'functions', '_publish.js'),
 ];
 
+/* Copies with the line endings NORMALISED to LF.
+
+   Found the hard way: several faults below are multi-line patches, and on
+   Windows git checks these files out with CRLF, so an exact-text find written
+   with \n matches nothing and the fault silently "could not be injected". Four
+   of them failed that way the first time this ran on cafnet — the suites all
+   passed, and the thing checking the suites was quietly doing nothing.
+
+   Normalising here rather than in every find string keeps the fault list
+   readable and makes this script give the same answer on any machine. Nothing
+   binary is in NEEDED, so reading everything as text is safe. */
 function seed() {
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(path.join(TMP, 'netlify', 'functions'), { recursive: true });
   NEEDED.forEach((rel) => {
     const from = path.join(SRC, rel);
-    if (fs.existsSync(from)) fs.copyFileSync(from, path.join(TMP, rel));
+    if (!fs.existsSync(from)) return;
+    fs.writeFileSync(path.join(TMP, rel), fs.readFileSync(from, 'utf8').replace(/\r\n/g, '\n'));
   });
 }
 
@@ -172,6 +187,60 @@ const FAULTS = [
       "function registrationState() { return { open: true }; }\nexport {\n  registrationState,"),
     expect: ['does not define its own registrationState'],
   },
+  /* ---- the venue schematic ---- */
+  {
+    /* Replaces an earlier fault that swapped the greedy `.*` for a lazy one.
+       That was NOT caught — and it should not have been, because backtracking
+       makes the two forms identical when the tail is one anchored letter. The
+       code comment claiming otherwise was wrong and has been corrected. This is
+       the real fault in the same function. */
+    name: 'blockOfPitch stops normalising case (c4b and C4A become two blocks)',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '  return (m ? m[1] : s).toUpperCase();', '  return (m ? m[1] : s);'),
+    expect: ['case is normalised'],
+  },
+  {
+    name: 'the sub-pitch letter is no longer stripped (every pitch its own block)',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '  return (m ? m[1] : s).toUpperCase();', '  return s.toUpperCase();'),
+    expect: ['D5A is in block D5', 'groups 18 pitches into 9 blocks'],
+  },
+  {
+    name: 'B1 loses its place on the drawing',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "B1: '3 / 3', ", ''),
+    expect: ['block B1 has a place on the drawing'],
+  },
+  {
+    name: 'two blocks are given the same cell',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "D1: '1 / 5',", "D1: '1 / 4',"),
+    expect: ['no two blocks are placed in the same cell'],
+  },
+  {
+    name: 'a time-share is drawn in the warning colour',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "              border = '1px solid rgba(255,255,255,0.34)';", "              border = '1px solid #f5c518';"),
+    expect: ['NOT in a warning colour'],
+  },
+  {
+    name: 'a shared pitch shows only the first group',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "              who = users.map((a) => a.toUpperCase()).join(' · ');", '              who = users[0].toUpperCase();'),
+    expect: ['D4A names both groups'],
+  },
+  {
+    name: 'unused pitches stop being reported',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '      if (unused.length) {', '      if (false) {'),
+    expect: ['named in the notes'],
+  },
+  {
+    name: 'a pitch is silently dropped from its block',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '        byBlock[b].push(p);', '        if (byBlock[b].length < 2) byBlock[b].push(p);'),
+    expect: ['every Saturday pitch is drawn exactly once'],
+  },
   {
     name: 'the Registration tab stops reading the shared validator',
     suite: 'test-registration-panel.js',
@@ -207,7 +276,7 @@ const problems = [];
 
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
-['test-registration.js', 'test-registration-panel.js'].forEach((f) => {
+['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }
@@ -218,7 +287,10 @@ console.log('\nInjecting faults one at a time.\n');
 FAULTS.forEach((f, i) => {
   if (!fs.existsSync(path.join(__dirname, f.suite))) { console.log(`  ${i + 1}. skipped (no ${f.suite}) — ${f.name}`); return; }
   seed();
-  try { f.apply(); } catch (e) { problems.push(`fault ${i + 1} could not be injected: ${e.message}`); console.log(`  ${i + 1}. COULD NOT INJECT — ${f.name}\n     ${e.message}`); return; }
+  /* A fault that cannot be injected is a FAILURE of this script, not a pass.
+     It means the code moved and this file did not follow — so the check it was
+     meant to exercise has not been exercised by anything. */
+  try { f.apply(); } catch (e) { problems.push(`fault ${i + 1} could not be injected (the code moved and this script did not follow): ${e.message}`); console.log(`  ${i + 1}. COULD NOT INJECT — ${f.name}\n     ${e.message}`); return; }
 
   const r = run(f.suite);
   if (r.code === 0) {

@@ -322,6 +322,54 @@
             </sc-if>
           </div>
 
+          <!-- WHERE EACH GROUP PLAYS — the schematic.
+               Drawn from the working copy, so it redraws as you tick boxes
+               further down, before anything is saved. It is not the site plan:
+               assets/venue-map.png names blocks, not the sub-pitches this
+               layout uses, so drawing "B1C" on it would mean inventing where
+               B1C sits. See the comment above BLOCK_GRID in the script. -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Where each group plays</div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 18px;line-height:1.5">A schematic, not the site plan &mdash; blocks are roughly where they sit at Zayed Sports City, and each one is divided into the pitches this layout actually lists. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
+
+            <sc-for list="{{ vMaps }}" as="vm" hint-placeholder-count="2">
+              <div style="margin-bottom:22px">
+                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                  <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;color:{{ vm.tint }}">{{ vm.label }}</div>
+                  <div style="font-size:12px;color:#7f8794;font-weight:600">{{ vm.summary }}</div>
+                </div>
+
+                <sc-if value="{{ vm.isEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:12px;color:#7f8794;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
+                </sc-if>
+
+                <div style="{{ vm.gridStyle }}">
+                  <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
+                    <div style="{{ blk.style }}">
+                      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:6px">{{ blk.name }}</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:5px">
+                        <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
+                          <div style="{{ pp.style }}" title="{{ pp.title }}">
+                            <div style="font-weight:800;font-size:11px;letter-spacing:.3px">{{ pp.name }}</div>
+                            <div style="font-size:10px;font-weight:700;margin-top:2px;color:{{ pp.whoColor }}">{{ pp.who }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ vm.hasNotes }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ vm.notes }}" as="nt" hint-placeholder-count="2">
+                      <span style="{{ nt.style }}">{{ nt.text }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+
           <!-- one card per day: the pitch list -->
           <sc-for list="{{ vDays }}" as="d" hint-placeholder-count="2">
             <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
@@ -566,6 +614,64 @@ const MANAGER_AGE_GROUPS = [
   { id: 'u18b', name: 'U18B Contact' }, { id: 'u18g', name: 'U18G Contact' },
 ];
 
+/* ---------------- The pitch schematic ----------------
+   A drawing of where each age group plays, on the Venue & days tab.
+
+   IT IS NOT THE SITE PLAN, and deliberately does not try to be.
+   `assets/venue-map.png` is a wayfinding map of the whole complex: it draws ONE
+   outline per block (D3, C4, B1 — which is the athletics track) with a name and
+   a car-park number, and it neither names nor divides what is inside them. But
+   the layout's pitches are D3A/D3B, C4A/C4B, B1A..B1D — and those sub-pitch
+   names are OURS (see CLAUDE.md, Venue section). Drawing a box labelled "B1C"
+   on that image would mean inventing where B1C sits, and then showing that
+   invention on the screen an organiser uses to make real decisions.
+
+   So this is a schematic: blocks in roughly their real relative positions for
+   orientation, each divided into the sub-pitches the layout ACTUALLY lists.
+   Every cell is derived, so a pitch added in the panel appears here by itself
+   and nothing can go stale. */
+
+/* Roughly where each block sits on the real map, as `grid-area: row / column`.
+   Read off assets/venue-map.png: the D row along the top, C4/C5 down the left,
+   B1 and B2 bottom-centre, the A blocks on the right. Only the arrangement is
+   meaningful — this is orientation, not distance. A block nobody has heard of
+   is still drawn; it just goes underneath. */
+const BLOCK_GRID = {
+  D5: '1 / 1', D4: '1 / 2', D3: '1 / 3', D2: '1 / 4', D1: '1 / 5',
+  C4: '2 / 1', C5: '2 / 2', A1: '2 / 5',
+  C1: '3 / 1', B2: '3 / 2', B1: '3 / 3', A2: '3 / 5',
+  C3: '4 / 1', C2: '4 / 2', A3: '4 / 4', A4: '4 / 5',
+};
+
+/* One colour per age group. The colour is the SECONDARY cue — every cell also
+   carries the group id as text, because fifteen colours cannot all be told
+   apart and one of them is always going to be someone's bad screen. */
+const AGE_TINT = {
+  u6: '#E11B22', u7: '#F2711C', u8: '#F5C518', u9: '#8DC63F', u10: '#17A34A',
+  u11: '#00A79D', u12: '#2E9BD6', u12g: '#7B61FF', u13: '#B15BD6',
+  u14b: '#E0559C', u14g: '#FF7A9C', u16b: '#C97B3A', u16g: '#9BA84A',
+  u18b: '#5B8DEF', u18g: '#40C4B4',
+};
+
+/* 'D5A' -> 'D5', 'C4B' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
+   sub-pitch; everything up to and including the last digit is the block.
+
+   The tail is at most ONE letter and it is anchored, which pins the whole thing
+   down: there is exactly one way to split any name, so 'D12A' gives 'D12' and
+   not 'D1' whichever way the first group is written. (An earlier version of this
+   comment claimed the greedy `.*` was load-bearing for that. It is not —
+   backtracking makes the lazy form identical here — and the fault-injection run
+   is what proved the claim wrong, because swapping them changed nothing.)
+
+   A name with no digit at all (someone types "Track") becomes its own block
+   rather than throwing. This panel must not fall over on a name it did not
+   expect, and the free-text pitch box upstairs means it will meet one. */
+function blockOfPitch(name) {
+  const s = String(name == null ? '' : name).trim();
+  const m = s.match(/^(.*[0-9])([A-Za-z])?$/);
+  return (m ? m[1] : s).toUpperCase();
+}
+
 class Component extends DCLogic {
   state = {
     cmName: '', cmUser: '', cmPass: '', cmAge: '', cmError: '', cmSuccess: '', cmBusy: false,
@@ -699,6 +805,7 @@ class Component extends DCLogic {
     return {
       vDays: days,
       vGroups: groups,
+      vMaps: this.venueMaps(v),
       vBusy: s.vBusy,
       vError: s.vError,
       vSuccess: s.vSuccess,
@@ -714,6 +821,118 @@ class Component extends DCLogic {
       onVenueSave: () => this.doSaveVenue(),
       onVenueReset: () => this.doResetVenue(),
     };
+  }
+
+  /* The schematic, built from the WORKING copy of the layout — so ticking a
+     pitch box further down the tab redraws this immediately, before anything is
+     saved. Pure: it reads `venue` and returns objects, touches no state and no
+     clock, which is what lets test-venue-map.js drive it directly.
+
+     Everything here is derived. There is no stored geometry beyond BLOCK_GRID,
+     which only says roughly where a block sits, so nothing can disagree with the
+     layout. */
+  venueMaps(v) {
+    if (!v) return [];
+    const dayTint = { day1: '#E11B22', day2: '#17A34A' };
+    const nameOf = (ag) => (MANAGER_AGE_GROUPS.find((g) => g.id === ag) || {}).name || ag.toUpperCase();
+
+    return ['day1', 'day2'].map((id) => {
+      const day = v[id] || {};
+      const pitches = (day.pitches || []).slice();
+      const groups = day.groups || {};
+
+      /* Which groups sit on each pitch. Built by walking the groups rather than
+         the pitches, so a group pointing at a pitch that no longer exists simply
+         does not appear — validateVenue() already refuses to save that state and
+         the problems list already names it. */
+      const usersOf = {};
+      pitches.forEach((p) => { usersOf[p] = []; });
+      Object.keys(groups).forEach((ag) => {
+        (groups[ag] || []).forEach((p) => { if (usersOf[p]) usersOf[p].push(ag); });
+      });
+
+      // Group the pitches into their blocks, keeping the layout's own order.
+      const order = [], byBlock = {};
+      pitches.forEach((p) => {
+        const b = blockOfPitch(p);
+        if (!byBlock[b]) { byBlock[b] = []; order.push(b); }
+        byBlock[b].push(p);
+      });
+
+      /* Blocks the map does not know about go in rows below the drawing rather
+         than being dropped or left to collide with a placed one. */
+      let spare = -1;
+      const blocks = order.map((b) => {
+        let area = BLOCK_GRID[b];
+        if (!area) { spare += 1; area = `${5 + Math.floor(spare / 5)} / ${(spare % 5) + 1}`; }
+        return {
+          name: b,
+          known: !!BLOCK_GRID[b],
+          style: `grid-area:${area};background:#0C0C0E;border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:9px 10px 10px`,
+          pitches: byBlock[b].map((p) => {
+            const users = usersOf[p] || [];
+            const tints = users.map((ag) => AGE_TINT[ag] || '#7f8794');
+            let bg, border, who, whoColor, title;
+            if (!users.length) {
+              bg = 'transparent'; border = '1px dashed rgba(255,255,255,0.22)';
+              who = 'free'; whoColor = '#5a616d';
+              title = `${p} — no age group is using this pitch`;
+            } else if (users.length === 1) {
+              bg = tints[0] + '30'; border = `1px solid ${tints[0]}`;
+              who = users[0].toUpperCase(); whoColor = tints[0];
+              title = `${p} — ${nameOf(users[0])}`;
+            } else {
+              /* TWO GROUPS ON ONE PITCH IS A TIME-SHARE, NOT A CLASH. D4 and D5
+                 run U6 in the morning and U7 in the afternoon, deliberately. So
+                 this is drawn as a split of both colours and labelled with both
+                 groups — NOT in a warning colour. A picture that cried wolf on
+                 the one arrangement Jay set up on purpose would be worse than no
+                 picture. The Fixture Editor is what keeps them apart by time. */
+              const stops = tints.map((t, i) => `${t}30 ${(i * 100) / tints.length}%, ${t}30 ${((i + 1) * 100) / tints.length}%`).join(', ');
+              bg = `linear-gradient(100deg, ${stops})`;
+              border = '1px solid rgba(255,255,255,0.34)';
+              who = users.map((a) => a.toUpperCase()).join(' · ');
+              whoColor = '#e7eaef';
+              title = `${p} — shared by ${users.map(nameOf).join(' and ')}. Two groups on one pitch at different times is a time-share, not a clash.`;
+            }
+            return {
+              name: p, who, whoColor, title,
+              style: `min-width:52px;background:${bg};border:${border};border-radius:7px;padding:5px 7px;text-align:center;color:#fff`,
+            };
+          }),
+        };
+      });
+
+      // The two things a drawing can say that a list of tick-boxes cannot.
+      const unused = pitches.filter((p) => !(usersOf[p] || []).length);
+      const shared = pitches.filter((p) => (usersOf[p] || []).length > 1);
+      const homeless = Object.keys(groups).filter((ag) => !(groups[ag] || []).length);
+
+      const notes = [];
+      const chip = (color) => `display:inline-block;background:${color}18;border:1px solid ${color}55;color:${color};border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700`;
+      if (homeless.length) {
+        notes.push({ style: chip('#f5c518'), text: `Not placed yet: ${homeless.map((a) => a.toUpperCase()).join(', ')}` });
+      }
+      if (unused.length) {
+        notes.push({ style: chip('#7f8794'), text: `No group on: ${unused.join(', ')}` });
+      }
+      if (shared.length) {
+        notes.push({ style: chip('#aeb4bf'), text: `Time-shared: ${shared.join(', ')} — the Fixture Editor keeps these apart by time` });
+      }
+
+      const groupCount = Object.keys(groups).length;
+      return {
+        id,
+        label: day.label || id,
+        tint: dayTint[id],
+        summary: `${pitches.length} pitch${pitches.length === 1 ? '' : 'es'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${pitches.length - unused.length} in use`,
+        gridStyle: 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;align-items:start',
+        blocks,
+        notes,
+        hasNotes: notes.length > 0,
+        isEmpty: !pitches.length,
+      };
+    });
   }
 
   /* ---------------- Venue & days ----------------

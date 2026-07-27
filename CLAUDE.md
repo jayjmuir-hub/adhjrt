@@ -719,6 +719,50 @@ than `OK`, and nothing reaches the server until the dialog is answered — which
 `doResetVenue()` is now a pair, the handler that asks and `reallyResetVenue()` that
 does it.
 
+### The pitch schematic — where each group plays (added 27 Jul 2026)
+
+A drawing at the top of the Venue & days tab: blocks in roughly their real
+positions, each divided into the sub-pitches the layout lists, tinted by age
+group. Built from the **working copy**, so it redraws as you tick boxes further
+down the tab, before anything is saved.
+
+**It is NOT the site plan, and must not become one.** `assets/venue-map.png` is a
+wayfinding map of the whole complex. It draws ONE outline per block — D3, C4,
+B1 (which is the athletics track) — with a name and a car-park number, and it
+neither names nor divides what is inside them. The layout's pitches are
+`D3A`/`D3B`, `C4A`/`C4B`, `B1A`..`B1D`, and **those sub-pitch names are ours**
+(see above). Drawing a box labelled "B1C" on that image would mean inventing
+where B1C sits and then showing that invention on a screen an organiser uses to
+make real decisions. If someone asks for the overlay again, that is the answer:
+block-level tinting is derivable, sub-pitch geometry is not.
+
+- `blockOfPitch()` maps a pitch to its block — `D5A`→`D5`, `C4B`→`C4`,
+  `D2`→`D2`. Everything up to and including the last digit; one optional
+  trailing letter is the sub-pitch marker. A name with no digit becomes its own
+  block rather than throwing, because the pitch box upstairs is free text.
+- `BLOCK_GRID` is the **only** stored geometry, and it only says roughly which
+  row and column a block sits in. A block it does not know is still drawn, in
+  rows underneath. `test-venue-map.js` asserts every block in the shipped layout
+  is one it knows, so the table cannot silently fall behind.
+- **Two groups on one pitch is drawn as a TIME-SHARE, not a problem.** D4 and D5
+  run U6 in the morning and U7 in the afternoon, deliberately. The cell splits
+  both colours and names both groups in a neutral tone — never amber or red. A
+  drawing that cried wolf on the one arrangement someone set up on purpose would
+  be worse than no drawing. There is an explicit test for this, and the first
+  version of that test **passed for the wrong reason** (it scanned the whole
+  style string, and U6's tint IS the brand red `#E11B22`).
+- It shows the two things a grid of tick-boxes cannot: a pitch **no group is on**,
+  and a group on the day with **no pitches yet**. The second is amber — it is
+  something to fix; the first is grey — it may well be deliberate.
+- `venueMaps()` is pure: layout in, objects out, no state and no clock, which is
+  what lets the test drive it directly. It tolerates a half-built layout — a
+  missing day, no pitch array, a group pointing at a pitch that is gone — without
+  throwing, because the tab is reachable mid-edit and a drawing that crashes
+  takes the whole panel with it.
+
+Organiser-only, deliberately. It shows draft state and unallocated groups, which
+are not things the public should see.
+
 ### The registration window (added 27 Jul 2026)
 
 **When the entry forms are open is a setting, not a deploy.** It used to be
@@ -1078,8 +1122,10 @@ Everything here is per-machine. On a new personal PC, in order:
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
-It currently holds the registration-window work only — **380 checks** plus
-`_prove-registration.js`, the fault-injection script.
+It currently holds the registration-window work and the pitch schematic —
+**512 checks** across three files — plus `_prove-registration.js`, the
+fault-injection script (25 faults, all of which must be caught by the check that
+claims to guard them).
 
 **The other thirteen files — 577 checks, plus `validate-bindings.js` — are still
 in `C:\Users\jayjm\adhjrt-sim` on jay-pc and are in no version control at

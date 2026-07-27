@@ -35,6 +35,22 @@
   to = "/assets/:splat"
   status = 200
 
+# --- tests -------------------------------------------------------------
+# No publish directory is set, so the repo root IS the deployed site and
+# tests/ would otherwise be readable at adhjrt.com/tests/. Netlify has no way
+# to exclude a folder from a no-build deploy, so a 404 rule is the mechanism.
+# force = true because these are real files on disk and would be served before
+# the rule was consulted otherwise.
+#
+# This is tidiness, NOT security: the repo is public, so nothing in tests/
+# should ever be secret in the first place. See tests/README.md step 1 — the
+# data check that has to happen before the older test files move in.
+[[redirects]]
+  from = "/tests/*"
+  to = "/tests/:splat"
+  status = 404
+  force = true
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.

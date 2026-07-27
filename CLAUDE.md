@@ -1072,22 +1072,35 @@ Everything here is per-machine. On a new personal PC, in order:
 4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
-### 5. The tests are not in this repo, and that is a risk
+### 5. The tests — half in the repo, half still on one disk
 
-`adhjrt-sim` — 577 checks across thirteen files plus the binding validator,
-driven by `runall.ps1` — lives only in `C:\Users\jayjm\adhjrt-sim` on
-`jay-pc`. **It is not in version control anywhere.** A session bridged to any
-other machine cannot run it, and a disk failure loses it.
+**`tests/` in this repo is the destination.** Plain Node, no dependencies, no
+build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
+file finds the clone itself, so any checkout on any machine can run them.
 
-The registration-window work added four more files (`_lib.js`,
-`test-registration.js`, `test-registration-panel.js` and
-`_prove-registration.js`, 380 checks) and they are in
-`C:\Users\Jay\adhjrt-sim` on `cafnet`. They find the clone themselves, so
-the same files run unchanged on either machine — copy them across and add the
-two test files to `jay-pc`'s `runall.ps1`, which is an explicit list: a test
-file not named in it never runs again.
+It currently holds the registration-window work only — **380 checks** plus
+`_prove-registration.js`, the fault-injection script.
 
-Worth deciding at some point whether the suite should live in the repo.
+**The other thirteen files — 577 checks, plus `validate-bindings.js` — are still
+in `C:\Users\jayjm\adhjrt-sim` on jay-pc and are in no version control at
+all.** Until they move, **run both suites** before trusting a change.
+
+Moving them in needs a session bridged to jay-pc, and **step one is a data
+check**: this repo is public, the registration sheets hold children's names,
+dates of birth and medical notes, and it has not been verified file by file that
+no fixture was built from a real sheet row. The rehearsal used invented players
+(the giveaway is the phone number `971500000000`). **If a real row turns up in a
+fixture it does not come in here — say so and stop, do not sanitise it quietly.**
+Full procedure in `tests/README.md`.
+
+`netlify.toml` has a `/tests/*` 404 rule, because no publish directory is set and
+the repo root IS the deployed site. Tidiness, not security — see above.
+
+**The habit that matters more than the count:** every new assertion is proven
+against a deliberately injected fault before it is trusted. It has caught two
+tests that passed with the real code deleted, a regex matching a comment instead
+of the code, a section check that scanned too wide a block, and three assertions
+that were simply wrong about what the code should do.
 
 ### 6. Traps
 

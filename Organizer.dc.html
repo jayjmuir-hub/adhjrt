@@ -166,7 +166,103 @@
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
         <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
+        <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
       </div>
+
+      <!-- registration window tab -->
+      <sc-if value="{{ isRegistration }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+              <div style="flex:1;min-width:260px">
+                <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Registration window</div>
+                <p style="color:#7f8794;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#aeb4bf">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#aeb4bf">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
+                <button onClick="{{ onRegSave }}" disabled="{{ rSaveDisabled }}" style="{{ rSaveStyle }}">{{ rSaveLabel }}</button>
+              </div>
+            </div>
+
+            <sc-if value="{{ rError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ rError }}</div></sc-if>
+            <sc-if value="{{ rSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:13px;font-weight:600">{{ rSuccess }}</div></sc-if>
+
+            <sc-if value="{{ rHasProblems }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:11px 13px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
+                <sc-for list="{{ rProblems }}" as="rp" hint-placeholder-count="1">
+                  <div style="color:#ff8a8a;font-size:13px;line-height:1.6">&bull; {{ rp }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ rHasWarnings }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:6px">Worth a look &mdash; you can still save</div>
+                <sc-for list="{{ rWarnings }}" as="rw" hint-placeholder-count="2">
+                  <div style="color:#f5c518;font-size:13px;line-height:1.6">&bull; {{ rw }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- the two dates -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">The dates</div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#aeb4bf">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
+                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;color-scheme:dark">
+                <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rOpensEchoColor }}">{{ rOpensEcho }}</div>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
+                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;color-scheme:dark">
+                <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rClosesEchoColor }}">{{ rClosesEcho }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- auto / force open / force closed -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Which one is in charge</div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#aeb4bf">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+              <sc-for list="{{ rModes }}" as="rm" hint-placeholder-count="3">
+                <button onClick="{{ rm.onPick }}" style="{{ rm.style }}">
+                  <div style="font-weight:800;font-size:14px;margin-bottom:5px">{{ rm.label }}</div>
+                  <div style="font-size:12px;font-weight:500;line-height:1.5;color:{{ rm.descColor }}">{{ rm.desc }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- what a visitor sees, computed from the UNSAVED working copy -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">What the public page says</div>
+              <sc-if value="{{ rPreviewUnsaved }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#f5c518;text-transform:uppercase">Preview of your unsaved changes</div></sc-if>
+            </div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
+
+            <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:20px;text-align:center">
+              <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:#fff">
+                <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>{{ rPreviewPill }}
+              </div>
+              <div style="color:#aeb4bf;font-size:14px;line-height:1.6;max-width:520px;margin:0 auto">{{ rPreviewBlurb }}</div>
+              <div style="margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:{{ rPreviewTint }}">{{ rPreviewButtons }}</div>
+              <sc-if value="{{ rPreviewTestMode }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);border-radius:8px;padding:9px 13px;color:#f5c518;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Test mode strip is showing on the public page</div>
+              </sc-if>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
 
       <!-- filters -->
       <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
@@ -486,6 +582,14 @@ class Component extends DCLogic {
     venue: null, venueSaved: null, venueUsage: null,
     vLoaded: false, vBusy: false, vError: '', vSuccess: '',
     vNewPitch: { day1: '', day2: '' },
+    /* The registration window being edited. Same shape as the venue pair above:
+       `reg` is the working copy the form mutates, `regSaved` is what the server
+       last confirmed, so Save can tell whether anything actually changed. Both
+       null until the tab is opened. regNow is the clock the preview is drawn
+       against — kept in state rather than read at render time so the preview
+       ticks over on its own instead of freezing until the next click. */
+    reg: null, regSaved: null, regNow: 0,
+    rLoaded: false, rBusy: false, rError: '', rSuccess: '',
     /* The dialog. null when closed; otherwise
        { kind: 'confirm'|'prompt', title, onConfirm, okLabel?, wide? }.
        modalValue is the prompt's input. */
@@ -499,6 +603,19 @@ class Component extends DCLogic {
     const session = api.currentSession();
     this.setState({ api, session });
     if (session) this.loadData(api);
+
+    /* Keeps the Registration tab's "what the public page says" preview honest
+       as the clock crosses a boundary. Five seconds, not one: the preview is a
+       back-office read-out, and a one-second re-render would rebuild the teams
+       and players tables sixty times a minute for a panel nobody is watching
+       that closely. The guard means it costs one comparison on every other tab. */
+    this._regClock = setInterval(() => {
+      if (this.state.tab === 'registration') this.setState({ regNow: Date.now() });
+    }, 5000);
+  }
+
+  componentWillUnmount() {
+    if (this._regClock) clearInterval(this._regClock);
   }
 
   async loadData(api) {
@@ -818,6 +935,199 @@ class Component extends DCLogic {
     }
   }
 
+  /* ---------------- Registration window ----------------
+     Everything this panel binds to. Kept out of renderVals() for the same
+     reason venueVals() is: that method is long enough already. CLAUDE.md's
+     binding trap applies — a {{ token }} the markup uses but this does not
+     return resolves silently to empty, and validate-bindings.js is the guard.
+
+     THE RULES ARE NOT REIMPLEMENTED HERE. api.validateSettings and
+     api.registrationCopy are the SERVER'S functions, re-exported through
+     organizer-data.js from the block that is compared character for character
+     against netlify/functions/_registration.js. That is the difference from the
+     Venue panel, where venueProblems() is a second hand-written copy of
+     validateVenue() and test-venue-panel.js exists to catch them disagreeing.
+     Here they cannot disagree: Save can never go green on something the server
+     will reject, and the preview can never show Jay wording a coach will not
+     see. If you find yourself writing a date rule in this file, stop. */
+  regVals(s) {
+    const api = s.api;
+    const r = s.reg;
+    const now = s.regNow || Date.now();
+    const ready = !!(r && api && api.validateSettings);
+
+    const v = ready ? api.validateSettings(r) : { ok: true, errors: [] };
+    const problems = ready && !v.ok ? v.errors : [];
+    const warnings = ready ? api.registrationWarnings(r, now) : [];
+    const copy = ready ? api.registrationCopy(r, now) : null;
+    const dirty = this.regDirty();
+
+    /* The weekday, spelled out, next to a date the organiser typed. Same
+       defensive trick as fmtDobLong() on the player form: a transposed month is
+       invisible in "2026-10-08" and obvious in "Thursday 8 October 2026".
+       Midday UTC, so no offset between -11 and +11 can shift the day. */
+    const weekdayOf = (ymd) => {
+      if (!ymd) return '';
+      const d = new Date(ymd + 'T12:00:00Z');
+      return isNaN(d.getTime()) ? '' : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getUTCDay()];
+    };
+    const echo = (stamp, endOfDay) => {
+      if (!ready || !stamp) {
+        return endOfDay
+          ? { text: 'No closing date — once registration opens it stays open.', color: '#f5c518' }
+          : { text: 'No opening date — registration stays closed.', color: '#f5c518' };
+      }
+      const ymd = api.dateOfStamp(stamp);
+      return {
+        text: `${endOfDay ? 'Closes 23:59' : 'Opens 00:00'} on ${weekdayOf(ymd)} ${api.fmtWindowDate(stamp, true)}, Abu Dhabi time`,
+        color: '#aeb4bf',
+      };
+    };
+    const opensEcho = echo(r && r.opensAt, false);
+    const closesEcho = echo(r && r.closesAt, true);
+
+    const modeOn = 'text-align:left;background:rgba(23,163,74,0.14);border:1px solid #17A34A;border-radius:11px;padding:13px 15px;color:#fff;cursor:pointer;width:100%';
+    const modeOff = 'text-align:left;background:#0C0C0E;border:1px solid rgba(255,255,255,0.14);border-radius:11px;padding:13px 15px;color:#aeb4bf;cursor:pointer;width:100%';
+    const MODES = [
+      { value: 'auto', label: 'Follow the dates', desc: 'The two dates above decide. This is the normal setting and the one to leave it on.' },
+      { value: 'open', label: 'Force open', desc: 'Open right now whatever the dates say — this is how you test the real forms early. The public page shows a TEST MODE strip the whole time.' },
+      { value: 'closed', label: 'Force closed', desc: 'Shut right now, even inside the dates. For pulling registration early without losing the dates you set.' },
+    ];
+
+    return {
+      rBusy: s.rBusy,
+      rError: s.rError,
+      rSuccess: s.rSuccess,
+      rProblems: problems,
+      rHasProblems: problems.length > 0,
+      rWarnings: warnings,
+      rHasWarnings: warnings.length > 0,
+      rSaveDisabled: s.rBusy || !dirty || problems.length > 0,
+      rSaveLabel: s.rBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
+      rSaveStyle: (s.rBusy || !dirty || problems.length > 0)
+        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:#17A34A;color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+      onRegSave: () => this.doSaveRegistration(),
+      onRegReset: () => this.doResetRegistration(),
+
+      rOpensDate: ready && r.opensAt ? api.dateOfStamp(r.opensAt) : '',
+      rClosesDate: ready && r.closesAt ? api.dateOfStamp(r.closesAt) : '',
+      onRegOpensDate: (e) => this.setRegDate('opensAt', e.target.value, false),
+      onRegClosesDate: (e) => this.setRegDate('closesAt', e.target.value, true),
+      rOpensEcho: opensEcho.text,
+      rOpensEchoColor: opensEcho.color,
+      rClosesEcho: closesEcho.text,
+      rClosesEchoColor: closesEcho.color,
+
+      rModes: MODES.map((m) => ({
+        label: m.label,
+        desc: m.desc,
+        style: (r && r.mode === m.value) ? modeOn : modeOff,
+        descColor: (r && r.mode === m.value) ? '#cdd2da' : '#7f8794',
+        onPick: () => this.setRegMode(m.value),
+      })),
+
+      rPreviewUnsaved: dirty,
+      rPreviewPill: copy ? copy.pill : '—',
+      rPreviewBlurb: copy ? copy.blurb : 'Loading the registration window…',
+      rPreviewButtons: copy ? copy.buttons : '',
+      rPreviewTestMode: !!(copy && copy.testMode),
+      rPreviewPillBg: (copy && copy.state.open) ? '#17A34A' : '#E11B22',
+      rPreviewTint: (copy && copy.state.open) ? '#3bd070' : '#7f8794',
+    };
+  }
+
+  /* Loaded the first time the tab is opened, like the venue layout — most
+     visits to this page are about registrations, not about settings. */
+  async loadRegistrationWindow() {
+    if (this.state.rLoaded || this.state.rBusy) return;
+    this.setState({ rBusy: true, rError: '' });
+    const res = await this.state.api.getRegistrationWindow();
+    if (res.ok && res.settings) {
+      this.setState({
+        reg: { ...res.settings },
+        regSaved: { ...res.settings },
+        rLoaded: true, rBusy: false, regNow: Date.now(),
+      });
+    } else {
+      this.setState({ rBusy: false, rError: res.error || 'Could not load the registration window.' });
+    }
+  }
+
+  /* Every edit routes through here, so a stale "Saved" can never sit next to an
+     unsaved change. Same contract as editVenue(). */
+  editReg(mutate) {
+    this.setState((s) => {
+      if (!s.reg) return {};
+      const next = { ...s.reg };
+      mutate(next);
+      return { reg: next, rSuccess: '', rError: '', regNow: Date.now() };
+    });
+  }
+
+  /* A native date input only ever emits a real date or an empty string, so the
+     null branch should be unreachable — which is exactly why it says so out loud
+     rather than silently clearing the field. A cleared date is a meaningful
+     value here (it means "undecided"), so a failure that looked like one would
+     be indistinguishable from an intentional edit. */
+  setRegDate(field, ymd, endOfDay) {
+    const api = this.state.api;
+    if (!ymd) { this.editReg((r) => { r[field] = null; }); return; }
+    const stamp = api.stampFromDate(ymd, endOfDay);
+    if (!stamp) { this.setState({ rError: `"${ymd}" is not a date I can use. Nothing was changed.` }); return; }
+    this.editReg((r) => { r[field] = stamp; });
+  }
+
+  setRegMode(mode) { this.editReg((r) => { r.mode = mode; }); }
+
+  regDirty() {
+    const { reg, regSaved } = this.state;
+    if (!reg || !regSaved) return false;
+    return JSON.stringify(reg) !== JSON.stringify(regSaved);
+  }
+
+  async doSaveRegistration() {
+    const api = this.state.api;
+    const v = api.validateSettings(this.state.reg);
+    if (!v.ok) { this.setState({ rError: 'Fix the problems listed below first.' }); return; }
+    this.setState({ rBusy: true, rError: '', rSuccess: '' });
+    const res = await api.saveRegistrationWindow(this.state.reg);
+    if (res.ok && res.settings) {
+      this.setState({
+        reg: { ...res.settings },
+        regSaved: { ...res.settings },
+        rBusy: false, regNow: Date.now(),
+        rSuccess: 'Saved. The public page follows this now — no deploy needed.',
+      });
+    } else {
+      // The server's own list wins if it sent one; it is the authority.
+      this.setState({ rBusy: false, rError: (res.errors && res.errors.join(' ')) || res.error || 'Could not save the registration window.' });
+    }
+  }
+
+  doResetRegistration() {
+    this.confirmModal(
+      'Clear both dates and go back to following the dates?\n\nWith no opening date, registration is CLOSED — the public page will say it opens soon. Nothing that has already been submitted is affected.',
+      () => this.reallyResetRegistration(),
+      { okLabel: 'Clear the window', wide: true }
+    );
+  }
+
+  async reallyResetRegistration() {
+    this.setState({ rBusy: true, rError: '', rSuccess: '' });
+    const res = await this.state.api.resetRegistrationWindow();
+    if (res.ok && res.settings) {
+      this.setState({
+        reg: { ...res.settings },
+        regSaved: { ...res.settings },
+        rBusy: false, regNow: Date.now(),
+        rSuccess: 'Cleared. Registration is closed until you set an opening date.',
+      });
+    } else {
+      this.setState({ rBusy: false, rError: res.error || 'Could not clear the registration window.' });
+    }
+  }
+
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
   async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
@@ -1057,15 +1367,17 @@ class Component extends DCLogic {
       onToggleCpNew: () => this.setState((st) => ({ showCpNew: !st.showCpNew })),
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
-      isVenue: s.tab === 'venue',
+      isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),
       showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
+      showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
       tabVenueStyle: s.tab === 'venue' ? tabOn : tabOff,
+      tabRegistrationStyle: s.tab === 'registration' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
 
@@ -1081,6 +1393,7 @@ class Component extends DCLogic {
       onModalConfirm: () => this.submitModal(),
 
       ...this.venueVals(s),
+      ...this.regVals(s),
 
       pendingAccounts: s.accounts.filter((a) => !a.approved).map((a) => ({
         ...a,

@@ -212,3 +212,51 @@ export async function resetVenue() {
   if (r.real) return r.json;
   return { ok: false, error: 'Resetting the venue layout needs the deployed site (not available in local preview).' };
 }
+
+/* -------- The registration window: when the entry forms are open --------
+   Read is public (registration-window.js GET); writing is organiser-only and
+   re-checked server-side, because when registration opens is a tournament-wide
+   decision rather than a per-age-group one.
+
+   The date logic is NOT reimplemented here. It is re-exported straight out of
+   scores-data.js, which holds the copy that is compared character for character
+   against the server's. The Registration panel needs to show a preview of what
+   the public will see, and a third hand-written copy of "is it open yet" is
+   exactly how the day/pitch tables drifted apart before the venue layout was
+   built. One extra module on a back-office page is the cheaper mistake.
+
+   As with the venue, there is no local-backend fallback: in local preview the
+   read falls back to the built-in default (which is CLOSED) and saving reports
+   that it needs the deployed site, rather than silently writing to localStorage
+   and letting someone think registration is set when it is not. */
+export {
+  registrationState, registrationCopy, registrationWarnings, validateSettings,
+  isRealDate, stampFromDate, dateOfStamp, fmtWindowDate, fmtCountdown,
+  DEFAULT_REGISTRATION, REGISTRATION_MODES,
+} from './scores-data.js';
+
+export async function getRegistrationWindow() {
+  const r = await tryFetchJson('/.netlify/functions/registration-window');
+  if (r.real && r.json && r.json.ok) return r.json;
+  return { ok: false, error: 'Could not load the registration window.' };
+}
+
+export async function saveRegistrationWindow(settings) {
+  const r = await tryFetchJson('/.netlify/functions/registration-window', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ settings }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Saving the registration window needs the deployed site (not available in local preview).' };
+}
+
+export async function resetRegistrationWindow() {
+  const r = await tryFetchJson('/.netlify/functions/registration-window', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ reset: true }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Resetting the registration window needs the deployed site (not available in local preview).' };
+}

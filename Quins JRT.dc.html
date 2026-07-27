@@ -617,26 +617,22 @@
   <section id="register" style="background:{{ accent }};color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;opacity:.14;background:repeating-linear-gradient(60deg,#fff 0 3px,transparent 3px 13px);pointer-events:none"></div>
     <div style="position:relative;max-width:900px;margin:0 auto;padding:96px 32px;text-align:center" data-reveal>
-      <sc-if value="{{ registrationOpen }}" hint-placeholder-val="{{ false }}">
-        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.22);padding:8px 18px;border-radius:100px;margin-bottom:24px;font-weight:800;letter-spacing:1px;font-size:13px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>REGISTRATION NOW OPEN
-        </div>
-      </sc-if>
-      <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}">
-        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.22);padding:8px 18px;border-radius:100px;margin-bottom:24px;font-weight:800;letter-spacing:1px;font-size:13px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>REGISTRATION OPENS OCTOBER 2026
+      <!-- One pill and one paragraph for all four phases. The wording is chosen
+           by registrationCopy() in the shared block, which the back office's
+           preview also calls, so what an organiser checks in /organizer is
+           character for character what a coach reads here. -->
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.22);padding:8px 18px;border-radius:100px;margin-bottom:24px;font-weight:800;letter-spacing:1px;font-size:13px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>{{ regPill }}
+      </div>
+      <sc-if value="{{ regTestMode }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:620px;margin:0 auto 24px;background:#0C0C0E;border:2px solid #f5c518;border-radius:12px;padding:12px 18px;color:#f5c518;font-weight:800;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;line-height:1.5">
+          Test mode &mdash; registration has been opened early for testing. This is not the live opening.
         </div>
       </sc-if>
       <h2 style="font-family:'Anton';font-size:clamp(38px,6.4vw,80px);line-height:0.92;text-transform:uppercase">Bring your club</h2>
-      <sc-if value="{{ registrationOpen }}" hint-placeholder-val="{{ false }}">
-        <p style="font-size:20px;margin-top:20px;color:rgba(255,255,255,0.9);max-width:560px;margin-left:auto;margin-right:auto">
-          Every player takes home a medal and every family is welcome. Registration is open &mdash; sign up your club or player below.
-        </p>
-      </sc-if>
-      <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}">
-        <p style="font-size:20px;margin-top:20px;color:rgba(255,255,255,0.9);max-width:560px;margin-left:auto;margin-right:auto">
-          Every player takes home a medal and every family is welcome. Registration opens in October 2026 &mdash; drop us a line to register your interest and we'll be in touch.
-        </p>
+      <p style="font-size:20px;margin-top:20px;color:rgba(255,255,255,0.9);max-width:560px;margin-left:auto;margin-right:auto">{{ regBlurb }}</p>
+      <sc-if value="{{ regHasCountdown }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:14px;font-weight:800;letter-spacing:1px;font-size:14px;color:rgba(255,255,255,0.75);text-transform:uppercase">Opens {{ regOpensIn }}</div>
       </sc-if>
       <div style="display:flex;gap:34px;justify-content:center;margin-top:48px;flex-wrap:wrap">
         <div style="position:relative;display:inline-block">
@@ -769,7 +765,7 @@
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3bd070" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>
             </div>
             <div style="font-family:'Anton';font-size:clamp(22px,2.8vw,33px);text-transform:uppercase">Thanks &mdash; you're on the list</div>
-            <p style="color:#aeb4bf;margin-top:12px">We've got your team's details. We'll be in touch closer to registration opening in October 2026.</p>
+            <p style="color:#aeb4bf;margin-top:12px">We've got your team's details and a confirmation is on its way to your head coach and manager. We'll be in touch with fixtures nearer the weekend.</p>
           </div>
         </sc-if>
 
@@ -777,8 +773,11 @@
           <div>
             <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:13px;text-transform:uppercase;margin-bottom:10px">Team registration</div>
             <h3 style="font-family:'Anton';font-size:clamp(24px,3.1vw,38px);text-transform:uppercase;line-height:1">Register your club</h3>
-            <sc-if value="{{ registrationOpen }}" hint-placeholder-val="{{ false }}"><p style="color:#aeb4bf;margin-top:10px;font-size:15px">Registration is open &mdash; fill in your club's details below to secure your spot.</p></sc-if>
-            <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><p style="color:#aeb4bf;margin-top:10px;font-size:15px">Registration opens October 2026 &mdash; submit now and we'll confirm your spot as soon as it's live.</p></sc-if>
+            <!-- This modal can only be open when registration is, so there is
+                 no closed variant here. It used to carry one that promised
+                 "submit now and we'll confirm your spot as soon as it's live",
+                 which nobody could ever read: the button behind it was gated. -->
+            <p style="color:#aeb4bf;margin-top:10px;font-size:15px">Fill in your club's details below to secure your spot. {{ regFormNote }}</p>
 
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -923,7 +922,7 @@
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3bd070" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>
             </div>
             <div style="font-family:'Anton';font-size:clamp(22px,2.8vw,33px);text-transform:uppercase">Thanks &mdash; you're on the list</div>
-            <p style="color:#aeb4bf;margin-top:12px">We've got the player's details. We'll be in touch closer to registration opening in October 2026.</p>
+            <p style="color:#aeb4bf;margin-top:12px">We've got the player's details and a confirmation is on its way to the email address you gave. We'll be in touch about placing them in a squad.</p>
           </div>
         </sc-if>
 
@@ -931,8 +930,7 @@
           <div>
             <div style="font-weight:800;letter-spacing:2px;color:#17A34A;font-size:13px;text-transform:uppercase;margin-bottom:10px">Player registration &amp; medical declaration</div>
             <h3 style="font-family:'Anton';font-size:clamp(24px,3.1vw,38px);text-transform:uppercase;line-height:1">Register a player</h3>
-            <sc-if value="{{ registrationOpen }}" hint-placeholder-val="{{ false }}"><p style="color:#aeb4bf;margin-top:10px;font-size:15px">Registration is open &mdash; joining without a team already? Register here and we'll help place your player.</p></sc-if>
-            <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><p style="color:#aeb4bf;margin-top:10px;font-size:15px">Joining without a team already? Register here and we'll help place your player once registration opens in October 2026.</p></sc-if>
+            <p style="color:#aeb4bf;margin-top:10px;font-size:15px">Joining without a team already? Register here and we'll help place your player. {{ regFormNote }}</p>
 
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -1099,7 +1097,7 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E11B22&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E11B22&quot;,&quot;#17A34A&quot;,&quot;#0C0C0E&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showCountdown&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;},&quot;registrationOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E11B22&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E11B22&quot;,&quot;#17A34A&quot;,&quot;#0C0C0E&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showCountdown&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;}}">
 const AGE_GROUP_NAMES = ['U6 Tag', 'U7 Tag', 'U8 Tag', 'U9 Mixed Contact', 'U10 Mixed Contact', 'U11 Mixed Contact', 'U12 Mixed Contact', 'U12G QR', 'U13 Mixed Contact', 'U14B Contact', 'U14G QR', 'U16B Contact', 'U16G Contact', 'U18B Contact', 'U18G Contact'];
 
 // Same club list used for pools/fixtures in scores-data.js.
@@ -1274,6 +1272,13 @@ class Component extends DCLogic {
        Saturday is the busier day; Sunday runs 10. test-venue.js asserts this
        fallback still equals the layout's day-one count. */
     pitchCount: 18,
+    /* The registration window, once the fetch lands. Null means "not known
+       yet", and registrationState() reads a null as CLOSED — so the register
+       CTA fails safe on first paint and on a failed fetch. `regNow` is the
+       clock it is measured against, refreshed by the same one-second timer the
+       kick-off countdown already uses, so the page opens and closes itself on
+       the day without a reload. */
+    reg: null, regNow: 0,
     ctaToast: '',
     /* Mobile nav. The links wrap onto three lines on a phone, and the header is
        position:sticky, so leaving them visible parks a quarter of the screen
@@ -1311,6 +1316,22 @@ class Component extends DCLogic {
     this.setState({ fxApi: api, fxAgeGroups: all, fxSelectedId: first && first.id }, () => {
       if (first) this.loadSchedule(first.id);
     });
+
+    /* Then the registration window. Also off the critical path — the fixtures
+       panel is already up — but ahead of the pitch count, because this one
+       decides whether the two biggest buttons on the page work, and the pitch
+       count is a decorative number.
+
+       No catch that opens the form: loadRegistrationWindow() already falls back
+       to the built-in default when the endpoint cannot be reached, and that
+       default is CLOSED. If it throws anyway, `reg` stays null, which
+       registrationState() also reads as closed. Both roads lead to a shut form,
+       which is the only acceptable place for this to fail to. */
+    try {
+      if (api.loadRegistrationWindow) this.setState({ reg: await api.loadRegistrationWindow(), regNow: Date.now() });
+    } catch (e) {
+      console.warn('could not read the registration window; registration stays closed:', e && e.message);
+    }
 
     /* Then the PITCHES stat, on its own. loadVenue() already falls back to the
        layout built into scores-data.js when the endpoint cannot be reached, so
@@ -1412,13 +1433,26 @@ class Component extends DCLogic {
   openPlayerModal() { this.setState({ playerModalOpen: true, playerSubmitted: false, playerError: '', playerSendFailed: false }); document.body.style.overflow = 'hidden'; }
   closePlayerModal() { this.setState({ playerModalOpen: false }); document.body.style.overflow = ''; }
 
+  /* The toast a shut button gives back. Built from the window rather than from
+     a hardcoded "October 2026", which was the whole problem: that string was
+     written into the page, so moving the date meant a deploy — and it was still
+     saying October while the dates were undecided. */
+  closedToast(what) {
+    const st = this.regState();
+    const api = this.state.fxApi;
+    const d = (api && api.fmtWindowDate) ? api.fmtWindowDate(st.opensAt) : '';
+    if (st.phase === 'before' && d) return `Registration opens ${d} — check back then to register your ${what}.`;
+    if (st.phase === 'after') return `Registration has closed. Get in touch and we'll see what we can do.`;
+    return `Registration isn't open yet — check back soon to register your ${what}.`;
+  }
+
   onClickRegisterTeam() {
-    if (this.props.registrationOpen ?? false) this.openTeamModal();
-    else this.flashToast('Registration opens October 2026 — check back then to register your team.');
+    if (this.regState().open) this.openTeamModal();
+    else this.flashToast(this.closedToast('team'));
   }
   onClickRegisterPlayer() {
-    if (this.props.registrationOpen ?? false) this.openPlayerModal();
-    else this.flashToast('Registration opens October 2026 — check back then to register your player.');
+    if (this.regState().open) this.openPlayerModal();
+    else this.flashToast(this.closedToast('player'));
   }
 
   setTeamField(field, val) { this.setState((s) => ({ teamForm: { ...s.teamForm, [field]: val } })); }
@@ -1639,7 +1673,8 @@ class Component extends DCLogic {
   }
 
   tick() {
-    const diff = Math.max(0, this.target - Date.now());
+    const now = Date.now();
+    const diff = Math.max(0, this.target - now);
     const s = Math.floor(diff / 1000);
     const p = (n) => String(n).padStart(2, '0');
     this.setState({
@@ -1647,7 +1682,44 @@ class Component extends DCLogic {
       hours: p(Math.floor((s % 86400) / 3600)),
       mins: p(Math.floor((s % 3600) / 60)),
       secs: p(s % 60),
+      /* The registration window is worked out against this, so the page changes
+         over AT the opening instant on a tab that has been left open — a coach
+         who has had the page up since breakfast does not have to reload to find
+         the buttons live. It costs nothing: this timer is already running for
+         the kick-off countdown. */
+      regNow: now,
     });
+  }
+
+  /* The current window, as this browser sees it. Every decision the page makes
+     about registration goes through here.
+
+     Before the fetch lands `reg` is null, and registrationState() answers CLOSED
+     for a null — so the page shows a shut form for the fraction of a second
+     before the real answer arrives, never an open one. That direction is
+     deliberate, and it is why this does NOT reach for a "probably open"
+     placeholder: being briefly wrong the safe way costs a coach one more click;
+     being wrong the other way is a submission the tournament was not expecting,
+     with no age check behind it yet.
+
+     The same applies if scores-data.js never loads at all — an offline visitor
+     on a stale cached copy gets the closed answer rather than an exception. */
+  regState() {
+    const s = this.state.reg;
+    const api = this.state.fxApi;
+    if (!api || !api.registrationState) return { open: false, phase: 'unset', forced: false, mode: 'auto', opensAt: null, closesAt: null };
+    return api.registrationState(s, this.state.regNow || Date.now());
+  }
+
+  /* The wording, from the shared block — the same call the back office's preview
+     makes, so what Jay checks in /organizer is character for character what a
+     coach reads. Nothing on this page writes registration copy of its own. */
+  regCopy() {
+    const api = this.state.fxApi;
+    if (!api || !api.registrationCopy) {
+      return { pill: 'REGISTRATION OPENS SOON', blurb: '', buttons: '', testMode: false, opensInMs: null, state: this.regState() };
+    }
+    return api.registrationCopy(this.state.reg, this.state.regNow || Date.now());
   }
 
   renderVals() {
@@ -1720,7 +1792,14 @@ class Component extends DCLogic {
     ] : [];
     const sponsorNames = ['Craft by Side Hustle', 'Pizza di Rocco', "Gino's Deli", 'Transguard Group', "McCafferty's", 'MODON', 'Smile Rite Dental Care', 'Stanford Medical Center', 'BEOND', 'Kibsons International', 'Sedbergh School', "The Sportsman's Arms", 'BestBites', 'Crompton Partners', 'The Club', 'Arabian Swim Academy', 'RECOVER', 'Broadway Malyan', 'JOOS MENA Cycles'];
     const sp = this.state.statsP;
-    const open = this.props.registrationOpen ?? false;
+    /* The registration window, decided in one place. `open` is the same boolean
+       the old `registrationOpen` prop carried, so everything that used to read
+       it still reads a boolean of the same name — but it now comes from a
+       setting an organiser changes in /organizer, not from a value baked into
+       this file that cost a production deploy to move. */
+    const rs = this.regState();
+    const rc = this.regCopy();
+    const open = rs.open;
     const teamPlayerRows = this.state.teamForm.players.map((p, idx) => ({
       firstName: p.firstName, lastName: p.lastName, dob: p.dob,
       onFirstName: (e) => this.setTeamPlayerField(idx, 'firstName', e.target.value),
@@ -1878,6 +1957,31 @@ class Component extends DCLogic {
       showCountdown: this.props.showCountdown ?? true,
       registrationOpen: open,
       registrationClosed: !open,
+      /* All four phases share one pill and one paragraph rather than an sc-if
+         per phase — the copy is chosen in registrationCopy(), in the block the
+         server and the back office also read, so there is one wording and it
+         cannot drift between the three places it appears. */
+      regPill: rc.pill,
+      regBlurb: rc.blurb,
+      /* "in 12 days", under the pill, only while the window is still ahead.
+         One unit: there is already a four-part countdown to kick-off further up
+         this page and a second one of those is noise. */
+      regOpensIn: (this.state.fxApi && this.state.fxApi.fmtCountdown) ? this.state.fxApi.fmtCountdown(rc.opensInMs) : '',
+      regHasCountdown: !!((this.state.fxApi && this.state.fxApi.fmtCountdown) ? this.state.fxApi.fmtCountdown(rc.opensInMs) : ''),
+      /* The TEST MODE strip. Shown whenever the form is open because an
+         organiser FORCED it open rather than because the dates say so — so a
+         test session can never be mistaken for the real thing, and a visitor
+         who gets in early knows it is not live. This replaces the ?register=test
+         URL override that was considered instead: no secret to leak, no query
+         string to remember, and it exercises the same switch the real opening
+         will use. */
+      regTestMode: rs.open && rs.forced,
+      /* One line inside each modal, in place of the two hardcoded "October 2026"
+         paragraphs that sat there. A modal can only be open when registration
+         is, so there is no closed variant to write. */
+      regFormNote: rs.closesAt
+        ? `Registration closes at the end of ${this.state.fxApi && this.state.fxApi.fmtWindowDate ? this.state.fxApi.fmtWindowDate(rs.closesAt) : ''} — Abu Dhabi time.`
+        : 'Registration is open.',
       statClubs: Math.round(20 * sp) + '+',
       statPlayers: Math.round(3000 * sp) + '+',
       statGroups: String(Math.round(15 * sp)),

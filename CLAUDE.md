@@ -109,6 +109,8 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
 | `venue-layout.js` | GET (public) the pitch and day layout; `?usage=1` adds per-pitch fixture counts (organisers); POST saves or resets it (organisers only) |
+| `registration-window.js` | GET (public) when the entry forms are open; POST saves or resets it (organisers only) |
+| `_registration.js` | the registration window — `registrationState()`, `validateSettings()`, `registrationCopy()`, defaults, and the SHARED BLOCK duplicated in `scores-data.js` (see Registration window below) |
 | `_venue.js` | `DEFAULT_VENUE` (pitches per day + which groups play each day), `loadVenue()`, `mergeVenue()`, `validateVenue()`, `venueWarnings()`, `countPitchUsage()` |
 | `submit-result.js` | also **clears** one result with `{ clear: true }` — the only removal path, and what the clean-up panel loops |
 | `_teams.js` | club prefixes and team code generation |
@@ -243,6 +245,11 @@ share preview.
   email comes from the same submission, and mail errors are swallowed too.
   The check is deliberately lenient — only ≥ 400 or a thrown error fails, so a
   followed redirect still counts as success.
+- **`registrationOpen` is gone.** It was an editor prop with a hardcoded
+  `true` default plus four hardcoded "October 2026" strings in the markup, so
+  every date change was a production deploy. Registration is now a back-office
+  setting — see "The registration window" above. Do not add a second lever for
+  it; one fact with two switches is how they end up disagreeing.
 - Netlify Identity is *not* used; auth is the custom bcrypt + HMAC system above.
 - **`.dc.html` templates only bind what `renderVals()` returns.** Raw
   `this.state.X` is not directly bindable — every value used as `{{ X }}` in the
@@ -712,6 +719,121 @@ than `OK`, and nothing reaches the server until the dialog is answered — which
 `doResetVenue()` is now a pair, the handler that asks and `reallyResetVenue()` that
 does it.
 
+### The registration window (added 27 Jul 2026)
+
+**When the entry forms are open is a setting, not a deploy.** It used to be
+`registrationOpen`, a hardcoded editor prop on the homepage defaulting to
+`true`; moving the date cost 15 Netlify credits and the page still said
+"REGISTRATION OPENS OCTOBER 2026" in four hardcoded places. That prop is
+**retired** — do not reintroduce it. There is one lever and it lives in
+`/organizer` → **Registration**.
+
+The stored setting is three fields in the `config` blob store at key
+`registration`:
+
+```
+{ opensAt: '2026-10-08T00:00:00+04:00' | null,
+  closesAt: '2026-11-01T23:59:59+04:00' | null,
+  mode: 'auto' | 'open' | 'closed' }
+```
+
+**Three states, not a date plus a toggle.** `auto` follows the dates; `open`
+and `closed` are deliberate exceptions. A date field and an independent on/off
+switch is how you end up with the two disagreeing and nobody sure which wins.
+
+**Null dates mean CLOSED.** With no opening date `auto` resolves to closed, and
+so does a closing date on its own. Every ambiguous input in this area fails
+closed on purpose: a form that is shut when it should be open is a phone call;
+open when it should be shut is a registration nobody expected, arriving with no
+age check behind it (the gateway is sub-project 1 and does not exist yet).
+
+**Times are ABU DHABI time.** Every stamp carries an explicit `+04:00`, and
+every date is formatted from the string's own characters rather than through a
+`Date` object — `new Date(stamp).getMonth()` answers in the *reader's*
+timezone and prints "31 October" to somebody in Los Angeles for a window that
+opens on 1 November. `test-registration.js` runs the display answers in five
+timezones from +14 to −11 and requires them all to agree; that is the only
+thing that catches this class of bug.
+
+**`Date.parse` accepts 31 February** and rolls it forward to 3 March, so
+`isRealDate()` exists and is called at both entry points. Same trap
+`composeDob()` closes on the player form.
+
+### The shared block — the duplication you must respect
+
+`registrationState()`, `validateSettings()`, `registrationWarnings()`,
+`registrationCopy()` and their helpers sit between two marker comments:
+
+```
+/* ===== REGISTRATION WINDOW — SHARED BLOCK (start) ===== */
+…
+/* ===== REGISTRATION WINDOW — SHARED BLOCK (end) ===== */
+```
+
+That text is **byte-for-byte identical** in `netlify/functions/_registration.js`
+and `scores-data.js`, and `test-registration.js` compares the two character for
+character. Plain `function` declarations with no `export` keyword are what let
+one text serve a CommonJS file and an ES module; each file exports the names
+separately, outside the block. Change one, change both, run the test.
+
+**This goes one better than the venue panel, and that is the point.** There,
+`validateVenue()` on the server and `venueProblems()` in the panel are two
+hand-written implementations of one rule, and `test-venue-panel.js` exists to
+catch them disagreeing. Here the back office calls the *server's own*
+`validateSettings` — re-exported through `organizer-data.js` from
+`scores-data.js` — so Save cannot go green on something the server will reject.
+The preview works the same way: `registrationCopy()` decides the public wording
+once, and the homepage and the back-office preview both print what it returns.
+**If you find yourself writing a date rule in a `.dc.html`, stop.**
+
+`organizer-data.js` re-exports rather than reimplementing, which does mean
+`/organizer` now loads `scores-data.js`. That is a deliberate trade: one extra
+module on a back-office page is cheaper than a third copy of the rules.
+
+### `phase` and `open` are different questions
+
+`registrationState(settings, now)` returns
+`{ open, phase, opensAt, closesAt, forced, mode }`.
+
+- **`phase`** is pure date arithmetic — `'unset' | 'before' | 'open' | 'after'`.
+  The mode never touches it.
+- **`open`** is whether the form works. Mode first, dates second.
+
+Keeping them apart is what stops a force-closed window having to lie about which
+phase it is in. `registrationCopy()` reads both and picks the wording; nothing
+else should make that judgement.
+
+Pure and synchronous, `now` passed in, no clock of its own — which is what makes
+it testable one millisecond either side of each boundary. The homepage feeds it
+`Date.now()` from the same one-second timer the kick-off countdown already runs,
+so **the page opens and closes itself at the exact instant, on a tab nobody
+reloaded.**
+
+### What the public sees
+
+| Phase | The page says |
+|---|---|
+| `unset` | "Registration opens soon" — no date is promised that has not been set |
+| `before` | "Registration opens 8 October", with a one-unit countdown under it |
+| `open` | "Registration closes 1 November" — **a deadline is more use to a coach than an open date** |
+| `after` | "Registration closed" — say what happened rather than showing a dead form |
+
+Force-closed *inside* the dates gets its own line ("Registration is closed"),
+because falling through to "opens soon" would be untrue and falling through to
+the phase wording would print a closing date that has not happened.
+
+**A TEST MODE strip** shows whenever the form is open because `mode` is
+`'open'` rather than because of the dates — so a test session can never be
+mistaken for the real thing. This replaced a `?register=test` URL override:
+no secret to leak, no query string to remember, and it exercises the same
+switch the real opening will use.
+
+**It is display only.** Submissions still go straight to Netlify Forms, so
+nothing yet *refuses* a late one — that is the gateway in
+`claude/spec-registration-window.md`, sub-project 1. Adding it is three lines
+inside that function once it exists. Until then the only thing keeping the
+public out is the site-wide Netlify password.
+
 ---
 
 ## Team codes and names — the rule
@@ -874,7 +996,13 @@ write to a PUBLIC repo by design. It is only good for reading.
 
 Jay's PC (`jay-pc`) has a clone at `C:\Users\jayjm\GitHub\adhjrt`, remote
 `origin` over HTTPS, credential helper = Git Credential Manager with the
-credential already cached. A **cloud** session can drive it: the Desktop
+credential already cached.
+
+**A second machine, `cafnet`, was set up the same way on 27 Jul 2026** — clone
+at `C:\Users\Jay\GitHub\adhjrt` (note the different username: `Jay`, not
+`jayjm`). Check which device a session is bridged to before assuming a path.
+`cafnet` does **not** have the `adhjrt-sim` test suite — see the Tests note
+below. A **cloud** session can drive it: the Desktop
 Commander MCP extension exposes a real shell on his machine as
 `mcp__remote-devices__Desktop_Commander__start_process`. This does NOT require a
 Cowork task started "On your computer" (verified from a cloud session,
@@ -944,7 +1072,24 @@ Everything here is per-machine. On a new personal PC, in order:
 4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
-### 5. Traps
+### 5. The tests are not in this repo, and that is a risk
+
+`adhjrt-sim` — 577 checks across thirteen files plus the binding validator,
+driven by `runall.ps1` — lives only in `C:\Users\jayjm\adhjrt-sim` on
+`jay-pc`. **It is not in version control anywhere.** A session bridged to any
+other machine cannot run it, and a disk failure loses it.
+
+The registration-window work added four more files (`_lib.js`,
+`test-registration.js`, `test-registration-panel.js` and
+`_prove-registration.js`, 380 checks) and they are in
+`C:\Users\Jay\adhjrt-sim` on `cafnet`. They find the clone themselves, so
+the same files run unchanged on either machine — copy them across and add the
+two test files to `jay-pc`'s `runall.ps1`, which is an explicit list: a test
+file not named in it never runs again.
+
+Worth deciding at some point whether the suite should live in the repo.
+
+### 6. Traps
 
 - **Merge conflicts from squash-merges.** Earlier features were squash-merged
   into `main`; a branch still carrying pre-squash commits will conflict on

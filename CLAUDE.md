@@ -719,22 +719,60 @@ than `OK`, and nothing reaches the server until the dialog is answered — which
 `doResetVenue()` is now a pair, the handler that asks and `reallyResetVenue()` that
 does it.
 
-### The pitch schematic — where each group plays (added 27 Jul 2026)
+### Where each group plays — two views (added 27 Jul 2026)
 
-A drawing at the top of the Venue & days tab: blocks in roughly their real
-positions, each divided into the sub-pitches the layout lists, tinted by age
-group. Built from the **working copy**, so it redraws as you tick boxes further
-down the tab, before anything is saved.
+At the top of the Venue & days tab, with a toggle. Both are built from the
+**working copy**, so both redraw as you tick boxes further down the tab, before
+anything is saved.
 
-**It is NOT the site plan, and must not become one.** `assets/venue-map.png` is a
-wayfinding map of the whole complex. It draws ONE outline per block — D3, C4,
-B1 (which is the athletics track) — with a name and a car-park number, and it
-neither names nor divides what is inside them. The layout's pitches are
-`D3A`/`D3B`, `C4A`/`C4B`, `B1A`..`B1D`, and **those sub-pitch names are ours**
-(see above). Drawing a box labelled "B1C" on that image would mean inventing
-where B1C sits and then showing that invention on a screen an organiser uses to
-make real decisions. If someone asks for the overlay again, that is the answer:
-block-level tinting is derivable, sub-pitch geometry is not.
+**SCHEMATIC** — every sub-pitch as its own labelled cell, blocks laid out in
+roughly their real positions by `BLOCK_GRID`. This is the view with room for the
+pitch names and the one that reads on a phone.
+
+**MAP** — `assets/venue-map.png` with a chip per block dragged onto it.
+
+**The map is block-level, and that line is the whole design.** The image draws
+ONE outline per block — D3, C4, B1 (which is the athletics track) — with a name
+and a car-park number, and it neither names nor divides what is inside them. The
+layout's pitches are `D3A`/`D3B`, `C4A`/`C4B`, `B1A`..`B1D`, and **those
+sub-pitch names are ours**. So a map chip names the BLOCK and the groups on it;
+the individual pitches are read in the schematic. Do not put a box labelled
+"B1C" on that image — nobody has decided where B1C sits.
+
+**Where a block sits IS real knowledge, so it is dragged and stored, not
+guessed.** `DEFAULT_POSITIONS` in `_venue.js` is the code's eyeballed starting
+point; an organiser unlocks the map and drags each block to where it actually
+is, and that replaces the guess. Percentages of the image, measured to the
+block's **centre** (a corner anchor drifts when the map resizes, because the
+offset and the box width scale differently). **One position per block for the
+whole weekend** — D3 is the same field on Saturday and Sunday.
+
+**Positions are stored under their OWN blob key** (`config`/`venue-positions`),
+not on the venue layout, and this is not a style preference:
+`validateVenue()` rebuilds each day from a known list of fields, so an extra
+field riding on the layout is **silently dropped on save**. The map would have
+appeared to save and then reverted. `test-venue-map.js` asserts that dropping
+behaviour directly so nobody re-learns it.
+
+- They still save together — one Save button, `venueDirty()` watches both — but
+  reset separately. Putting a group on a different day has nothing to do with
+  the map image, and someone fixing one must not lose the other.
+- **Dragging is locked by default.** The screen is mostly read; blocks sliding
+  under a mis-click would be worse than one deliberate unlock.
+- `touch-action:none` on an unlocked chip, or a drag on a phone scrolls the page
+  instead — which looks exactly like the feature not working.
+- The chips capture the pointer on `pointerdown`, so a fast drag cannot outrun a
+  small chip and drop it. The map image is `pointer-events:none` so it can never
+  swallow a drag.
+- `mapRect()` reads the rectangle from the DOM **at drag time**, never cached:
+  the panel is responsive and a stale rectangle silently offsets every drop
+  after a resize. If it cannot be measured, `pointerPct()` returns **null** and
+  the drag does nothing. It must not return a fallback — see the note in
+  `test-venue-map.js`, where a constant fallback passed a full end-to-end drag
+  test because the grab offset cancelled it exactly.
+- A block with no position (an unrecognised pitch name) goes in a **tray** beside
+  the map with a button to drop it on, rather than being dumped at 0,0 where it
+  would look placed.
 
 - `blockOfPitch()` maps a pitch to its block — `D5A`→`D5`, `C4B`→`C4`,
   `D2`→`D2`. Everything up to and including the last digit; one optional
@@ -1122,9 +1160,9 @@ Everything here is per-machine. On a new personal PC, in order:
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
-It currently holds the registration-window work and the pitch schematic —
-**512 checks** across three files — plus `_prove-registration.js`, the
-fault-injection script (25 faults, all of which must be caught by the check that
+It currently holds the registration-window work and the Venue & days views —
+**651 checks** across three files — plus `_prove-registration.js`, the
+fault-injection script (35 faults, all of which must be caught by the check that
 claims to guard them).
 
 **The other thirteen files — 577 checks, plus `validate-bindings.js` — are still

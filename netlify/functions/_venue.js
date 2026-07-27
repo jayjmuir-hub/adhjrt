@@ -69,6 +69,114 @@ const DEFAULT_VENUE = {
 
 const DAY_IDS = ['day1', 'day2'];
 
+/* ============================================================
+   WHERE EACH BLOCK SITS ON THE MAP IMAGE.
+   ------------------------------------------------------------
+   Percentages of assets/venue-map.png's width and height, measured to the
+   CENTRE of the block. Percentages rather than pixels because the map is
+   rendered responsively — a pixel offset would be wrong on every screen but
+   the one it was placed on.
+
+   WHY THIS IS A SEPARATE KEY rather than a field on the venue layout: the
+   layout is validated by validateVenue(), which rebuilds each day from a known
+   list of fields. An extra field would be silently DROPPED on the next save —
+   the position work would appear to save and then quietly vanish. Keeping it in
+   its own key at `config`/`venue-positions` also matches what it is: the layout
+   is configuration that changes what the site does, this is presentation that
+   changes what one back-office screen looks like.
+
+   ONE POSITION PER BLOCK FOR THE WHOLE WEEKEND, not one per day. D3 is the same
+   field on Saturday as on Sunday; only which age group is on it changes.
+
+   These defaults are EYEBALLED off the map image and are a starting point, not
+   a survey. That is exactly why the back office lets an organiser drag them:
+   Jay knows where these pitches actually are and the code does not. Anything an
+   organiser drags replaces the guess. A block with no position at all is drawn
+   in a tray beside the map rather than dumped at 0,0.
+   ============================================================ */
+const DEFAULT_POSITIONS = {
+  D5: { x: 12.4, y: 20.1 },
+  D4: { x: 20.0, y: 21.6 },
+  D3: { x: 28.4, y: 20.5 },
+  D2: { x: 38.5, y: 20.1 },
+  D1: { x: 49.2, y: 19.2 },
+  C4: { x: 11.1, y: 63.0 },
+  C5: { x: 20.2, y: 64.0 },
+  C1: { x: 29.9, y: 68.6 },
+  C3: { x: 8.6,  y: 75.9 },
+  C2: { x: 8.6,  y: 84.1 },
+  B2: { x: 54.9, y: 79.5 },
+  B1: { x: 71.7, y: 80.4 },
+  A1: { x: 93.0, y: 69.5 },
+  A2: { x: 85.9, y: 71.3 },
+  A3: { x: 84.0, y: 59.4 },
+  A4: { x: 91.8, y: 58.5 },
+};
+
+/* Block names are derived from pitch names, which are free text, so this caps
+   how much junk a hand-edited blob can carry. Sixteen blocks exist; 200 is far
+   past any real layout and far short of a problem. */
+const MAX_POSITIONS = 200;
+
+/* A saved map REPLACES the defaults for the blocks it mentions and leaves the
+   rest alone. Unlike a day's pitch list there is nothing here that a merge makes
+   unreachable — dragging a block always writes an entry, and "no entry" is a
+   meaningful state the UI handles (the block goes in the tray). */
+function mergePositions(saved) {
+  const out = { ...DEFAULT_POSITIONS };
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return out;
+  Object.keys(saved).forEach((raw) => {
+    const key = String(raw || '').trim().toUpperCase();
+    const p = saved[raw];
+    if (!key || !p || typeof p !== 'object') return;
+    const x = Number(p.x), y = Number(p.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (x < 0 || x > 100 || y < 0 || y > 100) return;
+    out[key] = { x, y };
+  });
+  return out;
+}
+
+/* Checks a map an organiser is trying to save. Refused with a reason rather
+   than coerced, same contract as validateVenue — the panel clamps while
+   dragging, so anything out of range got here by hand and guessing what was
+   meant would be worse than saying no. */
+function validatePositions(input) {
+  const errors = [];
+  if (input === null || input === undefined) return { ok: true, errors: [], positions: null };
+  if (typeof input !== 'object' || Array.isArray(input)) return { ok: false, errors: ['The block positions are not a map of names to coordinates.'] };
+
+  const keys = Object.keys(input);
+  if (keys.length > MAX_POSITIONS) return { ok: false, errors: [`That is ${keys.length} block positions; the most that can be stored is ${MAX_POSITIONS}.`] };
+
+  const out = {};
+  keys.forEach((raw) => {
+    const key = String(raw || '').trim().toUpperCase();
+    if (!key) { errors.push('A block position has no block name.'); return; }
+    const p = input[raw];
+    if (!p || typeof p !== 'object' || Array.isArray(p)) { errors.push(`"${key}" has no coordinates.`); return; }
+    const x = Number(p.x), y = Number(p.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) { errors.push(`"${key}" has a position that is not a pair of numbers.`); return; }
+    if (x < 0 || x > 100 || y < 0 || y > 100) { errors.push(`"${key}" is at ${x}, ${y} — positions are percentages of the map and must be between 0 and 100.`); return; }
+    // Rounded: a tenth of a percent is under a pixel on the real image, and it
+    // keeps the stored blob readable.
+    out[key] = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  });
+
+  return errors.length ? { ok: false, errors } : { ok: true, errors: [], positions: out };
+}
+
+/* No cache, unlike the layout. This is read once when the back office opens the
+   Venue tab and never on a request path anyone is waiting on. */
+async function loadPositions(blobStore) {
+  try {
+    return mergePositions(await blobStore('config').get('venue-positions', { type: 'json' }));
+  } catch (err) {
+    console.warn('_venue: could not read the block positions, using defaults -', err && err.message);
+    return { ...DEFAULT_POSITIONS };
+  }
+}
+
 /* A saved override REPLACES a day wholesale rather than merging field by field.
    Merging pitch lists would make removing a pitch impossible — the default
    would keep putting it back — and merging `groups` would make moving an age
@@ -285,4 +393,6 @@ module.exports = {
   DEFAULT_VENUE, DAY_IDS, AGE_IDS,
   mergeVenue, loadVenue, dayIdOf,
   validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
+  DEFAULT_POSITIONS, MAX_POSITIONS,
+  mergePositions, validatePositions, loadPositions,
 };

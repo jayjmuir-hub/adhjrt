@@ -193,14 +193,31 @@ export async function getVenue({ withUsage = false } = {}) {
   return { ok: false, error: 'Could not load the venue layout.' };
 }
 
-export async function saveVenue(venue) {
+/* `positions` is where each block sits on assets/venue-map.png, dragged into
+   place in the back office. Sent with the layout so one Save covers both — but
+   stored server-side under its own blob key, because validateVenue() rebuilds a
+   day from known fields and would silently drop an extra one. */
+export async function saveVenue(venue, positions) {
   const r = await tryFetchJson('/.netlify/functions/venue-layout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ venue }),
+    body: JSON.stringify(positions ? { venue, positions } : { venue }),
   });
   if (r.real) return r.json;
   return { ok: false, error: 'Saving the venue layout needs the deployed site (not available in local preview).' };
+}
+
+/* Puts every block back where the code guessed it was. Deliberately separate
+   from resetVenue(): the pitch layout and the map placement are different
+   decisions, and someone fixing one should not lose the other. */
+export async function resetVenuePositions() {
+  const r = await tryFetchJson('/.netlify/functions/venue-layout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ resetPositions: true }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Resetting the block positions needs the deployed site (not available in local preview).' };
 }
 
 export async function resetVenue() {

@@ -32,27 +32,55 @@ class DCLogic {
   }
 }
 
-function build() {
+/* A stand-in for the map element on screen. The drag maths reads the real
+   rectangle out of the DOM at drag time — it has to, because the panel is
+   responsive — so driving it means handing the component a document that
+   answers with a known rectangle. 800x600 at (100, 50) is arbitrary but not
+   square and not at the origin, which is what catches a left/top mix-up or a
+   forgotten offset. */
+const RECT = { left: 100, top: 50, width: 800, height: 600 };
+
+function build(rect) {
   const t = readRepo('Organizer.dc.html');
   const m = t.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
   if (!m) throw new Error('no x-dc script in Organizer.dc.html');
+  const doc = {
+    addEventListener() {}, body: { style: {} }, baseURI: 'https://adhjrt.com/',
+    getElementById: (elId) => (rect && /^vmap-/.test(elId) ? { getBoundingClientRect: () => rect } : null),
+  };
   // eslint-disable-next-line no-new-func
   const C = new Function('DCLogic', 'window', 'document', m[1] + '\n;return Component;')(
-    DCLogic,
-    { addEventListener() {} },
-    { addEventListener() {}, getElementById: () => null, body: { style: {} }, baseURI: 'https://adhjrt.com/' }
+    DCLogic, { addEventListener() {} }, doc
   );
   const c = new C();
   c.props = {};
+  c.__Component = C;
   return c;
 }
+
+/* A pointer event as the component sees it. setPointerCapture is what keeps a
+   fast drag attached to a small chip; the component guards the call, so the
+   stub records it rather than needing to exist. */
+function ptr(clientX, clientY) {
+  const captured = [];
+  return {
+    clientX, clientY, pointerId: 1,
+    preventDefault() { this.defaultPrevented = true; },
+    currentTarget: { setPointerCapture: (pid) => captured.push(pid) },
+    captured,
+  };
+}
+/* Where a percentage lands in RECT's client coordinates — the inverse of what
+   the component computes, so a bug in one is not cancelled by the same bug in
+   the other. */
+const atPct = (x, y) => ptr(RECT.left + (x / 100) * RECT.width, RECT.top + (y / 100) * RECT.height);
 
 /* The real default layout, read out of the server module so this test cannot
    drift from what the site actually ships. */
 const VENUE = require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js')).DEFAULT_VENUE;
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
-const C = build();
+const C = build(RECT);
 const maps = C.venueMaps(clone(VENUE));
 const sat = maps[0], sun = maps[1];
 
@@ -310,7 +338,7 @@ section('Every {{ token }} the schematic uses is returned');
   /* The one plain binding is the list itself; the rest are loop-scoped, which
      validate-bindings.js skips by design — so this is the only thing checking
      them. */
-  const C2 = build();
+  const C2 = build(RECT);
   C2.state = { ...C2.state, api: null, tab: 'venue', venue: clone(VENUE), venueSaved: clone(VENUE), vLoaded: true };
   let vals = null;
   try { vals = C2.renderVals(); } catch (e) { check('the venue tab renders', false, e.stack || e.message); }
@@ -318,12 +346,375 @@ section('Every {{ token }} the schematic uses is returned');
     plain.forEach((t) => check(`renderVals returns {{ ${t} }}`, Object.prototype.hasOwnProperty.call(vals, t)));
     check('vMaps is a list of two days', Array.isArray(vals.vMaps) && vals.vMaps.length === 2);
 
-    const sample = { vm: vals.vMaps[0], blk: vals.vMaps[0].blocks[0], pp: vals.vMaps[0].blocks[0].pitches[0], nt: { style: '', text: '' } };
+    /* The default layout has no strays and no warnings, so a sample taken only
+       from it would leave `st` and `nt` undefined and the loop-binding checks
+       would pass by testing nothing. This second state manufactures both. */
+    const C3 = build(RECT);
+    C3.state = {
+      ...C3.state, api: null, tab: 'venue', vLoaded: true, vView: 'map',
+      venue: { day1: { label: 'x', pitches: ['Z9'], groups: { u6: [] } }, day2: { label: 'y', pitches: [], groups: {} } },
+      venueSaved: null, venuePositions: {},
+    };
+    const oddVals = C3.renderVals();
+    check('the fixture really does produce a stray', (oddVals.vMaps[0].strays || []).length === 1);
+    check('…and a note', (oddVals.vMaps[0].notes || []).length > 0);
+
+    const sample = {
+      vm: vals.vMaps[0],
+      blk: vals.vMaps[0].blocks[0],
+      pp: vals.vMaps[0].blocks[0].pitches[0],
+      nt: oddVals.vMaps[0].notes[0],
+      st: oddVals.vMaps[0].strays[0],
+    };
     scoped.forEach((props, root) => {
       props.forEach((p) => check(`every ${root} carries ${p}`,
         sample[root] !== undefined && p in sample[root], `${root}.${p}`));
     });
   }
+}
+
+/* ====================================================================== */
+section('The map view: placing blocks on the real image');
+
+{
+  const POS = { D5: { x: 12.4, y: 20.1 }, D3: { x: 28.4, y: 20.5 }, C4: { x: 11.1, y: 63 } };
+  const m = C.venueMaps(clone(VENUE), POS, true)[0];
+  const blk = (name) => m.blocks.find((b) => b.name === name);
+
+  check('a block with a position is placed', blk('D3').placed === true);
+  check('a block with no position is NOT placed', blk('D2').placed === false);
+  check('…and says so the other way round too', blk('D2').notPlaced === true);
+
+  /* The stored percentage is the block's CENTRE. Anchoring by a corner would
+     make a block near the right edge drift when the map is resized, because the
+     offset and the box width scale differently. */
+  check('a placed block is positioned from its percentage', /left:28\.4%/.test(blk('D3').mapStyle) && /top:20\.5%/.test(blk('D3').mapStyle), blk('D3').mapStyle);
+  check('…and centred on it', /translate\(-50%,-50%\)/.test(blk('D3').mapStyle));
+  check('an unplaced block is not absolutely positioned', !/position:absolute/.test(blk('D2').mapStyle), blk('D2').mapStyle);
+
+  check('the map box keeps the image aspect ratio', /aspect-ratio:792\/547/.test(m.mapBoxStyle), m.mapBoxStyle);
+  check('the map box has the id the drag maths measures', m.mapId === 'vmap-day1');
+  check('Sunday has its own map box id', C.venueMaps(clone(VENUE), POS, true)[1].mapId === 'vmap-day2');
+
+  /* The chip answers what a map is good at — who is over there — because there
+     is no room on it for four pitch names. The schematic is where those live. */
+  eq('the chip names the groups on the block', blk('C4').mapWho, 'U11');
+  eq('a shared block names both', C.venueMaps(clone(VENUE), { D4: { x: 20, y: 21 } }, true)[0].blocks.find((b) => b.name === 'D4').mapWho, 'U6 · U7');
+  check('the tooltip lists the actual pitches', /D3A, D3B/.test(blk('D3').mapTitle), blk('D3').mapTitle);
+  check('…and the group in full', /U12 Mixed Contact/.test(blk('D3').mapTitle), blk('D3').mapTitle);
+
+  const free = C.venueMaps({ day1: { label: 'x', pitches: ['D1'], groups: {} }, day2: { label: 'y', pitches: [], groups: {} } }, { D1: { x: 5, y: 5 } }, true)[0];
+  eq('a block nobody is on says free', free.blocks[0].mapWho, 'free');
+  check('…and is drawn as an outline', /dashed/.test(free.blocks[0].mapStyle), free.blocks[0].mapStyle);
+
+  // Unplaced blocks are collected so the UI can offer to drop them on the map.
+  const strays = m.strays.map((b) => b.name);
+  check('unplaced blocks are collected as strays', strays.includes('D2') && !strays.includes('D3'), strays.join(','));
+  check('hasStrays follows', m.hasStrays === true);
+  check('a fully placed day has no strays',
+    C.venueMaps(clone(VENUE), require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js')).DEFAULT_POSITIONS, true)[0].hasStrays === false);
+}
+
+/* ====================================================================== */
+section('The lock');
+
+{
+  const POS = { D3: { x: 30, y: 30 } };
+  const lockedBlk = C.venueMaps(clone(VENUE), POS, true)[0].blocks.find((b) => b.name === 'D3');
+  const openBlk = C.venueMaps(clone(VENUE), POS, false)[0].blocks.find((b) => b.name === 'D3');
+
+  check('locked: the block does not invite a drag', /cursor:default/.test(lockedBlk.mapStyle), lockedBlk.mapStyle);
+  check('unlocked: it does', /cursor:grab/.test(openBlk.mapStyle), openBlk.mapStyle);
+  /* Without touch-action:none a drag on a phone scrolls the page instead of
+     moving the block, which looks exactly like the feature not working. */
+  check('unlocked: touch dragging will not scroll the page instead', /touch-action:none/.test(openBlk.mapStyle), openBlk.mapStyle);
+  check('locked: no touch-action override is needed', !/touch-action/.test(lockedBlk.mapStyle));
+
+  const c = build(RECT);
+  c.state = { ...c.state, vLocked: true };
+  check('the lock starts ON', c.state.vLocked === true);
+  c.toggleMapLock();
+  check('toggling unlocks', c.state.vLocked === false);
+  c.setState({ vDrag: { block: 'D3' } });
+  c.toggleMapLock();
+  check('locking again cancels any drag in progress', c.state.vDrag === null);
+}
+
+/* ====================================================================== */
+section('Dragging — the maths, driven through the handlers');
+
+{
+  const start = { D3: { x: 30, y: 30 } };
+  const fresh = () => {
+    const c = build(RECT);
+    c.state = { ...c.state, vLocked: false, venuePositions: { ...start }, venuePositionsSaved: { ...start }, venue: clone(VENUE), venueSaved: clone(VENUE) };
+    return c;
+  };
+
+  /* Grab the block dead centre and move: it should land exactly where the
+     pointer is, because the grab offset was zero. */
+  {
+    const c = fresh();
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    check('a drag records itself', c.state.vDrag && c.state.vDrag.block === 'D3');
+    c.onBlockMove('day1', 'D3', atPct(70, 40));
+    eq('the block follows the pointer', c.state.venuePositions.D3, { x: 70, y: 40 });
+    c.onBlockUp();
+    check('releasing ends the drag', c.state.vDrag === null);
+  }
+
+  /* Grab it off-centre: the block must keep that offset, not snap its middle
+     under the cursor. */
+  {
+    const c = fresh();
+    c.onBlockDown('day1', 'D3', atPct(34, 33));      // 4% right, 3% below centre
+    c.onBlockMove('day1', 'day1' === 'day1' ? 'D3' : 'D3', atPct(64, 53));
+    eq('the grab offset is preserved', c.state.venuePositions.D3, { x: 60, y: 50 });
+  }
+
+  /* A block cannot be dragged off the map. */
+  {
+    const c = fresh();
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    c.onBlockMove('day1', 'D3', ptr(RECT.left - 500, RECT.top - 500));
+    eq('dragging past the top-left clamps to 0,0', c.state.venuePositions.D3, { x: 0, y: 0 });
+    c.onBlockMove('day1', 'D3', ptr(RECT.left + RECT.width + 500, RECT.top + RECT.height + 500));
+    eq('dragging past the bottom-right clamps to 100,100', c.state.venuePositions.D3, { x: 100, y: 100 });
+  }
+
+  /* THE ONE THAT MATTERS MOST: locked means locked. */
+  {
+    const c = fresh();
+    c.setState({ vLocked: true });
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    check('locked: pointing at a block starts no drag', c.state.vDrag === null);
+    c.onBlockMove('day1', 'D3', atPct(80, 80));
+    eq('locked: the block does not move', c.state.venuePositions.D3, start.D3);
+  }
+
+  /* A move with no drag in progress, or for a different block, must do nothing
+     — pointer capture makes both reachable. */
+  {
+    const c = fresh();
+    c.onBlockMove('day1', 'D3', atPct(80, 80));
+    eq('a move with no drag does nothing', c.state.venuePositions.D3, start.D3);
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    c.onBlockMove('day1', 'C4', atPct(80, 80));
+    eq('a move for a different block does nothing', c.state.venuePositions.D3, start.D3);
+    check('…and does not invent a position for it', c.state.venuePositions.C4 === undefined);
+  }
+
+  /* An unmeasurable map must move nothing rather than guess.
+
+     ASSERTED ON THE GUARD ITSELF, not through a drag, and that distinction was
+     found by fault injection. Replacing the `return null` with a constant
+     `{x:50,y:50}` passes a down-then-move test perfectly: the grab offset is
+     computed from the same constant, so it cancels exactly and the block lands
+     back where it started. The drag looks correct while the guard is gone.
+     Only calling pointerPct directly can tell the difference. */
+  {
+    const c = build(null);   // no element, so no rectangle
+    c.state = { ...c.state, vLocked: false, venuePositions: { ...start }, venue: clone(VENUE), venueSaved: clone(VENUE), venuePositionsSaved: { ...start } };
+
+    eq('an unmeasurable map gives no rectangle', c.mapRect('day1'), null);
+    eq('…so a pointer has no position on it — null, not a guess', c.pointerPct('day1', atPct(80, 80)), null);
+
+    /* A laid-out-but-collapsed element (a hidden tab, or before first layout)
+       reports a zero-size rectangle. Dividing by that width gives Infinity. */
+    const zero = build({ left: 0, top: 0, width: 0, height: 0 });
+    eq('a zero-size map also gives no rectangle', zero.mapRect('day1'), null);
+    eq('…and no pointer position', zero.pointerPct('day1', ptr(10, 10)), null);
+
+    // And end to end: nothing moves, and nothing is marked as edited.
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    c.onBlockMove('day1', 'D3', atPct(80, 80));
+    eq('a map that cannot be measured moves nothing', c.state.venuePositions.D3, start.D3);
+    check('…and does not mark the layout as edited', c.venueDirty() === false);
+  }
+
+  /* A real measurement must still come back, or the checks above would pass on
+     a pointerPct that always returned null. */
+  {
+    const c = build(RECT);
+    eq('a measurable map gives a position', c.pointerPct('day1', atPct(25, 75)), { x: 25, y: 75 });
+    check('…and a rectangle', !!c.mapRect('day1'));
+  }
+
+  /* THE PRIMARY ROUTE is the dragged chip's own offsetParent, not a lookup by
+     id. Each chip is absolutely positioned inside the map box, so the browser
+     hands back exactly the element the percentages are measured against — and
+     nothing depends on the template interpolating an id, which cannot be
+     verified from here and would silently break every drag if it did not. */
+  {
+    const noDoc = build(null);   // getElementById finds nothing at all
+    const e = atPct(60, 20);
+    e.currentTarget.offsetParent = { getBoundingClientRect: () => RECT };
+    eq('the chip measures against its own offsetParent', noDoc.pointerPct('day1', e), { x: 60, y: 20 });
+
+    const withDoc = build({ left: 0, top: 0, width: 10, height: 10 });
+    const e2 = atPct(60, 20);
+    e2.currentTarget.offsetParent = { getBoundingClientRect: () => RECT };
+    eq('…and it is preferred over the id lookup', withDoc.pointerPct('day1', e2), { x: 60, y: 20 });
+
+    /* A drag driven entirely through the offsetParent route, with no document
+       to fall back on — the shape the real page is in. */
+    const c = build(null);
+    c.state = { ...c.state, vLocked: false, venuePositions: { D3: { x: 30, y: 30 } }, venuePositionsSaved: { D3: { x: 30, y: 30 } }, venue: clone(VENUE), venueSaved: clone(VENUE) };
+    const down = atPct(30, 30); down.currentTarget.offsetParent = { getBoundingClientRect: () => RECT };
+    const move = atPct(75, 45); move.currentTarget.offsetParent = { getBoundingClientRect: () => RECT };
+    c.onBlockDown('day1', 'D3', down);
+    c.onBlockMove('day1', 'D3', move);
+    eq('a full drag works with no id lookup available', c.state.venuePositions.D3, { x: 75, y: 45 });
+  }
+
+  /* Rounding, and the no-op guard behind it. Without rounding every pointer
+     move writes a new float and the unsaved-changes flag flickers on a block
+     nobody moved. */
+  {
+    const c = fresh();
+    c.onBlockDown('day1', 'D3', atPct(30, 30));
+    c.onBlockMove('day1', 'D3', ptr(RECT.left + RECT.width * 0.123456, RECT.top + RECT.height * 0.987654));
+    eq('positions are rounded to a tenth of a percent', c.state.venuePositions.D3, { x: 12.3, y: 98.8 });
+    const Comp = c.__Component;
+    eq('clampPct rounds', Comp.clampPct(12.3456), 12.3);
+    eq('clampPct floors at 0', Comp.clampPct(-40), 0);
+    eq('clampPct caps at 100', Comp.clampPct(140), 100);
+
+    const before = JSON.stringify(c.state.venuePositions);
+    c.setBlockPosition('D3', 12.3, 98.8);
+    eq('re-setting the same position changes nothing', JSON.stringify(c.state.venuePositions), before);
+  }
+
+  /* Dropping a stray block puts it in the middle, ready to be dragged. */
+  {
+    const c = fresh();
+    c.placeBlock('Z9');
+    eq('placing a stray drops it in the middle', c.state.venuePositions.Z9, { x: 50, y: 50 });
+  }
+
+  /* Pointer capture is what keeps a fast drag attached to a small chip. */
+  {
+    const c = fresh();
+    const e = atPct(30, 30);
+    c.onBlockDown('day1', 'D3', e);
+    check('the block captures the pointer', e.captured.length === 1);
+    check('…and the default action is prevented', e.defaultPrevented === true);
+  }
+}
+
+/* ====================================================================== */
+section('Moving a block counts as an unsaved change');
+
+{
+  const c = build(RECT);
+  const start = { D3: { x: 30, y: 30 } };
+  c.state = {
+    ...c.state, vLocked: false, venue: clone(VENUE), venueSaved: clone(VENUE),
+    venuePositions: { ...start }, venuePositionsSaved: { ...start },
+  };
+  check('nothing is dirty to begin with', c.venueDirty() === false);
+
+  /* One Save covers both halves, so a Save button that only watched the layout
+     would sit grey over a map somebody had just spent ten minutes arranging. */
+  c.setBlockPosition('D3', 60, 60);
+  check('moving a block makes the layout dirty', c.venueDirty() === true);
+  check('…and the Save button comes alive', c.renderVals().vSaveDisabled === false);
+
+  c.setState({ venuePositionsSaved: { ...c.state.venuePositions } });
+  check('saving settles it again', c.venueDirty() === false);
+
+  /* And the other half still works on its own. */
+  c.editVenue((v) => { v.day1.pitches.push('ZZ1'); });
+  check('editing the layout alone is still dirty', c.venueDirty() === true);
+}
+
+/* ====================================================================== */
+section('Saving actually sends the positions');
+
+{
+  /* The failure this guards is the quiet one: everything on screen behaves,
+     the drag works, Save goes green and says "Saved" — and the positions were
+     never in the request, so they come back to the defaults on the next load
+     and it looks like the map "forgot". */
+  const sent = [];
+  const c = build(RECT);
+  const positions = { D3: { x: 11, y: 22 } };
+  c.state = {
+    ...c.state, tab: 'venue', vLoaded: true,
+    venue: clone(VENUE), venueSaved: clone(VENUE),
+    venuePositions: { ...positions }, venuePositionsSaved: {},
+    api: {
+      saveVenue: async (venue, pos) => { sent.push({ venue, pos }); return { ok: true, venue, positions: { D3: { x: 11, y: 22 } } }; },
+      resetVenue: async () => ({ ok: false }),
+      resetVenuePositions: async () => ({ ok: true, positions: { ...require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js')).DEFAULT_POSITIONS } }),
+    },
+  };
+
+  return_check: {
+    const done = c.doSaveVenue();
+    // doSaveVenue is async; the call itself happens synchronously before the await.
+    check('Save passes the positions to the data layer', sent.length === 1 && !!sent[0].pos, JSON.stringify(sent[0] && Object.keys(sent[0])));
+    eq('…and passes the ones on screen', sent[0] && sent[0].pos, positions);
+    check('…alongside the layout', !!(sent[0] && sent[0].venue && sent[0].venue.day1));
+    void done;
+  }
+}
+
+/* ====================================================================== */
+section('The server side of the positions');
+
+{
+  const V = require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js'));
+
+  check('there is a default position for every block the schematic knows',
+    Object.keys(V.DEFAULT_POSITIONS).length === 16, String(Object.keys(V.DEFAULT_POSITIONS).length));
+  Object.keys(V.DEFAULT_POSITIONS).forEach((b) => {
+    const p = V.DEFAULT_POSITIONS[b];
+    check(`${b}'s default is on the map`, p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100, JSON.stringify(p));
+  });
+  /* Every block the shipped layout uses must start somewhere sensible, or the
+     first thing an organiser sees is a tray full of blocks. */
+  ['D5', 'D4', 'D3', 'D2', 'D1', 'C4', 'C5', 'B1', 'A1'].forEach((b) =>
+    check(`${b} (used by the real layout) has a starting position`, !!V.DEFAULT_POSITIONS[b]));
+
+  eq('a valid map is accepted and rounded', V.validatePositions({ D3: { x: 10.06, y: 20.04 } }).positions, { D3: { x: 10.1, y: 20 } });
+  eq('block names are normalised to upper case', Object.keys(V.validatePositions({ d3: { x: 1, y: 2 } }).positions), ['D3']);
+  check('nothing sent is fine — it means "leave them alone"', V.validatePositions(null).ok === true);
+  check('…and stores nothing', V.validatePositions(null).positions === null);
+
+  [
+    ['an array', [1, 2]],
+    ['a string', 'D3'],
+    ['coordinates that are not numbers', { D3: { x: 'left', y: 2 } }],
+    ['a coordinate past the right edge', { D3: { x: 101, y: 2 } }],
+    ['a negative coordinate', { D3: { x: -1, y: 2 } }],
+    ['no coordinates at all', { D3: {} }],
+    ['a null block', { D3: null }],
+  ].forEach(([label, input]) => {
+    const r = V.validatePositions(input);
+    check(`refused: ${label}`, r.ok === false, JSON.stringify(r.positions));
+    check(`refused with a reason: ${label}`, r.ok === false && r.errors[0] && r.errors[0].length > 10);
+  });
+
+  const many = {};
+  for (let i = 0; i < V.MAX_POSITIONS + 1; i += 1) many['B' + i] = { x: 1, y: 1 };
+  check('a blob with absurdly many blocks is refused', V.validatePositions(many).ok === false);
+
+  eq('merging nothing gives the defaults', V.mergePositions(null), V.DEFAULT_POSITIONS);
+  eq('merging junk gives the defaults', V.mergePositions('x'), V.DEFAULT_POSITIONS);
+  eq('a saved block overrides its default', V.mergePositions({ D3: { x: 1, y: 2 } }).D3, { x: 1, y: 2 });
+  eq('…and the others are untouched', V.mergePositions({ D3: { x: 1, y: 2 } }).C4, V.DEFAULT_POSITIONS.C4);
+  eq('an out-of-range saved value falls back to the default', V.mergePositions({ D3: { x: 500, y: 2 } }).D3, V.DEFAULT_POSITIONS.D3);
+  check('merging does not mutate the defaults', V.DEFAULT_POSITIONS.D3.x === 28.4);
+
+  /* THE TRAP THIS WHOLE SEPARATE KEY EXISTS TO AVOID: validateVenue rebuilds a
+     day from a known list of fields, so anything else riding on the venue
+     object is dropped on save. If positions had been stored there, the map
+     would have appeared to save and then silently reverted. */
+  const withExtra = clone(VENUE);
+  withExtra.day1.positions = { D3: { x: 1, y: 2 } };
+  const out = V.validateVenue(withExtra);
+  check('an extra field on the venue layout IS dropped on save', out.ok === true && out.venue.day1.positions === undefined);
 }
 
 /* ======================================================================
@@ -343,8 +734,26 @@ section('Every {{ token }} the schematic uses is returned');
      * unused pitches no longer reported  -> "named in the notes"
      * a pitch silently dropped from a
        block                              -> "every Saturday pitch is drawn exactly once"
+     * the lock ignored on pointer-down   -> "locked: pointing at a block starts no drag"
+     * the grab offset dropped            -> "the grab offset is preserved"
+     * the clamp removed                  -> "dragging past the top-left clamps to 0,0"
+     * rounding removed                   -> "positions are rounded to a tenth"
+     * an unmeasurable map guessed at     -> "null, not a guess"  (see below)
+     * the dirty check ignoring positions -> "moving a block makes the layout dirty"
+     * Save no longer sending positions   -> "Save passes the positions to the data layer"
+     * blocks anchored by corner          -> "and centred on it"
+     * touch-action dropped               -> "will not scroll the page instead"
+     * validatePositions not range-checking -> "a coordinate past the right edge"
 
-   AND ONE CLAIM IN THE CODE WAS WRONG, which the fault run is what found.
+   THE UNMEASURABLE-MAP FAULT IS THE ONE WORTH READING. Replacing pointerPct's
+   `return null` with a constant `{x:50,y:50}` passed a full down-then-move test
+   — because the grab offset is computed from the same constant and cancels it
+   exactly, so the block lands back where it started and the drag looks perfect.
+   The test had to be rewritten to assert on the guard itself. A test that
+   exercises a behaviour end to end can be blind to a fault sitting in the
+   middle of it, and only injecting the fault shows you which.
+
+   AND ONE CLAIM IN THE CODE WAS WRONG, which the fault run is also what found.
    blockOfPitch's comment said its greedy `.*` was load-bearing — that 'D12A'
    would otherwise split as 'D1'. Injecting the lazy form changed nothing, and it
    cannot: the tail is one anchored letter, so backtracking makes the two

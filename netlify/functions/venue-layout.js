@@ -29,8 +29,9 @@
 
 const { verify, getBearerToken, blobStore } = require('./_auth');
 const {
-  DEFAULT_VENUE,
+  DEFAULT_VENUE, DEFAULT_POSITIONS,
   loadVenue, validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
+  loadPositions, validatePositions,
 } = require('./_venue');
 
 const json = (statusCode, body) => ({
@@ -42,8 +43,18 @@ const json = (statusCode, body) => ({
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'GET') {
-      const venue = await loadVenue(blobStore);
-      const body = { ok: true, venue, defaults: DEFAULT_VENUE, warnings: venueWarnings(venue) };
+      const [venue, positions] = await Promise.all([loadVenue(blobStore), loadPositions(blobStore)]);
+      /* `positions` is where each block sits on assets/venue-map.png, placed by
+         hand in the back office. It rides on this endpoint rather than one of
+         its own because it is the same concern, the same permissions and the
+         same page load — but it is stored under its OWN blob key, because
+         validateVenue() rebuilds a day from known fields and would silently
+         drop an extra one. See _venue.js. */
+      const body = {
+        ok: true, venue, positions,
+        defaults: DEFAULT_VENUE, defaultPositions: DEFAULT_POSITIONS,
+        warnings: venueWarnings(venue),
+      };
 
       if ((event.queryStringParameters || {}).usage === '1') {
         const session = verify(getBearerToken(event));
@@ -72,18 +83,43 @@ exports.handler = async (event) => {
         await store.delete('venue');
         setCachedVenue(DEFAULT_VENUE);
         return json(200, {
-          ok: true, venue: DEFAULT_VENUE, defaults: DEFAULT_VENUE,
+          ok: true, venue: DEFAULT_VENUE, positions: await loadPositions(blobStore),
+          defaults: DEFAULT_VENUE, defaultPositions: DEFAULT_POSITIONS,
           warnings: venueWarnings(DEFAULT_VENUE), reset: true,
         });
       }
 
+      /* Resetting the pitch layout and resetting where blocks sit on the map
+         are different intentions and get different buttons. Putting a group on
+         a different day has nothing to do with the map image, and someone
+         fixing one should not lose the other. */
+      if (body.resetPositions) {
+        await store.delete('venue-positions');
+        const venue = await loadVenue(blobStore);
+        return json(200, {
+          ok: true, venue, positions: DEFAULT_POSITIONS,
+          defaults: DEFAULT_VENUE, defaultPositions: DEFAULT_POSITIONS,
+          warnings: venueWarnings(venue), resetPositions: true,
+        });
+      }
+
+      /* Both are validated BEFORE either is written. A layout that saves while
+         its positions bounce would leave the two halves of one Save disagreeing
+         with each other, and the panel would have nothing sensible to show. */
       const result = validateVenue(body.venue);
       if (!result.ok) return json(400, { ok: false, error: result.errors[0], errors: result.errors });
 
+      const posResult = validatePositions(body.positions);
+      if (!posResult.ok) return json(400, { ok: false, error: posResult.errors[0], errors: posResult.errors });
+
       await store.setJSON('venue', result.venue);
       setCachedVenue(result.venue);
+      if (posResult.positions) await store.setJSON('venue-positions', posResult.positions);
+
       return json(200, {
-        ok: true, venue: result.venue, defaults: DEFAULT_VENUE,
+        ok: true, venue: result.venue,
+        positions: await loadPositions(blobStore),
+        defaults: DEFAULT_VENUE, defaultPositions: DEFAULT_POSITIONS,
         warnings: venueWarnings(result.venue),
       });
     }

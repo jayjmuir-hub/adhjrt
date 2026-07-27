@@ -322,15 +322,41 @@
             </sc-if>
           </div>
 
-          <!-- WHERE EACH GROUP PLAYS — the schematic.
-               Drawn from the working copy, so it redraws as you tick boxes
-               further down, before anything is saved. It is not the site plan:
-               assets/venue-map.png names blocks, not the sub-pitches this
-               layout uses, so drawing "B1C" on it would mean inventing where
-               B1C sits. See the comment above BLOCK_GRID in the script. -->
+          <!-- WHERE EACH GROUP PLAYS — two views of the same derived data.
+               SCHEMATIC: every sub-pitch as its own labelled cell. Reads on a
+               phone, and it is the only one with room for the pitch names.
+               MAP: the real site map with each block dragged onto it by an
+               organiser. The BLOCK positions are real knowledge Jay has and the
+               code does not, which is why they are draggable and stored rather
+               than guessed. What sits INSIDE a block is still ours — the map
+               draws one outline per block and never divides it — so the map
+               chip names the block and the groups on it, and the schematic is
+               where the individual pitches are read. -->
           <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
-            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Where each group plays</div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 18px;line-height:1.5">A schematic, not the site plan &mdash; blocks are roughly where they sit at Zayed Sports City, and each one is divided into the pitches this layout actually lists. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
+              <div style="flex:1;min-width:220px">
+                <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Where each group plays</div>
+              </div>
+              <div style="display:flex;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px">
+                <button onClick="{{ onViewSchematic }}" style="{{ vViewSchematicStyle }}">Schematic</button>
+                <button onClick="{{ onViewMap }}" style="{{ vViewMapStyle }}">Map</button>
+              </div>
+            </div>
+
+            <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
+              <p style="color:#7f8794;font-size:12px;margin:0 0 18px;line-height:1.5">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
+            </sc-if>
+
+            <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
+              <p style="color:#7f8794;font-size:12px;margin:0 0 14px;line-height:1.5">The real Zayed Sports City map. <b style="color:#aeb4bf">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#aeb4bf">shared across both days</b>, because a block is the same field on Saturday as on Sunday. Save with the button at the top of the tab.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+                <button onClick="{{ onToggleMapLock }}" style="{{ vLockStyle }}">{{ vLockLabel }}</button>
+                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#7f8794;font-weight:700;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
+                <sc-if value="{{ vUnlocked }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:12px;color:#f5c518;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
+                </sc-if>
+              </div>
+            </sc-if>
 
             <sc-for list="{{ vMaps }}" as="vm" hint-placeholder-count="2">
               <div style="margin-bottom:22px">
@@ -343,21 +369,52 @@
                   <div style="font-size:12px;color:#7f8794;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
                 </sc-if>
 
-                <div style="{{ vm.gridStyle }}">
-                  <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
-                    <div style="{{ blk.style }}">
-                      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:6px">{{ blk.name }}</div>
-                      <div style="display:flex;flex-wrap:wrap;gap:5px">
-                        <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
-                          <div style="{{ pp.style }}" title="{{ pp.title }}">
-                            <div style="font-weight:800;font-size:11px;letter-spacing:.3px">{{ pp.name }}</div>
-                            <div style="font-size:10px;font-weight:700;margin-top:2px;color:{{ pp.whoColor }}">{{ pp.who }}</div>
-                          </div>
+                <!-- MAP VIEW. The image is pointer-events:none so it can
+                     never swallow a drag, and each block captures the pointer
+                     on the way down so a fast drag cannot outrun a small chip
+                     and drop it. -->
+                <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
+                  <div id="{{ vm.mapId }}" style="{{ vm.mapBoxStyle }}">
+                    <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                    <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
+                      <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
+                        <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">
+                          <div style="font-weight:800;font-size:11px;letter-spacing:.4px;line-height:1.2">{{ blk.name }}</div>
+                          <div style="font-size:10px;font-weight:700;line-height:1.2;margin-top:1px">{{ blk.mapWho }}</div>
+                        </div>
+                      </sc-if>
+                    </sc-for>
+                  </div>
+
+                  <sc-if value="{{ vm.hasStrays }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:10px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:10px 12px">
+                      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:7px">Not on the map yet</div>
+                      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+                        <sc-for list="{{ vm.strays }}" as="st" hint-placeholder-count="1">
+                          <button onClick="{{ st.onPlace }}" style="background:#0C0C0E;border:1px dashed rgba(245,197,24,0.6);color:#f5c518;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
                         </sc-for>
                       </div>
                     </div>
-                  </sc-for>
-                </div>
+                  </sc-if>
+                </sc-if>
+
+                <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
+                  <div style="{{ vm.gridStyle }}">
+                    <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
+                      <div style="{{ blk.style }}">
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:6px">{{ blk.name }}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:5px">
+                          <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
+                            <div style="{{ pp.style }}" title="{{ pp.title }}">
+                              <div style="font-weight:800;font-size:11px;letter-spacing:.3px">{{ pp.name }}</div>
+                              <div style="font-size:10px;font-weight:700;margin-top:2px;color:{{ pp.whoColor }}">{{ pp.who }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
 
                 <sc-if value="{{ vm.hasNotes }}" hint-placeholder-val="{{ false }}">
                   <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:8px">
@@ -688,6 +745,22 @@ class Component extends DCLogic {
     venue: null, venueSaved: null, venueUsage: null,
     vLoaded: false, vBusy: false, vError: '', vSuccess: '',
     vNewPitch: { day1: '', day2: '' },
+    /* Where each block sits on assets/venue-map.png, as percentages. Working
+       copy and last-saved copy, exactly like `venue` above, so one Save covers
+       both and the dirty check sees either changing. Stored server-side under
+       its own blob key — see _venue.js for why it cannot ride inside the venue
+       layout. */
+    venuePositions: null, venuePositionsSaved: null,
+    /* 'schematic' — every sub-pitch as its own labelled cell, reads on a phone.
+       'map' — the real site map with the blocks dragged onto it.
+       Both are kept because neither does the other's job: the map orients you,
+       the schematic is the one you can actually read the pitch names on. */
+    vView: 'schematic',
+    /* Dragging is OFF by default. This screen is mostly read, and a map whose
+       blocks slide under a mis-click would be worse than one that needs a
+       deliberate unlock first. */
+    vLocked: true,
+    vDrag: null,
     /* The registration window being edited. Same shape as the venue pair above:
        `reg` is the working copy the form mutates, `regSaved` is what the server
        last confirmed, so Save can tell whether anything actually changed. Both
@@ -741,6 +814,9 @@ class Component extends DCLogic {
      empty. validate-bindings.js guards it. */
   venueVals(s) {
     const v = s.venue;
+    const viewBase = 'font-weight:700;font-size:12px;padding:7px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;';
+    const viewOn = viewBase + 'background:#E11B22;color:#fff;';
+    const viewOff = viewBase + 'background:transparent;color:#aeb4bf;';
     const problems = v ? this.venueProblems() : [];
     const warnings = v ? this.venueLocalWarnings() : [];
     const dirty = this.venueDirty();
@@ -805,7 +881,21 @@ class Component extends DCLogic {
     return {
       vDays: days,
       vGroups: groups,
-      vMaps: this.venueMaps(v),
+      vMaps: this.venueMaps(v, s.venuePositions, s.vLocked),
+      vIsSchematic: s.vView !== 'map',
+      vIsMapView: s.vView === 'map',
+      vViewSchematicStyle: s.vView !== 'map' ? viewOn : viewOff,
+      vViewMapStyle: s.vView === 'map' ? viewOn : viewOff,
+      onViewSchematic: () => this.setVenueView('schematic'),
+      onViewMap: () => this.setVenueView('map'),
+      vLocked: s.vLocked,
+      vUnlocked: !s.vLocked,
+      vLockLabel: s.vLocked ? 'Locked — tap to move blocks' : 'Unlocked — drag the blocks',
+      vLockStyle: s.vLocked
+        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap'
+        : 'background:#f5c518;border:1px solid #f5c518;color:#0C0C0E;font-weight:800;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap',
+      onToggleMapLock: () => this.toggleMapLock(),
+      onResetPositions: () => this.doResetPositions(),
       vBusy: s.vBusy,
       vError: s.vError,
       vSuccess: s.vSuccess,
@@ -831,8 +921,9 @@ class Component extends DCLogic {
      Everything here is derived. There is no stored geometry beyond BLOCK_GRID,
      which only says roughly where a block sits, so nothing can disagree with the
      layout. */
-  venueMaps(v) {
+  venueMaps(v, positions, locked) {
     if (!v) return [];
+    const pos = positions || {};
     const dayTint = { day1: '#E11B22', day2: '#17A34A' };
     const nameOf = (ag) => (MANAGER_AGE_GROUPS.find((g) => g.id === ag) || {}).name || ag.toUpperCase();
 
@@ -865,10 +956,51 @@ class Component extends DCLogic {
       const blocks = order.map((b) => {
         let area = BLOCK_GRID[b];
         if (!area) { spare += 1; area = `${5 + Math.floor(spare / 5)} / ${(spare % 5) + 1}`; }
+
+        /* Everyone on this block, across all its pitches, in the order the
+           layout lists them. The map chip is too small for per-pitch labels —
+           that is what the schematic view is for — so it answers the question
+           the map is actually good at: which group is over there. */
+        const blockUsers = [];
+        byBlock[b].forEach((p) => (usersOf[p] || []).forEach((ag) => {
+          if (!blockUsers.includes(ag)) blockUsers.push(ag);
+        }));
+        const blockTints = blockUsers.map((ag) => AGE_TINT[ag] || '#7f8794');
+        const at = pos[b];
+        const placed = !!(at && Number.isFinite(Number(at.x)) && Number.isFinite(Number(at.y)));
+
+        let chipBg, chipBorder;
+        if (!blockUsers.length) { chipBg = 'rgba(12,12,14,0.86)'; chipBorder = '1px dashed rgba(255,255,255,0.3)'; }
+        else if (blockUsers.length === 1) { chipBg = blockTints[0] + 'E0'; chipBorder = `1px solid ${blockTints[0]}`; }
+        else {
+          const stops = blockTints.map((t, i) => `${t}E0 ${(i * 100) / blockTints.length}%, ${t}E0 ${((i + 1) * 100) / blockTints.length}%`).join(', ');
+          chipBg = `linear-gradient(100deg, ${stops})`;
+          chipBorder = '1px solid rgba(255,255,255,0.6)';
+        }
+
         return {
           name: b,
           known: !!BLOCK_GRID[b],
           style: `grid-area:${area};background:#0C0C0E;border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:9px 10px 10px`,
+
+          /* --- the map view --- */
+          placed,
+          notPlaced: !placed,
+          mapWho: blockUsers.length ? blockUsers.map((a) => a.toUpperCase()).join(' · ') : 'free',
+          mapTitle: blockUsers.length
+            ? `${b} — ${byBlock[b].join(', ')} — ${blockUsers.map(nameOf).join(', ')}`
+            : `${b} — ${byBlock[b].join(', ')} — no age group on it`,
+          /* translate(-50%,-50%) so the stored percentage is the block's CENTRE.
+             Anchoring by a corner would make a block near the right edge jump
+             when the map is resized, because the offset and the box width scale
+             differently. touch-action:none stops a drag on a phone scrolling
+             the page instead of moving the block. */
+          mapStyle: (placed
+            ? `position:absolute;left:${at.x}%;top:${at.y}%;transform:translate(-50%,-50%);`
+            : 'position:relative;')
+            + `background:${chipBg};border:${chipBorder};border-radius:8px;padding:5px 9px;text-align:center;color:#fff;`
+            + `box-shadow:0 3px 10px rgba(0,0,0,.55);white-space:nowrap;user-select:none;`
+            + (locked ? 'cursor:default;' : 'cursor:grab;touch-action:none;'),
           pitches: byBlock[b].map((p) => {
             const users = usersOf[p] || [];
             const tints = users.map((ag) => AGE_TINT[ag] || '#7f8794');
@@ -900,6 +1032,16 @@ class Component extends DCLogic {
               style: `min-width:52px;background:${bg};border:${border};border-radius:7px;padding:5px 7px;text-align:center;color:#fff`,
             };
           }),
+
+          /* Pointer events rather than mouse events, so one set of handlers
+             covers mouse, trackpad, pen and touch. The element captures the
+             pointer on the way down, which means move and up keep arriving here
+             even when the cursor outruns a small chip — without that, a quick
+             drag drops the block the moment the pointer leaves it. */
+          onDown: (e) => this.onBlockDown(id, b, e),
+          onMove: (e) => this.onBlockMove(id, b, e),
+          onUp: (e) => this.onBlockUp(e),
+          onPlace: () => this.placeBlock(b),
         };
       });
 
@@ -921,6 +1063,7 @@ class Component extends DCLogic {
       }
 
       const groupCount = Object.keys(groups).length;
+      const strays = blocks.filter((b) => b.notPlaced);
       return {
         id,
         label: day.label || id,
@@ -931,8 +1074,128 @@ class Component extends DCLogic {
         notes,
         hasNotes: notes.length > 0,
         isEmpty: !pitches.length,
+
+        /* --- the map view ---
+           The id is what onBlockMove measures against: the drag maths needs the
+           real on-screen rectangle of the map, and the map is responsive, so it
+           has to be read at drag time rather than assumed. */
+        mapId: `vmap-${id}`,
+        /* Same aspect ratio as assets/venue-map.png (792x547), so the image
+           fills the box exactly and a percentage means the same thing in both
+           directions no matter how wide the window is. */
+        mapBoxStyle: 'position:relative;width:100%;aspect-ratio:792/547;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#fff',
+        strays,
+        hasStrays: strays.length > 0,
       };
     });
+  }
+
+  /* ---------------- Dragging a block onto the map ----------------
+     The stored position is a PERCENTAGE of the map image, measured to the
+     centre of the block. Pixels would be wrong on every screen but the one the
+     block was placed on.
+
+     The rectangle is read from the DOM at drag time rather than cached: the
+     panel is inside a responsive layout, the window can be resized mid-session,
+     and a stale rectangle silently offsets every drop after it. */
+  mapRect(dayId, e) {
+    /* PREFERRED: the dragged chip's own offsetParent. Each chip is absolutely
+       positioned inside the map box, and the map box is the nearest positioned
+       ancestor, so the browser hands back exactly the element the percentages
+       are measured against — with no dependency on the template interpolating
+       an id attribute. That mattered enough to do it this way round: if an id
+       were the only route and it did not interpolate, every drag would silently
+       do nothing and look like the feature was broken.
+
+       FALLBACK: look the day's box up by id. Keeps a path for anything that
+       arrives without a live element to walk up from. */
+    const fromEvent = e && e.currentTarget && e.currentTarget.offsetParent;
+    const el = fromEvent
+      || (typeof document !== 'undefined' && document.getElementById ? document.getElementById(`vmap-${dayId}`) : null);
+    const r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    return (r && r.width > 0 && r.height > 0) ? r : null;
+  }
+
+  /* Pointer position as a percentage of the map, or null if the map cannot be
+     measured. Null rather than a guess: a drag that cannot be measured must do
+     nothing at all, not move the block somewhere arbitrary. A constant fallback
+     here would be invisible in an end-to-end drag test, because the grab offset
+     is computed from the same constant and cancels it exactly — see the note in
+     tests/test-venue-map.js. */
+  pointerPct(dayId, e) {
+    const r = this.mapRect(dayId, e);
+    if (!r) return null;
+    return { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+  }
+
+  /* Percentages are clamped to the map and rounded to a tenth — which is under
+     a pixel on the real 792px image. Rounding matters for more than tidiness:
+     without it every mouse move writes a new floating-point value and the
+     "unsaved changes" comparison flickers on a block nobody actually moved. */
+  static clampPct(n) { return Math.min(100, Math.max(0, Math.round(n * 10) / 10)); }
+
+  onBlockDown(dayId, block, e) {
+    if (this.state.vLocked) return;
+    if (e && e.preventDefault) e.preventDefault();
+    try { if (e.currentTarget && e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
+    const at = (this.state.venuePositions || {})[block];
+    const p = this.pointerPct(dayId, e);
+    /* The grab offset is what stops the block jumping so its centre lands under
+       the cursor the instant you touch it. */
+    const offX = (p && at) ? p.x - Number(at.x) : 0;
+    const offY = (p && at) ? p.y - Number(at.y) : 0;
+    this.setState({ vDrag: { block, dayId, offX, offY } });
+  }
+
+  onBlockMove(dayId, block, e) {
+    const d = this.state.vDrag;
+    if (!d || d.block !== block || this.state.vLocked) return;
+    const p = this.pointerPct(dayId, e);
+    if (!p) return;
+    this.setBlockPosition(block, p.x - d.offX, p.y - d.offY);
+  }
+
+  onBlockUp() { if (this.state.vDrag) this.setState({ vDrag: null }); }
+
+  setBlockPosition(block, x, y) {
+    const nx = Component.clampPct(x), ny = Component.clampPct(y);
+    this.setState((s) => {
+      const cur = (s.venuePositions || {})[block];
+      // No-op writes would mark the layout dirty for a drag that moved nothing.
+      if (cur && cur.x === nx && cur.y === ny) return {};
+      return { venuePositions: { ...(s.venuePositions || {}), [block]: { x: nx, y: ny } }, vSuccess: '', vError: '' };
+    });
+  }
+
+  /* A block the map has never heard of — someone typed a pitch name in a shape
+     nothing recognises — has no position, so it sits in a tray beside the map
+     instead of being dumped at 0,0 where it would look placed. This drops it in
+     the middle to be dragged from there. */
+  placeBlock(block) { this.setBlockPosition(block, 50, 50); }
+
+  toggleMapLock() { this.setState((s) => ({ vLocked: !s.vLocked, vDrag: null })); }
+  setVenueView(view) { this.setState({ vView: view, vDrag: null }); }
+
+  doResetPositions() {
+    this.confirmModal(
+      'Put every block back where the code guessed it was on the map?\n\nThis only moves the blocks on the picture. Which pitches exist, which day each group plays and which pitches it uses are all left exactly as they are.',
+      () => this.reallyResetPositions(),
+      { okLabel: 'Reset the positions', wide: true }
+    );
+  }
+
+  async reallyResetPositions() {
+    this.setState({ vBusy: true, vError: '', vSuccess: '' });
+    const res = await this.state.api.resetVenuePositions();
+    if (res.ok && res.positions) {
+      this.setState({
+        venuePositions: { ...res.positions },
+        venuePositionsSaved: { ...res.positions },
+        vBusy: false, vSuccess: 'The blocks are back where they started.',
+      });
+    } else {
+      this.setState({ vBusy: false, vError: res.error || 'Could not reset the block positions.' });
+    }
   }
 
   /* ---------------- Venue & days ----------------
@@ -943,9 +1206,15 @@ class Component extends DCLogic {
     this.setState({ vBusy: true, vError: '' });
     const res = await this.state.api.getVenue({ withUsage: true });
     if (res.ok && res.venue) {
+      /* Positions may legitimately be absent — an older deploy, or a read that
+         failed. Every block then reports itself unplaced and goes to the tray,
+         which is visible and fixable, rather than silently piling up at 0,0. */
+      const pos = res.positions && typeof res.positions === 'object' ? { ...res.positions } : {};
       this.setState({
         venue: this.cloneVenue(res.venue),
         venueSaved: this.cloneVenue(res.venue),
+        venuePositions: pos,
+        venuePositionsSaved: { ...pos },
         venueUsage: res.usage || null,
         vLoaded: true, vBusy: false,
       });
@@ -1108,21 +1377,31 @@ class Component extends DCLogic {
     return out;
   }
 
+  /* EITHER half being edited counts. One Save covers the layout and the block
+     positions, so a Save button that only watched the layout would go grey over
+     a map somebody had just spent ten minutes arranging. */
   venueDirty() {
-    const { venue, venueSaved } = this.state;
+    const { venue, venueSaved, venuePositions, venuePositionsSaved } = this.state;
     if (!venue || !venueSaved) return false;
-    return JSON.stringify(venue) !== JSON.stringify(venueSaved);
+    if (JSON.stringify(venue) !== JSON.stringify(venueSaved)) return true;
+    return JSON.stringify(venuePositions || {}) !== JSON.stringify(venuePositionsSaved || {});
   }
 
   async doSaveVenue() {
     const problems = this.venueProblems();
     if (problems.length) { this.setState({ vError: 'Fix the problems listed below first.' }); return; }
     this.setState({ vBusy: true, vError: '', vSuccess: '' });
-    const res = await this.state.api.saveVenue(this.state.venue);
+    const res = await this.state.api.saveVenue(this.state.venue, this.state.venuePositions || undefined);
     if (res.ok && res.venue) {
+      /* The server's own answer for both halves, not the working copy — it is
+         the authority, and echoing what was sent would hide a value it
+         normalised on the way in. */
+      const pos = res.positions && typeof res.positions === 'object' ? { ...res.positions } : (this.state.venuePositions || {});
       this.setState({
         venue: this.cloneVenue(res.venue),
         venueSaved: this.cloneVenue(res.venue),
+        venuePositions: pos,
+        venuePositionsSaved: { ...pos },
         vBusy: false,
         vSuccess: 'Saved. The fixtures pages, the app and the public site all read this now.',
       });
@@ -1144,9 +1423,14 @@ class Component extends DCLogic {
     this.setState({ vBusy: true, vError: '', vSuccess: '' });
     const res = await this.state.api.resetVenue();
     if (res.ok && res.venue) {
+      // Resetting the LAYOUT leaves the map placement alone; they are separate
+      // decisions with separate buttons. The server returns both regardless.
+      const pos = res.positions && typeof res.positions === 'object' ? { ...res.positions } : (this.state.venuePositions || {});
       this.setState({
         venue: this.cloneVenue(res.venue),
         venueSaved: this.cloneVenue(res.venue),
+        venuePositions: pos,
+        venuePositionsSaved: { ...pos },
         vBusy: false, vSuccess: 'Back to the built-in 2025 layout.',
       });
     } else {

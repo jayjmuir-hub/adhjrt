@@ -283,6 +283,14 @@ export async function resetVenue() {
    read falls back to the built-in default (which is CLOSED) and saving reports
    that it needs the deployed site, rather than silently writing to localStorage
    and letting someone think registration is set when it is not. */
+/* The pitch model, re-exported from the server's own module through
+   scores-data.js so the panel cannot grow a second opinion about how a pitch
+   splits or what the main pitches are called. Same reasoning as the
+   registration rules below. */
+export {
+  MAIN_PITCHES, SPLITS, derivePitches, remapGroupPitches,
+} from './scores-data.js';
+
 export {
   registrationState, registrationCopy, registrationWarnings, validateSettings,
   isRealDate, stampFromDate, dateOfStamp, fmtWindowDate, fmtCountdown,

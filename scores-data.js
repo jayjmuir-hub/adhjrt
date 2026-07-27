@@ -177,6 +177,11 @@ export const DEFAULT_VENUE = {
     date: '2026-11-07',
     label: 'Saturday 7 November',
     short: 'Sat',
+    /* Whole / halves / quarters per main pitch. THE SOURCE OF TRUTH; `pitches`
+       is derived from it (see derivePitches in netlify/functions/_venue.js) and
+       is written out here so every existing reader of `day.pitches` is
+       untouched and the two DEFAULT_VENUE copies stay comparable. */
+    splits: { D5: 2, D4: 2, D3: 2, D2: 1, D1: 1, C4: 1, C5: 1, B1: 4, A1: 4 },
     pitches: ['D5A', 'D5B', 'D4A', 'D4B', 'D3A', 'D3B', 'D2', 'D1',
       'C4', 'C5', 'B1A', 'B1B', 'B1C', 'B1D', 'A1A', 'A1B', 'A1C', 'A1D'],
     groups: {
@@ -195,6 +200,7 @@ export const DEFAULT_VENUE = {
     date: '2026-11-08',
     label: 'Sunday 8 November',
     short: 'Sun',
+    splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
     pitches: ['D3', 'D2', 'D1', 'C4A', 'C4B', 'C5', 'B1A', 'B1B', 'A1A', 'A1B'],
     groups: {
       u12g: ['B1A', 'B1B'],
@@ -206,6 +212,49 @@ export const DEFAULT_VENUE = {
     },
   },
 };
+
+/* ---- The pitch model, shared with netlify/functions/_venue.js ----
+   A main pitch is run whole, in halves or in quarters, and the playable surface
+   names are DERIVED from that. Duplicated here for the same reason
+   DEFAULT_VENUE is: the front end needs the answer before any fetch resolves,
+   and there is no build step to share a module across both sides.
+
+   Keep in step with _venue.js. test-venue-splits.js compares them. */
+export const MAIN_PITCHES = ['D5', 'D4', 'D3', 'D2', 'D1', 'C4', 'C5', 'C3', 'C2', 'C1', 'B1', 'A1', 'A2', 'A3', 'A4'];
+export const SPLITS = [1, 2, 4];
+const SPLIT_SUFFIXES = { 1: [''], 2: ['A', 'B'], 4: ['A', 'B', 'C', 'D'] };
+
+export function derivePitches(splits) {
+  const out = [];
+  if (!splits || typeof splits !== 'object') return out;
+  MAIN_PITCHES.forEach((main) => {
+    const n = Number(splits[main]);
+    if (SPLITS.indexOf(n) < 0) return;
+    SPLIT_SUFFIXES[n].forEach((suffix) => out.push(main + suffix));
+  });
+  return out;
+}
+
+/* A group keeps the same GROUND when a split changes; only the names change.
+   Split a pitch it had whole and it gets every part; merge the parts and it
+   gets the whole. Anything else loses an allocation to a rename, which nobody
+   notices until a team turns up. */
+export function remapGroupPitches(list, oldSplits, newSplits) {
+  const kept = [];
+  const add = (name) => { if (!kept.includes(name)) kept.push(name); };
+  (Array.isArray(list) ? list : []).forEach((p) => {
+    const name = typeof p === 'string' ? p.trim().toUpperCase() : '';
+    if (!name) return;
+    const m = name.match(/^(.*[0-9])([A-Z])?$/);
+    const main = m ? m[1] : name;
+    const before = Number((oldSplits || {})[main]);
+    const after = Number((newSplits || {})[main]);
+    if (SPLITS.indexOf(after) < 0) return;
+    if (before === after) { add(name); return; }
+    SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));
+  });
+  return kept;
+}
 
 /* The live layout once fetched. Until then every reader below answers from
    DEFAULT_VENUE, so nothing ever waits on a config fetch and nothing is ever

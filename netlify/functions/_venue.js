@@ -37,6 +37,12 @@ const DEFAULT_VENUE = {
     date: '2026-11-07',
     label: 'Saturday 7 November',
     short: 'Sat',
+    /* Whole / halves / quarters, per pitch, for this day. THE SOURCE OF TRUTH —
+       `pitches` below is derived from it and is only written out so the two
+       DEFAULT_VENUE copies stay comparable and every existing reader of
+       `day.pitches` keeps working untouched. validateVenue() rebuilds `pitches`
+       from `splits` on every save, so the two cannot drift. */
+    splits: { D5: 2, D4: 2, D3: 2, D2: 1, D1: 1, C4: 1, C5: 1, B1: 4, A1: 4 },
     pitches: ['D5A', 'D5B', 'D4A', 'D4B', 'D3A', 'D3B', 'D2', 'D1',
       'C4', 'C5', 'B1A', 'B1B', 'B1C', 'B1D', 'A1A', 'A1B', 'A1C', 'A1D'],
     groups: {
@@ -55,6 +61,7 @@ const DEFAULT_VENUE = {
     date: '2026-11-08',
     label: 'Sunday 8 November',
     short: 'Sun',
+    splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
     pitches: ['D3', 'D2', 'D1', 'C4A', 'C4B', 'C5', 'B1A', 'B1B', 'A1A', 'A1B'],
     groups: {
       u12g: ['B1A', 'B1B'],
@@ -68,6 +75,114 @@ const DEFAULT_VENUE = {
 };
 
 const DAY_IDS = ['day1', 'day2'];
+
+/* ============================================================
+   MAIN PITCHES, AND HOW EACH ONE IS SPLIT.
+   ------------------------------------------------------------
+   THE MODEL, in Jay's words: there are main pitches, and each one can be run
+   whole, cut in half, or cut into quarters. That is the decision somebody
+   actually makes on the ground — you mark a big pitch out into two small ones —
+   so it is the thing that gets stored, and the playable surfaces are DERIVED
+   from it.
+
+   The fifteen are confirmed by Jay against the site (27 Jul 2026):
+   D1–D5, C1–C5, B1, A1–A4. Note B1 only — B2 on the map is the softball pitch
+   and is not ours. The order below is the order surfaces come out in, and it is
+   the order the 2025 layout already used.
+
+   WHAT THIS REPLACED. Pitches used to be a free-text list an organiser typed
+   into. That is how `C4`, `c4` and `Pitch C4` became three different pitches to
+   the clash check — recorded in CLAUDE.md as a bug that had to be dug out once
+   already. With names derived from a fixed list plus a split, they cannot drift
+   again: there is no box to type a name into.
+
+   A SPLIT IS PER DAY, not per pitch. This is not a nicety — the weekend already
+   runs that way, and a single split per pitch would break it:
+
+     D3   halves on Saturday (D3A/D3B), WHOLE on Sunday
+     C4   whole on Saturday,            HALVES on Sunday (C4A/C4B)
+     B1   quarters on Saturday,         halves on Sunday
+     A1   quarters on Saturday,         halves on Sunday
+
+   A main pitch that is ABSENT from a day's `splits` is not in use that day.
+   That is why absence means unused rather than a 0: "not on the map today" and
+   "on the map, split into nothing" are not different states.
+   ============================================================ */
+const MAIN_PITCHES = ['D5', 'D4', 'D3', 'D2', 'D1', 'C4', 'C5', 'C3', 'C2', 'C1', 'B1', 'A1', 'A2', 'A3', 'A4'];
+
+/* Whole, halves, quarters. Nothing else — thirds do not happen on a rectangle
+   you are marking out with cones, and allowing them would put a third suffix
+   letter into names that everything downstream parses. */
+const SPLITS = [1, 2, 4];
+const SPLIT_SUFFIXES = { 1: [''], 2: ['A', 'B'], 4: ['A', 'B', 'C', 'D'] };
+
+/* splits -> the playable surface names, in MAIN_PITCHES order.
+   { D3: 2, D2: 1 } -> ['D3A', 'D3B', 'D2']
+
+   A whole pitch keeps the bare name, which is what makes this backwards
+   compatible: every saved fixture on 'D2' still means D2. */
+function derivePitches(splits) {
+  const out = [];
+  if (!splits || typeof splits !== 'object') return out;
+  MAIN_PITCHES.forEach((main) => {
+    const n = Number(splits[main]);
+    if (SPLITS.indexOf(n) < 0) return;
+    SPLIT_SUFFIXES[n].forEach((suffix) => out.push(main + suffix));
+  });
+  return out;
+}
+
+/* The other direction, for a layout saved before splits existed. Counts how
+   many surfaces each main pitch has and infers the split, so an override
+   already in the blob keeps working with nothing to migrate by hand.
+
+   A count that is not 1, 2 or 4 rounds UP to the next legal split rather than
+   dropping surfaces: three surfaces on one pitch is somebody's half-finished
+   edit, and inventing a fourth is recoverable where deleting a third is not. */
+function splitsFromPitches(pitches) {
+  const counts = {};
+  (Array.isArray(pitches) ? pitches : []).forEach((p) => {
+    const name = typeof p === 'string' ? p.trim().toUpperCase() : '';
+    if (!name) return;
+    const m = name.match(/^(.*[0-9])([A-Z])?$/);
+    const main = m ? m[1] : name;
+    if (MAIN_PITCHES.indexOf(main) < 0) return;
+    counts[main] = (counts[main] || 0) + 1;
+  });
+  const out = {};
+  Object.keys(counts).forEach((main) => {
+    const n = counts[main];
+    out[main] = n <= 1 ? 1 : (n <= 2 ? 2 : 4);
+  });
+  return out;
+}
+
+/* Renaming caused by a split change, e.g. { D3: ['D3A', 'D3B'] } when D3 goes
+   from whole to halves.
+
+   THE INVARIANT: a group keeps the same GROUND, only the names change. Split a
+   pitch a group had whole and it gets both halves — it had all of it before and
+   it has all of it now. Merge halves back and a group that had either one gets
+   the whole pitch, because there is now only one pitch and they are on it.
+
+   Anything else means an organiser silently loses an allocation to a naming
+   change, which is the sort of thing nobody notices until a team turns up. */
+function remapGroupPitches(list, oldSplits, newSplits) {
+  const kept = [];
+  const add = (name) => { if (!kept.includes(name)) kept.push(name); };
+  (Array.isArray(list) ? list : []).forEach((p) => {
+    const name = typeof p === 'string' ? p.trim().toUpperCase() : '';
+    if (!name) return;
+    const m = name.match(/^(.*[0-9])([A-Z])?$/);
+    const main = m ? m[1] : name;
+    const before = Number((oldSplits || {})[main]);
+    const after = Number((newSplits || {})[main]);
+    if (SPLITS.indexOf(after) < 0) return;            // the pitch left the day
+    if (before === after) { add(name); return; }      // untouched
+    SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));
+  });
+  return kept;
+}
 
 /* ============================================================
    WHERE EACH BLOCK SITS ON THE MAP IMAGE.
@@ -186,17 +301,37 @@ function mergeVenue(saved) {
   if (!saved || typeof saved !== 'object') return DEFAULT_VENUE;
   const out = {};
   for (const d of DAY_IDS) {
-    const s = saved[d];
-    out[d] = (s && typeof s === 'object' && Array.isArray(s.pitches) && s.groups && typeof s.groups === 'object')
-      ? {
-        date:  typeof s.date === 'string' ? s.date : DEFAULT_VENUE[d].date,
-        label: typeof s.label === 'string' ? s.label : DEFAULT_VENUE[d].label,
-        short: typeof s.short === 'string' ? s.short : DEFAULT_VENUE[d].short,
-        pitches: s.pitches.filter((p) => typeof p === 'string' && p.trim()).map((p) => p.trim()),
-        groups: s.groups,
-      }
-      : DEFAULT_VENUE[d];
+    const src = saved[d];
+    const usable = src && typeof src === 'object' && src.groups && typeof src.groups === 'object'
+      && (src.splits || Array.isArray(src.pitches));
+    if (!usable) { out[d] = DEFAULT_VENUE[d]; continue; }
+    /* A blob saved before splits existed carries only `pitches`; infer the
+       splits back out of it so nothing needs migrating by hand. */
+    const splits = normaliseSplits(src.splits) || splitsFromPitches(src.pitches);
+    out[d] = {
+      date:  typeof src.date === 'string' ? src.date : DEFAULT_VENUE[d].date,
+      label: typeof src.label === 'string' ? src.label : DEFAULT_VENUE[d].label,
+      short: typeof src.short === 'string' ? src.short : DEFAULT_VENUE[d].short,
+      splits,
+      /* ALWAYS derived, never taken from the blob. If the two ever disagreed
+         the site would be reading one and the panel editing the other. */
+      pitches: derivePitches(splits),
+      groups: src.groups,
+    };
   }
+  return out;
+}
+
+/* Keeps only the main pitches this venue has, at a split it can actually be
+   run at. Returns null for anything unusable so the caller can fall back. */
+function normaliseSplits(splits) {
+  if (!splits || typeof splits !== 'object' || Array.isArray(splits)) return null;
+  const out = {};
+  Object.keys(splits).forEach((raw) => {
+    const main = String(raw || '').trim().toUpperCase();
+    const n = Number(splits[raw]);
+    if (MAIN_PITCHES.indexOf(main) >= 0 && SPLITS.indexOf(n) >= 0) out[main] = n;
+  });
   return out;
 }
 
@@ -265,20 +400,32 @@ function validateVenue(input) {
     const src = input[d];
     const def = DEFAULT_VENUE[d];
     if (!src || typeof src !== 'object') { errors.push(`${def.label} is missing from the layout.`); continue; }
-    if (!Array.isArray(src.pitches)) { errors.push(`${def.label} has no list of pitches.`); continue; }
     if (!src.groups || typeof src.groups !== 'object' || Array.isArray(src.groups)) {
       errors.push(`${def.label} has no age groups.`); continue;
     }
 
-    const pitches = src.pitches.map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
-    // Case-insensitive, because "C4" and "c4" being two pitches is never what
-    // anyone meant and it would split a clash check in half.
-    const seen = new Map();
-    pitches.forEach((p) => {
-      const k = p.toLowerCase();
-      if (seen.has(k)) errors.push(`${def.label} lists "${p}" more than once.`);
-      else seen.set(k, p);
-    });
+    /* Splits are the input. A payload with only `pitches` is accepted and
+       converted, so an older client — or a blob edited by hand — still saves. */
+    let splits = normaliseSplits(src.splits);
+    if (!splits || !Object.keys(splits).length) {
+      if (Array.isArray(src.pitches)) splits = splitsFromPitches(src.pitches);
+      else { errors.push(`${def.label} has no pitches.`); continue; }
+    }
+
+    /* Anything the panel could not have sent is named rather than dropped —
+       silently ignoring a pitch nobody recognises is how a layout ends up
+       missing a surface an organiser thinks they set. */
+    if (src.splits && typeof src.splits === 'object' && !Array.isArray(src.splits)) {
+      Object.keys(src.splits).forEach((raw) => {
+        const main = String(raw || '').trim().toUpperCase();
+        const n = Number(src.splits[raw]);
+        if (MAIN_PITCHES.indexOf(main) < 0) errors.push(`"${raw}" is not one of the ${MAIN_PITCHES.length} main pitches.`);
+        else if (SPLITS.indexOf(n) < 0) errors.push(`${main} on ${def.label} is set to "${src.splits[raw]}" — a pitch is whole, halves or quarters.`);
+      });
+    }
+
+    const pitches = derivePitches(splits);
+    const known = new Set(pitches.map((p) => p.toLowerCase()));
 
     const groups = {};
     Object.keys(src.groups).forEach((ag) => {
@@ -288,11 +435,11 @@ function validateVenue(input) {
       list.forEach((p) => {
         const name = typeof p === 'string' ? p.trim() : '';
         if (!name) return;
-        if (!seen.has(name.toLowerCase())) {
-          errors.push(`${ag.toUpperCase()} is assigned "${name}", which is not a pitch on ${def.label}.`);
+        if (!known.has(name.toLowerCase())) {
+          errors.push(`${ag.toUpperCase()} is assigned "${name}", which is not a surface on ${def.label}.`);
           return;
         }
-        const canonical = seen.get(name.toLowerCase());
+        const canonical = pitches.find((x) => x.toLowerCase() === name.toLowerCase());
         if (!kept.includes(canonical)) kept.push(canonical);
       });
       groups[ag] = kept;
@@ -302,7 +449,8 @@ function validateVenue(input) {
       date:  typeof src.date === 'string' && src.date.trim() ? src.date.trim() : def.date,
       label: typeof src.label === 'string' && src.label.trim() ? src.label.trim() : def.label,
       short: typeof src.short === 'string' && src.short.trim() ? src.short.trim() : def.short,
-      pitches: [...seen.values()],
+      splits,
+      pitches,
       groups,
     };
   }
@@ -395,4 +543,6 @@ module.exports = {
   validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
   DEFAULT_POSITIONS, MAX_POSITIONS,
   mergePositions, validatePositions, loadPositions,
+  MAIN_PITCHES, SPLITS, SPLIT_SUFFIXES,
+  derivePitches, splitsFromPitches, normaliseSplits, remapGroupPitches,
 };

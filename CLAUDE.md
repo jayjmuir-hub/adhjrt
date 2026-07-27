@@ -552,10 +552,14 @@ is the PUBLISHED copy and the only thing the public sees.
 **Which day an age group plays is derived from where it has pitches.** It is not
 a separate list, and it must never become one again.
 
-The layout is `DEFAULT_VENUE`: for each of the two days, a `date`, a `label`, and
-a list of named `pitches`, plus `groups` mapping each age group to the pitches it
-is allowed to use. An age group is on Saturday because Saturday is where it has
+The layout is `DEFAULT_VENUE`: for each of the two days, a `date`, a `label`, a
+`splits` object saying how each main pitch is cut up that day, the derived list of
+playing surfaces in `pitches`, and `groups` mapping each age group to the surfaces
+it is allowed to use. An age group is on Saturday because Saturday is where it has
 pitches — so the day and the pitch allocation cannot contradict each other.
+
+**`splits` is the input; `pitches` is output.** See "Main pitches and splits"
+below before touching either.
 
 Read off `Pitch maps_Final.pdf` (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
 26 Jul 2026 as the same running order for 2026:
@@ -572,6 +576,80 @@ Read off `Pitch maps_Final.pdf` (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
   boxes inside one outline without naming them, so these have to match whatever
   goes on the printed pitch flags.
 - The homepage claims **"16 PITCHES"**. The real counts are 18 and 10.
+
+### Main pitches and splits (added 27 Jul 2026)
+
+Zayed Sports City has **fifteen main pitches** and that list does not change:
+
+```
+D5 D4 D3 D2 D1  C4 C5 C3 C2 C1  B1  A1 A2 A3 A4
+```
+
+Confirmed by Jay against the site on 27 Jul 2026. **There is no B2** — the B2 on
+the venue's own map is the softball diamond and is not ours. The order above is
+`MAIN_PITCHES` and it is the *layout* order, not alphabetical: it is the order the
+schematic draws them in, and `derivePitches()` emits surfaces in it.
+
+Each main pitch is run **whole, in halves or in quarters, on a given day** —
+`SPLITS = [1, 2, 4]`. Nothing else: thirds do not happen on a rectangle you are
+marking out with cones, and a third suffix letter would break every name
+downstream parses.
+
+| stored | surfaces |
+|---|---|
+| `{ D2: 1 }` | `D2` — a whole pitch keeps the **bare name**, which is what makes this backwards compatible: every saved fixture on `D2` still means D2 |
+| `{ D3: 2 }` | `D3A`, `D3B` |
+| `{ B1: 4 }` | `B1A`, `B1B`, `B1C`, `B1D` |
+
+**A main pitch absent from a day's `splits` is not in use that day.** Absence
+rather than a `0`, because "not on the map today" and "on the map, cut into
+nothing" are not two different states.
+
+**The split is per pitch AND per day**, which is not decoration — the weekend runs
+that way. D3 is halves on Saturday and whole on Sunday; C4 is the other way round.
+
+#### The functions
+
+Both `netlify/functions/_venue.js` and `scores-data.js` carry them (`_venue.js` for
+the server, `scores-data.js` because the front end needs an answer before any
+fetch lands). `organizer-data.js` **re-exports from `scores-data.js`** — there is
+deliberately no third copy.
+
+- `derivePitches(splits)` → the surface names, in `MAIN_PITCHES` order. Skips an
+  illegal split rather than guessing at it.
+- `splitsFromPitches(pitches)` → the other direction, for a layout saved before
+  splits existed. An odd count **rounds UP**: three surfaces on one pitch is
+  somebody's half-finished edit, and inventing a fourth is recoverable where
+  deleting a third is not.
+- `remapGroupPitches(list, oldSplits, newSplits)` → renaming caused by a split
+  change.
+
+**THE INVARIANT, and the reason this is worth a section: a group keeps the same
+GROUND, only the names change.** Split a pitch a group had whole and it gets every
+part — it had all of it before and it has all of it now. Merge the parts and a
+group on any one of them gets the whole pitch, because there is now only one
+pitch and they are on it. Get this wrong and an organiser silently loses an
+allocation to a rename, which nobody notices until a team turns up at a pitch that
+is not theirs. `test-venue-splits.js` asserts it as a property across **all nine**
+legal transitions, not as one example.
+
+A main pitch taken **out** of the day is the one case where a group does lose the
+allocation — there is no honest place to put it — and the panel confirms first,
+naming the groups affected and how many saved matches are on it.
+
+#### On the server
+
+`validateVenue()` treats `splits` as the source of truth and **always rebuilds
+`pitches` from it**, never trusting the payload's list. If the two could disagree,
+the site would read one while the panel edited the other. A payload with only
+`pitches` (an older client, or a blob edited by hand) still validates, with the
+splits inferred — **nothing to migrate by hand**. A split of 3, a pitch name
+nobody recognises, or a group on a surface that does not exist are all refused
+**by name** rather than silently dropped.
+
+`derivePitches(DEFAULT_VENUE.dayN.splits)` reproduces both shipped `pitches`
+arrays **character for character** — asserted, because if it did not, this model
+would have quietly moved live fixtures.
 
 ### Where it lives, and the duplication you must respect
 
@@ -638,11 +716,28 @@ Managers are refused server-side with a 403 that explains why.
   that names what is being cleared. The two days have different pitch lists and
   silently keeping names that exist on both (`B1A`, `D2`, `D1`) would put a group
   on a pitch nobody chose for it.
-- Removing a pitch **also unticks it from every group** on that day, and the
-  confirm first says how many saved matches are sitting on it —
-  `countPitchUsage()`, draft first and published as a fallback, because the draft
-  is what a change here is about to break. Organiser-only, since drafts are not
-  public.
+- **All fifteen main pitches are listed on every day card, in use or not** (Jay,
+  27 Jul 2026), each with four buttons: Not used / Whole / Halves / Quarters. A
+  pitch you are not using this day is a decision, and one you cannot see is one
+  you cannot change.
+- **There is no box to type a pitch name into any more.** `addPitch`,
+  `removePitch` and `vNewPitch` are gone. That box is how `C4`, `c4` and
+  `Pitch C4` became three pitches the clash check could not reconcile — a bug
+  that had to be dug out of this codebase once already. Names are now derived and
+  cannot be typed. `test-venue-splits.js` asserts the box has not come back.
+- `setPitchSplit(dayId, main, n)` calls the **server's own** `derivePitches()` and
+  `remapGroupPitches()` through `api.*`, so the panel cannot disagree with what
+  will be stored.
+- **Taking a pitch out** of the day confirms first, naming the groups that lose it
+  and how many saved matches are on it. **Changing a split** that would strand
+  saved fixtures also confirms, and says plainly that age-group allocations move
+  across on their own but **fixtures do not** — `countPitchUsage()`, draft first
+  and published as a fallback, because the draft is what a change here is about
+  to break. Organiser-only, since drafts are not public.
+- The age-group rows show surfaces **grouped by main pitch**, with one click to
+  take or drop a whole pitch. With B1 and A1 both in quarters the old flat list
+  was eighteen identical-looking boxes. Only pitches **in use that day** are
+  offered — the rest are on "Not used" in the day card above and have no surfaces.
 
 ### A pool is a pitch's day (added 26 Jul 2026)
 
@@ -1261,10 +1356,18 @@ Working shape:
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
-It currently holds the registration window, the Venue & days views and the
-account rules — **750 checks** across four files — plus `_prove-registration.js`,
-the fault-injection script (46 faults, all of which must be caught by the check
-that claims to guard them).
+It currently holds the registration window, the Venue & days views, the main
+pitch / split model and the account rules — **894 checks** across five files —
+plus `_prove-registration.js`, the fault-injection script (**60 faults**, all of
+which must be caught by the check that claims to guard them, and none of which
+may be "caught" by the suite throwing).
+
+**A test file must not fall over on a fault.** Reaching blind into a lookup that
+a fault makes `undefined` throws, kills the process, and every check after that
+point silently never runs — so the fault looks caught while proving nothing about
+the check that was supposed to catch it. Hence the `|| {}` fallbacks dotted
+through `test-venue-splits.js` and `test-venue-map.js`: the *guarding* check
+reports, and the file carries on.
 
 **The other thirteen files — 577 checks, plus `validate-bindings.js` — are still
 in `C:\Users\jayjm\adhjrt-sim` on jay-pc and are in no version control at

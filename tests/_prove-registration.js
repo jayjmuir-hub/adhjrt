@@ -75,6 +75,17 @@ function patchShared(find, replace) {
   patch('scores-data.js', find, replace);
 }
 
+/* The pitch model is carried twice as well — the server's copy in _venue.js and
+   the front end's in scores-data.js, which needs an answer before any fetch
+   lands. test-venue-splits.js compares the two lists, so a fault put into one
+   file only trips THAT check and says nothing about the one it was aimed at.
+   Same reasoning as patchShared; a separate helper because these are not the
+   registration block. */
+function patchPitchModel(find, replace) {
+  patch(path.join('netlify', 'functions', '_venue.js'), find, replace);
+  patch('scores-data.js', find, replace);
+}
+
 function patch(rel, find, replace) {
   const p = path.join(TMP, rel);
   const t = fs.readFileSync(p, 'utf8');
@@ -428,6 +439,118 @@ const FAULTS = [
     apply: () => patch('Quins JRT.dc.html', "  regState() {\n    const s = this.state.reg;", "  regState() {\n    if (!this.state.reg) return { open: true, phase: 'open', forced: false, mode: 'auto', opensAt: null, closesAt: null };\n    const s = this.state.reg;"),
     expect: ['before the window has loaded'],
   },
+
+  /* ---- the main-pitch / split model ------------------------------------
+     Everything below is aimed at one question: can a split change silently
+     move an age group off the ground it was given, or rename a surface a
+     saved fixture is sitting on. */
+
+  {
+    name: 'B2 is put back into the list of main pitches',
+    suite: 'test-venue-splits.js',
+    apply: () => patchPitchModel("'C1', 'B1', 'A1'", "'C1', 'B1', 'B2', 'A1'"),
+    expect: ['B2 is NOT one of ours'],
+  },
+  {
+    name: 'halves are suffixed 1/2 instead of A/B',
+    suite: 'test-venue-splits.js',
+    apply: () => patchPitchModel("2: ['A', 'B'],", "2: ['1', '2'],"),
+    /* The one that matters is the shipped-layout check: renaming a suffix
+       renames every surface the site already has fixtures on. */
+    expect: ['Saturday derives exactly the shipped surfaces', 'halves get A and B'],
+  },
+  {
+    name: 'a whole pitch is given an A suffix',
+    suite: 'test-venue-splits.js',
+    apply: () => patchPitchModel("SPLIT_SUFFIXES = { 1: [''],", "SPLIT_SUFFIXES = { 1: ['A'],"),
+    expect: ['Saturday derives exactly the shipped surfaces', 'whole keeps the bare name'],
+  },
+  {
+    name: 'a group is given only the first part when a pitch is split',
+    suite: 'test-venue-splits.js',
+    apply: () => patchPitchModel(
+      '    SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));',
+      '    add(main + SPLIT_SUFFIXES[after][0]);'),
+    expect: ['whole pitch stays whole'],
+  },
+  {
+    name: 'a group loses its allocation entirely when a split changes',
+    suite: 'test-venue-splits.js',
+    apply: () => patchPitchModel(
+      '    SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));',
+      '    return;'),
+    expect: ['splitting a whole pitch gives both halves'],
+  },
+  {
+    name: 'the panel stops remapping groups when it changes a split',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '        nv[dayId].groups[ag] = api.remapGroupPitches(nv[dayId].groups[ag], oldSplits, newSplits);',
+      '        nv[dayId].groups[ag] = nv[dayId].groups[ag];'),
+    expect: ['keeps the ground it had'],
+  },
+  {
+    name: 'validateVenue trusts the payload’s pitches instead of rebuilding them',
+    suite: 'test-venue-splits.js',
+    apply: () => patch(path.join('netlify', 'functions', '_venue.js'),
+      '    const pitches = derivePitches(splits);',
+      '    const pitches = Array.isArray(src.pitches) && src.pitches.length ? src.pitches : derivePitches(splits);'),
+    expect: ['corrected, not trusted'],
+  },
+  {
+    name: 'splitsFromPitches rounds an odd surface count DOWN',
+    suite: 'test-venue-splits.js',
+    apply: () => patch(path.join('netlify', 'functions', '_venue.js'),
+      '    out[main] = n <= 1 ? 1 : (n <= 2 ? 2 : 4);',
+      '    out[main] = n >= 4 ? 4 : (n >= 2 ? 2 : 1);'),
+    expect: ['rounds up rather than dropping'],
+  },
+  {
+    name: 'the age-group rows offer pitches that are not in use that day',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '          .filter((main) => Number((v[dayId].splits || {})[main]) > 0)',
+      '          .filter(() => true)'),
+    expect: ['only pitches in use that day are offered'],
+  },
+  {
+    name: 'the day card stops showing pitches that are not in use',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '      const mains = MAINS.map((main) => {',
+      '      const mains = MAINS.filter((main) => Number(splits[main]) > 0).map((main) => {'),
+    expect: ['all fifteen main pitches show on Saturday', 'C1 shows as not used today'],
+  },
+  {
+    name: 'taking a pitch out of the day stops asking first',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '      this.confirmModal(msg, apply, { okLabel: `Remove ${main}`, wide: true });\n      return;',
+      '      apply();\n      return;'),
+    expect: ['taking a pitch out opens a confirm'],
+  },
+  {
+    name: 'a split change that strands saved fixtures stops warning',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '    const used = stranded.reduce((t, nm) => t + (usage[nm] || 0), 0);',
+      '    const used = 0;'),
+    expect: ['a split with saved matches on it asks first'],
+  },
+  {
+    name: 'the free-text pitch box is put back',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '  setPitchSplit(dayId, main, n) {',
+      '  addPitch(dayId) { return dayId; }\n\n  setPitchSplit(dayId, main, n) {'),
+    expect: ['no addPitch handler remains'],
+  },
+  {
+    name: 'the two DEFAULT_VENUE copies are allowed to drift apart',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('scores-data.js', "D3: 2, D2: 1, D1: 1", "D3: 1, D2: 1, D1: 1"),
+    expect: ['the server and front-end layouts are deep-equal', 'including Saturday splits'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -437,7 +560,8 @@ const problems = [];
 
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
-['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js'].forEach((f) => {
+['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
+ 'test-venue-splits.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

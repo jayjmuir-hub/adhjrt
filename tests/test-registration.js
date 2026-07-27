@@ -65,8 +65,16 @@ section('The shared block is genuinely shared');
 {
   const S = '/* ===== REGISTRATION WINDOW — SHARED BLOCK (start) =====';
   const E = '/* ===== REGISTRATION WINDOW — SHARED BLOCK (end) ===== */';
+  /* CRLF -> LF before comparing. NOT a softening of the check: git stores both
+     files LF-normalised, so the line endings in a working copy are a checkout
+     artefact of `core.autocrlf`, not drift in the code. Without this the check
+     fails on Windows the moment one of the two files is written by anything
+     other than git — which is exactly what happened on 27 Jul 2026, when a file
+     arriving over the device bridge with LF endings sat next to a sibling git
+     had checked out with CRLF and the two "differed" by one character per line.
+     Every real difference still shows. */
   const grab = (rel) => {
-    const t = readRepo(rel);
+    const t = readRepo(rel).replace(/\r\n/g, '\n');
     const i = t.indexOf(S), j = t.indexOf(E);
     return (i < 0 || j < 0) ? null : t.slice(i, j + E.length);
   };

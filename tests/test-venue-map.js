@@ -413,7 +413,11 @@ section('The map view: placing blocks on the real image');
 {
   const POS = { D5: { x: 12.4, y: 20.1 }, D3: { x: 28.4, y: 20.5 }, C4: { x: 11.1, y: 63 } };
   const m = C.venueMaps(clone(VENUE), POS, true)[0];
-  const blk = (name) => m.blocks.find((b) => b.name === name);
+  /* Falls back to an empty block rather than undefined. If a block stops being
+     rendered at all, the checks below should REPORT that — reading a field off
+     undefined throws instead, kills the process, and every check after this
+     point silently never runs. A suite that collapses proves nothing. */
+  const blk = (name) => m.blocks.find((b) => b.name === name) || {};
 
   check('a block with a position is placed', blk('D3').placed === true);
   check('a block with no position is NOT placed', blk('D2').placed === false);
@@ -433,7 +437,7 @@ section('The map view: placing blocks on the real image');
   /* The chip answers what a map is good at — who is over there — because there
      is no room on it for four pitch names. The schematic is where those live. */
   eq('the chip names the groups on the block', blk('C4').mapWho, 'U11');
-  eq('a shared block names both', C.venueMaps(clone(VENUE), { D4: { x: 20, y: 21 } }, true)[0].blocks.find((b) => b.name === 'D4').mapWho, 'U6 · U7');
+  eq('a shared block names both', (C.venueMaps(clone(VENUE), { D4: { x: 20, y: 21 } }, true)[0].blocks.find((b) => b.name === 'D4') || {}).mapWho, 'U6 · U7');
   check('the tooltip lists the actual pitches', /D3A, D3B/.test(blk('D3').mapTitle), blk('D3').mapTitle);
   check('…and the group in full', /U12 Mixed Contact/.test(blk('D3').mapTitle), blk('D3').mapTitle);
 
@@ -454,8 +458,10 @@ section('The lock');
 
 {
   const POS = { D3: { x: 30, y: 30 } };
-  const lockedBlk = C.venueMaps(clone(VENUE), POS, true)[0].blocks.find((b) => b.name === 'D3');
-  const openBlk = C.venueMaps(clone(VENUE), POS, false)[0].blocks.find((b) => b.name === 'D3');
+  /* `|| {}` for the same reason as the block lookup above: if D3 stops being
+     rendered, these checks should say so rather than throw and stop the file. */
+  const lockedBlk = C.venueMaps(clone(VENUE), POS, true)[0].blocks.find((b) => b.name === 'D3') || {};
+  const openBlk = C.venueMaps(clone(VENUE), POS, false)[0].blocks.find((b) => b.name === 'D3') || {};
 
   check('locked: the block does not invite a drag', /cursor:default/.test(lockedBlk.mapStyle), lockedBlk.mapStyle);
   check('unlocked: it does', /cursor:grab/.test(openBlk.mapStyle), openBlk.mapStyle);

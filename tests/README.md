@@ -78,5 +78,8 @@ first place. See step 1 above.
 | `_lib.js` | repo lookup, `check` / `eq` / `section` / `summary` |
 | `test-registration.js` | `registrationState`, `validateSettings`, the shared block, dates and timezones — 196 checks |
 | `test-registration-panel.js` | the `/organizer` Registration tab and the public register CTA, driven through the components — 184 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests |
+| `test-venue-map.js` | the Venue & days schematic and the draggable map — 283 checks |
+| `test-venue-splits.js` | the fifteen main pitches, whole/halves/quarters, and the rule that a group keeps the same **ground** when a split changes — 142 checks |
+| `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 60 faults, all caught by the named check |
 | `runall.ps1` | the explicit list |

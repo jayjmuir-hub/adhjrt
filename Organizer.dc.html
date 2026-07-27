@@ -436,20 +436,25 @@
               </div>
               <p style="color:#7f8794;font-size:12px;margin:0 0 12px;line-height:1.5">{{ d.hint }}</p>
 
-              <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
-                <sc-for list="{{ d.pitchChips }}" as="pc" hint-placeholder-count="6">
-                  <span style="display:inline-flex;align-items:center;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.16);border-radius:999px;padding:6px 6px 6px 12px;font-size:12px;font-weight:700;color:#fff">
-                    {{ pc.name }}<span style="color:#7f8794;font-weight:600">{{ pc.usageLabel }}</span>
-                    <button onClick="{{ pc.onRemove }}" aria-label="Remove pitch" title="{{ pc.removeTitle }}" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:15px;line-height:1;padding:2px 6px">&times;</button>
-                  </span>
-                </sc-for>
-                <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#7f8794;align-self:center">No pitches on this day yet.</span></sc-if>
-              </div>
-
-              <div style="display:flex;gap:8px;max-width:420px">
-                <input value="{{ d.newPitch }}" onInput="{{ d.onNewPitchInput }}" onKeyDown="{{ d.onNewPitchKey }}" placeholder="Add a pitch (e.g. C4 or B1A)" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 12px;color:#fff;font-size:13px">
-                <button onClick="{{ d.onAddPitch }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">+ Add pitch</button>
-              </div>
+              <!-- Every main pitch, whether or not it is used today. A pitch
+                   you are not using is a decision, and one you cannot see is
+                   one you cannot change. Names are derived from the split, so
+                   there is nothing to type and nothing to mistype. -->
+              <sc-for list="{{ d.mains }}" as="mp" hint-placeholder-count="15">
+                <div style="{{ mp.rowStyle }}">
+                  <div style="font-weight:800;font-size:13px;color:#fff">{{ mp.name }}</div>
+                  <div>
+                    <div style="font-size:11px;font-weight:600;color:{{ mp.surfaceColor }}">{{ mp.surfaceLabel }}</div>
+                    <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:10px;font-weight:700;color:#f5c518;margin-top:2px">{{ mp.usageLabel }}</div></sc-if>
+                  </div>
+                  <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+                    <sc-for list="{{ mp.choices }}" as="sc" hint-placeholder-count="4">
+                      <button onClick="{{ sc.onPick }}" style="{{ sc.style }}">{{ sc.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#f5c518;font-weight:600;margin-top:10px">Nothing is in use on this day yet.</div></sc-if>
             </div>
           </sc-for>
 
@@ -470,12 +475,21 @@
                   </sc-for>
                 </select>
                 <div>
-                  <div style="display:flex;gap:14px;flex-wrap:wrap">
-                    <sc-for list="{{ g.pitchToggles }}" as="pt" hint-placeholder-count="6">
-                      <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:{{ pt.color }};cursor:pointer">
-                        <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:15px;height:15px;accent-color:#17A34A">
-                        {{ pt.name }}
-                      </label>
+                  <!-- Grouped by main pitch. Flat, eighteen surfaces read as
+                       eighteen identical boxes; grouped, they read as the
+                       pitches actually are. The name button takes or drops the
+                       whole pitch in one click. -->
+                  <div style="display:flex;gap:12px;flex-wrap:wrap">
+                    <sc-for list="{{ g.pitchGroups }}" as="pg" hint-placeholder-count="4">
+                      <div style="display:inline-flex;align-items:center;gap:7px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:5px 9px">
+                        <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
+                        <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
+                          <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:{{ pt.color }};cursor:pointer">
+                            <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:14px;height:14px;accent-color:#17A34A">
+                            {{ pt.short }}
+                          </label>
+                        </sc-for>
+                      </div>
                     </sc-for>
                   </div>
                   <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#f5c518;font-weight:600;margin-top:4px">No pitches chosen yet</div></sc-if>
@@ -778,7 +792,6 @@ class Component extends DCLogic {
        tab is opened. */
     venue: null, venueSaved: null, venueUsage: null,
     vLoaded: false, vBusy: false, vError: '', vSuccess: '',
-    vNewPitch: { day1: '', day2: '' },
     /* Where each block sits on assets/venue-map.png, as percentages. Working
        copy and last-saved copy, exactly like `venue` above, so one Save covers
        both and the dirty check sees either changing. Stored server-side under
@@ -856,35 +869,59 @@ class Component extends DCLogic {
     const dirty = this.venueDirty();
 
     const dayTint = { day1: '#E11B22', day2: '#17A34A' };
+    const MAINS = (s.api && s.api.MAIN_PITCHES) || [];
+    const SPLIT_CHOICES = [
+      { value: 0, label: 'Not used' },
+      { value: 1, label: 'Whole' },
+      { value: 2, label: 'Halves' },
+      { value: 4, label: 'Quarters' },
+    ];
+
     const days = !v ? [] : ['day1', 'day2'].map((id) => {
       const day = v[id];
       const usage = (s.venueUsage || {})[id] || {};
+      const splits = day.splits || {};
       const groupCount = Object.keys(day.groups || {}).length;
+      const surfaceCount = (day.pitches || []).length;
+
+      /* EVERY main pitch shows, in use or not — Jay's ask, and the reason is
+         sound: a pitch you are not using this day is a decision, and one you
+         cannot see is one you cannot change. An unused pitch is simply on
+         "Not used". */
+      const mains = MAINS.map((main) => {
+        const n = Number(splits[main]) || 0;
+        const surfaces = (s.api && s.api.derivePitches) ? s.api.derivePitches({ [main]: n }) : [];
+        const used = surfaces.reduce((t, name) => t + (usage[name] || 0), 0);
+        return {
+          name: main,
+          inUse: n > 0,
+          surfaceLabel: n === 0 ? 'not used today' : surfaces.join(' · '),
+          surfaceColor: n === 0 ? '#5a616d' : '#aeb4bf',
+          /* Saved fixtures already sitting on this pitch. Changing a split
+             renames them out from under the draw, so the count is shown before
+             the change rather than after it. */
+          usageLabel: used ? `${used} saved match${used === 1 ? '' : 'es'}` : '',
+          rowStyle: 'display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.07)',
+          choices: SPLIT_CHOICES.map((c) => ({
+            label: c.label,
+            style: (n === c.value)
+              ? 'font-weight:800;font-size:11px;padding:6px 11px;border-radius:7px;cursor:pointer;background:#17A34A;color:#fff;border:1px solid #17A34A;white-space:nowrap'
+              : 'font-weight:700;font-size:11px;padding:6px 11px;border-radius:7px;cursor:pointer;background:transparent;color:#7f8794;border:1px solid rgba(255,255,255,0.16);white-space:nowrap',
+            onPick: () => this.setPitchSplit(id, main, c.value),
+          })),
+        };
+      });
+
       return {
         id,
         label: day.label,
         tint: dayTint[id],
-        summary: `${(day.pitches || []).length} pitch${(day.pitches || []).length === 1 ? '' : 'es'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${day.date}`,
+        summary: `${surfaceCount} playing surface${surfaceCount === 1 ? '' : 's'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${day.date}`,
         hint: id === 'day1'
-          ? 'The 2025 map had 18 playing surfaces here — the big D1/D2 pitches, and the B1 and A1 areas each split into four small ones.'
-          : 'The 2025 map had 10 here. D4 and D5 are not used on Sunday.',
-        noPitches: !(day.pitches || []).length,
-        pitchChips: (day.pitches || []).map((name) => {
-          const used = usage[name] || 0;
-          return {
-            name,
-            // Blank rather than "· 0 matches": a nil count is noise on 18 chips.
-            usageLabel: used ? ` · ${used} match${used === 1 ? '' : 'es'}` : '',
-            removeTitle: used
-              ? `Remove ${name} — ${used} saved match${used === 1 ? '' : 'es'} are on it`
-              : `Remove ${name}`,
-            onRemove: () => this.removePitch(id, name),
-          };
-        }),
-        newPitch: (s.vNewPitch || {})[id] || '',
-        onNewPitchInput: (e) => this.setState((st) => ({ vNewPitch: { ...st.vNewPitch, [id]: e.target.value }, vError: '' })),
-        onNewPitchKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.addPitch(id); } },
-        onAddPitch: () => this.addPitch(id),
+          ? 'The 2025 running order: D5, D4 and D3 in halves, B1 and A1 in quarters, D2, D1, C4 and C5 whole.'
+          : 'The 2025 running order: C4, B1 and A1 in halves, everything else whole. D4 and D5 are not used on Sunday.',
+        mains,
+        noPitches: surfaceCount === 0,
       };
     });
 
@@ -902,12 +939,35 @@ class Component extends DCLogic {
           { value: 'day2', label: v.day2.short || 'Sun' },
         ]),
         onDayChange: (e) => { const val = e.target.value; if (val) this.setGroupDay(g.id, val); },
-        pitchToggles: !dayId ? [] : (v[dayId].pitches || []).map((name) => ({
-          name,
-          on: chosen.includes(name),
-          color: chosen.includes(name) ? '#fff' : '#7f8794',
-          onToggle: () => this.toggleGroupPitch(g.id, dayId, name),
-        })),
+        /* Grouped by main pitch rather than one flat run of surfaces. With
+           B1 in quarters and A1 in quarters that flat list was eighteen
+           identical-looking boxes; grouped, it reads as the pitches actually
+           are. Only pitches in use that day appear — the rest are set to
+           "Not used" in the day card above and have no surfaces to tick. */
+        pitchGroups: !dayId ? [] : MAINS
+          .filter((main) => Number((v[dayId].splits || {})[main]) > 0)
+          .map((main) => {
+            const surfaces = (v[dayId].pitches || []).filter((nm) => nm === main || (nm.length === main.length + 1 && nm.indexOf(main) === 0));
+            const onCount = surfaces.filter((nm) => chosen.includes(nm)).length;
+            return {
+              main,
+              whole: surfaces.length === 1,
+              allOn: onCount === surfaces.length && surfaces.length > 0,
+              someOn: onCount > 0,
+              headStyle: `font-size:10px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#fff' : '#5a616d'}`,
+              /* One click to take or drop a whole pitch. With quarters that is
+                 four ticks saved every time, and taking all four is the common
+                 case — U8 has all of B1. */
+              onToggleAll: () => this.toggleGroupMain(g.id, dayId, main, surfaces, onCount !== surfaces.length),
+              surfaces: surfaces.map((name) => ({
+                name,
+                short: name.length > main.length ? name.slice(main.length) : '•',
+                on: chosen.includes(name),
+                color: chosen.includes(name) ? '#fff' : '#7f8794',
+                onToggle: () => this.toggleGroupPitch(g.id, dayId, name),
+              })),
+            };
+          }),
         noneChosen: !!dayId && !chosen.length,
       };
     });
@@ -1273,17 +1333,77 @@ class Component extends DCLogic {
     });
   }
 
-  addPitch(dayId) {
-    const name = (this.state.vNewPitch[dayId] || '').trim();
-    if (!name) return;
-    const existing = ((this.state.venue || {})[dayId] || {}).pitches || [];
-    // Case-insensitive: "c4" and "C4" being two pitches is never what anyone meant.
-    if (existing.some((p) => p.toLowerCase() === name.toLowerCase())) {
-      this.setState((s) => ({ vNewPitch: { ...s.vNewPitch, [dayId]: '' }, vError: `${name} is already on that day.` }));
+  /* Sets how a main pitch is split on ONE day — 0 not used, 1 whole, 2 halves,
+     4 quarters. This is the only way pitch names come into existence now; the
+     free-text box that used to sit here is gone, and with it the class of bug
+     that made `C4`, `c4` and `Pitch C4` three different pitches to the clash
+     check.
+
+     THE GROUND A GROUP HAS DOES NOT CHANGE, only what it is called. Split a
+     pitch a group had whole and it gets both halves; merge them and a group on
+     either half gets the whole. remapGroupPitches() — the server's own
+     function, re-exported — does that, so the panel cannot disagree with what
+     will be stored. */
+  setPitchSplit(dayId, main, n) {
+    const api = this.state.api;
+    const v = this.state.venue;
+    if (!v || !api || !api.remapGroupPitches) return;
+    const before = Number((v[dayId].splits || {})[main]) || 0;
+    if (before === n) return;
+
+    const apply = () => this.editVenue((nv) => {
+      const oldSplits = { ...(nv[dayId].splits || {}) };
+      const newSplits = { ...oldSplits };
+      if (n === 0) delete newSplits[main]; else newSplits[main] = n;
+      nv[dayId].splits = newSplits;
+      nv[dayId].pitches = api.derivePitches(newSplits);
+      Object.keys(nv[dayId].groups || {}).forEach((ag) => {
+        nv[dayId].groups[ag] = api.remapGroupPitches(nv[dayId].groups[ag], oldSplits, newSplits);
+      });
+    });
+
+    /* Taking a pitch out of the day is the destructive one: any group on it
+       loses it, and any saved fixture there is left pointing at a surface that
+       no longer exists. Say how many before asking. */
+    if (n === 0) {
+      const surfaces = api.derivePitches({ [main]: before });
+      const usage = (this.state.venueUsage || {})[dayId] || {};
+      const used = surfaces.reduce((t, nm) => t + (usage[nm] || 0), 0);
+      const groups = Object.keys(v[dayId].groups || {})
+        .filter((ag) => (v[dayId].groups[ag] || []).some((nm) => surfaces.includes(nm)));
+      let msg = `Take ${main} out of ${v[dayId].label}?`;
+      if (groups.length) msg += `\n\nIt is currently used by: ${groups.map((a) => a.toUpperCase()).join(', ')}. That allocation will be cleared.`;
+      if (used) msg += `\n\n${used} saved match${used === 1 ? '' : 'es'} are on it and will be left on a surface that no longer exists.`;
+      this.confirmModal(msg, apply, { okLabel: `Remove ${main}`, wide: true });
       return;
     }
-    this.editVenue((v) => { v[dayId].pitches = [...v[dayId].pitches, name]; });
-    this.setState((s) => ({ vNewPitch: { ...s.vNewPitch, [dayId]: '' } }));
+
+    /* Changing the split renames the surfaces. Groups follow automatically, but
+       saved fixtures do not, so a change with matches on it is worth a look. */
+    const usage = (this.state.venueUsage || {})[dayId] || {};
+    const oldSurfaces = before ? api.derivePitches({ [main]: before }) : [];
+    const stranded = oldSurfaces.filter((nm) => !api.derivePitches({ [main]: n }).includes(nm));
+    const used = stranded.reduce((t, nm) => t + (usage[nm] || 0), 0);
+    if (used) {
+      const word = { 1: 'whole', 2: 'halves', 4: 'quarters' }[n];
+      this.confirmModal(
+        `Change ${main} to ${word} on ${v[dayId].label}?\n\n${used} saved match${used === 1 ? '' : 'es'} are on ${stranded.join(', ')}, which will no longer exist. Age group allocations move across on their own; fixtures do not.`,
+        apply, { okLabel: `Set ${main} to ${word}`, wide: true }
+      );
+      return;
+    }
+    apply();
+  }
+
+  /* Take or drop a whole main pitch for one age group in one click. With B1 in
+     quarters that is four ticks, and "all of it" is the common case. */
+  toggleGroupMain(ageId, dayId, main, surfaces, turnOn) {
+    this.editVenue((v) => {
+      const cur = v[dayId].groups[ageId] || [];
+      v[dayId].groups[ageId] = turnOn
+        ? cur.concat(surfaces.filter((n) => !cur.includes(n)))
+        : cur.filter((n) => !surfaces.includes(n));
+    });
   }
 
   /* opts: { okLabel, wide }. The confirm button says what it does — "Remove
@@ -1317,23 +1437,6 @@ class Component extends DCLogic {
        strand vBusy:true and wedge the panel, and the guard costs nothing. */
     Promise.resolve(isPrompt ? modal.onConfirm(value) : modal.onConfirm())
       .catch((e) => console.error('dialog action failed:', e));
-  }
-
-  removePitch(dayId, name) {
-    const used = ((this.state.venueUsage || {})[dayId] || {})[name] || 0;
-    const groups = Object.keys(((this.state.venue || {})[dayId] || {}).groups || {})
-      .filter((ag) => (this.state.venue[dayId].groups[ag] || []).includes(name));
-    let msg = `Remove ${name} from this day?`;
-    if (used) msg += `\n\n${used} saved match${used === 1 ? '' : 'es'} are on it. Those will be left on a pitch that no longer exists and will need moving.`;
-    if (groups.length) msg += `\n\nIt is currently ticked for: ${groups.map((a) => a.toUpperCase()).join(', ')}.`;
-    this.confirmModal(msg, () => {
-      this.editVenue((v) => {
-        v[dayId].pitches = v[dayId].pitches.filter((p) => p !== name);
-        Object.keys(v[dayId].groups).forEach((ag) => {
-          v[dayId].groups[ag] = (v[dayId].groups[ag] || []).filter((p) => p !== name);
-        });
-      });
-    }, { okLabel: 'Remove pitch', wide: true });
   }
 
   /* Moving a group to the other day CLEARS its pitches, because the two days

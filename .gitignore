@@ -1,0 +1,17 @@
+# Scratch files, never part of the site.
+#
+# _commitmsg.txt is how a multi-line commit message gets to `git commit -F`:
+# passing one with `-m` gets it shredded into pathspecs and the commit silently
+# does not happen (see CLAUDE.md). It is written, used and deleted — but a
+# `git add -A` that runs before the delete will happily commit it, which is
+# exactly what happened on 27 Jul 2026.
+#
+# It matters more here than in most repos: there is no publish directory, so
+# the repo root IS the deployed site and anything left here is served at
+# adhjrt.com/<filename>.
+_commitmsg.txt
+_msg*.txt
+*.ps1.bak
+
+# Node, if anything ever installs here. The site itself has no build step.
+node_modules/

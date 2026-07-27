@@ -208,8 +208,20 @@ const FAULTS = [
   {
     name: 'B1 loses its place on the drawing',
     suite: 'test-venue-map.js',
-    apply: () => patch('Organizer.dc.html', "B1: '3 / 3', ", ''),
+    apply: () => patch('Organizer.dc.html', "B1: '2 / 4', ", ''),
     expect: ['block B1 has a place on the drawing'],
+  },
+  {
+    name: 'the C blocks are staggered back above the B row',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "C4: '2 / 1', C5: '2 / 2', B2: '2 / 3',", "C4: '1 / 6', C5: '1 / 7', B2: '2 / 3',"),
+    expect: ['parallel with the B blocks'],
+  },
+  {
+    name: 'the A blocks are moved to the left of the B blocks',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', "B1: '2 / 4', A1: '2 / 5',", "B1: '2 / 5', A1: '2 / 4',"),
+    expect: ['right of the B blocks'],
   },
   {
     name: 'two blocks are given the same cell',

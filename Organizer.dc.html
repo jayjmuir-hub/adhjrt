@@ -688,16 +688,27 @@ const MANAGER_AGE_GROUPS = [
    Every cell is derived, so a pitch added in the panel appears here by itself
    and nothing can go stale. */
 
-/* Roughly where each block sits on the real map, as `grid-area: row / column`.
-   Read off assets/venue-map.png: the D row along the top, C4/C5 down the left,
-   B1 and B2 bottom-centre, the A blocks on the right. Only the arrangement is
-   meaningful — this is orientation, not distance. A block nobody has heard of
-   is still drawn; it just goes underneath. */
+/* Roughly where each block sits, as `grid-area: row / column`. Only the
+   arrangement is meaningful — this is orientation, not distance.
+
+   TWO ROWS THAT MATTER:
+     row 1  the D row along the top — D5, D4, D3, D2, D1.
+     row 2  C4, C5, B2, B1, A1 — THE C, B AND A BLOCKS ARE PARALLEL, left to
+            right across the site. Corrected on Jay's say-so 27 Jul 2026; they
+            were previously staggered across two rows, which read as though the
+            C pitches sat above the B ones. He walks the place; the wayfinding
+            map does not settle it either way.
+
+   Row 3 and below are the blocks no age group currently uses (C1, C2, C3, A2,
+   A3, A4) — kept so a pitch typed into one of them still lands somewhere
+   sensible, with the C's left and the A's right as they are on the ground.
+
+   A block nobody has heard of is still drawn; it just goes underneath. */
 const BLOCK_GRID = {
   D5: '1 / 1', D4: '1 / 2', D3: '1 / 3', D2: '1 / 4', D1: '1 / 5',
-  C4: '2 / 1', C5: '2 / 2', A1: '2 / 5',
-  C1: '3 / 1', B2: '3 / 2', B1: '3 / 3', A2: '3 / 5',
-  C3: '4 / 1', C2: '4 / 2', A3: '4 / 4', A4: '4 / 5',
+  C4: '2 / 1', C5: '2 / 2', B2: '2 / 3', B1: '2 / 4', A1: '2 / 5',
+  C3: '3 / 1', C2: '3 / 2', C1: '3 / 3', A2: '3 / 4', A3: '3 / 5',
+  A4: '4 / 5',
 };
 
 /* One colour per age group. The colour is the SECONDARY cue — every cell also

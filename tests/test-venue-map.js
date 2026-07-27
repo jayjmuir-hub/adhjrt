@@ -140,6 +140,40 @@ section('Pitches land in the right block');
     const areas = m.blocks.map((b) => (b.style.match(/grid-area:(\d+ \/ \d+)/) || [])[1]);
     check(`${m.label}: no two blocks are placed in the same cell`, new Set(areas).size === areas.length, areas.join(' '));
   });
+
+  /* THE C, B AND A BLOCKS SIT ON ONE ROW, parallel across the site. Corrected
+     on Jay's say-so — he walks the place. They were staggered over two rows
+     before, which read as though the C pitches were above the B ones. This is
+     the kind of thing that gets quietly undone by the next person tidying the
+     table, so it is asserted rather than left to the comment. */
+  const rowOf = (block) => {
+    const all = C.venueMaps({
+      day1: { label: 'x', pitches: ['C4', 'C5', 'B1', 'B2', 'A1', 'D3'], groups: {} },
+      day2: { label: 'y', pitches: [], groups: {} },
+    })[0];
+    const b = all.blocks.find((bb) => bb.name === block);
+    return b ? Number((b.style.match(/grid-area:(\d+)/) || [])[1]) : null;
+  };
+  const bRow = rowOf('B1');
+  check('B1 and B2 are on the same row as each other', rowOf('B2') === bRow);
+  ['C4', 'C5', 'A1'].forEach((b) =>
+    check(`${b} is parallel with the B blocks, not above or below them`, rowOf(b) === bRow, `${b} row ${rowOf(b)}, B row ${bRow}`));
+  check('the D blocks are still the row above', rowOf('D3') === bRow - 1, `D3 row ${rowOf('D3')}`);
+
+  /* Left to right across the site: C, then B, then A. A row that is parallel
+     but in the wrong order is no better than a staggered one. */
+  const colOf = (block) => {
+    const all = C.venueMaps({
+      day1: { label: 'x', pitches: ['C4', 'C5', 'B1', 'B2', 'A1'], groups: {} },
+      day2: { label: 'y', pitches: [], groups: {} },
+    })[0];
+    const b = all.blocks.find((bb) => bb.name === block);
+    return b ? Number((b.style.match(/grid-area:\d+ \/ (\d+)/) || [])[1]) : null;
+  };
+  check('C4 is left of C5', colOf('C4') < colOf('C5'));
+  check('the C blocks are left of the B blocks', colOf('C5') < colOf('B2'));
+  check('B2 is left of B1, as on the map', colOf('B2') < colOf('B1'));
+  check('the A blocks are right of the B blocks', colOf('B1') < colOf('A1'));
 }
 
 /* ====================================================================== */

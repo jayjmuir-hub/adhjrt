@@ -379,8 +379,11 @@
                     <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
                       <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
                         <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">
-                          <div style="font-weight:800;font-size:11px;letter-spacing:.4px;line-height:1.2">{{ blk.name }}</div>
-                          <div style="font-size:10px;font-weight:700;line-height:1.2;margin-top:1px">{{ blk.mapWho }}</div>
+                          <div style="display:flex;align-items:baseline;justify-content:center;gap:5px">
+                            <div style="{{ blk.mapNameStyle }}">{{ blk.name }}</div>
+                            <div style="{{ blk.mapSplitStyle }}">{{ blk.mapSplit }}</div>
+                          </div>
+                          <div style="{{ blk.mapWhoStyle }}">{{ blk.mapWho }}</div>
                         </div>
                       </sc-if>
                     </sc-for>
@@ -758,6 +761,114 @@ const AGE_TINT = {
   u18b: '#5B8DEF', u18g: '#40C4B4',
 };
 
+/* ============================================================
+   READABLE TEXT ON A COLOURED CHIP.
+   ------------------------------------------------------------
+   The map chips sit on top of somebody else's artwork — a bright, light
+   drawing with its own white-on-green labels. White text on every tint does
+   not work: U8 is #F5C518 and U9 is #8DC63F, and white on those is around
+   1.8:1, which is not "a bit hard to read", it is unreadable.
+
+   So the ink is CHOSEN, not fixed. These are the real WCAG formulas rather
+   than an eyeballed brightness fudge, because the whole point is to be able to
+   assert a contrast RATIO in a test instead of arguing about whether something
+   looks alright on the screen it was written on.
+   ============================================================ */
+
+/* WCAG 2.1 relative luminance of a #rrggbb colour. */
+function relLuminance(hex) {
+  const h = String(hex || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return 0;
+  const lin = [0, 2, 4].map((i) => {
+    const c = parseInt(h.substr(i, 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+}
+
+/* WCAG contrast ratio between two colours. 1 = identical, 21 = black on white. */
+function contrastRatio(a, b) {
+  const la = relLuminance(a), lb = relLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/* The two inks a chip may use. Near-black rather than pure black so it matches
+   the rest of the panel; near-white for the same reason. */
+const CHIP_INK_DARK = '#111317';
+const CHIP_INK_LIGHT = '#FFFFFF';
+
+/* WCAG AA for text this size. Not decoration: it is the number the test
+   asserts, which is the only reason any of this is worth writing. */
+const CHIP_MIN_CONTRAST = 4.5;
+
+/* Picks the ink for a chip carrying one or more tints.
+
+   MAXIMISES THE WORST CASE, not the average. A time-shared block is a gradient
+   of two tints and one piece of text lies across both, so the ink has to be
+   legible on the harder of them — averaging would let a chip be beautiful on
+   one half and unreadable on the other. U6 red plus U7 orange is exactly that
+   case: white is 4.8:1 on the red but 2.9:1 on the orange, so dark wins. */
+function chipInk(tints) {
+  const list = (Array.isArray(tints) ? tints : [tints]).filter(Boolean);
+  if (!list.length) return CHIP_INK_LIGHT;
+  const worst = (ink) => list.reduce((m, t) => Math.min(m, contrastRatio(ink, t)), Infinity);
+  return worst(CHIP_INK_DARK) >= worst(CHIP_INK_LIGHT) ? CHIP_INK_DARK : CHIP_INK_LIGHT;
+}
+
+/* Moves a colour a fraction of the way toward another. */
+function mixHex(hex, toward, amount) {
+  const h = String(hex || '').replace('#', ''), g = String(toward || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h) || !/^[0-9a-fA-F]{6}$/.test(g)) return hex;
+  const k = Math.max(0, Math.min(1, amount));
+  const ch = [0, 2, 4].map((i) => {
+    const a = parseInt(h.substr(i, 2), 16), b = parseInt(g.substr(i, 2), 16);
+    return Math.round(a + (b - a) * k).toString(16).padStart(2, '0');
+  });
+  return '#' + ch.join('').toUpperCase();
+}
+
+/* Even after picking the better ink, two of the fifteen tints land just under
+   4.5:1 and a red/orange time-share lands at 3.9. Rather than accept that or
+   hand-edit the palette — which is shared with the schematic and the standings
+   — the chip's own fill is nudged away from the ink until it clears.
+
+   BOUNDED AND ONLY WHEN NEEDED. A tint that already passes is returned
+   untouched, and the shift is capped at 40% so a colour cannot drift into
+   being a different colour: past that the chip is drawn as-is rather than
+   quietly becoming pastel. Most cases need one or two 5% steps. */
+function chipFill(tints, ink) {
+  const away = ink === CHIP_INK_DARK ? '#FFFFFF' : '#000000';
+  return (Array.isArray(tints) ? tints : [tints]).map((t) => {
+    let c = t;
+    for (let step = 1; step <= 8 && contrastRatio(ink, c) < CHIP_MIN_CONTRAST; step += 1) {
+      c = mixHex(t, away, step * 0.05);
+    }
+    return c;
+  });
+}
+
+/* How a block is cut up, from the number of surfaces it has that day. Shown on
+   the chip so the split can be read off the map without switching to the
+   schematic — Jay, 27 Jul 2026.
+
+   A COUNT, NOT A WORD. "QUARTERS" spelled out made the chips wide enough to
+   overlap each other on the drawing, which cost more legibility than it
+   bought; '×4' says the same thing in two characters. The full wording is in
+   the tooltip along with the surface names. */
+function splitMark(surfaceCount) {
+  return `×${surfaceCount}`;
+}
+
+/* The same fact in words, for the tooltip and anywhere with room. An
+   unexpected count is reported as itself rather than rounded to a word that
+   would be a lie. */
+function splitLabel(surfaceCount) {
+  if (surfaceCount === 1) return 'whole';
+  if (surfaceCount === 2) return 'halves';
+  if (surfaceCount === 4) return 'quarters';
+  return `${surfaceCount} surfaces`;
+}
+
 /* 'D5A' -> 'D5', 'C4B' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
    sub-pitch; everything up to and including the last digit is the block.
 
@@ -1063,13 +1174,23 @@ class Component extends DCLogic {
         const at = pos[b];
         const placed = !!(at && Number.isFinite(Number(at.x)) && Number.isFinite(Number(at.y)));
 
-        let chipBg, chipBorder;
-        if (!blockUsers.length) { chipBg = 'rgba(12,12,14,0.86)'; chipBorder = '1px dashed rgba(255,255,255,0.3)'; }
-        else if (blockUsers.length === 1) { chipBg = blockTints[0] + 'E0'; chipBorder = `1px solid ${blockTints[0]}`; }
-        else {
-          const stops = blockTints.map((t, i) => `${t}E0 ${(i * 100) / blockTints.length}%, ${t}E0 ${((i + 1) * 100) / blockTints.length}%`).join(', ');
-          chipBg = `linear-gradient(100deg, ${stops})`;
-          chipBorder = '1px solid rgba(255,255,255,0.6)';
+        /* THE CHIP IS OPAQUE. It used to be the tint at 'E0' — 88% — and the
+           map showed through every label. On a drawing this bright and this
+           busy that alone cost more legibility than the font size did.
+
+           The rim is near-black rather than the tint: the tint against a light
+           green pitch has almost no edge, and without an edge two chips that
+           overlap read as one. */
+        let chipBg, chipBorder, chipFg;
+        if (!blockUsers.length) {
+          chipBg = '#111317'; chipBorder = '1px dashed rgba(255,255,255,0.45)'; chipFg = '#CFD4DC';
+        } else {
+          chipFg = chipInk(blockTints);
+          const fills = chipFill(blockTints, chipFg);
+          chipBorder = '2px solid rgba(0,0,0,0.55)';
+          chipBg = fills.length === 1
+            ? fills[0]
+            : `linear-gradient(100deg, ${fills.map((t, i) => `${t} ${(i * 100) / fills.length}%, ${t} ${((i + 1) * 100) / fills.length}%`).join(', ')})`;
         }
 
         return {
@@ -1081,9 +1202,15 @@ class Component extends DCLogic {
           placed,
           notPlaced: !placed,
           mapWho: blockUsers.length ? blockUsers.map((a) => a.toUpperCase()).join(' · ') : 'free',
+          /* How the block is cut up, on the chip, so it can be read off the map
+             without switching views. Kept on the same line as the name and set
+             a size down, because it is the answer to a second question. */
+          mapSplit: splitMark(byBlock[b].length),
+          /* The tooltip carries what the chip cannot: the word for the split
+             and every surface name on the block. */
           mapTitle: blockUsers.length
-            ? `${b} — ${byBlock[b].join(', ')} — ${blockUsers.map(nameOf).join(', ')}`
-            : `${b} — ${byBlock[b].join(', ')} — no age group on it`,
+            ? `${b} — ${splitLabel(byBlock[b].length)}: ${byBlock[b].join(', ')} — ${blockUsers.map(nameOf).join(', ')}`
+            : `${b} — ${splitLabel(byBlock[b].length)}: ${byBlock[b].join(', ')} — no age group on it`,
           /* translate(-50%,-50%) so the stored percentage is the block's CENTRE.
              Anchoring by a corner would make a block near the right edge jump
              when the map is resized, because the offset and the box width scale
@@ -1092,9 +1219,16 @@ class Component extends DCLogic {
           mapStyle: (placed
             ? `position:absolute;left:${at.x}%;top:${at.y}%;transform:translate(-50%,-50%);`
             : 'position:relative;')
-            + `background:${chipBg};border:${chipBorder};border-radius:8px;padding:5px 9px;text-align:center;color:#fff;`
+            + `background:${chipBg};border:${chipBorder};border-radius:8px;padding:6px 11px;text-align:center;color:${chipFg};`
             + `box-shadow:0 3px 10px rgba(0,0,0,.55);white-space:nowrap;user-select:none;`
             + (locked ? 'cursor:default;' : 'cursor:grab;touch-action:none;'),
+          /* The name and the split share a line, so the split has to be dimmed
+             rather than coloured — a second colour would have to be contrast-
+             checked against the tint all over again, and there is no shade that
+             works on all fifteen. Opacity keeps whatever chipInk() proved. */
+          mapNameStyle: 'font-weight:900;font-size:14px;letter-spacing:.3px;line-height:1.15',
+          mapSplitStyle: 'font-size:10px;font-weight:800;letter-spacing:.4px;opacity:.72;text-transform:uppercase',
+          mapWhoStyle: 'font-size:11px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.92',
           pitches: byBlock[b].map((p) => {
             const users = usersOf[p] || [];
             const tints = users.map((ag) => AGE_TINT[ag] || '#7f8794');

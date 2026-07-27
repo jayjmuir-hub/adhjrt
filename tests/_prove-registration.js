@@ -551,6 +551,85 @@ const FAULTS = [
     apply: () => patch('scores-data.js', "D3: 2, D2: 1, D1: 1", "D3: 1, D2: 1, D1: 1"),
     expect: ['the server and front-end layouts are deep-equal', 'including Saturday splits'],
   },
+
+  /* ---- the map chips being readable -----------------------------------
+     Every one of these was possible before 27 Jul 2026 and one of them was
+     actually shipped: white text on a see-through chip. */
+
+  {
+    name: 'the chip ink goes back to always-white',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      'text-align:center;color:${chipFg};', 'text-align:center;color:#fff;'),
+    expect: ['carries dark ink', 'not hard-coded to white'],
+  },
+  {
+    name: 'the chip is made see-through again (the original bug)',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '            ? fills[0]', "            ? fills[0] + 'E0'"),
+    expect: ['the chip is opaque'],
+  },
+  {
+    name: 'a time-shared chip picks its ink from the first tint only',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      '  const worst = (ink) => list.reduce((m, t) => Math.min(m, contrastRatio(ink, t)), Infinity);',
+      '  const worst = (ink) => contrastRatio(ink, list[0]);'),
+    expect: ['time-share chip takes dark ink', 'clears'],
+  },
+  {
+    name: 'the contrast top-up is removed, leaving two tints just short',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      '    for (let step = 1; step <= 8 && contrastRatio(ink, c) < CHIP_MIN_CONTRAST; step += 1) {',
+      '    for (let step = 1; step <= 0; step += 1) {'),
+    expect: ['clears'],
+  },
+  {
+    name: 'the top-up is applied to every tint instead of only the ones that need it',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '    let c = t;', '    let c = mixHex(t, away, 0.05);'),
+    expect: ['is left exactly as it is', 'need no adjustment'],
+  },
+  {
+    name: 'relLuminance drops the sRGB gamma step',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      '    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);',
+      '    return c;'),
+    /* Note what does NOT catch this: the contrast ratios still clear 4.5,
+       because the top-up compensates for the worse ink choice. The damage
+       shows as more colours being nudged than need to be — and, directly, as
+       mid-grey reading 50% instead of 21.6%. */
+    expect: ['the gamma step is applied', 'need no adjustment'],
+  },
+  {
+    name: 'contrastRatio drops the +0.05 offsets, so dark colours score absurdly well',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      '  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);',
+      '  return Math.max(la, lb) / Math.min(la, lb);'),
+    expect: ['black on white is the maximum ratio', 'white ink on U6 red', 'clears'],
+  },
+  {
+    name: 'the block name on the map shrinks back to 11px',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      "mapNameStyle: 'font-weight:900;font-size:14px;", "mapNameStyle: 'font-weight:900;font-size:11px;"),
+    expect: ['the block name is at least 14px'],
+  },
+  {
+    name: 'every chip reports its pitch as whole',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '  return `×${surfaceCount}`;', "  return '×1';"),
+    expect: ['is in halves on Saturday, and says so', 'B1 is in quarters'],
+  },
+  {
+    name: 'the tooltip stops saying how the pitch is split',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html', '${splitLabel(byBlock[b].length)}: ', ''),
+    expect: ['the tooltip spells it out'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

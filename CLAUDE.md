@@ -925,6 +925,48 @@ behaviour directly so nobody re-learns it.
   the map image, and someone fixing one must not lose the other.
 - **Dragging is locked by default.** The screen is mostly read; blocks sliding
   under a mis-click would be worse than one deliberate unlock.
+
+#### Making the chips readable (added 27 Jul 2026)
+
+Jay: *"the labels over the map are a little difficult to read."* The cause was
+not the font size. The chips were the age-group tint at **88% opacity with white
+text on top**, sitting on a bright, light drawing that carries its own
+white-on-green labels. So the map showed through every label — and on the
+lighter tints white text was around **1.8:1**, which is not hard to read, it is
+not readable.
+
+**THE INK IS CHOSEN, NOT FIXED.** `chipInk()` uses the real WCAG relative
+luminance and contrast formulas, and picks near-black or near-white by
+**maximising the worst case** across every tint on the chip. A time-shared block
+is a gradient of two tints with one piece of text lying across both, so
+averaging would leave a chip legible on one half and not the other — U6 red plus
+U7 orange is exactly that: white is 4.8:1 on the red but 2.9:1 on the orange, so
+dark wins.
+
+**AND THE FILL IS TOPPED UP WHEN IT HAS TO BE.** Even with the better ink, two
+of the fifteen tints land just under 4.5:1 and a red/orange time-share lands at
+3.9. Rather than accept that or hand-edit a palette shared with the schematic and
+the standings, `chipFill()` nudges the chip's own fill away from the ink in 5%
+steps until it clears — **only when needed** (13 of 15 tints are returned
+byte-identical) and **capped at 40%**, so a colour cannot quietly become a
+different colour.
+
+`test-venue-map.js` asserts the ratio as a **property over all 120 chips the
+layout can produce** — 15 groups alone plus all 105 pairs — not as a handful of
+examples. That is the point: a number can be checked, "looks alright" cannot, and
+"looks alright" is what shipped the problem.
+
+⚠️ **The gamma step is load-bearing and nothing downstream notices it missing.**
+Drop the sRGB conversion in `relLuminance()` and every contrast ratio still
+clears 4.5, because the top-up compensates for the worse ink choice. The only
+things that catch it are the direct assertion that mid-grey reads **21.6%**
+rather than 50%, and the count of how many tints needed adjusting at all. A
+system with a fallback will hide a fault in the thing the fallback covers for.
+
+Also on the chip: the split, as **`×2` / `×4`** rather than the word. `QUARTERS`
+spelled out made the chips wide enough to overlap each other on the drawing,
+which cost more legibility than it bought. `splitLabel()` keeps the words for the
+tooltip, which also lists every surface name on the block.
 - `touch-action:none` on an unlocked chip, or a drag on a phone scrolls the page
   instead — which looks exactly like the feature not working.
 - The chips capture the pointer on `pointerdown`, so a fast drag cannot outrun a
@@ -1357,8 +1399,8 @@ build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
-pitch / split model and the account rules — **894 checks** across five files —
-plus `_prove-registration.js`, the fault-injection script (**60 faults**, all of
+pitch / split model and the account rules — **960 checks** across five files —
+plus `_prove-registration.js`, the fault-injection script (**70 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

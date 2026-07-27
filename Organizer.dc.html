@@ -447,6 +447,9 @@
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
       <div style="background:#151517;border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
         <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4;white-space:pre-line">{{ modalTitle }}</div>
+        <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
+          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.18);border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;margin-bottom:18px">
+        </sc-if>
         <div style="display:flex;justify-content:flex-end;gap:10px">
           <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
           <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
@@ -483,9 +486,10 @@ class Component extends DCLogic {
     venue: null, venueSaved: null, venueUsage: null,
     vLoaded: false, vBusy: false, vError: '', vSuccess: '',
     vNewPitch: { day1: '', day2: '' },
-    /* The confirm dialog. null when closed; otherwise
-       { title, onConfirm, okLabel?, wide? }. */
-    modal: null,
+    /* The dialog. null when closed; otherwise
+       { kind: 'confirm'|'prompt', title, onConfirm, okLabel?, wide? }.
+       modalValue is the prompt's input. */
+    modal: null, modalValue: '',
     showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
     showLoginPass: false, showSignupPass: false, showSignupCode: false, showCpCurrent: false, showCpNew: false,
   };
@@ -647,16 +651,33 @@ class Component extends DCLogic {
      pitch" reads very differently from "OK" on a dialog that lists the fixtures
      about to be stranded. */
   confirmModal(message, onConfirm, opts) {
-    this.setState({ modal: { title: message, onConfirm, ...(opts || {}) } });
+    this.setState({ modal: { kind: 'confirm', title: message, onConfirm, ...(opts || {}) } });
   }
-  closeModal() { this.setState({ modal: null }); }
+  /* Asks for a line of text. onConfirm gets the trimmed value and is not called
+     at all if the box is left empty — same contract as the Scores page's. */
+  promptModal(title, defaultValue, onConfirm, opts) {
+    this.setState({ modal: { kind: 'prompt', title, onConfirm, ...(opts || {}) }, modalValue: defaultValue || '' });
+  }
+  /* One OK button and nothing to decide — what window.alert() was doing. */
+  infoModal(message) {
+    this.setState({ modal: { kind: 'confirm', title: message, onConfirm: () => {}, okLabel: 'OK' } });
+  }
+  closeModal() { this.setState({ modal: null, modalValue: '' }); }
   submitModal() {
-    const { modal } = this.state;
+    const { modal, modalValue } = this.state;
     if (!modal) return;
     // Close FIRST, so a handler that awaits the server cannot leave the dialog
-    // sitting open over its own success message.
+    // sitting open over its own success message. test-venue-panel.js records the
+    // modal state from INSIDE the action, so this ordering is actually tested.
+    const isPrompt = modal.kind === 'prompt';
+    const value = (modalValue || '').trim();
     this.closeModal();
-    modal.onConfirm();
+    if (isPrompt && !value) return;
+    /* The handlers are async and go through tryFetchJson, which never rejects,
+       so this catch is belt-and-braces — but an unhandled rejection here would
+       strand vBusy:true and wedge the panel, and the guard costs nothing. */
+    Promise.resolve(isPrompt ? modal.onConfirm(value) : modal.onConfirm())
+      .catch((e) => console.error('dialog action failed:', e));
   }
 
   removePitch(dayId, name) {
@@ -818,12 +839,29 @@ class Component extends DCLogic {
     }
   }
 
-  async doResetPassword(username) {
-    const pwd = window.prompt(`New password for ${username} (min 6 characters):`);
-    if (!pwd) return;
-    if (pwd.length < 6) { window.alert('Password must be at least 6 characters.'); return; }
+  /* This was the last window.prompt + two window.alerts on the page. They are
+     worse than ugly here: native dialogs are silently swallowed in the sandboxed
+     preview iframe, so on a deploy preview this flow simply did nothing. */
+  doResetPassword(username) {
+    this.promptModal(
+      `New password for ${username} — at least 6 characters.`,
+      '',
+      (pwd) => {
+        if (pwd.length < 6) {
+          this.infoModal('That password is too short. It needs at least 6 characters.');
+          return;
+        }
+        return this.reallyResetPassword(username, pwd);
+      },
+      { okLabel: 'Set password' }
+    );
+  }
+
+  async reallyResetPassword(username, pwd) {
     const res = await this.state.api.resetAccountPassword(username, pwd);
-    window.alert(res.ok ? 'Password reset.' : (res.error || 'Failed to reset password.'));
+    this.infoModal(res.ok
+      ? `Password reset for ${username}. Tell them the new one yourself — it is not emailed.`
+      : (res.error || 'Failed to reset password.'));
   }
 
   onToggleChangePwd() {
@@ -857,7 +895,9 @@ class Component extends DCLogic {
     }
   }
 
-  doLogout() { this.state.api.logout(); this.setState({ session: null, teams: [], players: [] }); }
+  /* modal is cleared too: the dialog markup sits OUTSIDE the signed-in gate, so
+     a dialog left open at sign-out would render over the login form. */
+  doLogout() { this.state.api.logout(); this.setState({ session: null, teams: [], players: [], modal: null, modalValue: '' }); }
 
   usernameFromName(name) {
     const parts = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s'-]/g, '').trim().split(/\s+/).filter(Boolean);
@@ -1030,9 +1070,13 @@ class Component extends DCLogic {
       teamCount: s.teams.length, playerCount: s.players.length,
 
       isModalOpen: !!s.modal,
+      isModalPrompt: !!s.modal && s.modal.kind === 'prompt',
       modalTitle: s.modal ? s.modal.title : '',
       modalOkLabel: (s.modal && s.modal.okLabel) || 'OK',
       modalMaxWidth: (s.modal && s.modal.wide) ? '560px' : '380px',
+      modalValue: s.modalValue,
+      onModalValueChange: (e) => this.setState({ modalValue: e.target.value }),
+      onModalKeyDown: (e) => { if (e.key === 'Enter') this.submitModal(); if (e.key === 'Escape') this.closeModal(); },
       onModalCancel: () => this.closeModal(),
       onModalConfirm: () => this.submitModal(),
 

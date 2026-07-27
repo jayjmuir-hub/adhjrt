@@ -160,17 +160,54 @@ export async function revokeAccount(username) {
   return (await local()).accountsAction(session && session.token, 'revoke', username);
 }
 
-// Create an age-group Manager login directly (organizer-only, server-side).
-// The new account is approved immediately, so the manager can sign in right
-// away — useful for testing and for onboarding without invite codes.
-export async function createManager({ name, username, password, ageGroupId }) {
+/* Create a login directly (organizer-only, re-checked server-side). Approved
+   immediately, so they can sign in straight away — no invite code, no approval
+   round trip.
+
+   `role` is 'manager' (needs ageGroupId) or 'organizer' (takes an optional
+   title). Being able to make an ORGANIZER here is what lets
+   ORGANIZER_INVITE_CODE be deleted from Netlify altogether: one shared code for
+   everybody, with no expiry and no way to revoke it for one person, was the
+   weakest thing about the old route. */
+export async function createAccount({ role, name, username, password, ageGroupId, title }) {
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'create', name, username, password, ageGroupId }),
+    body: JSON.stringify({ action: 'create', role, name, username, password, ageGroupId, title }),
   });
   if (r.real) return r.json;
   return { ok: false, error: 'Creating logins needs the deployed site (not available in local preview).' };
+}
+
+/* Reset SOMEONE ELSE'S password. The organizer types it and hands it over —
+   nothing is emailed.
+
+   THIS FUNCTION DID NOT EXIST UNTIL 27 JULY 2026, while Organizer.dc.html
+   called it. The Reset password dialog opened, took a new password, closed and
+   did nothing: the TypeError was swallowed by the dialog's catch and only
+   reached the browser console, so on screen it looked like it had worked.
+   test-accounts.js now checks every api.* the page calls actually exists. */
+export async function resetAccountPassword(username, password) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'password', username, password }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Resetting a password needs the deployed site (not available in local preview).' };
+}
+
+/* Change your OWN password. The current one is required and checked against the
+   stored hash server-side — a stolen session must not be enough to lock the
+   real owner out. Was missing in exactly the same way as the function above. */
+export async function changeMyPassword(currentPassword, password) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'changeMine', currentPassword, password }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Changing your password needs the deployed site (not available in local preview).' };
 }
 
 /* -------- The venue: pitches per day, and which day each age group plays --------

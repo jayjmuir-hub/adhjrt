@@ -54,6 +54,11 @@ async function saveAccounts(list) {
   await store.setJSON('list', list);
 }
 
+/* The password-length rule lives in _password.js — policy, not cryptography,
+   and dependency-free so a test can require it without bcrypt. Re-exported
+   below so every existing `require('./_auth')` keeps working. */
+const { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem } = require('./_password');
+
 function hashPassword(password) {
   return bcrypt.hash(password, 10);
 }
@@ -103,4 +108,5 @@ function hasAgeGroupAccess(session, ageGroupId) {
   return false;
 }
 
-module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore };
+module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore,
+  MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem };

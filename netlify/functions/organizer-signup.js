@@ -17,7 +17,7 @@
 // Then privately share ORGANIZER_INVITE_CODE with whoever should be
 // able to create their own organizer login.
 
-const { loadAccounts, saveAccounts, hashPassword, sign } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem } = require('./_auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
@@ -29,8 +29,9 @@ exports.handler = async (event) => {
     if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {
       return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect invite code.' }) };
     }
-    if (password.length < 6) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password must be at least 6 characters.' }) };
+    const pwErr = passwordProblem(password);
+    if (pwErr) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
     }
 
     const uname = username.trim().toLowerCase();

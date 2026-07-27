@@ -8,14 +8,34 @@
 //
 // GET  -> { ok, accounts: [{ username, name, role, title, ageGroupId, approved, createdAt }] }
 // POST -> { action: 'approve'|'reject'|'revoke', username }
-//      -> { action: 'create', name, username, password, ageGroupId }  (new)
+//      -> { action: 'create',   role, name, username, password, ageGroupId?, title? }
+//      -> { action: 'password', username, password }        reset someone else's
+//      -> { action: 'changeMine', currentPassword, password } change your own
 //
-// The 'create' action lets an organizer mint an age-group Manager login
-// directly — already approved, ready to sign in — instead of the invite-code
-// self-signup + approval loop. Handy for testing the site, and for onboarding
-// a manager without sharing invite codes. Organizer-only, like everything here.
+// 'create' mints a login directly — already approved, ready to sign in —
+// instead of the invite-code self-signup plus approval loop.
+//
+//   role:'manager'   needs ageGroupId. This is how it has always worked.
+//   role:'organizer' needs no age group; takes an optional free-text title.
+//                    ADDED 27 Jul 2026. Before it, there was no way to make an
+//                    organizer except sharing ORGANIZER_INVITE_CODE and then
+//                    approving them — one code for everybody, no expiry, no
+//                    revoking it for one person, and no record of who used it.
+//                    With this here, that variable can be DELETED from Netlify
+//                    and organizer-signup.js refuses every signup on its own
+//                    (it already 401s when the variable is absent), which also
+//                    shuts the first-organizer-auto-approved bootstrap.
+//
+// 'password' and 'changeMine' BOTH EXISTED IN THE UI AND NOWHERE ELSE until
+// 27 Jul 2026. Organizer.dc.html called api.resetAccountPassword() and
+// api.changeMyPassword(); neither function existed in organizer-data.js and
+// neither action existed here. Both dialogs opened, took a new password,
+// closed, and did nothing — the TypeError went to the browser console and the
+// screen showed no error at all. If you are adding another action, add the
+// data-layer function in the same commit; test-accounts.js now checks every
+// api.* the page calls actually exists.
 
-const { loadAccounts, saveAccounts, hashPassword, verify, getBearerToken } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem } = require('./_auth');
 
 // Age-group ids a created manager may be bound to. Mirrors AGE_GROUPS in
 // scores-data.js. '*' is the special "all age groups" admin-manager.
@@ -55,25 +75,64 @@ exports.handler = async (event) => {
         const name = (payload.name || '').trim();
         const newUname = (payload.username || '').trim().toLowerCase();
         const password = payload.password || '';
+        /* Defaults to manager, because that is what every existing caller
+           meant before organizers could be created here. */
+        const role = (payload.role || 'manager').trim();
         const ageGroupId = (payload.ageGroupId || '').trim();
-        if (!name || !newUname || !password || !ageGroupId) {
-          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Name, username, password and age group are all required.' }) };
+
+        if (role !== 'manager' && role !== 'organizer') {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A login is either a manager or an organiser.' }) };
         }
-        if (password.length < 6) {
-          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password must be at least 6 characters.' }) };
+        if (!name || !newUname || !password) {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Name, username and password are all required.' }) };
         }
-        if (!VALID_AGE_GROUP_IDS.has(ageGroupId)) {
-          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown age group.' }) };
+        const pwErr = passwordProblem(password);
+        if (pwErr) return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
+
+        /* An age group is what SCOPES a manager — it is the only thing standing
+           between them and every other group's registrations, and the signed
+           token carries it. An organizer has no age group because they see
+           everything, so requiring one would be theatre. */
+        if (role === 'manager') {
+          if (!ageGroupId) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A manager login needs an age group.' }) };
+          if (!VALID_AGE_GROUP_IDS.has(ageGroupId)) {
+            return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown age group.' }) };
+          }
         }
+
         const all = await loadAccounts();
         if (all.some((a) => a.username === newUname)) {
           return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'That username is already taken.' }) };
         }
         const passwordHash = await hashPassword(password);
-        all.push({
-          username: newUname, passwordHash, name, role: 'manager', ageGroupId,
+        const account = {
+          username: newUname, passwordHash, name, role,
           approved: true, createdAt: new Date().toISOString(), createdBy: session.username,
-        });
+        };
+        if (role === 'manager') account.ageGroupId = ageGroupId;
+        else account.title = (payload.title || '').trim() || 'Organizer';
+        all.push(account);
+        await saveAccounts(all);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, role }) };
+      }
+
+      /* Change your OWN password. The current one has to be given and is
+         checked against the stored hash — a stolen session should not be enough
+         to lock the real owner out of their own account. */
+      if (action === 'changeMine') {
+        const all = await loadAccounts();
+        const me = all.findIndex((a) => a.username === session.username);
+        if (me === -1) return { statusCode: 404, body: JSON.stringify({ ok: false, error: 'Your account no longer exists.' }) };
+        const current = payload.currentPassword || '';
+        const next = payload.password || '';
+        if (!current) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Enter your current password.' }) };
+        const pwErr = passwordProblem(next);
+        if (pwErr) return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
+        if (!(await verifyPassword(current, all[me].passwordHash))) {
+          return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'That is not your current password.' }) };
+        }
+        all[me].passwordHash = await hashPassword(next);
+        all[me].passwordChangedAt = new Date().toISOString();
         await saveAccounts(all);
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
@@ -83,6 +142,20 @@ exports.handler = async (event) => {
       const accounts = await loadAccounts();
       const idx = accounts.findIndex((a) => a.username === uname);
       if (idx === -1) return { statusCode: 404, body: JSON.stringify({ ok: false, error: 'Account not found.' }) };
+
+      /* Reset SOMEONE ELSE'S password. No current password, because the whole
+         point is that they have lost theirs — the authority is the organizer
+         session that got this far. Never emailed and never shown again: the
+         organizer typed it and hands it over themselves. */
+      if (action === 'password') {
+        const pwErr = passwordProblem(payload.password || '');
+        if (pwErr) return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
+        accounts[idx].passwordHash = await hashPassword(payload.password);
+        accounts[idx].passwordChangedAt = new Date().toISOString();
+        accounts[idx].passwordChangedBy = session.username;
+        await saveAccounts(accounts);
+        return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+      }
 
       if (action === 'approve') {
         accounts[idx].approved = true;

@@ -21,7 +21,8 @@ $failed = @()
 $tests = @(
   'test-registration.js',
   'test-registration-panel.js',
-  'test-venue-map.js'
+  'test-venue-map.js',
+  'test-accounts.js'
 )
 
 Write-Host ''

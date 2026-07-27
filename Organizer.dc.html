@@ -492,8 +492,15 @@
         <div style="margin-top:24px">
 
           <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
-            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create manager login</div>
-            <p style="color:#7f8794;font-size:13px;margin-bottom:16px;line-height:1.5">Make an age-group manager account that can sign in straight away — no invite code or approval needed. A manager sees the scores, fixtures and registrations for their group only.</p>
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create a login</div>
+            <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#aeb4bf">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+              <button onClick="{{ onCmRoleManager }}" style="{{ cmRoleManagerStyle }}">Manager</button>
+              <button onClick="{{ onCmRoleOrganizer }}" style="{{ cmRoleOrganizerStyle }}">Organiser</button>
+            </div>
+            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
+
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <div>
                 <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NAME</label>
@@ -507,16 +514,25 @@
                 <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
                 <input value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
               </div>
-              <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
-                <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-                  <option value="">Select&hellip;</option>
-                  <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
-                    <option value="{{ ag.id }}">{{ ag.name }}</option>
-                  </sc-for>
-                </select>
-              </div>
+              <sc-if value="{{ cmIsManager }}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
+                  <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                    <option value="">Select&hellip;</option>
+                    <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
+                      <option value="{{ ag.id }}">{{ ag.name }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+              </sc-if>
+              <sc-if value="{{ cmIsOrganizer }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">TITLE (OPTIONAL)</label>
+                  <input value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                </div>
+              </sc-if>
             </div>
+            <div style="font-size:12px;color:#5a616d;margin-top:10px">Passwords are at least {{ cmMinPassword }} characters.</div>
             <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
             <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
             <button onClick="{{ onCreateManager }}" disabled="{{ cmBusy }}" style="margin-top:16px;background:#17A34A;color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ cmLabel }}</button>
@@ -704,6 +720,13 @@ const MANAGER_AGE_GROUPS = [
    sensible, with the C's left and the A's right as they are on the ground.
 
    A block nobody has heard of is still drawn; it just goes underneath. */
+/* Mirrors MIN_PASSWORD_LENGTH in netlify/functions/_auth.js, which is the
+   authority — this copy only decides when the form complains before sending.
+   test-accounts.js asserts the two numbers match, because a client floor lower
+   than the server's means Create goes ahead and bounces off a 400 with the
+   password already typed. */
+const MIN_PASSWORD_LENGTH = 10;
+
 const BLOCK_GRID = {
   D5: '1 / 1', D4: '1 / 2', D3: '1 / 3', D2: '1 / 4', D1: '1 / 5',
   C4: '2 / 1', C5: '2 / 2', B2: '2 / 3', B1: '2 / 4', A1: '2 / 5',
@@ -742,7 +765,7 @@ function blockOfPitch(name) {
 
 class Component extends DCLogic {
   state = {
-    cmName: '', cmUser: '', cmPass: '', cmAge: '', cmError: '', cmSuccess: '', cmBusy: false,
+    cmRole: 'manager', cmName: '', cmUser: '', cmPass: '', cmAge: '', cmTitle: '', cmError: '', cmSuccess: '', cmBusy: false,
     api: null, session: null, loginUser: '', loginPass: '', loginError: '', loginBusy: false,
     authMode: 'login',
     signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
@@ -1646,17 +1669,36 @@ class Component extends DCLogic {
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
   async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
 
+  /* Creates a manager OR an organiser. The age group is what scopes a manager
+     and is required for one; an organiser sees everything, so asking for one
+     would be theatre. Everything here is re-checked server-side. */
   async doCreateManager() {
-    const { api, cmName, cmUser, cmPass, cmAge } = this.state;
-    if (!cmName.trim() || !cmUser.trim() || !cmPass || !cmAge) {
-      this.setState({ cmError: 'Fill in name, username, password and age group.', cmSuccess: '' });
+    const { api, cmRole, cmName, cmUser, cmPass, cmAge, cmTitle } = this.state;
+    const isManager = cmRole !== 'organizer';
+    if (!cmName.trim() || !cmUser.trim() || !cmPass) {
+      this.setState({ cmError: 'Fill in name, username and password.', cmSuccess: '' });
       return;
     }
-    if (cmPass.length < 6) { this.setState({ cmError: 'Password must be at least 6 characters.', cmSuccess: '' }); return; }
+    if (isManager && !cmAge) {
+      this.setState({ cmError: 'A manager login needs an age group.', cmSuccess: '' });
+      return;
+    }
+    if (cmPass.length < MIN_PASSWORD_LENGTH) {
+      this.setState({ cmError: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, cmSuccess: '' });
+      return;
+    }
     this.setState({ cmBusy: true, cmError: '', cmSuccess: '' });
-    const res = await api.createManager({ name: cmName.trim(), username: cmUser.trim(), password: cmPass, ageGroupId: cmAge });
+    const res = await api.createAccount({
+      role: isManager ? 'manager' : 'organizer',
+      name: cmName.trim(), username: cmUser.trim(), password: cmPass,
+      ageGroupId: isManager ? cmAge : '', title: isManager ? '' : cmTitle.trim(),
+    });
     if (res.ok) {
-      this.setState({ cmBusy: false, cmSuccess: `Login "${cmUser.trim().toLowerCase()}" created — they can sign in now.`, cmName: '', cmUser: '', cmPass: '', cmAge: '' });
+      this.setState({
+        cmBusy: false,
+        cmSuccess: `${isManager ? 'Manager' : 'Organiser'} login "${cmUser.trim().toLowerCase()}" created — they can sign in now. Tell them the password yourself; nothing is emailed.`,
+        cmName: '', cmUser: '', cmPass: '', cmAge: '', cmTitle: '',
+      });
       this.refreshAccounts();
     } else {
       this.setState({ cmBusy: false, cmError: res.error || 'Could not create login.' });
@@ -1668,11 +1710,11 @@ class Component extends DCLogic {
      preview iframe, so on a deploy preview this flow simply did nothing. */
   doResetPassword(username) {
     this.promptModal(
-      `New password for ${username} — at least 6 characters.`,
+      `New password for ${username} — at least ${MIN_PASSWORD_LENGTH} characters.`,
       '',
       (pwd) => {
-        if (pwd.length < 6) {
-          this.infoModal('That password is too short. It needs at least 6 characters.');
+        if (pwd.length < MIN_PASSWORD_LENGTH) {
+          this.infoModal(`That password is too short. It needs at least ${MIN_PASSWORD_LENGTH} characters.`);
           return;
         }
         return this.reallyResetPassword(username, pwd);
@@ -1813,6 +1855,9 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state;
+    const roleBase = 'font-weight:700;font-size:13px;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap;';
+    const roleOn = roleBase + 'background:#17A34A;color:#fff;border:1px solid #17A34A;';
+    const roleOff = roleBase + 'background:transparent;color:#aeb4bf;border:1px solid rgba(255,255,255,0.2);';
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const tabOn = tabBase + 'background:#E11B22;color:#fff;';
     const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
@@ -1926,6 +1971,18 @@ class Component extends DCLogic {
       pendingCount: s.accounts.filter((a) => !a.approved).length,
       accountsEmpty: s.accounts.filter((a) => a.approved).length === 0,
 
+      cmIsManager: s.cmRole !== 'organizer',
+      cmIsOrganizer: s.cmRole === 'organizer',
+      cmRoleManagerStyle: s.cmRole !== 'organizer' ? roleOn : roleOff,
+      cmRoleOrganizerStyle: s.cmRole === 'organizer' ? roleOn : roleOff,
+      onCmRoleManager: () => this.setState({ cmRole: 'manager', cmError: '', cmSuccess: '' }),
+      onCmRoleOrganizer: () => this.setState({ cmRole: 'organizer', cmError: '', cmSuccess: '' }),
+      cmRoleNote: s.cmRole === 'organizer'
+        ? 'An organiser sees every registration, including medical notes, and can change the tournament-wide settings. Creating one here means nobody needs the shared invite code — once every organiser is made this way, ORGANIZER_INVITE_CODE can be deleted in Netlify and self-signup shuts off by itself.'
+        : 'A manager sees the scores, fixtures and registrations for one age group only — in full, medical notes included, which is deliberate for player welfare.',
+      cmTitle: s.cmTitle,
+      onCmTitle: (e) => this.setState({ cmTitle: e.target.value }),
+      cmMinPassword: MIN_PASSWORD_LENGTH,
       cmName: s.cmName, cmUser: s.cmUser, cmPass: s.cmPass, cmAge: s.cmAge,
       cmError: s.cmError, cmSuccess: s.cmSuccess, cmBusy: s.cmBusy,
       cmLabel: s.cmBusy ? 'Creating…' : 'Create login',

@@ -36,6 +36,13 @@ const NEEDED = [
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_scoring.js'),
   path.join('netlify', 'functions', '_publish.js'),
+  path.join('netlify', 'functions', '_password.js'),
+  path.join('netlify', 'functions', '_auth.js'),
+  path.join('netlify', 'functions', 'accounts-admin.js'),
+  path.join('netlify', 'functions', 'organizer-signup.js'),
+  path.join('netlify', 'functions', 'manager-signup.js'),
+  path.join('netlify', 'functions', 'organizer-login.js'),
+  path.join('netlify', 'functions', 'manager-login.js'),
 ];
 
 /* Copies with the line endings NORMALISED to LF.
@@ -316,6 +323,85 @@ const FAULTS = [
       "    if (false) { errors.push(`\"${key}\" is at ${x}, ${y}"),
     expect: ['a coordinate past the right edge', 'a negative coordinate'],
   },
+  /* ---- logins and passwords ----
+     The first two put back the exact bug that was live: a function the page
+     calls that does not exist. Both features were dead and silent. */
+  {
+    name: 'resetAccountPassword disappears from the data layer again',
+    suite: 'test-accounts.js',
+    apply: () => patch('organizer-data.js', 'export async function resetAccountPassword(', 'async function resetAccountPassword('),
+    expect: ['provides api.resetAccountPassword()', 'resetAccountPassword exists'],
+  },
+  {
+    name: 'changeMyPassword disappears from the data layer again',
+    suite: 'test-accounts.js',
+    apply: () => patch('organizer-data.js', 'export async function changeMyPassword(', 'async function changeMyPassword('),
+    expect: ['provides api.changeMyPassword()', 'changeMyPassword exists'],
+  },
+  {
+    name: "the 'password' action is removed from the backend",
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'), "if (action === 'password') {", 'if (false) {'),
+    expect: ["handles action 'password'", "'password' is handled"],
+  },
+  {
+    name: 'changing your own password stops checking the current one',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      '        if (!(await verifyPassword(current, all[me].passwordHash))) {',
+      '        if (false) {'),
+    expect: ['verifies it against the stored hash'],
+  },
+  {
+    name: 'the password floor drops back to 6',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', '_password.js'), 'const MIN_PASSWORD_LENGTH = 10;', 'const MIN_PASSWORD_LENGTH = 6;'),
+    expect: ['it is at least 10'],
+  },
+  {
+    name: "the page's copy of the floor is left behind at the old number",
+    suite: 'test-accounts.js',
+    apply: () => patch('Organizer.dc.html', 'const MIN_PASSWORD_LENGTH = 10;', 'const MIN_PASSWORD_LENGTH = 6;'),
+    expect: ['uses the same minimum as the server'],
+  },
+  {
+    /* The one that would lock the whole committee out on the morning somebody
+       needed in, because every existing password predates the new floor. */
+    name: 'a length check is added to organizer-login.js',
+    suite: 'test-accounts.js',
+    /* The realistic regression: somebody applies the shared rule "for
+       consistency" at the one place it must never be applied, and every account
+       whose password predates the new floor stops being able to sign in.
+
+       TWO EARLIER VERSIONS OF THIS FAULT WERE NOT CAUGHT, and both were the
+       fault's fault rather than the check's. The first added a harmless
+       `p.length` that did not resemble the mistake at all. The second added
+       only the IMPORT — and importing without calling really is harmless, so a
+       check that fired on it would be wrong. A fault has to be the actual
+       mistake, not something adjacent to it. */
+    apply: () => {
+      const f = path.join('netlify', 'functions', 'organizer-login.js');
+      patch(f, "const { loadAccounts, verifyPassword, sign } = require('./_auth');",
+        "const { loadAccounts, verifyPassword, sign, passwordProblem } = require('./_auth');");
+      patch(f, "    if (!account || !(await verifyPassword(password || '', account.passwordHash))) {",
+        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !(await verifyPassword(password || '', account.passwordHash))) {");
+    },
+    expect: ['does NOT check password length'],
+  },
+  {
+    name: 'creating a manager stops requiring an age group',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'), "          if (!ageGroupId) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A manager login needs an age group.' }) };", ''),
+    expect: ['a manager still needs an age group'],
+  },
+  {
+    name: 'deleting ORGANIZER_INVITE_CODE stops shutting off self-signup',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'organizer-signup.js'),
+      'if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
+      'if (inviteCode !== process.env.ORGANIZER_INVITE_CODE) {'),
+    expect: ['a missing invite code refuses every signup'],
+  },
   {
     name: 'the Registration tab stops reading the shared validator',
     suite: 'test-registration-panel.js',
@@ -351,7 +437,7 @@ const problems = [];
 
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
-['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js'].forEach((f) => {
+['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

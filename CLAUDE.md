@@ -101,7 +101,8 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | `manager-login.js` | returns a signed session token |
 | `organizer-signup.js` | shared invite code; first organiser account auto-approved |
 | `organizer-login.js` | as above |
-| `accounts-admin.js` | organiser-only: list / approve / reject / revoke; can also create an already-approved manager login directly (`action:'create'`) |
+| `accounts-admin.js` | organiser-only: list / approve / reject / revoke; create a manager **or organiser** login directly (`action:'create'`); reset someone's password (`action:'password'`) or change your own (`action:'changeMine'`) |
+| `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`. Dependency-free on purpose — see Accounts below |
 | `get-results.js` | public read of all match results (merges every age group's blob) |
 | `submit-result.js` | write one result; re-verifies role + age group from the token; write-and-verify retry |
 | `_results.js` | results storage layout — one blob per age group, legacy merge (see Results storage below) |
@@ -318,6 +319,76 @@ JRT palette, Anton + Barlow.
 - A follower's chosen age group is remembered in localStorage, per device.
 - PWA install works but isn't promoted (push notifications would justify it
   but there's no backend for that). Treat `/app` as a fast mobile web page.
+
+---
+
+## Accounts and passwords (rewritten 27 Jul 2026)
+
+### Making a login
+
+**Both roles are created in the back office now** — Accounts tab → *Create a
+login* → pick Manager or Organiser. Approved immediately, no invite code, no
+approval round trip. `accounts-admin.js` `action:'create'` takes a `role`
+(defaulting to `manager`, so older callers still mean what they meant).
+
+- A **manager** needs an `ageGroupId`. That is the only thing scoping them away
+  from every other group's registrations, and the signed token carries it.
+- An **organiser** needs none — they see everything — and takes an optional
+  free-text title.
+
+**The point of being able to create an organiser here is that
+`ORGANIZER_INVITE_CODE` can now be DELETED in Netlify.** `organizer-signup.js`
+already refuses every signup when that variable is absent, so removing it shuts
+self-signup off with no deploy and no code change. That closes two things at
+once: one shared code for everybody with no expiry, no per-person revocation and
+no record of who used it; and the first-organiser-auto-approved bootstrap, which
+would hand an approved organiser account — and children's medical notes — to
+whoever signed up first if the accounts blob were ever lost.
+
+Jay's call whether to delete it. Until he does, the old route still works.
+
+### Passwords
+
+**One floor, `MIN_PASSWORD_LENGTH` in `netlify/functions/_password.js`, currently
+10.** It was 6, written out separately in three functions. An organiser reads
+every registration and a manager reads their own group's in full, medical notes
+included — both reach the same class of data, so both get the same floor.
+
+`_password.js` is deliberately **separate from `_auth.js` and dependency-free**:
+the rule is policy, not cryptography, and `_auth.js` pulls in `bcryptjs`, which
+Netlify installs at build time and which is not in the clone. Keeping them apart
+is what lets `test-accounts.js` require the rule directly. A test that needs
+`npm install` first is a test that eventually stops being run. `_auth.js`
+re-exports it, so every existing `require('./_auth')` is unaffected.
+
+⚠️ **The floor applies when a password is SET, never at login.** A length check
+in `manager-login.js` or `organizer-login.js` would lock out every account whose
+password predates the change — the whole committee, on the morning somebody
+needed to get in. `test-accounts.js` asserts neither login file has one.
+
+`Organizer.dc.html` carries its own copy of the number so the form can complain
+before sending; the test asserts the two match. A client floor *lower* than the
+server's means Create goes ahead and bounces off a 400 with the password already
+typed.
+
+### Two features that were dead and silent
+
+Until 27 Jul 2026 `Organizer.dc.html` called `api.resetAccountPassword()` and
+`api.changeMyPassword()`. **Neither function existed in `organizer-data.js`, and
+neither action existed in `accounts-admin.js`.** Both dialogs opened, took a new
+password, closed, and did nothing — the `TypeError` was swallowed by the dialog's
+own `.catch()` and reached only the browser console. On screen it looked exactly
+like success. Nobody could reset a password and nobody could have known.
+
+Both are built now. More importantly, **`test-accounts.js` mechanically checks
+every `api.X` the page calls against what `organizer-data.js` actually exports**,
+and every action the data layer posts against what `accounts-admin.js` handles.
+Add a UI call and its data-layer function in the same commit, or that test fails.
+
+This is the failure mode this codebase is most prone to: the `.dc.html` files
+call into a data layer through a plain object, so a missing function is not a
+build error, not a runtime crash the user sees, and not visible in review. It is
+the same shape as the `{{ token }}` binding trap already recorded above.
 
 ---
 
@@ -1190,10 +1261,10 @@ Working shape:
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
-It currently holds the registration-window work and the Venue & days views —
-**651 checks** across three files — plus `_prove-registration.js`, the
-fault-injection script (35 faults, all of which must be caught by the check that
-claims to guard them).
+It currently holds the registration window, the Venue & days views and the
+account rules — **750 checks** across four files — plus `_prove-registration.js`,
+the fault-injection script (46 faults, all of which must be caught by the check
+that claims to guard them).
 
 **The other thirteen files — 577 checks, plus `validate-bindings.js` — are still
 in `C:\Users\jayjm\adhjrt-sim` on jay-pc and are in no version control at

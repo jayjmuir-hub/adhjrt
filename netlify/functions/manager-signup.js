@@ -18,7 +18,7 @@
 // SESSION_SECRET must also be set (shared with the other auth functions).
 // Share each age group's code only with that group's manager(s).
 
-const { loadAccounts, saveAccounts, hashPassword, sign } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem } = require('./_auth');
 
 function codesMap() {
   try { return JSON.parse(process.env.MANAGER_INVITE_CODES || '{}'); } catch (e) { return {}; }
@@ -31,8 +31,9 @@ exports.handler = async (event) => {
     if (!name || !username || !password || !inviteCode) {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'All fields are required.' }) };
     }
-    if (password.length < 6) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password must be at least 6 characters.' }) };
+    const pwErr = passwordProblem(password);
+    if (pwErr) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
     }
 
     const codes = codesMap();

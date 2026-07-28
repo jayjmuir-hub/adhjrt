@@ -37,6 +37,7 @@ const NEEDED = [
   path.join('netlify', 'functions', '_agegroups.js'),
   path.join('netlify', 'functions', '_intake.js'),
   path.join('netlify', 'functions', '_ratelimit.js'),
+  path.join('netlify', 'functions', '_teams.js'),
   path.join('netlify', 'functions', 'submission-created.js'),
   path.join('netlify', 'functions', 'get-registrations.js'),
   path.join('netlify', 'functions', 'get-my-registrations.js'),
@@ -109,6 +110,20 @@ function run(file) {
     return { code: e.status === undefined ? 1 : e.status, out: (e.stdout || '') + (e.stderr || '') };
   }
 }
+
+const INTAKE_F = path.join('netlify', 'functions', '_intake.js');
+/* The confirmation block from _intake.js, verbatim, so a fault can move it
+   rather than duplicate it. If this stops matching, the fault refuses to inject
+   and that is a FAILURE of this script, not a pass. */
+const MAIL_BLOCK = [
+  '  try {',
+  '    const result = await d.sendConfirmation(form, data);',
+  '    if (result && result.sent) log(`confirmation sent (${result.count} recipient(s))`);',
+  "    else log(`confirmation not sent: ${(result && result.reason) || 'unknown'}`);",
+  '  } catch (err) {',
+  '    log(`confirmation email failed (the registration WAS saved) - ${err && err.message}`);',
+  '  }',
+].join('\n');
 
 const REG = path.join('netlify', 'functions', '_registration.js');
 const SD = 'scores-data.js';
@@ -1118,6 +1133,141 @@ const FAULTS = [
       '    return { ok: false, retryAfterSecs: Math.max(1, Math.ceil(left / 1000)) };',
       '    return { ok: false };'),
     expect: ['says how long is left', 'which is the rest of the hour'],
+  },
+
+  /* ---- the whole flow ---------------------------------------------------
+     The order these happen in is the design. Most of these faults leave every
+     individual rule working perfectly and still break the thing. */
+
+  {
+    name: 'the registration window stops being checked at all',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (!open) {', '  if (false) {'),
+    expect: ['a submission outside the window is refused'],
+  },
+  {
+    name: 'an unreadable registration window FAILS OPEN, taking late entries',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    log(`registration window unreadable, refusing - ${err && err.message}`);\n    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };",
+      '    open = true;'),
+    expect: ['an unreadable window refuses rather than guessing'],
+  },
+  {
+    name: 'the rate limit is checked but its answer is ignored',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '  if (!rate.ok) {', '  if (false) {'),
+    expect: ['a rate-limited submission is refused'],
+  },
+  {
+    name: 'the honeypot writes the row anyway',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (verdict.drop) {\n    log('accepted and discarded: honeypot');\n    return { status: 200, body: { ok: true } };\n  }", ''),
+    expect: ['nothing was written', 'a bot does not make us read'],
+  },
+  {
+    name: 'the honeypot is answered AFTER the window is read, so a bot can make us do I/O',
+    suite: 'test-intake.js',
+    apply: () => {
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        "  if (verdict.drop) {\n    log('accepted and discarded: honeypot');\n    return { status: 200, body: { ok: true } };\n  }\n", '');
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        "  /* 5. THE TEAM CODE",
+        "  if (verdict.drop) {\n    log('accepted and discarded: honeypot');\n    return { status: 200, body: { ok: true } };\n  }\n\n  /* 5. THE TEAM CODE");
+    },
+    expect: ['a bot does not make us read the registration window'],
+  },
+  {
+    name: 'the honeypot replies differently from a real success, telling a bot it was seen',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    return { status: 200, body: { ok: true } };\n  }\n\n  /* 4. THE REGISTRATION WINDOW",
+      "    return { status: 200, body: { ok: true, discarded: true } };\n  }\n\n  /* 4. THE REGISTRATION WINDOW"),
+    expect: ['the body is the same shape as a real success'],
+  },
+  {
+    name: 'a failed sheet write is reported as a success',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    return { status: 500, body: { ok: false, error: NOT_SAVED } };',
+      '    return { status: 200, body: { ok: true } };'),
+    expect: ['a failed write is a 500, not a quiet success'],
+  },
+  {
+    name: 'a failed sheet write still sends a confirmation, so the coach stops chasing it',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    return { status: 500, body: { ok: false, error: NOT_SAVED } };',
+      '    await d.sendConfirmation(form, data);\n    return { status: 500, body: { ok: false, error: NOT_SAVED } };'),
+    expect: ['no confirmation is sent for something that was not saved'],
+  },
+  {
+    name: 'a failed sheet write is not parked, so the registration is simply gone',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    try { await d.parkFailed(form, data, err && err.message); } catch (e2) {',
+      '    try { if (false) await d.parkFailed(form, data, err && err.message); } catch (e2) {'),
+    expect: ['parked so it can be replayed'],
+  },
+  {
+    name: 'a failed confirmation email is allowed to fail the whole submission',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    log(`confirmation email failed (the registration WAS saved) - ${err && err.message}`);',
+      '    return { status: 500, body: { ok: false, error: NOT_SAVED } };'),
+    expect: ['a failed email is still a success'],
+  },
+  {
+    name: 'the confirmation is sent BEFORE the row is written',
+    suite: 'test-intake.js',
+    /* A genuine REORDER, not an extra send — an extra send is caught by the
+       "exactly one email" checks and would say nothing about ordering. The
+       whole confirmation block is lifted out and put back above the append. */
+    apply: () => {
+      const BLOCK = MAIL_BLOCK;
+      patch(INTAKE_F, BLOCK, '');
+      patch(INTAKE_F, '  /* 6. THE ROW. This is the record. */', BLOCK + '\n  /* 6. THE ROW. This is the record. */');
+    },
+    expect: ['the row is written before the email is sent'],
+  },
+  {
+    name: 'the team code never reaches the mailer, so the email omits it',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), "    data['team-name'] = teamCode;", ''),
+    expect: ['the mailer is told the team code'],
+  },
+  {
+    name: 'a failed numbering read costs the whole registration',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    } catch (err) {\n      log(`could not read the teams sheet for numbering - ${err && err.message}`);\n    }',
+      '    } catch (err) {\n      throw err;\n    }'),
+    expect: ['a failed numbering read does not cost the registration'],
+  },
+  {
+    name: 'a dropped field stops being logged, so nothing is ever noticed',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (cleaned.dropped.length) log(`dropped unknown field(s): ${cleaned.dropped.join(\', \')}`);', ''),
+    expect: ['a dropped field IS logged, by name'],
+  },
+  {
+    name: 'a log line starts carrying the submitted value as well as the field name',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    log(`refused: ${verdict.field || 'validation'}`);",
+      "    log(`refused: ${verdict.field || 'validation'} = ${cleaned.clean[verdict.field]}`);"),
+    expect: ['no registration data is logged'],
+  },
+  {
+    name: 'the parked copy is logged instead of stored',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    log(`sheet append failed, parking the submission - ${err && err.message}`);',
+      '    log(`sheet append failed, parking the submission - ${JSON.stringify(data)}`);'),
+    expect: ['no registration data is logged'],
   },
 ];
 

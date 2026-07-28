@@ -605,6 +605,47 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### The submission flow (added 28 Jul 2026)
+
+`handleSubmission(body, deps)` in `_intake.js`. Every dependency is injected —
+not for tidiness, but because a fresh clone has no `node_modules`, so anything
+requiring `googleapis` cannot be loaded by a test at all. `submit-registration.js`
+is a thin adapter that builds the real clients and calls this.
+
+**The order is the design**, and most of the injected faults leave every
+individual rule working perfectly while still breaking the whole:
+
+1. **Rate limit** — first, because it is the only thing between a public
+   endpoint and unbounded sheet writes and emails. Fails OPEN.
+2. **Allow-list** — an unknown form refused before anything else.
+3. **Validation**, which also answers the honeypot. A filled honeypot returns a
+   reply **byte-identical to a real success** and stops here, so a bot cannot
+   even make us read a blob, and gets nothing to learn from.
+4. **The registration window** — sub-project 3's remaining "three lines".
+   ⚠️ **Fails CLOSED**, unlike the rate limiter: there, allowing costs nothing;
+   here, allowing means taking entries after the squads were meant to be fixed.
+5. **Team code** — a failed numbering read costs the tidy number, never the
+   registration.
+6. **The row.** On failure: park the submission for replay, return 500, and send
+   **no email** — a confirmation for something not in the sheet is worse than
+   none, because the coach stops chasing it.
+7. **The confirmation**, after the row and swallowed. A mail failure must never
+   cost a registration or make anyone resubmit into a duplicate row.
+
+`handleSubmission` **never rejects** — asserted against every dependency
+throwing. A rejection behind a public handler is a 500 with no explanation.
+
+⚠️ **No field VALUE may reach a log.** Asserted with a sentinel in every
+free-text field, down every path including the failures. Dropped field NAMES are
+logged; values never are.
+
+⚠️ **A sentinel test can be poisoned into uselessness.** The first version put
+the sentinel in *every* field including `age-group` and `consent` — which made
+every submission fail validation, so it never reached the write, the mailer or
+the parking. It passed against a fault that logged the entire submission as
+JSON. It now poisons only free-text fields and asserts the poisoned submission
+still returns 200 before relying on it.
+
 ### Rate limiting (added 28 Jul 2026)
 
 `netlify/functions/_ratelimit.js`. **Twenty submissions per address per hour**,
@@ -1558,8 +1599,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,350 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**128 faults**, all of
+rules — **1,435 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**144 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

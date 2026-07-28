@@ -32,6 +32,11 @@
 // the two halves lived in different files.
 
 const { squadCap, AGE_GROUP_BY_NAME } = require('./_agegroups');
+const { checkRate } = require('./_ratelimit');
+/* Also dependency-free, so it is required directly rather than injected — one
+   less thing the adapter can hand over wrongly. googleapis and the mailer are
+   injected precisely because they are NOT. */
+const { nextTeamCode } = require('./_teams');
 
 /* ============================================================
    THE SHEET COLUMNS.
@@ -393,11 +398,148 @@ function mapPlayerRow(row) {
   };
 }
 
+/* ============================================================
+   THE WHOLE FLOW.
+   ------------------------------------------------------------
+   Every dependency is injected. That is not a testing convenience: a fresh
+   clone has no node_modules, so anything that requires googleapis cannot be
+   loaded by a test at all. submit-registration.js is a thin adapter that builds
+   the real Sheets client, mailer and blob store and calls this.
+
+   Returns { status, body }. The caller turns that into an HTTP response.
+   ============================================================ */
+
+const NOT_SAVED = 'We could not save your entry — nothing has been registered. Please email admin@adhjrt.com and we will enter it for you.';
+
+async function handleSubmission(body, deps) {
+  const d = deps || {};
+  const log = typeof d.log === 'function' ? d.log : () => {};
+  const now = Number.isFinite(d.now) ? d.now : Date.now();
+  const b = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const form = b.form;
+
+  /* 1. THE RATE LIMIT, FIRST.
+        It is the only thing between a public endpoint and an unbounded number
+        of sheet writes and emails, so it must not sit behind anything that
+        costs a round trip. It fails OPEN — see _ratelimit.js. */
+  const rate = await checkRate(d.rateStore, d.ip, now);
+  if (!rate.ok) {
+    log(`rate limited: ${rate.retryAfterSecs}s remaining`);
+    return {
+      status: 429,
+      body: {
+        ok: false,
+        error: 'Too many registrations from this connection. Please try again shortly, or email admin@adhjrt.com.',
+        retryAfterSecs: rate.retryAfterSecs,
+      },
+    };
+  }
+
+  /* 2. THE ALLOW-LIST. An unknown form is refused before anything else. */
+  const cleaned = cleanSubmission(form, b.data);
+  if (!cleaned) {
+    log('refused: unrecognised form');
+    return { status: 400, body: { ok: false, error: 'We could not read that submission.' } };
+  }
+  /* Logged by NAME. Never by value — nothing in a registration belongs in a
+     log, and this line is the one a future edit is most likely to widen. */
+  if (cleaned.dropped.length) log(`dropped unknown field(s): ${cleaned.dropped.join(', ')}`);
+
+  /* 3. VALIDATION, which also answers the honeypot. */
+  const verdict = validateSubmission(form, cleaned.clean);
+  if (!verdict.ok) {
+    log(`refused: ${verdict.field || 'validation'}`);
+    return { status: 400, body: { ok: false, error: verdict.error, field: verdict.field } };
+  }
+  /* A filled honeypot is accepted and thrown away, and it happens HERE — before
+     the window is read — so a bot cannot even make us do I/O, and gets a reply
+     indistinguishable from a real success. */
+  if (verdict.drop) {
+    log('accepted and discarded: honeypot');
+    return { status: 200, body: { ok: true } };
+  }
+
+  /* 4. THE REGISTRATION WINDOW. Sub-project 3's remaining three lines:
+        registrationState() was built, shared with the front end and tested at
+        every boundary in July, and all that was missing was somewhere to call
+        it from.
+
+        FAILS CLOSED, unlike the rate limiter. There, allowing costs nothing;
+        here, allowing means taking registrations after the squads were supposed
+        to be fixed and the draw was built. */
+  let open = false;
+  try {
+    open = !!d.registrationState(await d.loadRegistration(), now).open;
+  } catch (err) {
+    log(`registration window unreadable, refusing - ${err && err.message}`);
+    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
+  }
+  if (!open) {
+    log('refused: registration is not open');
+    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
+  }
+
+  /* 5. THE TEAM CODE, teams only. A failed numbering read costs the tidy number,
+        not the registration — an organiser can renumber in the sheet, and the
+        alternative is refusing a real entry because a read timed out. */
+  const data = { ...cleaned.clean };
+  delete data[HONEYPOT];
+  const submittedAt = new Date(now).toISOString();
+  let teamCode;
+  let row;
+
+  if (form === 'team-registration') {
+    let existing = [];
+    try {
+      existing = await d.readTeamsSheet();
+    } catch (err) {
+      log(`could not read the teams sheet for numbering - ${err && err.message}`);
+    }
+    teamCode = nextTeamCode(data.club, data['age-group'], Array.isArray(existing) ? existing : []);
+    /* The confirmation email prints the code, so it has to be on the data
+       before the mailer sees it. */
+    data['team-name'] = teamCode;
+    row = teamRow(data, teamCode, submittedAt);
+  } else {
+    row = playerRow(data, submittedAt);
+  }
+
+  /* 6. THE ROW. This is the record. */
+  try {
+    await d.appendRow(form, row);
+  } catch (err) {
+    log(`sheet append failed, parking the submission - ${err && err.message}`);
+    /* Parked so it can be replayed by hand. Better than the Netlify Forms copy
+       it replaces, because this one can be read programmatically.
+       ⚠️ That blob holds children's personal data. */
+    try { await d.parkFailed(form, data, err && err.message); } catch (e2) {
+      log(`could not park the failed submission - ${e2 && e2.message}`);
+    }
+    /* NO EMAIL. A confirmation for a registration that is not in the sheet is
+       worse than no confirmation: the coach stops chasing it. */
+    return { status: 500, body: { ok: false, error: NOT_SAVED } };
+  }
+
+  /* 7. THE CONFIRMATION, after the row and swallowed. A mail failure must never
+        cost a registration, and must never make anyone resubmit into a
+        duplicate row. Same rule submission-created.js has always had. */
+  try {
+    const result = await d.sendConfirmation(form, data);
+    if (result && result.sent) log(`confirmation sent (${result.count} recipient(s))`);
+    else log(`confirmation not sent: ${(result && result.reason) || 'unknown'}`);
+  } catch (err) {
+    log(`confirmation email failed (the registration WAS saved) - ${err && err.message}`);
+  }
+
+  return { status: 200, body: teamCode ? { ok: true, teamCode } : { ok: true } };
+}
+
 module.exports = {
   TEAM_COLUMNS, TEAM_OUT, PLAYER_COLUMNS,
   TEAM_RANGE, PLAYER_RANGE,
   FORMS, HONEYPOT, cleanSubmission,
   validateSubmission, MAX_FIELD_CHARS, MAX_NOTES_CHARS, MAX_PLAYERS_CHARS,
+  handleSubmission, NOT_SAVED,
   teamRow, playerRow,
   mapTeamRow, mapPlayerRow,
 };

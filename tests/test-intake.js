@@ -953,6 +953,331 @@ console.warn = realWarn;
    fault that warns must still be visible on the console. */
 check('console.warn is restored afterwards', console.warn === realWarn);
 
+/* ====================================================================== */
+section('handleSubmission — the whole flow, with nothing real attached');
+
+/* Every dependency is injected, so this drives the ACTUAL order of operations
+   without a Google client, a mailer or a blob store. That is not a testing
+   convenience: a fresh clone has no node_modules, so anything requiring
+   googleapis cannot be loaded by a test at all. submit-registration.js is a
+   thin adapter that builds the real ones and calls this. */
+
+function deps(over) {
+  const calls = { appended: [], mailed: [], parked: [], logs: [] };
+  const base = {
+    now: T0,
+    ip: '1.2.3.4',
+    rateStore: fakeStore(),
+    loadRegistration: async () => ({ opensAt: null, closesAt: null, mode: 'open' }),
+    registrationState: (settings) => ({ open: settings.mode !== 'closed', phase: 'open', mode: settings.mode }),
+    readTeamsSheet: async () => [],
+    appendRow: async (form, row) => { calls.appended.push({ form, row }); },
+    sendConfirmation: async (form, data) => { calls.mailed.push({ form, data }); return { sent: true, count: 1 }; },
+    parkFailed: async (form, data, err) => { calls.parked.push({ form, data, err }); },
+    log: (m) => { calls.logs.push(String(m)); },
+  };
+  return { d: { ...base, ...(over || {}) }, calls };
+}
+
+/* handleSubmission must NEVER reject. It runs behind a public HTTP handler, and
+   a rejection there is a 500 with no explanation and nothing logged. A thrown
+   error is turned into a reportable result here rather than being allowed to
+   kill the file — otherwise a fault that makes it throw looks "caught" while
+   every check after it silently never runs. */
+const H = (body, over) => {
+  const { d, calls } = deps(over);
+  return I.handleSubmission(body, d)
+    .then((r) => ({ r, calls }))
+    .catch((err) => ({ r: { status: 'THREW', body: { error: String(err && err.message) } }, calls, threw: true }));
+};
+
+/* `|| {}` on every calls.x[0] below. A fault that stops a row being appended
+   makes these undefined, and reaching in throws — which kills the file and
+   means every check after it silently never runs. The count check above is the
+   one that should report it. */
+
+/* ---- the happy path ---------------------------------------------------- */
+
+{
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() });
+  eq('a good team registration is accepted', r.status, 200);
+  check('…and says so', r.body.ok === true);
+  eq('exactly one row was appended', calls.appended.length, 1);
+  eq('…to the team sheet', (calls.appended[0] || {}).form, 'team-registration');
+  eq('exactly one email was sent', calls.mailed.length, 1);
+  eq('nothing was parked', calls.parked.length, 0);
+  check('the team code comes back to the coach', typeof r.body.teamCode === 'string' && r.body.teamCode.length > 0);
+
+  /* THE ROW MUST BE WHAT THE READERS EXPECT. If handleSubmission built its own
+     array the writer and the readers would be back to disagreeing, which is the
+     whole thing Task 2 ended. */
+  eq('the row is the one teamRow() builds', ((calls.appended[0] || {}).row || []).length, I.TEAM_COLUMNS.length);
+  eq('…with the generated code in the code column',
+    ((calls.appended[0] || {}).row || [])[I.TEAM_COLUMNS.indexOf('team-code')], r.body.teamCode);
+  check('…and a real timestamp in the first',
+    /^\d{4}-\d{2}-\d{2}T/.test(((calls.appended[0] || {}).row || [])[0]), ((calls.appended[0] || {}).row || [])[0]);
+
+  /* The email template prints the team code, so it has to be on the data by
+     the time the mailer sees it. */
+  eq('the mailer is told the team code', ((calls.mailed[0] || {}).data || {})['team-name'], r.body.teamCode);
+}
+
+{
+  const { r, calls } = await H({ form: 'player-registration', data: goodPlayer() });
+  eq('a good player registration is accepted', r.status, 200);
+  eq('one row', calls.appended.length, 1);
+  eq('…to the player sheet', (calls.appended[0] || {}).form, 'player-registration');
+  eq('one email', calls.mailed.length, 1);
+  check('no team code for a player', r.body.teamCode === undefined);
+  eq('the row is the one playerRow() builds', ((calls.appended[0] || {}).row || []).length, I.PLAYER_COLUMNS.length);
+}
+
+/* ---- the order things happen in ---------------------------------------- */
+
+/* Rate limit FIRST: it is the only thing standing between a public endpoint and
+   an unbounded number of sheet writes and emails, so it must not sit behind
+   anything that costs money or a round trip. */
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '1.2.3.4', T0);
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() }, { rateStore: store });
+  eq('a rate-limited submission is refused', r.status, 429);
+  eq('nothing was written', calls.appended.length, 0);
+  eq('nothing was emailed', calls.mailed.length, 0);
+  check('…and it says when to try again', r.body.retryAfterSecs > 0);
+  check('…in words a coach can act on', /try again/i.test(r.body.error || ''), r.body.error);
+}
+{
+  /* Fail-open reaches all the way out: a broken counter must not cost a
+     registration. Silenced the same way as the rate-limit block above — the
+     warning is expected here, and expected noise is where a real FAIL hides. */
+  const quiet = console.warn; console.warn = () => {};
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() },
+    { rateStore: fakeStore({}, true) });
+  console.warn = quiet;
+  eq('a broken counter still lets a registration through', r.status, 200);
+  eq('…and it is written', calls.appended.length, 1);
+}
+
+/* An unknown form is refused before anything else happens. */
+{
+  const { r, calls } = await H({ form: 'not-a-form', data: {} });
+  eq('an unknown form is a 400', r.status, 400);
+  eq('nothing written', calls.appended.length, 0);
+}
+['', null, undefined, 42].forEach(async (f) => {
+  const { r } = await H({ form: f, data: {} });
+  eq(`a form of "${String(f)}" is a 400`, r.status, 400);
+});
+{
+  const { r } = await H(null);
+  eq('no body at all is a 400', r.status, 400);
+  const { r: r2 } = await H('a string');
+  eq('a string body is a 400', r2.status, 400);
+}
+
+/* ---- the honeypot ------------------------------------------------------ */
+
+/* INDISTINGUISHABLE FROM SUCCESS. Same status, same body shape. A different
+   status, a different message or a different set of keys hands the bot the
+   answer and it comes back with the field blank. */
+{
+  const d = goodPlayer(); d['bot-field'] = 'i am a robot';
+  const { r, calls } = await H({ form: 'player-registration', data: d });
+  eq('a bot gets 200', r.status, 200);
+  check('…and ok: true', r.body.ok === true);
+  eq('nothing was written', calls.appended.length, 0);
+  eq('nothing was emailed', calls.mailed.length, 0);
+  const real = await H({ form: 'player-registration', data: goodPlayer() });
+  eq('the body is the same shape as a real success',
+    Object.keys(r.body).sort().join(), Object.keys(real.r.body).sort().join());
+}
+{
+  /* And it never reaches the window read, so a bot cannot even make us do I/O. */
+  let reads = 0;
+  const d = goodTeam(); d['bot-field'] = 'x';
+  const { calls } = await H({ form: 'team-registration', data: d },
+    { loadRegistration: async () => { reads += 1; return { mode: 'open' }; } });
+  eq('a bot does not make us read the registration window', reads, 0);
+  eq('…nor the teams sheet', calls.appended.length, 0);
+}
+
+/* ---- validation -------------------------------------------------------- */
+
+{
+  const d = goodTeam(); delete d.club;
+  const { r, calls } = await H({ form: 'team-registration', data: d });
+  eq('an invalid submission is a 400', r.status, 400);
+  eq('…with the coach-facing sentence', r.body.error,
+    'Please fill in club, age group, preferred pool, head coach name and head coach email.');
+  eq('…and the field, so the page can point at it', r.body.field, 'club');
+  eq('nothing written', calls.appended.length, 0);
+  eq('nothing emailed', calls.mailed.length, 0);
+}
+{
+  const d = goodTeam(); d.players = roster(19);
+  const { r } = await H({ form: 'team-registration', data: d });
+  eq('an oversized squad is refused by the SERVER now', r.status, 400);
+  eq('…with the browser’s own sentence', r.body.error,
+    'U16B Contact squads are a maximum of 18 players and you have listed 19. Please remove 1.');
+}
+
+/* ---- the registration window ------------------------------------------- */
+
+/* This is sub-project 3's remaining "three lines". registrationState() was
+   built, shared with the front end and tested at every boundary in July; all
+   that was ever missing was somewhere to call it from. */
+{
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() },
+    { loadRegistration: async () => ({ mode: 'closed' }) });
+  eq('a submission outside the window is refused', r.status, 403);
+  check('…in words', /not open/i.test(r.body.error || ''), r.body.error);
+  eq('nothing written', calls.appended.length, 0);
+  eq('nothing emailed', calls.mailed.length, 0);
+}
+{
+  /* Forcing the window open has to let a real test registration through end to
+     end, or it is not a test. */
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() },
+    { loadRegistration: async () => ({ mode: 'open' }) });
+  eq('forced open lets a real submission through', r.status, 200);
+  eq('…and it is written', calls.appended.length, 1);
+}
+{
+  /* A window that cannot be read must FAIL CLOSED. Unlike the rate limiter:
+     there, allowing costs nothing; here, allowing means accepting registrations
+     after the squads were supposed to be fixed. */
+  const { r, calls } = await H({ form: 'team-registration', data: goodTeam() },
+    { loadRegistration: async () => { throw new Error('blobs down'); } });
+  eq('an unreadable window refuses rather than guessing', r.status, 403);
+  eq('nothing written', calls.appended.length, 0);
+}
+
+/* ---- the team code ----------------------------------------------------- */
+
+{
+  const { r, threw } = await H({ form: 'team-registration', data: goodTeam() },
+    { readTeamsSheet: async () => { throw new Error('sheet read failed'); } });
+  check('a failed numbering read does not throw out of handleSubmission', !threw, r.body.error);
+  eq('a failed numbering read does not cost the registration', r.status, 200);
+  check('…and a code is still issued', typeof r.body.teamCode === 'string' && r.body.teamCode.length > 0);
+}
+/* Nothing a dependency can do may turn into a rejection. */
+{
+  const throwers = ['appendRow', 'sendConfirmation', 'parkFailed', 'loadRegistration', 'readTeamsSheet'];
+  for (const name of throwers) {
+    const { threw } = await H({ form: 'team-registration', data: goodTeam() },
+      { [name]: async () => { throw new Error('boom'); } });
+    check(`a throwing ${name} does not reject`, !threw);
+  }
+  const { threw } = await H({ form: 'team-registration', data: goodTeam() },
+    { registrationState: () => { throw new Error('boom'); } });
+  check('a throwing registrationState does not reject', !threw);
+}
+
+/* ---- when the sheet write fails ---------------------------------------- */
+
+{
+  const { r, calls } = await H({ form: 'player-registration', data: goodPlayer() },
+    { appendRow: async () => { throw new Error('sheets down'); } });
+  eq('a failed write is a 500, not a quiet success', r.status, 500);
+  check('…and tells the coach nothing has been registered',
+    /nothing has been registered/i.test(r.body.error || ''), r.body.error);
+  check('…and where to go', /admin@adhjrt\.com/.test(r.body.error || ''));
+  eq('the submission is parked so it can be replayed', calls.parked.length, 1);
+  /* NO EMAIL. A confirmation for a registration that is not in the sheet is
+     worse than no confirmation: the coach stops chasing it. */
+  eq('no confirmation is sent for something that was not saved', calls.mailed.length, 0);
+}
+
+/* ---- when the email fails ---------------------------------------------- */
+
+{
+  const { r, calls } = await H({ form: 'player-registration', data: goodPlayer() },
+    { sendConfirmation: async () => { throw new Error('graph down'); } });
+  eq('a failed email is still a success', r.status, 200);
+  eq('…because the row is the record, and it is there', calls.appended.length, 1);
+  eq('…and nothing is parked, because nothing was lost', calls.parked.length, 0);
+}
+{
+  const { r } = await H({ form: 'player-registration', data: goodPlayer() },
+    { sendConfirmation: async () => ({ sent: false, reason: 'no template' }) });
+  eq('a mailer that declines is still a success', r.status, 200);
+}
+{
+  /* Order matters: the row first, always. A mail failure must never make a
+     caller retry into a duplicate row. */
+  const order = [];
+  await H({ form: 'player-registration', data: goodPlayer() }, {
+    appendRow: async () => { order.push('append'); },
+    sendConfirmation: async () => { order.push('mail'); return { sent: true }; },
+  });
+  eq('the row is written before the email is sent', order.join(), 'append,mail');
+}
+
+/* ---- nothing about a registration reaches a log ------------------------ */
+
+/* THE CHECK THAT STOPS A FUTURE EDIT LOGGING A CHILD'S MEDICAL NOTES. Every
+   field carries a unique sentinel; no log line may contain any of it, down
+   every path including the failures. */
+{
+  const SENTINEL = 'ZZSENTINELZZ';
+  /* ⚠️ ONLY THE FREE-TEXT FIELDS. The first version of this poisoned every
+     field including `age-group`, `dob` and `consent` — which made the
+     submission fail VALIDATION every time, so it never reached the write, the
+     mailer or the parking, and the check quietly proved nothing. It passed
+     against a fault that logged the entire submission as JSON. Found by
+     injecting that fault. */
+  const KEEP_VALID = ['age-group', 'dob', 'consent', 'play-up-consent', 'preferred-pool'];
+  const poison = (o) => {
+    const out = { ...o };
+    Object.keys(out).forEach((k) => {
+      if (typeof out[k] === 'string' && KEEP_VALID.indexOf(k) < 0) out[k] = SENTINEL + k;
+    });
+    return out;
+  };
+  /* Prove the poisoned submission is still ACCEPTED, or the paths below are
+     not the paths they claim to be. */
+  {
+    const { r } = await H({ form: 'player-registration', data: poison(goodPlayer()) });
+    eq('the poisoned submission still gets all the way through', r.status, 200);
+  }
+  const paths = [
+    ['a success', {}],
+    ['a failed write', { appendRow: async () => { throw new Error('x'); } }],
+    ['a failed email', { sendConfirmation: async () => { throw new Error('x'); } }],
+    ['a closed window', { loadRegistration: async () => ({ mode: 'closed' }) }],
+    ['an unreadable window', { loadRegistration: async () => { throw new Error('x'); } }],
+    ['a failed numbering read', { readTeamsSheet: async () => { throw new Error('x'); } }],
+  ];
+  for (const [name, over] of paths) {
+    const { calls } = await H({ form: 'player-registration', data: poison(goodPlayer()) }, over);
+    const leaked = calls.logs.filter((l) => l.indexOf(SENTINEL) >= 0);
+    check(`no registration data is logged on ${name}`, leaked.length === 0, leaked[0]);
+  }
+  /* A REFUSAL is its own path, and the one most likely to grow a "helpful"
+     log line carrying the offending value. It needs a field that is PRESENT
+     and invalid — a missing field has no value to leak. */
+  {
+    const d2 = poison(goodPlayer());
+    d2['medical-notes'] = (SENTINEL + '-').repeat(300);        // over the 2000 cap
+    const { r, calls } = await H({ form: 'player-registration', data: d2 });
+    eq('…and that path really is a refusal', r.status, 400);
+    eq('…on the field we made too long', r.body.field, 'medical-notes');
+    const leaked = calls.logs.filter((l) => l.indexOf(SENTINEL) >= 0);
+    check('no registration data is logged on a refusal', leaked.length === 0, leaked[0]);
+  }
+
+  /* And an unknown field is logged by NAME, which is the whole point of
+     cleanSubmission reporting the drop. */
+  const d = poison(goodPlayer()); d['some-unknown-field'] = SENTINEL + 'value';
+  const { calls } = await H({ form: 'player-registration', data: d });
+  check('a dropped field IS logged, by name',
+    calls.logs.some((l) => l.indexOf('some-unknown-field') >= 0), calls.logs.join(' | '));
+  check('…but never its value',
+    !calls.logs.some((l) => l.indexOf(SENTINEL) >= 0), calls.logs.join(' | '));
+}
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 

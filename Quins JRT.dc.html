@@ -366,8 +366,13 @@
   <!-- ============ FORMAT / AGE GROUPS ============ -->
   <section id="format" style="background:#0C0C0E;color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A);z-index:2"></div>
-    <div style="position:absolute;inset:0;opacity:.35;pointer-events:none;z-index:0"><img class="fmt-bgimg" src="assets/results-collage.jpg" alt=""></div>
+    <div style="position:absolute;inset:0;opacity:.2;pointer-events:none;z-index:0"><img class="fmt-bgimg" src="assets/format-action.jpg" alt=""></div>
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,12,14,0.6),rgba(12,12,14,0.85));pointer-events:none;z-index:0"></div>
+    <!-- Vignette: fades the photo to black on all four edges, same #0C0C0E the
+         section background already is, same idea as the hero's left-edge fade
+         (linear-gradient(90deg,#0C0C0E 34%,...)) but radial so it reads on all
+         sides rather than just one. Center stays clear so the photo still shows. -->
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(12,12,14,0) 35%,rgba(12,12,14,.92) 100%);pointer-events:none;z-index:0"></div>
     <div style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:100px 32px">
       <div class="fmt-head" data-reveal>
         <div class="fmt-eyebrow"><span class="rule"></span>The format</div>

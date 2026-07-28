@@ -605,6 +605,42 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### Validation (added 28 Jul 2026)
+
+`validateSubmission(form, clean)` in `_intake.js`. **No new rules** — every one
+is already applied in the browser. What is new is that the browser was the ONLY
+place they were applied, so anyone editing the page could register a squad of
+any size for a contact age grade. Ages are sub-project 2 and deliberately absent.
+
+**The wording is copied character for character** from `submitTeam()` and
+`_playerFormError()`, and `test-intake.js` reads both out of the page and fails
+if either moves. Same reason as `test-venue-panel.js`: two hand-written copies
+of one rule always drift, and when they do a coach either gets a refusal the
+page never warned about or the page blocks something the server would have taken.
+
+- ⚠️ **`age-group` is required on the TEAM form and NOT on the player form.**
+  That is not an oversight — `_playerFormError()` does not ask for it and
+  `emptyPlayerForm()` starts it blank, so the browser accepts a player without
+  one. A rule the coach was never shown is a rule that looks like a bug. (Worth
+  raising with Jay as a gap in the *form*, not in this code.)
+- Consent must be the exact string `'Yes'`. `'true'`, `'on'`, `'yes'` are a
+  client we did not write, and treating them as agreement records consent
+  nobody gave.
+- **The honeypot is accepted, not refused**, and checked FIRST. A bot told "no"
+  tries again with the field blank; a bot told "thank you" goes away. Checking
+  it first also stops a bot filling it and reading the validation rules back out
+  of the error messages.
+- A squad list that is not a JSON array is a broken client, not a coach mistake,
+  and says so differently — telling a coach to fix a list the page mangled sends
+  them round in circles.
+
+⚠️ **A rule that cannot fire is worse than no rule.** A flat `MAX_ROSTER` of 30
+sat in the cap check and was dead: `age-group` is required and an unrecognised
+one is refused first, so the cap applied is always a real group's, and the
+largest is 18. Deleting the branch changed no test — which is how it was found.
+The test now asserts the invariant that actually holds: every group's cap is
+enforced at its own number, checked across all fifteen.
+
 ⚠️ **A no-op is not a fault.** The first version of the range fault hardcoded
 `A:N` — which is the correct answer today, so nothing changed and nothing was
 caught, correctly. The real mistake is adding a column *and* leaving the range
@@ -1493,8 +1529,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,178 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**98 faults**, all of
+rules — **1,306 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**116 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

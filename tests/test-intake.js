@@ -434,6 +434,319 @@ eq('players go to the players sheet', I.FORMS['player-registration'].sheetEnv, '
 check('the two are not the same sheet',
   I.FORMS['team-registration'].sheetEnv !== I.FORMS['player-registration'].sheetEnv);
 
+/* ====================================================================== */
+section('Validation — the rules, server side for the first time');
+
+/* NO NEW RULES HERE. Every one of these is already applied in the browser; the
+   point is that until now that was the ONLY place it was applied, so anyone
+   editing the page could register a squad of any size for a contact age grade.
+   Ages are sub-project 2 and deliberately absent.
+
+   The wording is copied CHARACTER FOR CHARACTER from submitTeam() and
+   _playerFormError(), so a coach sees the same sentence whichever side refuses
+   — see the agreement section below, which reads it out of the page. */
+
+const V = (form, data) => I.validateSubmission(form, I.cleanSubmission(form, data).clean);
+const A_GROUPS = require(path.join(repoRoot(), 'netlify', 'functions', '_agegroups.js')).AGE_GROUPS;
+
+/* A submission with everything filled in. Every value is invented. */
+const goodTeam = () => ({
+  club: 'Test Club', 'age-group': 'U16B Contact', 'preferred-pool': 'No preference',
+  'head-coach-name': 'A Coach', 'head-coach-email': 'coach@example.com',
+  'head-coach-phone': '+971500000000', 'num-players': '2',
+  players: JSON.stringify([
+    { firstName: 'One', lastName: 'Player', dob: '2011-01-01' },
+    { firstName: 'Two', lastName: 'Player', dob: '2011-01-02' },
+  ]),
+});
+const goodPlayer = () => ({
+  'player-first-name': 'Test', 'player-last-name': 'Player', dob: '2011-01-01',
+  club: 'Test Club', 'age-group': 'U16B Contact',
+  'parent-first-name': 'Parent', 'parent-last-name': 'Surname',
+  'parent-email': 'parent@example.com', 'parent-phone': '+971500000000',
+  'emergency-first-name': 'Emergency', 'emergency-last-name': 'Contact',
+  'emergency-phone': '+971500000001',
+  consent: 'Yes', 'play-up-consent': 'No',
+});
+
+check('a complete team registration is accepted', V('team-registration', goodTeam()).ok === true,
+  V('team-registration', goodTeam()).error);
+check('a complete player registration is accepted', V('player-registration', goodPlayer()).ok === true,
+  V('player-registration', goodPlayer()).error);
+check('neither is silently dropped', !V('team-registration', goodTeam()).drop
+  && !V('player-registration', goodPlayer()).drop);
+
+/* ---- required fields, one at a time ---------------------------------- */
+
+/* EACH FIELD REMOVED INDIVIDUALLY. A single "everything missing" case passes
+   even when only one field is actually being checked, which is exactly the kind
+   of hollow test this project has shipped before. */
+const TEAM_REQUIRED = ['club', 'age-group', 'preferred-pool', 'head-coach-name', 'head-coach-email'];
+TEAM_REQUIRED.forEach((f) => {
+  const d = goodTeam(); delete d[f];
+  const r = V('team-registration', d);
+  check(`a team with no ${f} is refused`, r.ok === false, JSON.stringify(r));
+  eq(`…and told which one`, r.field, f);
+});
+TEAM_REQUIRED.forEach((f) => {
+  const d = goodTeam(); d[f] = '   ';
+  check(`whitespace does not count as a ${f}`, V('team-registration', d).ok === false);
+});
+
+/* NOT required on the team form, and must not become so — the browser lets a
+   coach submit without them and the server refusing would be a rule the coach
+   was never shown. */
+['head-coach-phone', 'manager-name', 'manager-email', 'manager-phone', 'notes', 'num-players']
+  .forEach((f) => {
+    const d = goodTeam(); delete d[f];
+    check(`a team with no ${f} is still fine`, V('team-registration', d).ok === true);
+  });
+
+const PLAYER_REQUIRED = [
+  'player-first-name', 'player-last-name', 'dob', 'club',
+  'parent-first-name', 'parent-last-name', 'parent-email',
+  'emergency-first-name', 'emergency-last-name', 'emergency-phone',
+];
+PLAYER_REQUIRED.forEach((f) => {
+  const d = goodPlayer(); delete d[f];
+  const r = V('player-registration', d);
+  check(`a player with no ${f} is refused`, r.ok === false, JSON.stringify(r));
+  eq(`…and told which one`, r.field, f);
+});
+
+/* ⚠️ AGE GROUP IS NOT REQUIRED ON THE PLAYER FORM. _playerFormError() does not
+   ask for it and emptyPlayerForm() starts it blank, so the browser accepts a
+   player with none. The server matches that rather than quietly tightening it:
+   a rule the coach was never shown is a rule that looks like a bug. Worth
+   raising with Jay separately — it is a gap in the form, not in this code. */
+{
+  const d = goodPlayer(); delete d['age-group'];
+  check('a player with no age group is accepted, matching the form', V('player-registration', d).ok === true);
+}
+{
+  const d = goodPlayer(); d['play-up-consent'] = '';
+  check('play-up consent is not required on its own', V('player-registration', d).ok === true);
+}
+{
+  const d = goodPlayer(); delete d['parent-phone'];
+  check('a parent phone is not required, matching the form', V('player-registration', d).ok === true);
+}
+{
+  const d = goodPlayer(); delete d['medical-notes'];
+  check('medical notes are not required', V('player-registration', d).ok === true);
+}
+
+/* ---- consent ---------------------------------------------------------- */
+
+['No', '', 'yes', 'true', 'on'].forEach((v) => {
+  const d = goodPlayer(); d.consent = v;
+  check(`consent "${v}" is not consent`, V('player-registration', d).ok === false, v);
+});
+{
+  const d = goodPlayer(); delete d.consent;
+  check('missing consent is not consent', V('player-registration', d).ok === false);
+  eq('…and the field named is consent', V('player-registration', d).field, 'consent');
+}
+
+/* ---- the age group, when it is there ---------------------------------- */
+
+['U16B contact', 'u16b', 'U16B', 'Under 16 Boys', 'not a group'].forEach((v) => {
+  [['team-registration', goodTeam()], ['player-registration', goodPlayer()]].forEach(([form, d]) => {
+    d['age-group'] = v;
+    const r = V(form, d);
+    check(`${form}: "${v}" is not one of the fifteen`, r.ok === false, v);
+    check(`…and the message says so`, /age group/i.test(r.error || ''), r.error);
+  });
+});
+
+/* ---- the squad cap, enforced for the first time ------------------------ */
+
+const roster = (n) => JSON.stringify(
+  Array.from({ length: n }, (_, i) => ({ firstName: `P${i}`, lastName: 'Player', dob: '2011-01-01' }))
+);
+
+{
+  /* U16B is 18, U16G is 12 — different numbers, so a cap read off the wrong
+     group cannot pass by coincidence. */
+  const at18 = goodTeam(); at18.players = roster(18);
+  check('18 players in U16B is exactly the cap and is allowed', V('team-registration', at18).ok === true,
+    V('team-registration', at18).error);
+
+  const over = goodTeam(); over.players = roster(19);
+  const r = V('team-registration', over);
+  check('19 is one too many', r.ok === false);
+  eq('…and the sentence is the one the browser uses',
+    r.error, 'U16B Contact squads are a maximum of 18 players and you have listed 19. Please remove 1.');
+
+  const g = goodTeam(); g['age-group'] = 'U16G Contact'; g.players = roster(13);
+  eq('the cap follows the GROUP, not the biggest number in the tournament',
+    V('team-registration', g).error,
+    'U16G Contact squads are a maximum of 12 players and you have listed 13. Please remove 1.');
+
+  const g12 = goodTeam(); g12['age-group'] = 'U16G Contact'; g12.players = roster(12);
+  check('12 in U16G is allowed', V('team-registration', g12).ok === true);
+  const g13 = goodTeam(); g13['age-group'] = 'U16G Contact'; g13.players = roster(18);
+  check('18 in U16G is NOT allowed, even though 18 is a cap somewhere',
+    V('team-registration', g13).ok === false);
+
+  const none = goodTeam(); none.players = roster(0);
+  check('an empty roster is allowed — a coach may send names later',
+    V('team-registration', none).ok === true);
+  const noField = goodTeam(); delete noField.players;
+  check('no roster at all is allowed too', V('team-registration', noField).ok === true);
+}
+
+/* WHY THERE IS NO SEPARATE ABSOLUTE CEILING. There was one — a flat roster cap
+   of 30 — and it was dead code: `age-group` is required on this form and an
+   unrecognised one is refused before we get here, so the cap applied is always
+   a real group's, and the largest in the tournament is 18. Deleting the branch
+   changed no test, which is how it was found.
+
+   So the invariant to assert is the one that actually holds: no roster can get
+   past this larger than the biggest squad in the tournament. */
+{
+  const huge = goodTeam(); huge.players = roster(31);
+  check('31 players is refused', V('team-registration', huge).ok === false);
+  check('…as is anything over the largest cap in the tournament, in every group',
+    A_GROUPS.every((g) => {
+      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad + 1);
+      return V('team-registration', d).ok === false;
+    }));
+  check('…while exactly the cap is allowed in every group',
+    A_GROUPS.every((g) => {
+      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad);
+      return V('team-registration', d).ok === true;
+    }));
+  check('the biggest squad anywhere is 18, so nothing larger can ever be stored',
+    Math.max(...A_GROUPS.map((g) => g.squad)) === 18);
+  check('an unrecognised group never reaches the cap check at all',
+    (() => { const d = goodTeam(); d['age-group'] = 'nope'; d.players = roster(99);
+      const r = V('team-registration', d); return r.ok === false && r.field === 'age-group'; })());
+}
+
+/* The roster arrives as a JSON string. Anything that is not a JSON array is a
+   broken client, not a coach mistake, so it says so differently. */
+['not json', '{}', '"a string"', '42', 'null'].forEach((v) => {
+  const d = goodTeam(); d.players = v;
+  const r = V('team-registration', d);
+  check(`a squad list of ${v} is refused`, r.ok === false, v);
+  check('…and points at admin@adhjrt.com rather than blaming the coach',
+    /admin@adhjrt\.com/.test(r.error || ''), r.error);
+});
+{
+  const d = goodTeam(); d.players = '[]';
+  check('an empty JSON array is fine', V('team-registration', d).ok === true);
+}
+
+/* ---- length caps ------------------------------------------------------ */
+
+eq('a field is capped at 200 characters', I.MAX_FIELD_CHARS, 200);
+eq('notes get more room', I.MAX_NOTES_CHARS, 2000);
+{
+  const at = goodTeam(); at['head-coach-name'] = 'x'.repeat(200);
+  check('exactly 200 is allowed', V('team-registration', at).ok === true);
+  const over = goodTeam(); over['head-coach-name'] = 'x'.repeat(201);
+  const r = V('team-registration', over);
+  check('201 is not', r.ok === false);
+  eq('…and the field is named', r.field, 'head-coach-name');
+  check('…in words a coach can act on', /head coach/i.test(r.error || ''), r.error);
+}
+{
+  const at = goodTeam(); at.notes = 'x'.repeat(2000);
+  check('2000 characters of notes are allowed', V('team-registration', at).ok === true);
+  const over = goodTeam(); over.notes = 'x'.repeat(2001);
+  check('2001 are not', V('team-registration', over).ok === false);
+}
+{
+  const over = goodPlayer(); over['medical-notes'] = 'x'.repeat(2001);
+  check('medical notes get the longer allowance too, and a limit',
+    V('player-registration', over).ok === false);
+  const at = goodPlayer(); at['medical-notes'] = 'x'.repeat(2000);
+  check('…2000 of them being fine', V('player-registration', at).ok === true);
+}
+{
+  /* The squad list is JSON and legitimately long, so it has its own ceiling —
+     but it still has one. Without it the only limit on a request is the body
+     size, and this is a public endpoint. */
+  const over = goodTeam(); over.players = JSON.stringify([{ firstName: 'x'.repeat(9000) }]);
+  check('a squad list cannot be unbounded', V('team-registration', over).ok === false);
+}
+
+/* ---- the honeypot ----------------------------------------------------- */
+
+/* ACCEPTED, NOT REFUSED. A bot told "no" tries again with the field blank. A
+   bot told "thank you" goes away. Anything that behaves differently for a
+   filled honeypot than for a real submission — a different status, a different
+   message, a different shape — hands it the answer. */
+{
+  const d = goodTeam(); d['bot-field'] = 'i am a robot';
+  const r = V('team-registration', d);
+  check('a filled honeypot is ACCEPTED', r.ok === true);
+  check('…but marked to be thrown away', r.drop === true);
+  check('…and says nothing that would tell a bot why', !r.error);
+}
+{
+  const d = goodPlayer(); d['bot-field'] = 'x';
+  const r = V('player-registration', d);
+  check('the player form has one too', r.ok === true && r.drop === true);
+}
+{
+  const d = goodTeam(); d['bot-field'] = '';
+  check('an empty honeypot is what a real browser sends', V('team-registration', d).drop !== true);
+  const d2 = goodTeam();
+  check('…and so is no honeypot at all', V('team-registration', d2).drop !== true);
+}
+/* A filled honeypot short-circuits BEFORE the other rules, so a bot cannot
+   learn the validation rules by filling it and reading the errors back. */
+{
+  const d = goodTeam(); d['bot-field'] = 'x'; delete d.club; d.players = roster(99);
+  const r = V('team-registration', d);
+  check('a filled honeypot is accepted even when everything else is wrong', r.ok === true && r.drop === true);
+  check('…and still explains nothing', !r.error);
+}
+
+/* ---- junk ------------------------------------------------------------- */
+
+check('an unknown form is refused rather than validated', I.validateSubmission('nope', {}).ok === false);
+check('no data at all is refused, not thrown on', I.validateSubmission('team-registration', {}).ok === false);
+check('null data is refused, not thrown on', I.validateSubmission('team-registration', null).ok === false);
+
+/* ====================================================================== */
+section('The browser and the server say the same sentence');
+
+/* THE test-venue-panel.js PATTERN, and it exists because two hand-written
+   copies of one rule always drift. If they diverge, a coach either gets a
+   refusal the page never warned about, or the page blocks something the server
+   would have taken — and neither is debuggable from the outside.
+
+   Read out of the page, not retyped, so a change on either side breaks this. */
+{
+  const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+
+  const teamRequiredMsg = "Please fill in club, age group, preferred pool, head coach name and head coach email.";
+  check('the page still uses the team required-fields sentence',
+    page.indexOf(teamRequiredMsg) >= 0, 'not found in the page');
+  const d1 = goodTeam(); delete d1.club;
+  eq('…and the server says exactly it', V('team-registration', d1).error, teamRequiredMsg);
+
+  const playerRequiredMsg = "Please fill in the player name, date of birth, club, parent name, parent email and an emergency contact (name and mobile).";
+  check('the page still uses the player required-fields sentence',
+    page.indexOf(playerRequiredMsg) >= 0, 'not found in the page');
+  const d2 = goodPlayer(); delete d2.dob;
+  eq('…and the server says exactly it', V('player-registration', d2).error, playerRequiredMsg);
+
+  const consentMsg = "Please read and agree to the Medical Declaration & Consent before submitting.";
+  check('the page still uses the consent sentence', page.indexOf(consentMsg) >= 0, 'not found in the page');
+  const d3 = goodPlayer(); d3.consent = 'No';
+  eq('…and the server says exactly it', V('player-registration', d3).error, consentMsg);
+
+  /* The cap sentence is built from a template on both sides, so the check is
+     that the template is still the same shape. */
+  const capTemplate = 'squads are a maximum of ${cap} players and you have listed ${f.players.length}. Please remove ${over}.';
+  check('the page still builds the cap sentence the same way',
+    page.indexOf(capTemplate) >= 0, 'the template moved — the server copy must follow');
+}
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 

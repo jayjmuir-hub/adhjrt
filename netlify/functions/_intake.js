@@ -31,6 +31,8 @@
 // — is the check that catches that, and it could not be written at all while
 // the two halves lived in different files.
 
+const { squadCap, AGE_GROUP_BY_NAME } = require('./_agegroups');
+
 /* ============================================================
    THE SHEET COLUMNS.
    ------------------------------------------------------------
@@ -164,6 +166,165 @@ function cleanSubmission(form, data) {
 }
 
 /* ============================================================
+   VALIDATION.
+   ------------------------------------------------------------
+   NO NEW RULES. Every one of these is already applied in the browser. The
+   point is that until the gateway that was the ONLY place they were applied,
+   so anyone editing the page could register a squad of any size for a contact
+   age grade. Ages are sub-project 2 and are deliberately not here.
+
+   THE WORDING IS COPIED CHARACTER FOR CHARACTER from submitTeam() and
+   _playerFormError() in "Quins JRT.dc.html", so a coach sees the same sentence
+   whichever side refuses. test-intake.js reads both out of the page and fails
+   if either moves — the test-venue-panel.js pattern, which exists because two
+   hand-written copies of one rule always drift.
+
+   Returns { ok, error, field, drop }. `drop` means "accept this and throw it
+   away" and is only ever set by the honeypot.
+   ============================================================ */
+
+/* A public endpoint with no length limit is a public endpoint that will
+   eventually receive a megabyte. 200 characters is far past any real name,
+   club or email; notes and medical notes get room to be a paragraph. */
+const MAX_FIELD_CHARS = 200;
+const MAX_NOTES_CHARS = 2000;
+const LONG_FIELDS = ['notes', 'medical-notes'];
+
+/* The squad list is JSON and legitimately long, but it still needs a ceiling —
+   without one the only limit on a request is the body size. Thirty players of
+   plausible name length is nowhere near this. */
+const MAX_PLAYERS_CHARS = 8000;
+
+/* Which fields a coach must fill in. Copied from the browser's own checks —
+   submitTeam() line 1603 and _playerFormError() line 1513.
+
+   ⚠️ 'age-group' is required on the TEAM form and NOT on the player form. That
+   is not an oversight here: _playerFormError() does not ask for it and
+   emptyPlayerForm() starts it blank, so the browser accepts a player without
+   one. A rule the coach was never shown is a rule that looks like a bug. */
+const REQUIRED = {
+  'team-registration': {
+    fields: ['club', 'age-group', 'preferred-pool', 'head-coach-name', 'head-coach-email'],
+    message: 'Please fill in club, age group, preferred pool, head coach name and head coach email.',
+  },
+  'player-registration': {
+    fields: [
+      'player-first-name', 'player-last-name', 'dob', 'club',
+      'parent-first-name', 'parent-last-name', 'parent-email',
+      'emergency-first-name', 'emergency-last-name', 'emergency-phone',
+    ],
+    message: 'Please fill in the player name, date of birth, club, parent name, parent email and an emergency contact (name and mobile).',
+  },
+};
+
+/* Plain-English names for the "too long" message. A coach reading
+   "That head-coach-name is too long" has to work out what we mean; this is ten
+   lines and the difference between a usable message and a cryptic one. */
+const LABELS = {
+  club: 'club name', 'age-group': 'age group', 'preferred-pool': 'preferred pool',
+  'head-coach-name': 'head coach name', 'head-coach-email': 'head coach email',
+  'head-coach-phone': 'head coach phone', 'manager-name': 'manager name',
+  'manager-email': 'manager email', 'manager-phone': 'manager phone',
+  'num-players': 'number of players', notes: 'notes', players: 'squad list',
+  'player-first-name': 'player first name', 'player-last-name': 'player last name',
+  dob: 'date of birth', 'parent-first-name': 'parent first name',
+  'parent-last-name': 'parent last name', 'parent-email': 'parent email',
+  'parent-phone': 'parent phone', 'emergency-first-name': 'emergency contact first name',
+  'emergency-last-name': 'emergency contact last name',
+  'emergency-phone': 'emergency contact phone', 'medical-notes': 'medical notes',
+  consent: 'consent', 'play-up-consent': 'play-up consent',
+};
+const label = (key) => LABELS[key] || key;
+
+const text = (v) => (v === undefined || v === null ? '' : String(v));
+const filled = (v) => text(v).trim().length > 0;
+
+const bad = (error, field) => ({ ok: false, error, field: field || null });
+const good = (extra) => ({ ok: true, error: null, field: null, ...(extra || {}) });
+
+function validateSubmission(form, clean) {
+  const spec = FORMS[typeof form === 'string' ? form : ''];
+  if (!spec) return bad('We could not read that submission.', null);
+  const d = clean && typeof clean === 'object' ? clean : {};
+
+  /* 1. THE HONEYPOT, FIRST AND SILENTLY.
+        Accepted, not refused: a bot told "no" tries again with the field
+        blank; a bot told "thank you" goes away. It short-circuits before every
+        other rule so a bot cannot fill it and read the validation rules back
+        out of the errors. */
+  if (filled(d[HONEYPOT])) return good({ drop: true });
+
+  /* 2. REQUIRED FIELDS. One message for the set, matching the browser, but the
+        FIELD is named separately so the client can highlight it. */
+  const req = REQUIRED[form];
+  for (const f of req.fields) {
+    if (!filled(d[f])) return bad(req.message, f);
+  }
+
+  /* 3. CONSENT. A checkbox arrives as the string 'Yes' or 'No'. Anything else
+        — 'true', 'on', 'yes' — is a client we did not write, and treating it as
+        agreement would be recording consent nobody gave. */
+  if (form === 'player-registration' && text(d.consent) !== 'Yes') {
+    return bad('Please read and agree to the Medical Declaration & Consent before submitting.', 'consent');
+  }
+
+  /* 4. THE AGE GROUP, when there is one. Matched exactly against the fifteen.
+        Refused rather than guessed at: a group we cannot recognise is a group
+        we cannot apply a squad cap to, and later a group we cannot age-check. */
+  const groupName = text(d['age-group']).trim();
+  if (groupName && !AGE_GROUP_BY_NAME[groupName]) {
+    return bad(`"${groupName}" is not one of the tournament's age groups.`, 'age-group');
+  }
+
+  /* 5. THE SQUAD LIST arrives as a JSON string. Something that is not a JSON
+        array is a broken client rather than a coach mistake, so it says so
+        differently — telling a coach to fix their squad list when the page
+        mangled it would send them round in circles. */
+  let roster = null;
+  if (form === 'team-registration' && filled(d.players)) {
+    if (text(d.players).length > MAX_PLAYERS_CHARS) {
+      return bad('We could not read the squad list. Please try again, or email admin@adhjrt.com.', 'players');
+    }
+    try { roster = JSON.parse(text(d.players)); } catch (e) { roster = null; }
+    if (!Array.isArray(roster)) {
+      return bad('We could not read the squad list. Please try again, or email admin@adhjrt.com.', 'players');
+    }
+  }
+
+  /* 6. THE SQUAD CAP — the rule that has never once been enforced anywhere but
+        the browser. The sentence is submitTeam()'s, character for character.
+
+        NO SEPARATE ABSOLUTE CEILING. There was one here briefly — a flat
+        MAX_ROSTER of 30 — and it was DEAD CODE: `age-group` is required on this
+        form and step 4 refuses anything that is not one of the fifteen, so by
+        the time we get here squadCap() has always returned a real cap, and the
+        largest in the tournament is 18. A rule that cannot fire is worse than
+        no rule, because it reads as protection that is not there. Deleting the
+        branch changed no test, which is how it was found.
+
+        If `age-group` ever stops being required on the team form, the fallback
+        cap (18, the largest) still bounds this — but come back and check. */
+  if (roster) {
+    const cap = squadCap(groupName);
+    if (roster.length > cap) {
+      const over = roster.length - cap;
+      return bad(`${groupName} squads are a maximum of ${cap} players and you have listed ${roster.length}. Please remove ${over}.`, 'players');
+    }
+  }
+
+  /* 7. LENGTH. Last, so a coach fixes the obvious things first. */
+  for (const f of spec.fields) {
+    const max = LONG_FIELDS.indexOf(f) >= 0 ? MAX_NOTES_CHARS : MAX_FIELD_CHARS;
+    if (f === 'players') continue;   // has its own ceiling, checked above
+    if (text(d[f]).length > max) {
+      return bad(`That ${label(f)} is too long — please shorten it to ${max} characters or fewer.`, f);
+    }
+  }
+
+  return good();
+}
+
+/* ============================================================
    WRITING.
    ============================================================ */
 
@@ -236,6 +397,7 @@ module.exports = {
   TEAM_COLUMNS, TEAM_OUT, PLAYER_COLUMNS,
   TEAM_RANGE, PLAYER_RANGE,
   FORMS, HONEYPOT, cleanSubmission,
+  validateSubmission, MAX_FIELD_CHARS, MAX_NOTES_CHARS, MAX_PLAYERS_CHARS,
   teamRow, playerRow,
   mapTeamRow, mapPlayerRow,
 };

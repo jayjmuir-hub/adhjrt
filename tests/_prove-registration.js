@@ -882,6 +882,148 @@ const FAULTS = [
       "    sheetEnv: 'GOOGLE_SHEET_ID_PLAYERS',", "    sheetEnv: 'GOOGLE_SHEET_ID_TEAMS',"),
     expect: ['players go to the players sheet', 'the two are not the same sheet'],
   },
+
+  /* ---- validation -------------------------------------------------------
+     The squad cap has never been enforced anywhere but the browser. These are
+     the faults that decide whether it now is. */
+
+  {
+    name: 'the squad cap stops being checked at all',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    if (roster.length > cap) {', '    if (false) {'),
+    expect: ['19 is one too many', 'the sentence is the one the browser uses'],
+  },
+  {
+    name: 'the cap is off by one, so one extra player always gets through',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    if (roster.length > cap) {', '    if (roster.length > cap + 1) {'),
+    expect: ['19 is one too many'],
+  },
+  {
+    name: 'the cap is read from the largest group instead of the one submitted',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    const cap = squadCap(groupName);', '    const cap = 18;'),
+    expect: ['the cap follows the GROUP', '18 in U16G is NOT allowed'],
+  },
+  {
+    name: 'the cap sentence drifts from the one the browser shows',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      'players and you have listed ${roster.length}. Please remove ${over}.`',
+      'players and you have listed ${roster.length}. Please remove ${over} of them.`'),
+    expect: ['the sentence is the one the browser uses'],
+  },
+  {
+    name: 'the required-field check passes if ANY one field is filled in',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    if (!filled(d[f])) return bad(req.message, f);',
+      '    if (req.fields.every((x) => !filled(d[x]))) return bad(req.message, f);'),
+    expect: ['is refused'],
+  },
+  {
+    name: 'whitespace counts as a filled-in field',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "const filled = (v) => text(v).trim().length > 0;",
+      'const filled = (v) => text(v).length > 0;'),
+    expect: ['whitespace does not count as a'],
+  },
+  {
+    name: 'the team form starts requiring an age group on the PLAYER form too',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      'emergency-first-name', 'emergency-last-name', 'emergency-phone',\n    ],\n    message: 'Please fill in the player name",
+      "      'emergency-first-name', 'emergency-last-name', 'emergency-phone', 'age-group',\n    ],\n    message: 'Please fill in the player name"),
+    expect: ['a player with no age group is accepted'],
+  },
+  {
+    name: 'anything truthy is accepted as medical consent',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form === 'player-registration' && text(d.consent) !== 'Yes') {",
+      "  if (form === 'player-registration' && !filled(d.consent)) {"),
+    expect: ['is not consent'],
+  },
+  {
+    name: 'consent stops being checked entirely',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form === 'player-registration' && text(d.consent) !== 'Yes') {", '  if (false) {'),
+    expect: ['is not consent', 'missing consent is not consent'],
+  },
+  {
+    name: 'an unrecognised age group is waved through',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (groupName && !AGE_GROUP_BY_NAME[groupName]) {', '  if (false) {'),
+    expect: ['is not one of the fifteen', 'never reaches the cap check'],
+  },
+  {
+    name: 'the age group is matched case-insensitively',
+    suite: 'test-intake.js',
+    apply: () => {
+      patch(path.join('netlify', 'functions', '_agegroups.js'),
+        'AGE_GROUP_BY_NAME[g.name] = g;', 'AGE_GROUP_BY_NAME[g.name.toLowerCase()] = g;');
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        "  const groupName = text(d['age-group']).trim();",
+        "  const groupName = text(d['age-group']).trim().toLowerCase();");
+    },
+    expect: ['is not one of the fifteen'],
+  },
+  {
+    name: 'a squad list that is not an array is accepted',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    if (!Array.isArray(roster)) {', '    if (false) {'),
+    expect: ['is refused', 'points at admin@adhjrt.com'],
+  },
+  {
+    name: 'the honeypot REFUSES instead of silently accepting, telling a bot it was seen',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (filled(d[HONEYPOT])) return good({ drop: true });',
+      "  if (filled(d[HONEYPOT])) return bad('Rejected.', HONEYPOT);"),
+    expect: ['a filled honeypot is ACCEPTED', 'marked to be thrown away'],
+  },
+  {
+    name: 'the honeypot is checked LAST, so a bot can read the rules out of the errors',
+    suite: 'test-intake.js',
+    apply: () => {
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        '  if (filled(d[HONEYPOT])) return good({ drop: true });\n\n', '');
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        '  return good();\n}', '  if (filled(d[HONEYPOT])) return good({ drop: true });\n  return good();\n}');
+    },
+    expect: ['accepted even when everything else is wrong'],
+  },
+  {
+    name: 'the honeypot stops being checked, so the bot trap does nothing',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (filled(d[HONEYPOT])) return good({ drop: true });', ''),
+    expect: ['a filled honeypot is ACCEPTED', 'marked to be thrown away'],
+  },
+  {
+    name: 'the length cap is removed',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    if (text(d[f]).length > max) {', '    if (false) {'),
+    expect: ['201 is not', '2001 are not'],
+  },
+  {
+    name: 'every field gets the long allowance, so a name can be 2000 characters',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    const max = LONG_FIELDS.indexOf(f) >= 0 ? MAX_NOTES_CHARS : MAX_FIELD_CHARS;",
+      '    const max = MAX_NOTES_CHARS;'),
+    expect: ['201 is not'],
+  },
+  {
+    name: 'the squad list loses its own ceiling, so a request is bounded only by body size',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    if (text(d.players).length > MAX_PLAYERS_CHARS) {', '    if (false) {'),
+    expect: ['a squad list cannot be unbounded'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

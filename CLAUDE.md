@@ -1038,6 +1038,51 @@ evaluating (or erroring) as a formula. Applied to every cell in `exportCsv()`,
 not just the phone columns, since name/notes fields are free text a coach or
 parent could type anything into.
 
+**Squad list — Teams table "click to expand" (added 28 Jul 2026).** A coach's
+roster **was already being saved** — `players`, column M of the Teams sheet,
+a raw JSON string of everyone typed into the registration form — but nothing
+in `Organizer.dc.html` ever read it. The Teams table showed only the number
+typed into "# Players"; Jay had no way to see who was actually on a squad
+without opening the sheet directly. Jay was offered three options (a count
+with names only in the CSV; names in the table behind a click-to-expand; all
+names crammed into one cell) and picked click-to-expand.
+
+No backend change was needed — `r.players` was already flowing through
+untouched on every team row returned by `_intake.js`'s `mapTeamRow()`.
+Everything here is client-side:
+
+- `Component.parseRoster(playersJson)` (static, next to `csvSafe()`) turns the
+  raw JSON into `[{ name, dob }]`. Deliberately defensive: wrapped in
+  try/catch and checks `Array.isArray()` before mapping, because one
+  hand-typed or historical row with a malformed `players` cell must not throw
+  and take down the whole Teams table — it should just show an empty roster
+  for that one team. A roster entry with no name still shows as `(no name)`
+  rather than vanishing silently; a missing `dob` shows `—`.
+- `state.expandedTeam` holds the **team code** (`r.teamName` — despite the
+  name this is the generated code like `ADH1`, not a free-text field, so it's
+  safe as a unique key) of whichever team's row is currently expanded, or
+  `''` if none are. Only one team can be expanded at a time.
+- `toggleTeamExpand(teamName)` flips `expandedTeam` between that team's code
+  and `''` — this is a genuine toggle, not a one-way "open": clicking an
+  already-open team's button closes it again.
+- `renderVals()`'s `teamRows` mapping now also computes, per row: `roster`,
+  `rosterCount`, `hasRoster` (only teams with a non-empty roster get a
+  clickable toggle — no dead click target on an empty count), `isExpanded`,
+  `toggleLabel` (▼/▲), and `onToggleRoster` (a closure over that row's team
+  code).
+- The template turns the "# Players" cell into a button (only when
+  `hasRoster`) and adds a conditional detail `<tr>` directly below the data
+  row, rendered only when that row's `isExpanded` is true, listing every
+  roster entry as `Name (dob)`.
+
+⚠️ **This is deliberately scoped to display only.** The registration form
+(`Quins JRT.dc.html`) already has a client-side per-player play-up/age check
+(`_rosterPlayerAgeCheck()`) that runs when a coach builds a roster — surfacing
+*that* flag inside the Organizer roster view (e.g. highlighting a player who
+was allowed to play up) is a separate, materially larger piece of work
+(reusing/duplicating that age-check logic here) that was intentionally left
+for a later decision, not built silently alongside this.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not

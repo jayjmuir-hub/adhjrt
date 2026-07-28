@@ -1817,6 +1817,51 @@ const FAULTS = [
     expect: ['exportCsv() actually runs every cell through csvSafe(), not just the raw value'],
   },
 
+  /* Squad list — Teams table "click to expand" (added 28 Jul 2026).
+     parseRoster() is the one thing standing between a raw, coach-typed JSON
+     cell and the Teams table — it has to survive malformed/missing/non-array
+     input without throwing, or one bad row takes down the whole table. */
+  {
+    name: 'parseRoster() stops guarding against malformed JSON, so one bad players cell throws and takes down the whole Teams table',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  static parseRoster(playersJson) {\n    if (!playersJson) return [];\n    let arr;\n    try {\n      arr = JSON.parse(playersJson);\n    } catch (e) {\n      return [];\n    }\n    if (!Array.isArray(arr)) return [];",
+      "  static parseRoster(playersJson) {\n    if (!playersJson) return [];\n    let arr;\n    arr = JSON.parse(playersJson);\n    if (!Array.isArray(arr)) return [];"),
+    expect: ['malformed JSON returns an empty roster, not a thrown error'],
+  },
+  {
+    name: 'parseRoster() stops checking Array.isArray(), so a stray non-array JSON value (e.g. a plain object) is treated as a roster',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "    if (!Array.isArray(arr)) return [];\n    return arr.map((p) => {",
+      "    return arr.map((p) => {"),
+    expect: ['valid JSON that is not an array (e.g. a stray object) returns an empty roster'],
+  },
+  {
+    name: 'parseRoster() stops falling back to "(no name)" for a nameless roster entry, so it silently prints a blank line instead',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "      return { name: name || '(no name)', dob: (p && p.dob) || '—' };",
+      "      return { name: name, dob: (p && p.dob) || '—' };"),
+    expect: ['a roster entry with no name at all is still listed, not silently dropped'],
+  },
+  {
+    name: 'renderVals() stops flagging hasRoster from the parsed roster, so a team with a saved squad list gets no expand button',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "        rosterCount: roster.length,\n        hasRoster: roster.length > 0,",
+      "        rosterCount: roster.length,\n        hasRoster: false,"),
+    expect: ['a team with a saved roster is flagged hasRoster so the table shows a toggle button'],
+  },
+  {
+    name: 'toggleTeamExpand() stops toggling closed again, so once opened a team\'s roster can never be collapsed',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  toggleTeamExpand(teamName) {\n    const { expandedTeam } = this.state;\n    this.setState({ expandedTeam: expandedTeam === teamName ? '' : teamName });\n  }",
+      "  toggleTeamExpand(teamName) {\n    this.setState({ expandedTeam: teamName });\n  }"),
+    expect: ["clicking an already-open team's toggle collapses it again (toggle, not one-way)"],
+  },
+
   {
     name: 'the top-nav Organizer link is removed, leaving only the footer one',
     suite: 'test-registration-panel.js',

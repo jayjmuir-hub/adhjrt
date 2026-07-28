@@ -630,9 +630,26 @@
                     <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
-                    <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
+                    <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">
+                      <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ r.onToggleRoster }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap">{{ r.numPlayers }} {{ r.toggleLabel }}</button>
+                      </sc-if>
+                      <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ false }}">{{ r.numPlayers }}</sc-if>
+                    </td>
                     <td style="padding:12px 14px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
                   </tr>
+                  <sc-if value="{{ r.isExpanded }}" hint-placeholder-val="{{ false }}">
+                    <tr style="border-top:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03)">
+                      <td colspan="12" style="padding:10px 14px 14px 40px">
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;margin-bottom:8px">Squad ({{ r.rosterCount }})</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px 24px">
+                          <sc-for list="{{ r.roster }}" as="p" hint-placeholder-count="2">
+                            <div style="font-size:13px;color:#cdd2da;white-space:nowrap"><span style="font-weight:600;color:#fff">{{ p.name }}</span> <span style="color:#7f8794">({{ p.dob }})</span></div>
+                          </sc-for>
+                        </div>
+                      </td>
+                    </tr>
+                  </sc-if>
                 </sc-for>
               </sc-for>
             </tbody>
@@ -969,7 +986,7 @@ class Component extends DCLogic {
     authMode: 'login',
     signupName: '', signupTitle: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     signupPending: false, signupPendingMessage: '',
-    tab: 'teams', search: '', clubFilter: '', ageFilter: '',
+    tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
     teams: [], players: [], accounts: [],
     /* The venue layout being edited. `venue` is the working copy the form
        mutates; `venueSaved` is what the server last confirmed, so the Save
@@ -2115,6 +2132,16 @@ class Component extends DCLogic {
 
   matches(hay, needle) { return hay.toLowerCase().includes(needle.toLowerCase()); }
 
+  /* A coach's submitted roster is stored as a raw JSON string in the "players"
+     column of the Teams sheet — it's already flowing through to r.players on
+     every team row, untouched. Nothing in Organizer.dc.html has ever read it
+     before now, so the Teams table only ever showed the typed "# Players"
+     count, never who. Added 28 Jul 2026 (squad list visibility). */
+  toggleTeamExpand(teamName) {
+    const { expandedTeam } = this.state;
+    this.setState({ expandedTeam: expandedTeam === teamName ? '' : teamName });
+  }
+
   /* Phone numbers are stored with a leading "+" (e.g. "+971569135186"). Excel
      and Google Sheets both open a CSV cell starting with =, +, -, or @ as a
      formula, not text — so every mobile number in the export was landing as
@@ -2125,6 +2152,26 @@ class Component extends DCLogic {
   static csvSafe(v) {
     const s = String(v || '');
     return /^[=+\-@]/.test(s) ? "'" + s : s;
+  }
+
+  /* Parses the raw roster JSON a coach submitted with their team into a
+     display-safe list of { name, dob }. Deliberately defensive: a hand-typed
+     or ancient row could have a missing/malformed players cell, and a broken
+     JSON.parse must not take down the whole Teams table — it should just show
+     an empty roster for that one team. Added 28 Jul 2026. */
+  static parseRoster(playersJson) {
+    if (!playersJson) return [];
+    let arr;
+    try {
+      arr = JSON.parse(playersJson);
+    } catch (e) {
+      return [];
+    }
+    if (!Array.isArray(arr)) return [];
+    return arr.map((p) => {
+      const name = [p && p.firstName, p && p.lastName].filter(Boolean).join(' ').trim();
+      return { name: name || '(no name)', dob: (p && p.dob) || '—' };
+    });
   }
 
   exportCsv() {
@@ -2188,7 +2235,20 @@ class Component extends DCLogic {
     const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
     const allAges = Array.from(new Set([...s.teams.map((t) => t.ageGroup), ...s.players.map((p) => p.ageGroup)])).sort();
 
-    const teamRows = this._filteredTeams().map((r) => ({ ...r, submittedAtDisplay: this.fmtDate(r.submittedAt) }));
+    const teamRows = this._filteredTeams().map((r) => {
+      const roster = Component.parseRoster(r.players);
+      const isExpanded = !!r.teamName && r.teamName === s.expandedTeam;
+      return {
+        ...r,
+        submittedAtDisplay: this.fmtDate(r.submittedAt),
+        roster,
+        rosterCount: roster.length,
+        hasRoster: roster.length > 0,
+        isExpanded,
+        toggleLabel: isExpanded ? '▲' : '▼',
+        onToggleRoster: () => this.toggleTeamExpand(r.teamName),
+      };
+    });
     const playerRows = this._filteredPlayers().map((r) => ({
       ...r,
       submittedAtDisplay: this.fmtDate(r.submittedAt),

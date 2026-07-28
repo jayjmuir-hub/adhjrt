@@ -296,6 +296,81 @@ section('exportCsv() reads rows through the same sorted method, so the CSV is gr
     /const rows = tab === 'teams' \? this\._filteredTeams\(\) : this\._filteredPlayers\(\);/.test(src));
 }
 
+section('Squad list — Teams table can show and expand a team\'s roster (added 28 Jul 2026)');
+{
+  /* Jay: a coach's roster IS saved (players column on the Teams sheet, a raw
+     JSON string), but the Teams table only ever showed the typed "# Players"
+     count — never who. Jay picked "names in the table, click to expand" over
+     the CSV-only option and the "all names crammed in one cell" option.
+     parseRoster() turns that raw JSON into a safe { name, dob } list; it must
+     survive missing, malformed, and non-array input without throwing, since
+     a broken cell in one team's row must not take down the whole table. */
+  const c = build();
+  const parseRoster = c.constructor.parseRoster;
+
+  eq('a normal roster becomes a name+dob list',
+    JSON.stringify(parseRoster(JSON.stringify([
+      { firstName: 'Amina', lastName: 'Khan', dob: '2015-03-04' },
+      { firstName: 'Jay', lastName: 'Muir', dob: '2014-11-20' },
+    ]))),
+    JSON.stringify([{ name: 'Amina Khan', dob: '2015-03-04' }, { name: 'Jay Muir', dob: '2014-11-20' }]));
+
+  eq('a roster entry missing a dob shows an em dash, not "undefined"',
+    JSON.stringify(parseRoster(JSON.stringify([{ firstName: 'Amina', lastName: 'Khan' }]))),
+    JSON.stringify([{ name: 'Amina Khan', dob: '—' }]));
+
+  eq('a roster entry with no name at all is still listed, not silently dropped',
+    JSON.stringify(parseRoster(JSON.stringify([{ dob: '2015-03-04' }]))),
+    JSON.stringify([{ name: '(no name)', dob: '2015-03-04' }]));
+
+  /* Wrapped in try/catch (rather than a bare call) on purpose: the whole
+     point of these two checks is that parseRoster() must NOT throw on bad
+     input. If a regression removes its internal guard and it throws instead,
+     an unguarded call here would crash this entire test file before it could
+     report which check failed — catching it and reporting the exception
+     message as the "actual" value keeps the failure attributable. */
+  const safeParseRoster = (v) => { try { return JSON.stringify(parseRoster(v)); } catch (e) { return 'THREW: ' + e.message; } };
+  eq('missing players value returns an empty roster, not a crash', safeParseRoster(''), '[]');
+  eq('undefined players value returns an empty roster, not a crash', safeParseRoster(undefined), '[]');
+  eq('malformed JSON returns an empty roster, not a thrown error', safeParseRoster('{not json'), '[]');
+  eq('valid JSON that is not an array (e.g. a stray object) returns an empty roster',
+    safeParseRoster(JSON.stringify({ firstName: 'Amina' })), '[]');
+
+  const c2 = build();
+  c2.state = {
+    ...c2.state,
+    tab: 'teams',
+    teams: [
+      { ...team('Zebra RFC', 'U12G QR', 'Z1', '2026-01-05'), players: JSON.stringify([{ firstName: 'Amina', lastName: 'Khan', dob: '2015-03-04' }]) },
+      { ...team('Antelope RFC', 'U8 Tag', 'A1', '2026-01-01'), players: '' },
+    ],
+  };
+  const vals2 = c2.renderVals();
+  const zebraRow = vals2.teamRows.find((r) => r.teamName === 'Z1');
+  const antelopeRow = vals2.teamRows.find((r) => r.teamName === 'A1');
+  eq('a team with a saved roster reports the right count', zebraRow.rosterCount, 1);
+  check('a team with a saved roster is flagged hasRoster so the table shows a toggle button', zebraRow.hasRoster === true);
+  check('a team with no saved roster is NOT flagged hasRoster — no dead click target', antelopeRow.hasRoster === false);
+  eq('a team not yet toggled open is collapsed', zebraRow.isExpanded, false);
+  eq('the collapsed toggle shows a down arrow', zebraRow.toggleLabel, '▼');
+
+  c2.state.expandedTeam = 'Z1';
+  const vals3 = c2.renderVals();
+  const zebraRowOpen = vals3.teamRows.find((r) => r.teamName === 'Z1');
+  const antelopeRowClosed = vals3.teamRows.find((r) => r.teamName === 'A1');
+  eq('setting expandedTeam to a team\'s code expands only that team\'s row', zebraRowOpen.isExpanded, true);
+  eq('every other team stays collapsed', antelopeRowClosed.isExpanded, false);
+  eq('the expanded toggle shows an up arrow', zebraRowOpen.toggleLabel, '▲');
+
+  c2.state.expandedTeam = 'Z1';
+  zebraRowOpen.onToggleRoster();
+  eq('clicking an already-open team\'s toggle collapses it again (toggle, not one-way)', c2.state.expandedTeam, '');
+
+  c2.state.expandedTeam = '';
+  vals3.teamRows.find((r) => r.teamName === 'Z1').onToggleRoster();
+  eq('clicking a collapsed team\'s toggle opens it', c2.state.expandedTeam, 'Z1');
+}
+
 summary('test-organizer-grouping.js');
 
 }

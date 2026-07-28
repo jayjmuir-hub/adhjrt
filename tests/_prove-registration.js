@@ -35,6 +35,10 @@ const NEEDED = [
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
+  path.join('netlify', 'functions', '_intake.js'),
+  path.join('netlify', 'functions', 'submission-created.js'),
+  path.join('netlify', 'functions', 'get-registrations.js'),
+  path.join('netlify', 'functions', 'get-my-registrations.js'),
   path.join('netlify', 'functions', '_scoring.js'),
   path.join('netlify', 'functions', '_publish.js'),
   path.join('netlify', 'functions', '_password.js'),
@@ -687,6 +691,108 @@ const FAULTS = [
       'const MAX_SQUAD_ANY_GROUP = 15;'),
     expect: ['the largest squad anywhere is 18', 'derived from the table'],
   },
+
+  /* ---- the sheet columns ------------------------------------------------
+     Every one of these was possible while the order lived in three hand-synced
+     copies, and every one of them is silent: no error, no crash, just a sheet
+     full of children's details with a column in the wrong place. */
+
+  {
+    name: 'preferred-pool is moved next to age group, where it reads as if it belongs',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  'submittedAt', 'club', 'team-code', 'age-group',\n  'head-coach-name'",
+      "  'submittedAt', 'club', 'team-code', 'age-group', 'preferred-pool',\n  'head-coach-name'"),
+    expect: ['team columns', 'fourteen of them'],
+  },
+  {
+    name: 'the reader\u2019s output names shift by one against the columns',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "const TEAM_OUT = [\n  'submittedAt', 'club', 'teamName', 'ageGroup',",
+      "const TEAM_OUT = [\n  'submittedAt', 'teamName', 'club', 'ageGroup',"),
+    expect: ['club survives the round trip', 'the team output names'],
+  },
+  {
+    name: 'a parent\u2019s phone lands in the emergency-contact box (one column out)',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    parentMobile: col('parent-phone'),",
+      "    parentMobile: col('emergency-phone'),"),
+    expect: ['the parent phone is the parent phone', 'names are joined'],
+  },
+  {
+    name: 'the emergency contact is built from the parent\u2019s name',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    emergencyContact: joinName(row, PLAYER_COLUMNS, 'emergency-first-name', 'emergency-last-name'),",
+      "    emergencyContact: joinName(row, PLAYER_COLUMNS, 'parent-first-name', 'parent-last-name'),"),
+    expect: ['the emergency contact is not the parent', 'names are joined'],
+  },
+  {
+    name: 'a blank cell reaches the sheet as undefined instead of an empty string',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "const cell = (v) => (v === undefined || v === null ? '' : String(v));",
+      'const cell = (v) => v;'),
+    expect: ['a field nobody filled in is an empty string', 'every cell is a string'],
+  },
+  {
+    name: 'a short row from Sheets gives undefined instead of blanks',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      'const at = (row, i) => cell((Array.isArray(row) ? row : [])[i]);',
+      'const at = (row, i) => (Array.isArray(row) ? row : [])[i];'),
+    expect: ['a short row still has every field', 'not undefined', 'and the missing ones are blank'],
+  },
+  {
+    name: 'a missing half of a name pair leaves a stray space',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    .filter(Boolean).join(\' \');', "    .join(' ');"),
+    expect: ['a name built from nothing is blank', 'first name only', 'last name only'],
+  },
+  {
+    name: 'a column is added but the A1 range is left behind (Sheets drops the overflow)',
+    suite: 'test-intake.js',
+    /* THE FAULT HAS TO BE THE ACTUAL MISTAKE. Hardcoding the range to 'A:N' on
+       its own changes nothing — A:N IS fourteen columns today, so the first
+       version of this fault was a no-op and was correctly not caught. The real
+       mistake is adding a column and leaving the range behind: the row is then
+       fifteen wide, the range is fourteen, and Sheets silently drops the
+       fifteenth with no error anywhere. */
+    apply: () => {
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        "const TEAM_RANGE = `A:${colLetter(TEAM_COLUMNS.length)}`;      // A:N",
+        "const TEAM_RANGE = 'A:N';");
+      patch(path.join('netlify', 'functions', '_intake.js'),
+        "  'num-players', 'notes', 'players', 'preferred-pool',\n];",
+        "  'num-players', 'notes', 'players', 'preferred-pool', 'new-field',\n];");
+    },
+    expect: ['exactly as wide as the team columns'],
+  },
+  {
+    name: 'the submitted body is allowed to supply its own team code',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  return rowFrom(TEAM_COLUMNS, { ...(data || {}), submittedAt, 'team-code': teamCode });",
+      "  return rowFrom(TEAM_COLUMNS, { submittedAt, 'team-code': teamCode, ...(data || {}) });"),
+    expect: ['a submitted team code cannot override', 'a submitted timestamp cannot override'],
+  },
+  {
+    name: 'USER_ENTERED is put back, so a typed "=" becomes a live formula',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submission-created.js'),
+      "      valueInputOption: 'RAW',", "      valueInputOption: 'USER_ENTERED',"),
+    expect: ['still RAW'],
+  },
+  {
+    name: 'a reader grows its own copy of the column order again',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
+      "function getAuth() {",
+      "const TEAM_FIELDS = ['submittedAt', 'club'];\n\nfunction getAuth() {"),
+    expect: ['has no TEAM_FIELDS of its own'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -697,7 +803,7 @@ const problems = [];
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
- 'test-venue-splits.js', 'test-agegroups.js'].forEach((f) => {
+ 'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

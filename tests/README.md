@@ -81,6 +81,7 @@ first place. See step 1 above.
 | `test-venue-map.js` | the Venue & days schematic, the draggable map, and whether the map labels can be read — 349 checks |
 | `test-venue-splits.js` | the fifteen main pitches, whole/halves/quarters, and the rule that a group keeps the same **ground** when a split changes — 142 checks |
 | `test-agegroups.js` | the fifteen age groups server-side, and the squad caps the gateway will enforce — 59 checks |
+| `test-intake.js` | the sheet column order and the round trip between the writer and the two readers — 68 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 76 faults, all caught by the named check |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 87 faults, all caught by the named check |
 | `runall.ps1` | the explicit list |

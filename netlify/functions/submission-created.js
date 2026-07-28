@@ -55,6 +55,10 @@
 const { google } = require('googleapis');
 const { sendConfirmation } = require('./_email');
 const { nextTeamCode } = require('./_teams');
+/* The column order and the row builders. They used to be written out by hand
+   here AND in both readers — three copies, kept in step by eye. See _intake.js
+   for why that was worth ending. */
+const I = require('./_intake');
 
 // The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
 // names it after the account locale, and anyone can rename it. Hardcoding the
@@ -108,7 +112,7 @@ exports.handler = async (event) => {
 
     if (formName === 'team-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_TEAMS;
-      columns = 'A:N';
+      columns = I.TEAM_RANGE;
 
       /* The team code (e.g. ADH1) is generated here rather than typed by the
          coach, so it is consistent everywhere it appears. It counts the club's
@@ -119,7 +123,7 @@ exports.handler = async (event) => {
       try {
         const current = await sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: `${sheetName}!A:N`,
+          range: `${sheetName}!${I.TEAM_RANGE}`,
         });
         const [, ...rows] = current.data.values || [[]]; // drop header
         existingRows = rows;
@@ -133,26 +137,11 @@ exports.handler = async (event) => {
       const teamCode = nextTeamCode(data.club, data['age-group'], existingRows);
       data['team-name'] = teamCode; // so the confirmation email shows it too
 
-      values = [[
-        submittedAt,
-        data.club || '', teamCode, data['age-group'] || '',
-        data['head-coach-name'] || '', data['head-coach-email'] || '', data['head-coach-phone'] || '',
-        data['manager-name'] || '', data['manager-email'] || '', data['manager-phone'] || '',
-        data['num-players'] || '', data.notes || '', data.players || '',
-        data['preferred-pool'] || '',
-      ]];
+      values = [I.teamRow(data, teamCode, submittedAt)];
     } else if (formName === 'player-registration') {
       spreadsheetId = process.env.GOOGLE_SHEET_ID_PLAYERS;
-      columns = 'A:P';
-      values = [[
-        submittedAt,
-        data['player-first-name'] || '', data['player-last-name'] || '', data.dob || '',
-        data.club || '', data['age-group'] || '',
-        data['parent-first-name'] || '', data['parent-last-name'] || '',
-        data['parent-email'] || '', data['parent-phone'] || '',
-        data['emergency-first-name'] || '', data['emergency-last-name'] || '', data['emergency-phone'] || '',
-        data['medical-notes'] || '', data.consent || '', data['play-up-consent'] || '',
-      ]];
+      columns = I.PLAYER_RANGE;
+      values = [I.playerRow(data, submittedAt)];
     } else {
       // Not one of our two forms (e.g. Netlify's own honeypot test) — ignore.
       return { statusCode: 200, body: 'ignored' };

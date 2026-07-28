@@ -547,6 +547,42 @@ is the PUBLISHED copy and the only thing the public sees.
   `teamNamesFromRegistrations()` is the single source of the naming rule and the
   import review table reads it too, so the two cannot drift.
 
+## The sheet columns — one copy, at last (added 28 Jul 2026)
+
+`netlify/functions/_intake.js` holds the column order for both registration
+sheets, the row builders, and the two mappers that turn a row back into what
+`/organizer` displays.
+
+**It was hardcoded three times** — `submission-created.js` (a positional array),
+`get-registrations.js` and `get-my-registrations.js` (`TEAM_FIELDS` plus a
+sixteen-name positional destructure, duplicated verbatim between them). Each
+file was individually consistent, so a one-column drift between them would have
+read as correct in review and put a parent's phone number in the
+emergency-contact box. The sheet is what somebody rings from at a tournament.
+
+- **The round-trip test is the point.** Write a registration with the writer,
+  read it back with the reader, get the same thing. That check could not be
+  written at all while the two halves lived in different files, and it is what
+  catches a shift of one.
+- The A1 ranges (`A:N`, `A:P`) are **derived** from the column counts, not
+  typed. A range narrower than the row makes Sheets drop the overflow with no
+  error anywhere.
+- `submittedAt` and `team-code` are spread **after** the submitted data, so a
+  submission cannot supply its own timestamp or claim another club's team code.
+- Sheets returns a **short array** when the trailing cells are blank — it does
+  not pad. Every field comes back `''`, never `undefined`, or the dashboard
+  renders the word "undefined" in a column.
+- `preferred-pool` is the LAST team column, not next to `age-group` where it
+  reads as if it belongs. It was added after the sheet had rows in it. Leave it.
+- ⚠️ `valueInputOption: 'RAW'` is load-bearing and asserted. `USER_ENTERED`
+  makes a typed `=` a live formula in a sheet holding children's names, dates of
+  birth and medical notes, and eats the `+` off every phone number.
+
+⚠️ **A no-op is not a fault.** The first version of the range fault hardcoded
+`A:N` — which is the correct answer today, so nothing changed and nothing was
+caught, correctly. The real mistake is adding a column *and* leaving the range
+behind; the fault had to do both before it meant anything.
+
 ## Age groups, server side (added 28 Jul 2026)
 
 `netlify/functions/_agegroups.js` carries the fifteen age groups — id, name,
@@ -1429,9 +1465,9 @@ build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
-pitch / split model, the age-group table and the account rules — **1,019
-checks** across six files — plus `_prove-registration.js`, the fault-injection
-script (**76 faults**, all of
+pitch / split model, the age-group table, the sheet columns and the account
+rules — **1,087 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**87 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

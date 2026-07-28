@@ -47,6 +47,11 @@ function privateKey() {
   return k.replace(/\\n/g, '\n');
 }
 
+/* The sheet column order, the field names /organizer expects, and the two
+   row mappers. All three used to be written out by hand in this file AND in
+   the other reader AND in submission-created.js — see _intake.js. */
+const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
+
 function getAuth() {
   return new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -55,27 +60,6 @@ function getAuth() {
   });
 }
 
-const TEAM_FIELDS = ['submittedAt', 'club', 'teamName', 'ageGroup', 'headCoachName', 'headCoachEmail', 'headCoachMobile', 'managerName', 'managerEmail', 'managerMobile', 'numPlayers', 'notes', 'players', 'preferredPool'];
-
-function mapTeamRow(row) {
-  const obj = {};
-  TEAM_FIELDS.forEach((f, i) => { obj[f] = row[i] || ''; });
-  return obj;
-}
-
-function mapPlayerRow(row) {
-  const [submittedAt, playerFirst, playerLast, dob, club, ageGroup, parentFirst, parentLast, parentEmail, parentMobile, emergencyFirst, emergencyLast, emergencyMobile, medicalNotes, consent, playUpConsent] = row;
-  return {
-    submittedAt: submittedAt || '',
-    playerName: [playerFirst, playerLast].filter(Boolean).join(' '),
-    dob: dob || '', club: club || '', ageGroup: ageGroup || '',
-    parentName: [parentFirst, parentLast].filter(Boolean).join(' '),
-    parentEmail: parentEmail || '', parentMobile: parentMobile || '',
-    emergencyContact: [emergencyFirst, emergencyLast].filter(Boolean).join(' '),
-    emergencyMobile: emergencyMobile || '',
-    medicalNotes: medicalNotes || '', consent: consent || '', playUpConsent: playUpConsent || '',
-  };
-}
 
 async function readRows(auth, spreadsheetId, columns) {
   const sheets = google.sheets({ version: 'v4', auth });
@@ -105,8 +89,8 @@ exports.handler = async (event) => {
 
     const auth = getAuth();
     const [teamRows, playerRows] = await Promise.all([
-      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, 'A:N'),
-      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, 'A:P'),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
+      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),
     ]);
 
     const keep = (row) => seesEverything || norm(row.ageGroup) === norm(allowedName);

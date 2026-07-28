@@ -24,6 +24,7 @@ $tests = @(
   'test-venue-map.js',
   'test-venue-splits.js',
   'test-agegroups.js',
+  'test-intake.js',
   'test-accounts.js'
 )
 

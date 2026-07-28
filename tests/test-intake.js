@@ -1278,6 +1278,104 @@ const H = (body, over) => {
     !calls.logs.some((l) => l.indexOf(SENTINEL) >= 0), calls.logs.join(' | '));
 }
 
+/* ====================================================================== */
+section('The function itself stays thin');
+
+/* submit-registration.js CANNOT BE LOADED BY A TEST. It requires googleapis,
+   and a fresh clone has no node_modules. That is exactly why it must contain no
+   decisions — a rule added there is a rule nothing can check.
+
+   So these are text checks, and they are narrow on purpose: they assert the
+   SPLIT holds, not what the file does. What it does is handleSubmission's job
+   and has 400 checks against it. */
+{
+  const fn = readRepo(path.join('netlify', 'functions', 'submit-registration.js')).replace(/\r\n/g, '\n');
+  const code = fn.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  check('it hands off to handleSubmission', /handleSubmission\(/.test(code));
+  check('…and does not decide anything itself', !/validateSubmission|cleanSubmission|checkRate|squadCap/.test(code));
+  check('…nor build a sheet row by hand', !/teamRow|playerRow/.test(code));
+  check('…nor carry its own copy of the columns', !/submittedAt.*age-group/.test(code));
+
+  check('POST only', /event\.httpMethod !== 'POST'/.test(code));
+  check('…and anything else is a 405', /405/.test(code));
+  /* The GUARD, not the constant. A first version of this looked for
+     'MAX_BODY_BYTES' before 'JSON.parse' — which the const declaration at the
+     top satisfies all on its own, so deleting the actual check passed. */
+  check('the body is measured at all', /Buffer\.byteLength\(/.test(code));
+  check('…against the limit', /> MAX_BODY_BYTES/.test(code));
+  check('…and BEFORE it is parsed',
+    code.indexOf('Buffer.byteLength(') >= 0
+    && code.indexOf('Buffer.byteLength(') < code.indexOf('JSON.parse'));
+  check('…and an oversized body is refused rather than trimmed',
+    /> MAX_BODY_BYTES[\s\S]{0,140}return json\(400/.test(code));
+  check('a body that will not parse is a 400, not a crash', /catch[\s\S]{0,120}400/.test(code));
+
+  /* The rate-limit bucket must come from Netlify's own header. x-forwarded-for
+     is caller-supplied, so anyone could pick their own bucket. */
+  check('the address comes from Netlify’s header', /x-nf-client-connection-ip/.test(code));
+  check('…and not from x-forwarded-for', !/x-forwarded-for/i.test(code));
+
+  check('every reply is no-store', /'Cache-Control': 'no-store'/.test(code));
+  check('there is no CORS header — same origin only',
+    !/Access-Control-Allow/i.test(code));
+
+  /* RAW is load-bearing and has been fixed once already. */
+  check('the append is RAW', /valueInputOption: 'RAW'/.test(code));
+  check('…and USER_ENTERED has not crept back', !/USER_ENTERED/.test(code));
+
+  /* The dead letter has to be namespaced and flagged, because of what is in it. */
+  check('a failed submission is parked under its own key', /failed-submissions\//.test(code));
+  check('…and the file says out loud what that blob contains',
+    /CHILDREN'S PERSONAL DATA/i.test(fn), 'the warning comment is missing');
+
+  /* The catch-all must not log the submission. */
+  check('the catch-all logs the message only', /console\.error\([^)]*err && err\.message/.test(code));
+  check('…and never the event or the body',
+    !/console\.(error|log)\([^)]*\b(event|body|raw)\b/.test(code));
+
+  check('the log helper passes a string through, nothing structured',
+    /log: \(message\) =>/.test(code));
+}
+
+/* ====================================================================== */
+section('The Google client lives in one place now');
+
+/* privateKey(), getAuth() and firstSheetName() were written out THREE times,
+   and the gateway would have made it four. The private-key repair is the kind
+   of thing you fix once, at 2am, and must never fix again in a copy somebody
+   forgot about. */
+{
+  const users = ['submission-created.js', 'get-registrations.js', 'get-my-registrations.js', 'submit-registration.js'];
+  users.forEach((f) => {
+    const src = readRepo(path.join('netlify', 'functions', f)).replace(/\r\n/g, '\n');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    check(`${f} has no copy of privateKey()`, !/function privateKey\(/.test(code));
+    check(`${f} has no copy of getAuth()`, !/function getAuth\(/.test(code));
+    check(`${f} has no copy of firstSheetName()`, !/async function firstSheetName\(/.test(code));
+    check(`${f} does not reach for googleapis directly`, !/require\('googleapis'\)/.test(code));
+    check(`${f} asks _sheets.js instead`, /require\('\.\/_sheets'\)/.test(code));
+  });
+
+  const sheets = readRepo(path.join('netlify', 'functions', '_sheets.js')).replace(/\r\n/g, '\n');
+  check('_sheets.js is where they live', /function privateKey\(/.test(sheets)
+    && /function getAuth\(/.test(sheets) && /async function firstSheetName\(/.test(sheets));
+  /* The readers get a narrower scope than the writer, so a bug in a reader
+     cannot write to a sheet full of children's data. */
+  check('there is a read-only auth as well as a writing one', /function getReadAuth\(/.test(sheets));
+  check('…and it really is read-only', /spreadsheets\.readonly/.test(sheets));
+  check('…while the writer is not', /'https:\/\/www\.googleapis\.com\/auth\/spreadsheets'/.test(sheets));
+  const readers = ['get-registrations.js', 'get-my-registrations.js'];
+  readers.forEach((f) => {
+    const code = readRepo(path.join('netlify', 'functions', f)).replace(/\r\n/g, '\n');
+    check(`${f} uses the read-only auth`, /getReadAuth\(\)/.test(code));
+    check(`…and not the writing one`, !/[^d]getAuth\(\)/.test(code));
+  });
+  /* The private-key repair itself. Both breakages were real. */
+  check('the quote-stripping repair survived the move', /k\.slice\(1, -1\)/.test(sheets));
+  check('the newline repair survived too', /replace\(\/\\\\n\/g, '\\n'\)/.test(sheets));
+}
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 

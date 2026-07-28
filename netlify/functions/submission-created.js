@@ -52,52 +52,15 @@
 //    appends a row to the matching sheet.
 // ---------------------------------------------------------------------
 
-const { google } = require('googleapis');
 const { sendConfirmation } = require('./_email');
 const { nextTeamCode } = require('./_teams');
 /* The column order and the row builders. They used to be written out by hand
    here AND in both readers — three copies, kept in step by eye. See _intake.js
    for why that was worth ending. */
 const I = require('./_intake');
-
-// The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
-// names it after the account locale, and anyone can rename it. Hardcoding the
-// name produces "Unable to parse range: Sheet1!A:P". Ask the API for the first
-// tab's real name instead, so renaming a tab can never break this again.
-async function firstSheetName(sheets, spreadsheetId) {
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId,
-    fields: 'sheets.properties.title',
-  });
-  const title = ((meta.data.sheets || [])[0] || {}).properties?.title;
-  if (!title) throw new Error('Spreadsheet has no tabs: ' + spreadsheetId);
-  return title;
-}
-
-
-// Reads the service account private key from the environment and repairs the
-// two ways it commonly arrives broken:
-//   1. wrapped in the double quotes copied straight out of the JSON key file
-//      — the leading " sits in front of "-----BEGIN PRIVATE KEY-----" and the
-//      PEM parser rejects it with ERR_OSSL_UNSUPPORTED
-//   2. newlines still written as the two characters \ and n rather than real
-//      line breaks
-// Handles a correctly-pasted key unchanged, so it is safe either way.
-function privateKey() {
-  let k = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
-  if (k.length > 1 && ((k[0] === '"' && k[k.length - 1] === '"') || (k[0] === "'" && k[k.length - 1] === "'"))) {
-    k = k.slice(1, -1);
-  }
-  return k.replace(/\\n/g, '\n');
-}
-
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: privateKey(),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
+/* Service-account auth and the private-key repair, in one place — they used
+   to be written out in this file and two others. See _sheets.js. */
+const { getAuth, firstSheetName, sheetsClient } = require('./_sheets');
 
 exports.handler = async (event) => {
   try {
@@ -105,7 +68,7 @@ exports.handler = async (event) => {
     const { form_name: formName, data } = body.payload;
 
     const auth = getAuth();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = sheetsClient(auth);
 
     let spreadsheetId, columns, values;
     const submittedAt = new Date().toISOString();

@@ -13,8 +13,15 @@
 // get-registrations.js and submission-created.js, and is read-only on the
 // sheets (spreadsheets.readonly scope).
 
-const { google } = require('googleapis');
 const { verify, getBearerToken } = require('./_auth');
+/* Service-account auth and the private-key repair, in one place — they used
+   to be written out in this file and two others. See _sheets.js. */
+const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
+
+/* The sheet column order, the field names /organizer expects, and the two row
+   mappers. All three used to be written out by hand in this file AND in the
+   other reader AND in submission-created.js — see _intake.js. */
+const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
 
 // Age-group id -> public name. This MUST mirror AGE_GROUPS in scores-data.js
 // and AGE_GROUP_INFO in "Quins JRT.dc.html". The registration form submits
@@ -33,36 +40,8 @@ const AGE_GROUP_NAME_BY_ID = {
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-// --- sheet plumbing: same column contract as get-registrations.js ----------
-async function firstSheetName(sheets, spreadsheetId) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties.title' });
-  const title = ((meta.data.sheets || [])[0] || {}).properties?.title;
-  if (!title) throw new Error('Spreadsheet has no tabs: ' + spreadsheetId);
-  return title;
-}
-
-function privateKey() {
-  let k = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
-  if (k.length > 1 && ((k[0] === '"' && k[k.length - 1] === '"') || (k[0] === "'" && k[k.length - 1] === "'"))) k = k.slice(1, -1);
-  return k.replace(/\\n/g, '\n');
-}
-
-/* The sheet column order, the field names /organizer expects, and the two
-   row mappers. All three used to be written out by hand in this file AND in
-   the other reader AND in submission-created.js — see _intake.js. */
-const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
-
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: privateKey(),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-}
-
-
 async function readRows(auth, spreadsheetId, columns) {
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = sheetsClient(auth);
   const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   const [, ...rows] = res.data.values || [[]]; // skip header row
@@ -87,7 +66,7 @@ exports.handler = async (event) => {
       return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'No age group is set on this account.' }) };
     }
 
-    const auth = getAuth();
+    const auth = getReadAuth();
     const [teamRows, playerRows] = await Promise.all([
       readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
       readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),

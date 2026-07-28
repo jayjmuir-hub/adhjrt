@@ -605,6 +605,40 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### The gateway function, and _sheets.js (added 28 Jul 2026)
+
+`netlify/functions/submit-registration.js` is the front door. It builds the real
+Google client, mailer and blob store, hands them to `handleSubmission()`, and
+turns the answer into an HTTP response. **It contains no decisions.**
+
+⚠️ **It cannot be loaded by a test** — it requires `googleapis`, and a fresh
+clone has no `node_modules`. That is exactly why it must stay thin: a rule added
+there is a rule nothing can check. `test-intake.js` asserts the split holds
+(no `validateSubmission`, no `teamRow`, no column list), not what the file does.
+
+- **POST only**, body capped at 64 KB **before** the parse.
+- The rate-limit bucket comes from `x-nf-client-connection-ip` — Netlify's own
+  header. **Never `x-forwarded-for`**, which is caller-supplied and would let
+  anyone pick their own bucket.
+- No CORS header. Same origin only. Every reply `no-store`.
+- `valueInputOption: 'RAW'`, never `USER_ENTERED` — asserted here as well as in
+  `submission-created.js`.
+- A failed write parks the submission at `config`/`failed-submissions/<stamp>`.
+  ⚠️ **That blob holds children's personal data.** Do not widen access to the
+  `config` store, do not expose it, and clear it once entries are replayed.
+
+`netlify/functions/_sheets.js` holds `privateKey()`, `getAuth()`,
+`getReadAuth()` and `firstSheetName()`. Those were written out **three times**
+and the gateway would have made it four — and the private-key repair is the kind
+of thing you fix once, at 2am, and must never fix again in a copy somebody
+forgot about. The two dashboard readers now use a **read-only** scope, so a bug
+in a reader cannot write to a sheet full of children's data.
+
+⚠️ **A check on a constant is not a check on the guard.** The body-size test
+first looked for `MAX_BODY_BYTES` appearing before `JSON.parse` — which the
+`const` declaration at the top satisfies by itself, so deleting the actual size
+check passed. It asserts `Buffer.byteLength(` before `JSON.parse` now.
+
 ### The submission flow (added 28 Jul 2026)
 
 `handleSubmission(body, deps)` in `_intake.js`. Every dependency is injected —
@@ -1599,8 +1633,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,435 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**144 faults**, all of
+rules — **1,487 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**158 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

@@ -38,6 +38,8 @@ const NEEDED = [
   path.join('netlify', 'functions', '_intake.js'),
   path.join('netlify', 'functions', '_ratelimit.js'),
   path.join('netlify', 'functions', '_teams.js'),
+  path.join('netlify', 'functions', '_sheets.js'),
+  path.join('netlify', 'functions', 'submit-registration.js'),
   path.join('netlify', 'functions', 'submission-created.js'),
   path.join('netlify', 'functions', 'get-registrations.js'),
   path.join('netlify', 'functions', 'get-my-registrations.js'),
@@ -805,8 +807,8 @@ const FAULTS = [
     name: 'a reader grows its own copy of the column order again',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      "function getAuth() {",
-      "const TEAM_FIELDS = ['submittedAt', 'club'];\n\nfunction getAuth() {"),
+      'exports.handler = async (event) => {',
+      "const TEAM_FIELDS = ['submittedAt', 'club'];\n\nexports.handler = async (event) => {"),
     expect: ['has no TEAM_FIELDS of its own'],
   },
 
@@ -1268,6 +1270,114 @@ const FAULTS = [
       '    log(`sheet append failed, parking the submission - ${err && err.message}`);',
       '    log(`sheet append failed, parking the submission - ${JSON.stringify(data)}`);'),
     expect: ['no registration data is logged'],
+  },
+
+  /* ---- the function stays thin ------------------------------------------
+     submit-registration.js cannot be loaded by a test — it requires googleapis
+     and a fresh clone has no node_modules. So the only thing worth guarding is
+     that it never grows a decision, because a rule there is a rule nothing can
+     check. */
+
+  {
+    name: 'the function grows its own validation instead of asking _intake.js',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      '    const config = blobStore(\'config\');',
+      "    if (!validateSubmission) { /* noop */ }\n    const config = blobStore('config');"),
+    expect: ['does not decide anything itself'],
+  },
+  {
+    name: 'the function builds its own sheet row',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      '      appendRow: async (form, row) => {',
+      '      appendRow: async (form, row) => {\n        row = teamRow({}, \'X\', \'Y\');'),
+    expect: ['nor build a sheet row by hand'],
+  },
+  {
+    name: 'the rate-limit bucket is taken from a caller-supplied header',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "const clientIp = (event) => (event.headers || {})['x-nf-client-connection-ip'] || '';",
+      "const clientIp = (event) => (event.headers || {})['x-forwarded-for'] || '';"),
+    expect: ['comes from Netlify', 'not from x-forwarded-for'],
+  },
+  {
+    name: 'the body size limit moves to after the parse, so a megabyte is parsed first',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "    const raw = event.body || '';\n    if (Buffer.byteLength(raw, event.isBase64Encoded ? 'base64' : 'utf8') > MAX_BODY_BYTES) {\n      return json(400, { ok: false, error: 'That submission is too large. Please email admin@adhjrt.com.' });\n    }\n",
+      "    const raw = event.body || '';\n"),
+    expect: ['the body is measured at all', 'BEFORE it is parsed', 'against the limit'],
+  },
+  {
+    name: 'a CORS header is added, opening the endpoint to any site',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "  headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },",
+      "  headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },"),
+    expect: ['no CORS header'],
+  },
+  {
+    name: 'replies become cacheable',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "'Cache-Control': 'no-store'", "'Cache-Control': 'max-age=60'"),
+    expect: ['every reply is no-store'],
+  },
+  {
+    name: 'the append goes back to USER_ENTERED, making a typed "=" a live formula',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "          valueInputOption: 'RAW',", "          valueInputOption: 'USER_ENTERED',"),
+    expect: ['the append is RAW', 'USER_ENTERED has not crept back'],
+  },
+  {
+    name: 'the catch-all logs the whole event',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "    console.error('submit-registration error:', err && err.message);",
+      "    console.error('submit-registration error:', event, err && err.message);"),
+    expect: ['never the event or the body', 'logs the message only'],
+  },
+  {
+    name: 'the parked submission loses its own namespace',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), '`failed-submissions/${stamp}-${suffix}`', '`${stamp}-${suffix}`'),
+    expect: ['parked under its own key'],
+  },
+  {
+    name: 'the warning about what the dead-letter blob holds is deleted',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "⚠️ THIS BLOB HOLDS CHILDREN'S PERSONAL DATA.", 'Note:'),
+    expect: ['says out loud what that blob contains'],
+  },
+  {
+    name: 'a reader is given the WRITING scope',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
+      '    const auth = getReadAuth();', '    const auth = getAuth();'),
+    expect: ['uses the read-only auth', 'not the writing one'],
+  },
+  {
+    name: 'the read-only scope is widened to read-write',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_sheets.js'),
+      "    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],",
+      "    scopes: ['https://www.googleapis.com/auth/spreadsheets'],"),
+    expect: ['it really is read-only'],
+  },
+  {
+    name: 'the private-key quote repair is dropped',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_sheets.js'), '    k = k.slice(1, -1);', ''),
+    expect: ['quote-stripping repair survived'],
+  },
+  {
+    name: 'a reader grows its own copy of getAuth again',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
+      'exports.handler = async (event) => {',
+      'function getAuth() { return null; }\n\nexports.handler = async (event) => {'),
+    expect: ['has no copy of getAuth()'],
   },
 ];
 

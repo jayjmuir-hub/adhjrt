@@ -8,62 +8,15 @@
 //
 // Setup: the same GOOGLE_SERVICE_ACCOUNT_* / GOOGLE_SHEET_ID_* vars as
 // submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
+/* Service-account auth and the private-key repair, in one place — they used
+   to be written out in this file and two others. See _sheets.js. */
+const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
 
-const { google } = require('googleapis');
-
-// The tab inside each spreadsheet is not necessarily called "Sheet1" — Google
-// names it after the account locale, and anyone can rename it. Hardcoding the
-// name produces "Unable to parse range: Sheet1!A:P". Ask the API for the first
-// tab's real name instead, so renaming a tab can never break this again.
-async function firstSheetName(sheets, spreadsheetId) {
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId,
-    fields: 'sheets.properties.title',
-  });
-  const title = ((meta.data.sheets || [])[0] || {}).properties?.title;
-  if (!title) throw new Error('Spreadsheet has no tabs: ' + spreadsheetId);
-  return title;
-}
-
-const { verify, getBearerToken } = require('./_auth');
-
-// Reads the service account private key from the environment and repairs the
-// two ways it commonly arrives broken:
-//   1. wrapped in the double quotes copied straight out of the JSON key file
-//      — the leading " sits in front of "-----BEGIN PRIVATE KEY-----" and the
-//      PEM parser rejects it with ERR_OSSL_UNSUPPORTED
-//   2. newlines still written as the two characters \ and n rather than real
-//      line breaks
-// Handles a correctly-pasted key unchanged, so it is safe either way.
-function privateKey() {
-  let k = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
-  if (k.length > 1 && ((k[0] === '"' && k[k.length - 1] === '"') || (k[0] === "'" && k[k.length - 1] === "'"))) {
-    k = k.slice(1, -1);
-  }
-  return k.replace(/\\n/g, '\n');
-}
-
-/* The sheet column order, the field names /organizer expects, and the two
-   row mappers. All three used to be written out by hand in this file AND in
-   the other reader AND in submission-created.js — see _intake.js. */
+/* The sheet column order, the field names /organizer expects, and the two row
+   mappers. All three used to be written out by hand in this file AND in the
+   other reader AND in submission-created.js — see _intake.js. */
 const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
 
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: privateKey(),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-}
-
-
-async function readRows(auth, spreadsheetId, columns) {
-  const sheets = google.sheets({ version: 'v4', auth });
-  const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const [, ...rows] = res.data.values || [[]]; // skip header row
-  return rows;
-}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
@@ -73,7 +26,7 @@ exports.handler = async (event) => {
       return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
     }
 
-    const auth = getAuth();
+    const auth = getReadAuth();
     const [teamRows, playerRows] = await Promise.all([
       readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
       readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),

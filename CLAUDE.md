@@ -605,6 +605,35 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### Rate limiting (added 28 Jul 2026)
+
+`netlify/functions/_ratelimit.js`. **Twenty submissions per address per hour**,
+counted in a blob under `ratelimit/<address>`.
+
+The biggest squad in the tournament is 18, so a club secretary entering a whole
+age group by hand is the legitimate heavy user; twenty is comfortably past that
+and far short of anything useful to an abuser.
+
+- ⚠️ **IT FAILS OPEN.** If the counter cannot be read or written, the submission
+  is **allowed**. Losing a real registration because a blob read hiccupped is far
+  worse than the abuse it would have prevented, and the site password is still in
+  front of all of this. Deliberate, asserted, and not to be quietly reversed.
+- **Fixed window, not sliding** — anchored to the FIRST hit in the hour. A
+  sliding window means continuous traffic never lets the hour elapse, so an
+  address stays blocked for as long as it keeps trying.
+- A missing address collapses to **one shared bucket**, never a skip. Skipping
+  would make "send no address header" the way round the limit.
+- The address comes from a request header, so the key is **sanitised** — a
+  header containing a slash must not be able to write to a key of its choosing
+  in a store that also holds the venue layout and the registration window.
+- A window stamped in the **future** is treated as stale. Clock skew between
+  instances must not lock somebody out for longer than the window.
+
+⚠️ **Twenty hits at the same instant cannot tell a fixed window from a sliding
+one.** The first rollover test did exactly that and missed a fault that pushed
+the window start forward on every write. The check that catches it spreads the
+hits out and asserts the window still starts at the first.
+
 ### Validation (added 28 Jul 2026)
 
 `validateSubmission(form, clean)` in `_intake.js`. **No new rules** — every one
@@ -1529,8 +1558,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,306 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**116 faults**, all of
+rules — **1,350 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**128 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

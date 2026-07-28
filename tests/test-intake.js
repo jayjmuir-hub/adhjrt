@@ -33,6 +33,10 @@
 const path = require('path');
 const { repoRoot, readRepo, section, check, eq, summary } = require('./_lib');
 
+/* Top-level await: the rate-limit section drives an async store. Node 22 in
+   CommonJS does not allow it, so the whole file runs inside main(). */
+async function main() {
+
 const I = require(path.join(repoRoot(), 'netlify', 'functions', '_intake.js'));
 
 /* ====================================================================== */
@@ -747,6 +751,208 @@ section('The browser and the server say the same sentence');
     page.indexOf(capTemplate) >= 0, 'the template moved — the server copy must follow');
 }
 
+/* ====================================================================== */
+section('Rate limiting');
+
+/* THE THIRD THING NETLIFY FORMS WAS DOING THAT NOBODY CHOSE. Without it the
+   gateway is a public endpoint that appends unbounded rows to a sheet of
+   children's data and sends unbounded mail from admin@adhjrt.com — and the
+   recipient address comes out of the request body, which makes it a relay on
+   our own domain.
+
+   ⚠️ IT FAILS OPEN. If the counter store is unavailable the submission is
+   ALLOWED. Losing a real registration because a blob read hiccupped is far
+   worse than the abuse it would have prevented, and the site password is still
+   in front of all of this. That is a deliberate trade and it is asserted. */
+
+const R = require(path.join(repoRoot(), 'netlify', 'functions', '_ratelimit.js'));
+
+/* A store that behaves like a Netlify blob store: get(key,{type:'json'}) and
+   setJSON(key, value). `fail` makes every call throw, like an outage. */
+function fakeStore(seed, fail) {
+  const data = { ...(seed || {}) };
+  return {
+    calls: 0,
+    async get(key) { this.calls += 1; if (fail) throw new Error('store down'); return data[key] === undefined ? null : data[key]; },
+    async setJSON(key, v) { if (fail) throw new Error('store down'); data[key] = v; },
+    peek(key) { return data[key]; },
+  };
+}
+
+const T0 = 1790000000000;               // an arbitrary fixed instant
+const HOUR = 60 * 60 * 1000;
+
+eq('twenty an hour', R.MAX_PER_WINDOW, 20);
+eq('the window is an hour', R.WINDOW_MS, HOUR);
+/* A club secretary entering a whole age group by hand is the legitimate heavy
+   user. Twenty an hour is far past that and far short of useful abuse. */
+check('the limit is comfortably above one age group entered by hand', R.MAX_PER_WINDOW >= 15);
+
+/* ---- counting --------------------------------------------------------- */
+
+{
+  const store = fakeStore();
+  const seen = [];
+  for (let i = 0; i < 25; i += 1) seen.push(await R.checkRate(store, '1.2.3.4', T0));
+  check('the first one is allowed', seen[0].ok === true);
+  check('the twentieth is allowed', seen[19].ok === true);
+  check('the twenty-first is not', seen[20].ok === false);
+  check('and neither is anything after it', seen.slice(20).every((r) => r.ok === false));
+  eq('exactly twenty got through', seen.filter((r) => r.ok).length, 20);
+}
+
+/* A refusal has to tell the caller how long to wait, or the only honest thing
+   it can say to a coach is "try again at some point". */
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '1.2.3.4', T0);
+  const r = await R.checkRate(store, '1.2.3.4', T0 + 60000);   // a minute in
+  check('refused', r.ok === false);
+  check('…and says how long is left', r.retryAfterSecs > 0);
+  eq('…which is the rest of the hour', r.retryAfterSecs, 3540);
+  check('the number is whole seconds, not a fraction', Number.isInteger(r.retryAfterSecs));
+}
+
+/* ---- the window rolls over -------------------------------------------- */
+
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '1.2.3.4', T0);
+  check('blocked at the end of the hour', (await R.checkRate(store, '1.2.3.4', T0 + HOUR - 1)).ok === false);
+  check('allowed again the moment the hour is up', (await R.checkRate(store, '1.2.3.4', T0 + HOUR)).ok === true);
+  check('…and the count started over, not carried on',
+    (await R.checkRate(store, '1.2.3.4', T0 + HOUR + 1)).ok === true);
+}
+
+/* THE WINDOW IS ANCHORED TO THE FIRST HIT, NOT THE LAST. A fixed window, not a
+   sliding one. Twenty hits all at the same instant cannot tell the two apart —
+   which is why the check above did not catch a fault that pushed the start
+   forward on every write. Spreading them out is what shows it: with a sliding
+   window, continuous traffic means the hour never elapses and an address stays
+   blocked for as long as it keeps trying. */
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '1.2.3.4', T0 + i * 60000); // one a minute
+  /* `|| {}` — a fault that changes the key makes this undefined, and reaching
+     into it throws and takes the rest of the file with it. Report, do not die. */
+  eq('the window still starts at the FIRST hit', (store.peek('ratelimit/1.2.3.4') || {}).windowStart, T0);
+  check('blocked at the twenty-first', (await R.checkRate(store, '1.2.3.4', T0 + 20 * 60000)).ok === false);
+  check('…and freed one hour after the FIRST hit, not the last',
+    (await R.checkRate(store, '1.2.3.4', T0 + HOUR)).ok === true);
+  eq('…and the new window starts then', (store.peek('ratelimit/1.2.3.4') || {}).windowStart, T0 + HOUR);
+}
+
+/* A clock that goes backwards — a retry landing on a different instance, or a
+   stored window from the future — must not lock somebody out indefinitely. */
+{
+  const store = fakeStore({ 'ratelimit/1.2.3.4': { count: 20, windowStart: T0 + HOUR * 5 } });
+  check('a window stamped in the future is treated as stale, not as a lock-out',
+    (await R.checkRate(store, '1.2.3.4', T0)).ok === true);
+}
+
+/* ---- one bucket per IP ------------------------------------------------- */
+
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '1.2.3.4', T0);
+  check('one address being noisy does not block another',
+    (await R.checkRate(store, '5.6.7.8', T0)).ok === true);
+  check('…and the noisy one is still blocked', (await R.checkRate(store, '1.2.3.4', T0)).ok === false);
+}
+
+/* No IP at all shares ONE bucket rather than skipping the check. Skipping would
+   make "send no IP header" the way round the limit. */
+{
+  const store = fakeStore();
+  for (let i = 0; i < 20; i += 1) await R.checkRate(store, '', T0);
+  check('a missing address is still counted', (await R.checkRate(store, '', T0)).ok === false);
+  check('…and null is the same bucket', (await R.checkRate(store, null, T0)).ok === false);
+  check('…while a real address is unaffected', (await R.checkRate(store, '1.2.3.4', T0)).ok === true);
+}
+
+/* The key is namespaced, because this store also holds the venue layout, the
+   registration window and the block positions. */
+{
+  const store = fakeStore();
+  await R.checkRate(store, '1.2.3.4', T0);
+  check('the counter is stored under a ratelimit/ key', !!store.peek('ratelimit/1.2.3.4'), Object.keys(store).join());
+  check('…and nothing else was written',
+    Object.keys(store.peek('ratelimit/1.2.3.4') || {}).sort().join() === 'count,windowStart');
+}
+
+/* An address is not a free-form key — it comes from a request header. A store
+   this shared holds the venue layout and the registration window too, so a
+   header containing a slash must not be able to write to a key of its choosing. */
+{
+  const store = fakeStore();
+  await R.checkRate(store, '../../venue', T0);
+  check('a slashed address cannot escape the namespace', store.peek('venue') === undefined);
+  check('…nor write outside ratelimit/ at all',
+    Object.keys(store.peek('ratelimit/.._.._venue') || {}).length === 2, R.keyFor('../../venue'));
+  /* Dots survive because they are legitimate in an address; only the slashes
+     are replaced, and without a slash ".." cannot traverse anything. */
+  eq('…because every slash is replaced', R.keyFor('../../venue'), 'ratelimit/.._.._venue');
+  check('no key can contain a slash after the prefix',
+    ['../../x', 'a/b', '\\\\srv\\share', 'a?b=c', 'a b'].every((v) => R.keyFor(v).indexOf('/', 'ratelimit/'.length) < 0));
+  eq('a normal IPv4 address is left alone', R.keyFor('1.2.3.4'), 'ratelimit/1.2.3.4');
+  eq('an IPv6 address survives too', R.keyFor('2001:db8::1'), 'ratelimit/2001:db8::1');
+  eq('an empty address gets one shared bucket', R.keyFor(''), 'ratelimit/unknown');
+  eq('…and so does junk', R.keyFor(null), 'ratelimit/unknown');
+  check('a very long header cannot make a very long key', R.keyFor('x'.repeat(500)).length < 80);
+}
+
+/* ---- failing open ------------------------------------------------------ */
+
+/* These cases deliberately break the store, and _ratelimit.js deliberately
+   warns when that happens. Left alone that is over a hundred lines of expected
+   noise in every run — and a real FAIL buried in expected noise is a FAIL
+   nobody reads. Silenced only for this block, and restored after. */
+const realWarn = console.warn;
+console.warn = () => {};
+
+{
+  const store = fakeStore({}, true);
+  const r = await R.checkRate(store, '1.2.3.4', T0);
+  check('a store outage ALLOWS the submission', r.ok === true);
+  check('…and says it could not count', r.degraded === true);
+  check('…without pretending to know a retry time', !r.retryAfterSecs);
+}
+{
+  const r = await R.checkRate(null, '1.2.3.4', T0);
+  check('no store at all also fails open', r.ok === true && r.degraded === true);
+}
+{
+  /* A write that fails after a successful read must not refuse either — the
+     count is lost, which is the same cost as the outage above. */
+  const store = {
+    async get() { return { count: 1, windowStart: T0 }; },
+    async setJSON() { throw new Error('write failed'); },
+  };
+  check('a failed write still allows the submission', (await R.checkRate(store, '1.2.3.4', T0)).ok === true);
+}
+{
+  /* Junk in the stored value is the same as no value — start a fresh window
+     rather than throwing on a shape nobody wrote.
+
+     ⚠️ NO INJECTED FAULT FOR THESE. Removing either shape guard in readWindow()
+     is observationally identical: a non-object gives `undefined.count` -> NaN,
+     which the finite check already rejects, and a numeric string coerces to the
+     same comparison result. They are belt and braces for readability, not
+     load-bearing, and a fault for them would be something adjacent to a mistake
+     rather than the mistake — which this project has already learned not to
+     write. The guards that ARE load-bearing (the expiry and the future-stamp
+     check) each have one. */
+  const store = fakeStore({ 'ratelimit/1.2.3.4': 'not an object' });
+  check('junk in the store starts a fresh window', (await R.checkRate(store, '1.2.3.4', T0)).ok === true);
+  const store2 = fakeStore({ 'ratelimit/1.2.3.4': { count: 'lots', windowStart: 'whenever' } });
+  check('…as does a value of the wrong shape', (await R.checkRate(store2, '1.2.3.4', T0)).ok === true);
+}
+
+console.warn = realWarn;
+/* Proof the silencing was scoped and did not leave the suite deaf: a later
+   fault that warns must still be visible on the console. */
+check('console.warn is restored afterwards', console.warn === realWarn);
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 
@@ -762,4 +968,6 @@ section('The browser and the server say the same sentence');
      * USER_ENTERED put back                   -> "still RAW"
    ====================================================================== */
 
-summary('test-intake.js');
+}
+
+main().then(() => summary('test-intake.js'));

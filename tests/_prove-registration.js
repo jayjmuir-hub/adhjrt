@@ -36,6 +36,7 @@ const NEEDED = [
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
   path.join('netlify', 'functions', '_intake.js'),
+  path.join('netlify', 'functions', '_ratelimit.js'),
   path.join('netlify', 'functions', 'submission-created.js'),
   path.join('netlify', 'functions', 'get-registrations.js'),
   path.join('netlify', 'functions', 'get-my-registrations.js'),
@@ -1023,6 +1024,100 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
       '    if (text(d.players).length > MAX_PLAYERS_CHARS) {', '    if (false) {'),
     expect: ['a squad list cannot be unbounded'],
+  },
+
+  /* ---- rate limiting ----------------------------------------------------
+     The last of the three things Netlify Forms was doing that nobody chose. */
+
+  {
+    name: 'the limit stops being applied, so an address can submit for ever',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'), '  if (win.count >= max) {', '  if (false) {'),
+    expect: ['the twenty-first is not', 'exactly twenty got through'],
+  },
+  {
+    name: 'the limit is off by one',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'), '  if (win.count >= max) {', '  if (win.count > max) {'),
+    expect: ['the twenty-first is not', 'exactly twenty got through'],
+  },
+  {
+    name: 'the count is never written back, so nothing ever accumulates',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      '    await store.setJSON(key, { count: win.count + 1, windowStart: win.windowStart });',
+      '    await store.setJSON(key, { count: win.count, windowStart: win.windowStart });'),
+    expect: ['the twenty-first is not', 'exactly twenty got through'],
+  },
+  {
+    name: 'the window start is pushed forward on every hit, so it never rolls over',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      '    await store.setJSON(key, { count: win.count + 1, windowStart: win.windowStart });',
+      '    await store.setJSON(key, { count: win.count + 1, windowStart: now });'),
+    /* A sliding window instead of a fixed one. Twenty hits at the SAME instant
+       cannot tell the two apart, which is why the plain rollover check misses
+       it — the one that catches it spreads the hits out. */
+    expect: ['the window still starts at the FIRST hit', 'freed one hour after the FIRST hit'],
+  },
+  {
+    name: 'the window never expires at all',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      '  if (now - windowStart >= WINDOW_MS) return null;', ''),
+    expect: ['allowed again the moment the hour is up'],
+  },
+  {
+    name: 'a stored window from the future locks the address out',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'), '  if (windowStart > now) return null;', ''),
+    expect: ['treated as stale, not as a lock-out'],
+  },
+  {
+    name: 'a store outage FAILS CLOSED, losing real registrations to protect a counter',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      "    console.warn('rate limit: could not read the counter, allowing -', err && err.message);\n    return { ok: true, degraded: true };",
+      '    return { ok: false, retryAfterSecs: 60 };'),
+    expect: ['a store outage ALLOWS the submission', 'no store at all also fails open'],
+  },
+  {
+    name: 'a failed WRITE fails closed, even though the read worked',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      "    console.warn('rate limit: could not record the submission, allowing -', err && err.message);\n    return { ok: true, degraded: true };",
+      '    return { ok: false, retryAfterSecs: 60 };'),
+    expect: ['a failed write still allows the submission'],
+  },
+  {
+    name: 'every address shares one bucket',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'), '  return `ratelimit/${safe}`;', "  return 'ratelimit/all';"),
+    expect: ['one address being noisy does not block another', 'because every slash is replaced', 'counter is stored under a ratelimit/ key'],
+  },
+  {
+    name: 'a missing address SKIPS the check, making "send no address" the way round it',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      "  const safe = raw.replace(/[^0-9a-zA-Z.:_-]/g, '_').slice(0, 60) || 'unknown';",
+      "  if (!raw) return '';\n  const safe = raw.replace(/[^0-9a-zA-Z.:_-]/g, '_').slice(0, 60);"),
+    expect: ['an empty address gets one shared bucket', 'a missing address is still counted'],
+  },
+  {
+    name: 'the address is used as a raw key, so a header can write where it likes',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      "  const safe = raw.replace(/[^0-9a-zA-Z.:_-]/g, '_').slice(0, 60) || 'unknown';",
+      "  const safe = raw.slice(0, 60) || 'unknown';"),
+    expect: ['every slash is replaced', 'no key can contain a slash'],
+  },
+  {
+    name: 'a refusal stops saying how long to wait',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      '    return { ok: false, retryAfterSecs: Math.max(1, Math.ceil(left / 1000)) };',
+      '    return { ok: false };'),
+    expect: ['says how long is left', 'which is the rest of the hour'],
   },
 ];
 

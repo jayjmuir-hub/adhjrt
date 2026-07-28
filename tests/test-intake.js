@@ -426,10 +426,20 @@ section('The allow-list and the columns cannot drift apart');
 /* The form names have to be the ones the page actually submits, or the gateway
    refuses every real registration and accepts none. Read out of the page. */
 {
+  /* The form names have to be the ones the page actually sends, or the gateway
+     refuses every real registration and accepts none.
+
+     ⚠️ This check used to look for `'form-name': '<name>'`, which is how the
+     page addressed NETLIFY FORMS. Since 28 Jul 2026 it posts
+     { form: '<name>', data: {…} } to our own function instead, so the old
+     anchor stopped existing — and the baseline run caught it, which is what
+     that baseline is for. */
   const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
   Object.keys(I.FORMS).forEach((name) => {
-    check(`the page really submits "${name}"`, page.indexOf(`'form-name': '${name}'`) >= 0, name);
+    check(`the page really submits "${name}"`,
+      page.indexOf(`this.postRegistration('${name}'`) >= 0, name);
   });
+  check('…and no longer addresses Netlify Forms at all', !/'form-name':/.test(page));
 }
 
 /* Each form knows which sheet it belongs to, by env var NAME. Never a value. */

@@ -1379,6 +1379,86 @@ const FAULTS = [
       'function getAuth() { return null; }\n\nexports.handler = async (event) => {'),
     expect: ['has no copy of getAuth()'],
   },
+
+  /* ---- the page and the gateway -----------------------------------------
+     The distinction between "we do not know" and "you are wrong" is the whole
+     reason the gateway is worth having on the client side. */
+
+  {
+    name: 'the page goes back to posting at Netlify Forms',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "      res = await fetch('/.netlify/functions/submit-registration', {",
+      "      res = await fetch('/', {"),
+    expect: ['posts to our own function'],
+  },
+  {
+    name: 'a refusal is shown as a generic connection message',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '        teamError: e.message || NETWORK_MESSAGE,', '        teamError: NETWORK_MESSAGE,'),
+    expect: ['shown what the SERVER said', 'NOT told to check their connection'],
+  },
+  {
+    name: 'the player form does the same',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '        playerError: e.message || NETWORK_MESSAGE,', '        playerError: NETWORK_MESSAGE,'),
+    expect: ['closed window is shown in the server'],
+  },
+  {
+    name: 'the form is cleared on a refusal, so the coach retypes everything',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '        teamError: e.message || NETWORK_MESSAGE,\n      });',
+      '        teamError: e.message || NETWORK_MESSAGE,\n        teamForm: emptyTeamForm(),\n      });'),
+    expect: ['form is kept so it can be fixed'],
+  },
+  {
+    name: 'ok:false in a 200 is treated as a success',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '    if (!res.ok || !payload.ok) {', '    if (!res.ok) {'),
+    expect: ['ok:false in a 200 is still a refusal'],
+  },
+  {
+    name: 'a network failure is reported as a refusal, so "try again" is never offered',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '      throw new SubmitError(NETWORK_MESSAGE, true);\n    }\n    /* A body that will not parse',
+      "      throw new SubmitError('Something went wrong.', false);\n    }\n    /* A body that will not parse"),
+    expect: ['dead connection says try again', 'does not claim the entry was registered'],
+  },
+  {
+    name: 'an unparseable reply is treated as a refusal instead of a lost connection',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '    if (!payload) throw new SubmitError(NETWORK_MESSAGE, true);', ''),
+    expect: ['unparseable reply is treated as a network failure', 'gateway error page is a network failure'],
+  },
+  {
+    name: 'the team code never reaches the success screen',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "      teamCode: (result && result.teamCode) || '',", "      teamCode: '',"),
+    expect: ['the team code the server issued'],
+  },
+  {
+    name: 'the client-side checks are dropped, so every mistake costs a round trip',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "      this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });\n      return;",
+      "      this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });"),
+    expect: ['caught before any request'],
+  },
+  {
+    name: 'the form-name field is put back in the body',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "      result = await this.postRegistration('team-registration', {\n        club: effClub(f),",
+      "      result = await this.postRegistration('team-registration', {\n        'form-name': 'team-registration',\n        club: effClub(f),"),
+    expect: ['no form-name field left over'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

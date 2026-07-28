@@ -530,4 +530,174 @@ check('it rounds DOWN, so 47 hours is never "in 2 days"', REG.fmtCountdown(47 * 
    and the reason is written above tokensIn().
    ====================================================================== */
 
-summary('test-registration-panel.js');
+/* ====================================================================== */
+/* From here down the checks drive async submit handlers, so they live inside
+   main(). Node 22 in CommonJS has no top-level await. */
+async function main() {
+
+section('Submitting: the page and the gateway');
+
+/* WHAT CHANGED ON 28 JULY 2026. Both forms used to POST to '/' and Netlify
+   Forms caught them before any of our code ran — so there was nowhere to stand
+   and refuse one. They now post JSON to our own function, and the reply carries
+   a sentence written for a coach.
+
+   THE DISTINCTION THAT MATTERS is between a refusal and a network failure.
+   A refusal means "we received this and it is wrong" — show what we said, and
+   keep the form so it can be fixed. A network failure means "we do not know
+   whether we received it" — tell them to try again. Telling a coach to check
+   their connection when the real answer is "that squad is one player over"
+   sends them round in circles for ever. */
+
+/* Drives a real submit handler against a fake fetch. Returns what the page
+   ended up showing. */
+async function submitWith(fetchImpl, which, formPatch) {
+  const c = build('Quins JRT.dc.html');
+  const g = (typeof globalThis !== 'undefined') ? globalThis : global;
+  const realFetch = g.fetch;
+  g.fetch = fetchImpl;
+  try {
+    if (which === 'team') {
+      c.state = { ...c.state, teamForm: { ...c.state.teamForm,
+        club: 'Test Club', ageGroup: 'U16B Contact', preferredPool: 'No preference',
+        headCoachName: 'A Coach', headCoachEmail: 'coach@example.com',
+        headCoachPhone: '', managerName: '', managerEmail: '', managerPhone: '',
+        numPlayers: '2', notes: '', players: [], ...(formPatch || {}) } };
+      await c.submitTeam();
+    } else {
+      c.state = { ...c.state, playerForm: { ...c.state.playerForm,
+        playerFirstName: 'Test', playerLastName: 'Player', dob: '2011-01-01',
+        club: 'Test Club', ageGroup: '',
+        parentFirstName: 'Parent', parentLastName: 'Surname',
+        parentEmail: 'parent@example.com', parentPhone: '',
+        emergencyFirstName: 'Emergency', emergencyLastName: 'Contact',
+        emergencyPhone: '500000000', medicalNotes: '',
+        consent: true, playUpConsent: false, ...(formPatch || {}) } };
+      await c.submitPlayer();
+    }
+  } finally { g.fetch = realFetch; }
+  return c.state;
+}
+
+const okReply = (body) => async () => ({ ok: true, status: 200, json: async () => ({ ok: true, ...(body || {}) }) });
+const refusal = (error, status) => async () => ({ ok: false, status: status || 400, json: async () => ({ ok: false, error }) });
+const dead = () => { throw new TypeError('Failed to fetch'); };
+
+/* ---- where it posts ---------------------------------------------------- */
+
+{
+  let seen = null;
+  await submitWith(async (url, opts) => { seen = { url, opts }; return { ok: true, status: 200, json: async () => ({ ok: true, teamCode: 'TST1' }) }; }, 'team');
+  eq('it posts to our own function, not to Netlify Forms',
+    seen && seen.url, '/.netlify/functions/submit-registration');
+  eq('…by POST', seen.opts.method, 'POST');
+  eq('…as JSON', seen.opts.headers['Content-Type'], 'application/json');
+  const sent = JSON.parse(seen.opts.body);
+  eq('…naming the form in the body', sent.form, 'team-registration');
+  check('…with the fields under data', sent.data && sent.data.club === 'Test Club');
+  check('…and no form-name field left over from Netlify Forms',
+    !('form-name' in sent.data), Object.keys(sent.data).join());
+  check('the page no longer posts to the site root at all',
+    !/fetch\('\/'/.test(readRepo('Quins JRT.dc.html')));
+}
+
+/* ---- a success --------------------------------------------------------- */
+
+{
+  const st = await submitWith(okReply({ teamCode: 'TST1' }), 'team');
+  check('the success screen shows', st.teamSubmitted === true);
+  check('…with no error', !st.teamError);
+  eq('…and the team code the server issued', st.teamCode, 'TST1');
+  check('…and the form is cleared', st.teamForm.club === '');
+  check('the submitting flag is put back', st.teamSubmitting === false);
+}
+{
+  const st = await submitWith(okReply(), 'player');
+  check('a player submission succeeds too', st.playerSubmitted === true);
+  check('…and the form is cleared', st.playerForm.playerFirstName === '');
+}
+
+/* ---- a refusal --------------------------------------------------------- */
+
+{
+  const msg = 'U16B Contact squads are a maximum of 18 players and you have listed 19. Please remove 1.';
+  const st = await submitWith(refusal(msg), 'team');
+  eq('the coach is shown what the SERVER said', st.teamError, msg);
+  check('…and is NOT told to check their connection',
+    !/connection/i.test(st.teamError), st.teamError);
+  check('the success screen does not show', st.teamSubmitted !== true);
+  /* THE ONE THAT WOULD HURT. Clearing the form on a refusal means the coach
+     retypes fifteen players to fix one. */
+  eq('…and the form is kept so it can be fixed', st.teamForm.club, 'Test Club');
+}
+{
+  const st = await submitWith(refusal('Registration is not open at the moment. Please email admin@adhjrt.com.', 403), 'player');
+  check('a closed window is shown in the server’s words',
+    /not open/i.test(st.playerError), st.playerError);
+  check('…and the player form is kept', st.playerForm.playerFirstName === 'Test');
+  check('…and the error survives a field edit', st.playerSendFailed === true);
+}
+{
+  /* A 200 carrying ok:false is still a refusal. Only reading res.ok would miss
+     it, and the old code read nothing at all. */
+  const st = await submitWith(async () => ({ ok: true, status: 200, json: async () => ({ ok: false, error: 'Nope.' }) }), 'team');
+  eq('ok:false in a 200 is still a refusal', st.teamError, 'Nope.');
+  check('…and not a success', st.teamSubmitted !== true);
+}
+
+/* ---- a network failure ------------------------------------------------- */
+
+{
+  const st = await submitWith(dead, 'team');
+  check('a dead connection says try again', /try again|Check your connection/i.test(st.teamError), st.teamError);
+  check('…and does not claim the entry was registered',
+    /nothing has been registered/i.test(st.teamError), st.teamError);
+  check('the success screen does not show', st.teamSubmitted !== true);
+  check('…and the form is kept', st.teamForm.club === 'Test Club');
+}
+{
+  /* A reply that is not JSON means something answered instead of our function —
+     a proxy, a captive portal, the platform password page. That is "we do not
+     know", not "you are wrong". */
+  const st = await submitWith(async () => ({ ok: true, status: 200, json: async () => { throw new Error('not json'); } }), 'team');
+  check('an unparseable reply is treated as a network failure',
+    /nothing has been registered/i.test(st.teamError), st.teamError);
+}
+{
+  const st = await submitWith(async () => ({ ok: false, status: 502, json: async () => { throw new Error('html'); } }), 'team');
+  check('a gateway error page is a network failure too',
+    /nothing has been registered/i.test(st.teamError), st.teamError);
+}
+
+/* ---- the client checks still run first --------------------------------- */
+
+/* They are not redundant. They give instant feedback without a round trip, and
+   the server is the authority, not the replacement. */
+{
+  let called = false;
+  const st = await submitWith(async () => { called = true; return { ok: true, status: 200, json: async () => ({ ok: true }) }; },
+    'team', { club: '' });
+  check('an obviously incomplete form is caught before any request', called === false);
+  check('…and says so', !!st.teamError);
+}
+
+/* ---- the markup ---------------------------------------------------------- */
+
+{
+  const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  check('the Netlify Forms encoder is gone', !/function encodeFormData/.test(page));
+  check('…and nothing still calls it', !/encodeFormData\(/.test(page));
+  check('the network message exists once, as a constant', (page.match(/const NETWORK_MESSAGE/g) || []).length === 1);
+  check('SubmitError carries the distinction', /class SubmitError/.test(page) && /isNetwork/.test(page));
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamSubmitted: true, teamCode: 'TST1' };
+  const vals = c.renderVals();
+  eq('the team code is a binding the page can show', vals.teamCode, 'TST1');
+  check('…and is only shown when there is one', vals.teamHasCode === true);
+  const c2 = build('Quins JRT.dc.html');
+  eq('…with nothing shown before a submission', c2.renderVals().teamHasCode, false);
+}
+
+}
+
+main().then(() => summary('test-registration-panel.js'));

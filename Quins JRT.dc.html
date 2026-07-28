@@ -766,6 +766,12 @@
             </div>
             <div style="font-family:'Anton';font-size:clamp(22px,2.8vw,33px);text-transform:uppercase">Thanks &mdash; you're on the list</div>
             <p style="color:#aeb4bf;margin-top:12px">We've got your team's details and a confirmation is on its way to your head coach and manager. We'll be in touch with fixtures nearer the weekend.</p>
+            <sc-if value="{{ teamHasCode }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:18px;display:inline-block;background:rgba(23,163,74,0.12);border:1px solid rgba(23,163,74,0.45);border-radius:10px;padding:10px 18px">
+                <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#7f8794;text-transform:uppercase">Your team code</div>
+                <div style="font-family:'Anton';font-size:26px;letter-spacing:1px;color:#3bd070;margin-top:2px">{{ teamCode }}</div>
+              </div>
+            </sc-if>
           </div>
         </sc-if>
 
@@ -1207,9 +1213,19 @@ const AGE_GROUP_CARDS = [
   { age: 'U18G', name: 'U18G Contact', band: 'Girls Contact', day: 'Saturday', comp: 'Pool → Cup/Bowl/Plate/Shield', desc: 'Girls colts contact rugby, pools into a finals series.', tint: '#E11B22' },
 ];
 
-function encodeFormData(data) {
-  return Object.keys(data).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data[k] == null ? '' : data[k])).join('&');
+/* What a coach is told when we genuinely do not know whether the submission
+   arrived. Deliberately NOT used for a refusal — see postRegistration(). */
+const NETWORK_MESSAGE = 'We could not send your entry — nothing has been registered. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com and we will enter it for you.';
+
+/* Carries the one distinction the callers need: was this "we do not know" or
+   "we know, and it is wrong". */
+class SubmitError extends Error {
+  constructor(message, isNetwork) {
+    super(message);
+    this.isNetwork = !!isNetwork;
+  }
 }
+
 
 
 // Pools a coach can ask for. "No preference" is deliberately included so a
@@ -1285,7 +1301,7 @@ class Component extends DCLogic {
        permanently over the content. Collapsed behind a button instead; CSS owns
        the breakpoint, this owns open/closed. */
     navOpen: false,
-    teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '',
+    teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '', teamCode: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
     /* True only when a send FAILED, as opposed to a field being invalid. The
        reactive clear below wipes validation errors as soon as the form becomes
@@ -1428,7 +1444,7 @@ class Component extends DCLogic {
     this._toastTimer = setTimeout(() => this.setState({ ctaToast: '' }), 2600);
   }
 
-  openTeamModal() { this.setState({ teamModalOpen: true, teamSubmitted: false, teamError: '' }); document.body.style.overflow = 'hidden'; }
+  openTeamModal() { this.setState({ teamModalOpen: true, teamSubmitted: false, teamError: '', teamCode: '' }); document.body.style.overflow = 'hidden'; }
   closeTeamModal() { this.setState({ teamModalOpen: false }); document.body.style.overflow = ''; }
   openPlayerModal() { this.setState({ playerModalOpen: true, playerSubmitted: false, playerError: '', playerSendFailed: false }); document.body.style.overflow = 'hidden'; }
   closePlayerModal() { this.setState({ playerModalOpen: false }); document.body.style.overflow = ''; }
@@ -1567,35 +1583,57 @@ class Component extends DCLogic {
     this.setState((s) => ({ teamForm: { ...s.teamForm, players: s.teamForm.players.filter((_, i) => i !== idx) } }));
   }
 
-  /* Posts a registration and says plainly whether it landed.
+  /* Posts a registration to OUR OWN function and says plainly what happened.
 
-     Both forms used to `await fetch(...)` inside a try/catch that swallowed the
-     error, then show the success screen unconditionally. Two ways that lies to
-     a club:
+     UNTIL 28 JULY 2026 THIS POSTED TO NETLIFY FORMS, at '/'. Netlify caught the
+     submission before any of our code ran, which meant there was nowhere to
+     stand and refuse one — no age check, no squad cap, no registration window.
+     It now goes to /.netlify/functions/submit-registration, which validates,
+     writes the sheet row and sends the confirmation itself.
 
-       - the network drops, the catch eats it, and they are told "we have your
-         team entry";
-       - nothing ever looked at the status. Netlify answers an unrecognised form
-         with a plain 404 (verified: 404, ok:false, no redirect), which is
-         exactly what happens if the form stops being detected at build. Every
-         submission would 404 and every club would be told it worked.
+     A REFUSAL AND A NETWORK FAILURE ARE DIFFERENT AND MUST STAY DIFFERENT.
+       - a refusal means "we received this and it is wrong". The coach should
+         fix it. Telling them to try again would produce the same refusal for
+         ever.
+       - a network failure means "we do not know whether we received it". The
+         coach should try again.
+     `isNetwork` carries that distinction out to the callers.
 
-     Neither leaves a trace the club could notice, because the confirmation
-     email is sent from the same submission they never made, and mail failures
-     are swallowed too. So a registration that vanished looks identical to one
-     that succeeded, right up to the moment someone is missing from the draw.
+     The old version was deliberately lenient about what counted as success,
+     because a wrong "it failed" was worse than a wrong "it worked" when nothing
+     downstream could tell the difference. That reasoning is now obsolete: the
+     function answers with an explicit { ok } and a sentence written for a coach,
+     so being lenient would throw away the only honest answer we have.
 
-     Deliberately lenient about what counts as success: any non-4xx/5xx reply
-     passes, including a followed redirect. Only a thrown error or an explicit
-     error status fails, so this can never turn a working submission into a
-     scary message. */
-  async postRegistration(fields) {
-    const res = await fetch('/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: encodeFormData(fields),
-    });
-    if (res.status >= 400) throw new Error('HTTP ' + res.status);
+     Both ways this used to lie are still worth remembering:
+       - the network dropped, the catch ate it, and a club was told "we have
+         your team entry";
+       - nothing looked at the status, and Netlify answers an unrecognised form
+         with a plain 404 — exactly what happens if form detection breaks at
+         build. Every submission would 404 and every club would be told it
+         worked. Neither leaves a trace a club could notice, because the
+         confirmation is sent from the same submission they never made. */
+  async postRegistration(form, data) {
+    let res;
+    try {
+      res = await fetch('/.netlify/functions/submit-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ form, data }),
+      });
+    } catch (e) {
+      throw new SubmitError(NETWORK_MESSAGE, true);
+    }
+    /* A body that will not parse means something between us and the function
+       answered instead of the function — a proxy, a captive portal, the
+       platform password page. That is a network problem, not a refusal. */
+    let payload = null;
+    try { payload = await res.json(); } catch (e) { payload = null; }
+    if (!payload) throw new SubmitError(NETWORK_MESSAGE, true);
+    if (!res.ok || !payload.ok) {
+      throw new SubmitError(payload.error || NETWORK_MESSAGE, false);
+    }
+    return payload;
   }
 
   async submitTeam() {
@@ -1616,9 +1654,9 @@ class Component extends DCLogic {
       return;
     }
     this.setState({ teamSubmitting: true, teamError: '' });
+    let result;
     try {
-      await this.postRegistration({
-        'form-name': 'team-registration',
+      result = await this.postRegistration('team-registration', {
         club: effClub(f), 'age-group': f.ageGroup, 'preferred-pool': f.preferredPool,
         'head-coach-name': f.headCoachName, 'head-coach-email': f.headCoachEmail,
         'head-coach-phone': f.headCoachPhone ? `+971${f.headCoachPhone}` : '',
@@ -1633,11 +1671,21 @@ class Component extends DCLogic {
          cruellest possible response to a failed fifteen-player entry. */
       this.setState({
         teamSubmitting: false,
-        teamError: 'We could not send your entry — nothing has been registered. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com and we will enter it for you.',
+        /* The server's own sentence, not a generic one. A refusal is a real
+           answer — "U16B squads are a maximum of 18" is something a coach can
+           act on, and hiding it behind "check your connection" would send them
+           round in circles. */
+        teamError: e.message || NETWORK_MESSAGE,
       });
       return;
     }
-    this.setState({ teamSubmitting: false, teamSubmitted: true, teamForm: emptyTeamForm() });
+    /* The team code, on screen. Until now a coach only learned it from the
+       confirmation email. */
+    this.setState({
+      teamSubmitting: false, teamSubmitted: true,
+      teamCode: (result && result.teamCode) || '',
+      teamForm: emptyTeamForm(),
+    });
   }
 
   async submitPlayer() {
@@ -1649,8 +1697,7 @@ class Component extends DCLogic {
     }
     this.setState({ playerSubmitting: true, playerError: '', playerSendFailed: false });
     try {
-      await this.postRegistration({
-        'form-name': 'player-registration',
+      await this.postRegistration('player-registration', {
         'player-first-name': f.playerFirstName, 'player-last-name': f.playerLastName, dob: f.dob, club: effClub(f), 'age-group': f.ageGroup,
         'parent-first-name': f.parentFirstName, 'parent-last-name': f.parentLastName,
         'parent-email': f.parentEmail, 'parent-phone': f.parentPhone ? `+971${f.parentPhone}` : '',
@@ -1665,7 +1712,11 @@ class Component extends DCLogic {
       this.setState({
         playerSubmitting: false,
         playerSendFailed: true,
-        playerError: 'We could not send this registration — nothing has been saved. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com.',
+        /* Same rule as the team form: show what the server actually said.
+           playerSendFailed keeps it visible while fields are edited, which
+           matters more for a refusal than it ever did for a dropped connection
+           — the coach is editing precisely because we refused. */
+        playerError: e.message || NETWORK_MESSAGE,
       });
       return;
     }
@@ -1853,6 +1904,8 @@ class Component extends DCLogic {
 
       teamModalOpen: this.state.teamModalOpen,
       teamSubmitted: this.state.teamSubmitted,
+      teamCode: this.state.teamCode || '',
+      teamHasCode: !!this.state.teamCode,
       teamShowForm: !this.state.teamSubmitted,
       teamForm: this.state.teamForm,
       clubOptions: CLUB_NAMES,

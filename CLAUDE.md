@@ -605,6 +605,42 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### The page posts to us now (added 28 Jul 2026)
+
+`postRegistration(form, data)` in `Quins JRT.dc.html` posts JSON to
+`/.netlify/functions/submit-registration`. It used to POST to `/`, where
+Netlify Forms caught it before any of our code ran — which is why there was
+nowhere to stand and refuse one.
+
+⚠️ **A REFUSAL AND A NETWORK FAILURE ARE DIFFERENT AND MUST STAY DIFFERENT.**
+
+| | means | so the page |
+|---|---|---|
+| refusal | we received it and it is wrong | shows **the server's own sentence** and keeps the form |
+| network failure | we do not know whether we received it | says try again, and keeps the form |
+
+Telling a coach to check their connection when the real answer is "that squad
+is one player over" sends them round in circles for ever. `SubmitError` carries
+`isNetwork` so the two can never be collapsed.
+
+- A reply that will not parse as JSON is a **network failure**, not a refusal —
+  something answered instead of our function: a proxy, a captive portal, the
+  platform password page.
+- `ok: false` inside a **200** is still a refusal. Reading only `res.ok` would
+  miss it; the old code read nothing at all.
+- The client-side checks still run first. They are not redundant — instant
+  feedback, no round trip — and the server is the authority, not the
+  replacement.
+- The success screen now shows the **team code**. A coach used to learn it only
+  from the confirmation email.
+- `encodeFormData()` and every `'form-name'` field are **gone**. Netlify Forms
+  is no longer addressed from the page at all.
+
+⚠️ **An old check anchored on `'form-name'` and had to move.** It asserted the
+page submitted the form names `_intake.js` knows — by looking for the Netlify
+Forms field. That field no longer exists, so the check broke, and the
+fault-run's baseline caught it. That baseline exists for exactly this.
+
 ### The gateway function, and _sheets.js (added 28 Jul 2026)
 
 `netlify/functions/submit-registration.js` is the front door. It builds the real
@@ -1633,8 +1669,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,487 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**158 faults**, all of
+rules — **1,526 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**168 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

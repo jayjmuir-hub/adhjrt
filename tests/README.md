@@ -77,11 +77,11 @@ first place. See step 1 above.
 |---|---|
 | `_lib.js` | repo lookup, `check` / `eq` / `section` / `summary` |
 | `test-registration.js` | `registrationState`, `validateSettings`, the shared block, dates and timezones — 196 checks |
-| `test-registration-panel.js` | the `/organizer` Registration tab and the public register CTA, driven through the components — 184 checks |
+| `test-registration-panel.js` | the `/organizer` Registration tab, the public register CTA, and both submit handlers driven against a fake fetch — 222 checks |
 | `test-venue-map.js` | the Venue & days schematic, the draggable map, and whether the map labels can be read — 349 checks |
 | `test-venue-splits.js` | the fifteen main pitches, whole/halves/quarters, and the rule that a group keeps the same **ground** when a split changes — 142 checks |
 | `test-agegroups.js` | the fifteen age groups server-side, and the squad caps the gateway will enforce — 59 checks |
 | `test-intake.js` | the sheet column order, the round trip between the writer and the two readers, the allow-list, the validation rules, the rate limit, the whole submission flow and the thinness of the function itself — 468 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 158 faults, all caught by the named check |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 168 faults, all caught by the named check |
 | `runall.ps1` | the explicit list |

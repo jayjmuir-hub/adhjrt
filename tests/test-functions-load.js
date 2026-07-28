@@ -167,15 +167,8 @@ async function callIt(f, mod, method) {
       check(`${f} (${method}) does not throw out of the handler`, !r.threw, r.threw);
       /* 500 is the tell. Something inside blew up and the catch turned it into
          a shrug. Any deliberate refusal is fine. */
-      /* submission-created.js is the ONE exemption, and it is not a
-         loophole: it is not an HTTP endpoint. Netlify Forms invokes it with a
-         specific { payload } body, and a 500 on a bogus body is the correct
-         answer — it is what makes Netlify retry. Nobody can call it with a
-         browser, so a 500 here is not a blank screen for anyone. */
-      if (f !== 'submission-created.js') {
-        check(`${f} (${method}) refuses cleanly rather than returning 500`,
-          r.status !== 500, `status ${r.status}: ${String(r.body).slice(0, 160)}`);
-      }
+      check(`${f} (${method}) refuses cleanly rather than returning 500`,
+        r.status !== 500, `status ${r.status}: ${String(r.body).slice(0, 160)}`);
       check(`${f} (${method}) answers at all`, typeof r.status === 'number', JSON.stringify(r).slice(0, 120));
     }
   }

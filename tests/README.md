@@ -84,5 +84,5 @@ first place. See step 1 above.
 | `test-intake.js` | the sheet column order, the round trip between the writer and the two readers, the allow-list, the validation rules, the rate limit, the whole submission flow and the thinness of the function itself — 468 checks |
 | `test-functions-load.js` | loads and CALLS every Netlify function, signed out and signed in — the only test that executes them at all — 170 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 172 faults, all caught by the named check |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 171 faults, all caught by the named check |
 | `runall.ps1` | the explicit list |

@@ -261,11 +261,14 @@ section('The three copies are down to one');
 
 {
   const norm = (f) => readRepo(path.join('netlify', 'functions', f)).replace(/\r\n/g, '\n');
-  const writer = norm('submission-created.js');
+  /* submission-created.js was the third copy and the WRITER. It is gone as of
+     28 Jul 2026 — nothing posts to Netlify Forms any more, so the webhook could
+     never fire again. submit-registration.js is the writer now. */
+  const writer = norm('submit-registration.js');
   const reader1 = norm('get-registrations.js');
   const reader2 = norm('get-my-registrations.js');
 
-  [['submission-created.js', writer], ['get-registrations.js', reader1], ['get-my-registrations.js', reader2]]
+  [['submit-registration.js', writer], ['get-registrations.js', reader1], ['get-my-registrations.js', reader2]]
     .forEach(([name, src]) => {
       check(`${name} asks _intake.js for the columns`, /require\('\.\/_intake'\)/.test(src), 'no require');
       check(`${name} has no TEAM_FIELDS of its own`, !/const TEAM_FIELDS\s*=/.test(src));
@@ -276,9 +279,7 @@ section('The three copies are down to one');
      sixteen are in the right order. */
   check('nobody destructures a sheet row by position any more',
     !/const \[submittedAt, playerFirst/.test(reader1 + reader2 + writer));
-  check('the writer no longer builds a positional array by hand',
-    !/values = \[\[\s*\n?\s*submittedAt,/.test(writer));
-  check('the writer asks for the range too', /I\.TEAM_RANGE|TEAM_RANGE/.test(writer));
+  check('the writer asks _intake.js for the range', /spec\.range|TEAM_RANGE/.test(writer));
 
   /* RAW is not a style choice and must survive every refactor of this file. A
      leading "=" in a free-text box becomes a live formula in a sheet holding
@@ -1356,7 +1357,7 @@ section('The Google client lives in one place now');
    of thing you fix once, at 2am, and must never fix again in a copy somebody
    forgot about. */
 {
-  const users = ['submission-created.js', 'get-registrations.js', 'get-my-registrations.js', 'submit-registration.js'];
+  const users = ['get-registrations.js', 'get-my-registrations.js', 'submit-registration.js'];
   users.forEach((f) => {
     const src = readRepo(path.join('netlify', 'functions', f)).replace(/\r\n/g, '\n');
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

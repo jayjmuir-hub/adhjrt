@@ -605,6 +605,27 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+## Netlify Forms is GONE (28 July 2026)
+
+Registrations do not touch Netlify Forms at any point any more. `POST` goes
+straight to `/.netlify/functions/submit-registration`, which validates, writes
+the sheet row and sends the confirmation itself.
+
+**Deleted:** `netlify-forms.html` (the hidden decoy that registered the two
+forms with Netlify's build-time crawler) and `netlify/functions/submission-created.js`
+(the webhook Netlify called after each submission). Nothing posts to Forms, so
+the webhook could never fire again, and a second untested write path into a
+sheet of children's data is worse than none.
+
+**The Forms feature is still switched on in Netlify.** It costs nothing and no
+form is registered any more, so it does nothing. Turning it off is a separate,
+reversible decision.
+
+⚠️ **If you ever need to go back**, both files are in git history at `577b7fe`.
+But read `claude/plan-submission-gateway.md` first — going back means giving up
+the age checks, the squad cap, the registration window and the rate limit, all
+of which only exist because our code is the front door.
+
 ### ⚠️ Nothing tested these functions until 28 July 2026
 
 `tests/test-functions-load.js` loads **and calls** every file in
@@ -1705,8 +1726,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,696 checks** across eight files — plus `_prove-registration.js`,
-the fault-injection script (**172 faults**, all of
+rules — **1,684 checks** across eight files — plus `_prove-registration.js`,
+the fault-injection script (**171 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

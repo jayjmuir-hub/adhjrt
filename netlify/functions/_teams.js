@@ -1,7 +1,8 @@
 // netlify/functions/_teams.js
 //
 // Generates the tournament team code for a registration, e.g. ADH1.
-// Not an HTTP endpoint — required by submission-created.js.
+// Not an HTTP endpoint — required by _intake.js, which the submission
+// gateway calls. (It was submission-created.js until 28 Jul 2026.)
 //
 // The code is <club prefix><number>, where the number counts that club's
 // teams WITHIN AN AGE GROUP. So a club entering two U16B sides gets ADH1 and

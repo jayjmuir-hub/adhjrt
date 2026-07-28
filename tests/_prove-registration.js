@@ -50,7 +50,6 @@ const NEEDED = [
   path.join('netlify', 'functions', 'submit-result.js'),
   path.join('netlify', 'functions', 'venue-layout.js'),
   path.join('netlify', 'functions', 'registration-window.js'),
-  path.join('netlify', 'functions', 'submission-created.js'),
   path.join('netlify', 'functions', 'get-registrations.js'),
   path.join('netlify', 'functions', 'get-my-registrations.js'),
   path.join('netlify', 'functions', '_scoring.js'),
@@ -805,13 +804,6 @@ const FAULTS = [
       "  return rowFrom(TEAM_COLUMNS, { ...(data || {}), submittedAt, 'team-code': teamCode });",
       "  return rowFrom(TEAM_COLUMNS, { submittedAt, 'team-code': teamCode, ...(data || {}) });"),
     expect: ['a submitted team code cannot override', 'a submitted timestamp cannot override'],
-  },
-  {
-    name: 'USER_ENTERED is put back, so a typed "=" becomes a live formula',
-    suite: 'test-intake.js',
-    apply: () => patch(path.join('netlify', 'functions', 'submission-created.js'),
-      "      valueInputOption: 'RAW',", "      valueInputOption: 'USER_ENTERED',"),
-    expect: ['still RAW'],
   },
   {
     name: 'a reader grows its own copy of the column order again',

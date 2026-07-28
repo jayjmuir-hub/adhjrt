@@ -40,6 +40,16 @@ const NEEDED = [
   path.join('netlify', 'functions', '_teams.js'),
   path.join('netlify', 'functions', '_sheets.js'),
   path.join('netlify', 'functions', 'submit-registration.js'),
+  path.join('netlify', 'functions', '_email.js'),
+  path.join('netlify', 'functions', '_results.js'),
+  path.join('netlify', 'functions', 'get-results.js'),
+  path.join('netlify', 'functions', 'get-schedule-override.js'),
+  path.join('netlify', 'functions', 'save-schedule-override.js'),
+  path.join('netlify', 'functions', 'publish-schedule.js'),
+  path.join('netlify', 'functions', 'scoring-rules.js'),
+  path.join('netlify', 'functions', 'submit-result.js'),
+  path.join('netlify', 'functions', 'venue-layout.js'),
+  path.join('netlify', 'functions', 'registration-window.js'),
   path.join('netlify', 'functions', 'submission-created.js'),
   path.join('netlify', 'functions', 'get-registrations.js'),
   path.join('netlify', 'functions', 'get-my-registrations.js'),
@@ -1459,6 +1469,50 @@ const FAULTS = [
       "      result = await this.postRegistration('team-registration', {\n        'form-name': 'team-registration',\n        club: effClub(f),"),
     expect: ['no form-name field left over'],
   },
+
+  /* ---- the functions actually run ---------------------------------------
+     THE ONE THAT SHIPPED. 28 Jul 2026: extracting the Google client sliced a
+     range out of get-registrations.js that also took `require('./_auth')` and
+     the whole of readRows(). It parsed, node --check passed, all 1,526 checks
+     passed — and the organiser's Teams and Players tabs went blank on
+     production, because a ReferenceError inside the handler became a 500 and a
+     500 looks exactly like "there is no data". */
+
+  {
+    name: 'a reader loses its _auth require (the bug that actually shipped)',
+    suite: 'test-functions-load.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
+      "const { verify, getBearerToken } = require('./_auth');\n", ''),
+    expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
+  },
+  {
+    name: 'a reader loses a function its handler calls (the other half of it)',
+    suite: 'test-functions-load.js',
+    apply: () => {
+      const f = path.join('netlify', 'functions', 'get-registrations.js');
+      patch(f, 'async function readRows(auth, spreadsheetId, columns) {\n  const sheets = sheetsClient(auth);',
+        'async function unusedReadRows(auth, spreadsheetId, columns) {\n  const sheets = sheetsClient(auth);');
+    },
+    /* NOT caught by anything unauthenticated: a 401 comes back long before
+       readRows is reached. What catches it is the signed-in section, which is
+       the only reason that section exists. */
+    expect: ['does not throw when it is actually allowed to run', 'answers a signed-in read with 200'],
+
+  },
+  {
+    name: 'a shared module loses a require, taking every caller down with it',
+    suite: 'test-functions-load.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "const { checkRate } = require('./_ratelimit');", ''),
+    expect: ['loads'],
+  },
+  {
+    name: 'a function stops exporting a handler',
+    suite: 'test-functions-load.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      'exports.handler = async (event) => {', 'const notTheHandler = async (event) => {'),
+    expect: ['exports a handler'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1469,7 +1523,8 @@ const problems = [];
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
- 'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js'].forEach((f) => {
+ 'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
+ 'test-functions-load.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

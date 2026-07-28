@@ -8,6 +8,8 @@
 //
 // Setup: the same GOOGLE_SERVICE_ACCOUNT_* / GOOGLE_SHEET_ID_* vars as
 // submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
+const { verify, getBearerToken } = require('./_auth');
+
 /* Service-account auth and the private-key repair, in one place — they used
    to be written out in this file and two others. See _sheets.js. */
 const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
@@ -17,6 +19,14 @@ const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
    other reader AND in submission-created.js — see _intake.js. */
 const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
 
+
+async function readRows(auth, spreadsheetId, columns) {
+  const sheets = sheetsClient(auth);
+  const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const [, ...rows] = res.data.values || [[]]; // skip header row
+  return rows;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };

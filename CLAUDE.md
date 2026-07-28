@@ -605,6 +605,42 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
+### ⚠️ Nothing tested these functions until 28 July 2026
+
+`tests/test-functions-load.js` loads **and calls** every file in
+`netlify/functions/`. It is the only test that executes them at all. It exists
+because of a bug that reached production.
+
+**What happened.** Extracting the Google client into `_sheets.js` sliced a range
+out of `get-registrations.js` that also contained `require('./_auth')` and the
+whole of `readRows()`. The file still parsed. `node --check` passed. All 1,526
+checks passed — because every check on that file asserted what it must **not**
+contain ("no copy of `getAuth()`") and **nothing asserted what it needs**. It
+deployed, and the organiser's Teams and Players tabs went blank.
+
+**A missing require is a ReferenceError at CALL time, not at parse time.** The
+handler's own catch turned it into a 500, and a 500 looks to a user exactly like
+"there is no data".
+
+- The three packages a fresh clone lacks (`googleapis`, `@netlify/blobs`,
+  `bcryptjs`) are **stubbed**, and the stubs answer plausibly rather than
+  throwing — a throwing stub would turn every authenticated call into a 500 and
+  hide the very faults this file catches.
+- It calls every handler **signed out** (expecting 401/403/405, never 500) and
+  the readers **signed in**, with a real token minted by the same `sign()` the
+  login functions use.
+- ⚠️ **The signed-in half is not optional.** Renaming a function the handler
+  calls was NOT caught by any unauthenticated check — a 401 comes back long
+  before the call is reached. Everything behind the auth check is invisible
+  until something logs in.
+- `submission-created.js` is the one exemption from the no-500 rule: it is a
+  Forms webhook, not an HTTP endpoint, and a 500 on a bogus body is correct —
+  it is what makes Netlify retry.
+
+**The lesson, stated plainly: asserting the absence of things is not a test.**
+Every text-based check in this repo that says a file does not contain something
+should be paired with one that runs it.
+
 ### The page posts to us now (added 28 Jul 2026)
 
 `postRegistration(form, data)` in `Quins JRT.dc.html` posts JSON to
@@ -1669,8 +1705,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,526 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**168 faults**, all of
+rules — **1,696 checks** across eight files — plus `_prove-registration.js`,
+the fault-injection script (**172 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

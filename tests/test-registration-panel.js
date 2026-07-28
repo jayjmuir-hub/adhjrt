@@ -775,6 +775,56 @@ const rosterDobAtCutoffAge = (age) => `${2026 - age}-01-01`;
   check('an out-of-range row is blocked', !!row.ageBlockedMessage && !row.agePlayUpMessage, JSON.stringify(row));
 }
 
+/* ---- the wide (two-year) girls' play-up allowance — added 28 Jul 2026 ----
+   The real case that found this: a girl aged 12 registering for U14G QR
+   (age 13) was blocked outright, because U14G QR's one-hop chain points at
+   U12G QR (age 11) — there is no girls' group at 12 at all. Driven through
+   the real component, both on the roster (here) and the standalone player
+   form (below), since both call the same _playerAgeCheck(). */
+{
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U14G QR',
+    players: [{ firstName: 'Twelve', lastName: 'YearOld', dob: rosterDobAtCutoffAge(12), dobDay: '1', dobMonth: '01', dobYear: String(2026 - 12) }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('a 12-year-old in U14G QR is a play-up on the roster, not blocked', !row.ageBlockedMessage && !!row.agePlayUpMessage, JSON.stringify(row));
+  check('…one age group, not two', /one age group younger/.test(row.agePlayUpMessage), row.agePlayUpMessage);
+}
+{
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U14G QR',
+    players: [{ firstName: 'Eleven', lastName: 'YearOld', dob: rosterDobAtCutoffAge(11), dobDay: '1', dobMonth: '01', dobYear: String(2026 - 11) }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('an 11-year-old in U14G QR is also a play-up, two groups young', !row.ageBlockedMessage && !!row.agePlayUpMessage, JSON.stringify(row));
+  check('…two age groups, not one', /two age groups younger/.test(row.agePlayUpMessage), row.agePlayUpMessage);
+}
+{
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U14G QR',
+    players: [{ firstName: 'Ten', lastName: 'YearOld', dob: rosterDobAtCutoffAge(10), dobDay: '1', dobMonth: '01', dobYear: String(2026 - 10) }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('a 10-year-old in U14G QR is still blocked — three groups is outside even the wide allowance',
+    !!row.ageBlockedMessage && !row.agePlayUpMessage, JSON.stringify(row));
+}
+{
+  /* U16B Contact is NOT one of the four wide girls' groups — confirms the
+     allowance did not leak sideways into the boys' stream. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: 'Two', lastName: 'GroupsYoung', dob: rosterDobAtCutoffAge(12), dobDay: '1', dobMonth: '01', dobYear: String(2026 - 12) }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('a boy two groups young for U16B Contact is still blocked, not a wide play-up',
+    !!row.ageBlockedMessage && !row.agePlayUpMessage, JSON.stringify(row));
+}
+{
+  /* Same rule, driven through the standalone player form rather than the
+     roster, since both paths call _playerAgeCheck() but nothing else here
+     exercises the player form directly against a wide group. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, playerForm: { ...c.state.playerForm, ageGroup: 'U14G QR', dob: rosterDobAtCutoffAge(12) } };
+  const vals = c.renderVals();
+  check('the player form itself treats a 12-year-old in U14G QR as a play-up', vals.playerPlayUpNeeded === true, JSON.stringify(vals.playerPlayUpPrompt));
+}
+
 /* ---- the submit-time gate ---- */
 
 {

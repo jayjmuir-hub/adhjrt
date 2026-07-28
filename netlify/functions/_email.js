@@ -200,10 +200,19 @@ function playerEmail(d) {
   const player = [d['player-first-name'], d['player-last-name']].filter(Boolean).join(' ');
   const parent = d['parent-first-name'] || '';
 
+  /* Playing up is recorded as a plain 'Yes'/'No' string in play-up-consent
+     (see Quins JRT.dc.html's playUpConsent / submitPlayer()). Surfaced here
+     so the confirmation email itself flags it, not just the /organizer
+     sheet — added 28 Jul 2026 alongside the wider girls'-groups play-up
+     allowance, so a parent who ticked the consent box sees it reflected
+     back rather than a generic confirmation that reads as if nothing
+     unusual was noted. */
+  const playingUp = d['play-up-consent'] === 'Yes';
+
   const rows = [
     row('Player', player),
     row('Date of birth', d.dob),
-    row('Age group', d['age-group']),
+    row('Age group', playingUp ? `${d['age-group']} (playing up)` : d['age-group']),
     row('Club', d.club),
     row('Parent / guardian', [d['parent-first-name'], d['parent-last-name']].filter(Boolean).join(' ')),
     row('Contact email', d['parent-email']),
@@ -215,13 +224,17 @@ function playerEmail(d) {
   /* Medical notes are deliberately not repeated here — they are in the
      registration, but echoing them into an inbox is unnecessary. */
 
+  const closing = playingUp
+    ? `We have noted that ${player ? esc(player) : 'this player'} is registered to play up an age group, with your consent as parent/guardian. Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong — including the play-up — just reply to this email.`
+    : 'Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong, just reply to this email.';
+
   return {
     subject: `Registration received — ${player || 'player'} | ADH JRT 2026`,
     html: wrap(
       'Thanks, we have your registration',
       `${parent ? esc(parent) + ', t' : 'T'}hank you for registering ${player ? `<strong>${esc(player)}</strong>` : 'your child'} for the Abu Dhabi Harlequins Junior Rugby Tournament. Here is what we received:`,
       rows,
-      'Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong, just reply to this email.'
+      closing
     ),
   };
 }

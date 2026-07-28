@@ -1093,6 +1093,69 @@ const FAULTS = [
     expect: ['an untouched blank row does not block submission'],
   },
 
+  /* ---- the wide (two-year) girls' play-up list — added 28 Jul 2026 -------
+     Real case that found this: Mike Yohotu, DOB 1 Sep 2013, registering for
+     U14G QR — 12 at the cut-off, one year young, but the one-hop chain (which
+     jumps u14g -> u12g, age 11) had no group at 12 and blocked him outright.
+     These faults are aimed at the arithmetic itself and at the server/client
+     list agreeing, not at the general play-up mechanism above, which the
+     older faults already cover. */
+
+  {
+    name: 'the server TWO_YEAR_PLAYUP_GROUP_IDS drifts from the client (u18g dropped)',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g'];",
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g'];"),
+    expect: ['the server carries the same wide play-up group list'],
+  },
+  {
+    name: 'the wide allowance is silently widened to three years young instead of two',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "    if (groupsYoung === 1 || groupsYoung === 2) {",
+      "    if (groupsYoung === 1 || groupsYoung === 2 || groupsYoung === 3) {"),
+    expect: ['three years younger than the band is blocked (even when wide)'],
+  },
+  {
+    name: 'the wide allowance is narrowed to only two years young, breaking the real one-year Mike Yohotu case',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "    if (groupsYoung === 1 || groupsYoung === 2) {",
+      "    if (groupsYoung === 2) {"),
+    expect: ['a 12-year-old girl registering for U14G QR is a play-up, not blocked'],
+  },
+  {
+    /* Deliberately NOT caught via the boundary sweep's isWide flag — that
+       flag is read straight off A.TWO_YEAR_PLAYUP_GROUP_IDS, so a fault that
+       widens the exported list would make the sweep's own "expected" value
+       move with it and the fault would sail through unnoticed. Only the
+       hardcoded literal-id assertion below is independent of the list this
+       fault is damaging. */
+    name: 'a non-wide group (U16B Contact) is accidentally given the two-year girls\' allowance',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g'];",
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g', 'u16b'];"),
+    expect: ['u16b is never in the wide play-up list, no matter what the export says'],
+  },
+  {
+    name: 'the client TWO_YEAR_PLAYUP_GROUP_IDS check is removed, so the client falls back to the old one-hop chain for U14G QR',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "    if (TWO_YEAR_PLAYUP_GROUP_IDS.includes(info.id)) {",
+      "    if (false) {"),
+    expect: ['a 12-year-old in U14G QR is a play-up on the roster, not blocked'],
+  },
+  {
+    name: 'the client-side wide allowance leaks into a non-wide group (U16B Contact)',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g'];",
+      "const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g', 'u16b'];"),
+    expect: ['a boy two groups young for U16B Contact is still blocked, not a wide play-up'],
+  },
+
   {
     name: 'the honeypot REFUSES instead of silently accepting, telling a bot it was seen',
     suite: 'test-intake.js',
@@ -1601,6 +1664,44 @@ const FAULTS = [
       'exports.handler = async (event) => {', 'const notTheHandler = async (event) => {'),
     expect: ['exports a handler'],
   },
+
+  /* ---- the play-up highlight in the confirmation email — added 28 Jul 2026,
+     alongside the wide girls' play-up allowance. Nothing tested _email.js's
+     templates before test-email.js existed, so these faults are aimed at
+     whether the highlight is actually there, not at some pre-existing rule. */
+
+  {
+    name: 'the play-up flag is read from the wrong field, so it never fires',
+    suite: 'test-email.js',
+    apply: () => patch(path.join('netlify', 'functions', '_email.js'),
+      "const playingUp = d['play-up-consent'] === 'Yes';",
+      "const playingUp = d['play-up'] === 'Yes';"),
+    expect: ['the age group row is suffixed'],
+  },
+  {
+    name: 'the play-up check is inverted, so a normal registration is highlighted and a real one is not',
+    suite: 'test-email.js',
+    apply: () => patch(path.join('netlify', 'functions', '_email.js'),
+      "const playingUp = d['play-up-consent'] === 'Yes';",
+      "const playingUp = d['play-up-consent'] !== 'Yes';"),
+    expect: ['no play-up wording leaks in when consent is "No"', 'the age group is shown plain'],
+  },
+  {
+    name: 'the age-group row stops mentioning "(playing up)"',
+    suite: 'test-email.js',
+    apply: () => patch(path.join('netlify', 'functions', '_email.js'),
+      "row('Age group', playingUp ? `${d['age-group']} (playing up)` : d['age-group']),",
+      "row('Age group', d['age-group']),"),
+    expect: ['the age group row is suffixed'],
+  },
+  {
+    name: 'the closing paragraph never distinguishes the play-up case',
+    suite: 'test-email.js',
+    apply: () => patch(path.join('netlify', 'functions', '_email.js'),
+      "  const closing = playingUp\n    ? `We have noted that ${player ? esc(player) : 'this player'} is registered to play up an age group, with your consent as parent/guardian. Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong — including the play-up — just reply to this email.`\n    : 'Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong, just reply to this email.';",
+      "  const closing = 'Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong, just reply to this email.';"),
+    expect: ['the closing paragraph names the player as playing up'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1612,7 +1713,7 @@ console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
- 'test-functions-load.js'].forEach((f) => {
+ 'test-functions-load.js', 'test-email.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

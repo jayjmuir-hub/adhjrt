@@ -1042,7 +1042,7 @@
                     <div style="font-size:13px;color:#f5c518;font-weight:700;margin-bottom:10px">{{ playerPlayUpPrompt }}</div>
                     <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:600;color:#fff;cursor:pointer">
                       <input type="checkbox" checked="{{ playerForm.playUpConsent }}" onChange="{{ onPlayerPlayUpConsent }}" style="margin-top:2px;width:18px;height:18px;flex:none;accent-color:#f5c518">
-                      <span>I consent, as parent/guardian, to the player playing up one age group. <span style="color:#E11B22">*</span></span>
+                      <span>I consent, as parent/guardian, to the player playing up as described above. <span style="color:#E11B22">*</span></span>
                     </label>
                   </div>
                 </sc-if>
@@ -1186,6 +1186,14 @@ const PREV_GROUP_ID = {
   u7: 'u6', u8: 'u7', u9: 'u8', u10: 'u9', u11: 'u10', u12: 'u11', u12g: 'u11',
   u13: 'u12', u14b: 'u13', u14g: 'u12g', u16b: 'u14b', u16g: 'u14g', u18b: 'u16b', u18g: 'u16g',
 };
+// All four girls' groups — U12G/U14G QR (non-contact) and U16G/U18G Contact —
+// get a wider, arithmetic-based play-up allowance (up to two age groups
+// young) instead of the one-hop PREV_GROUP_ID chain above. Added 28 Jul 2026
+// at Jay's explicit instruction, covering all four groups including the two
+// contact ones — flagging once, here, that U16G/U18G are tackle formats, not
+// non-contact QR like U12G/U14G, so the injury/age-grade profile of playing
+// two years up is materially different there. See claude/spec-age-validation.md.
+const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g'];
 const AGE_GROUP_INFO_BY_NAME = Object.fromEntries(AGE_GROUP_INFO.map((g) => [g.name, g]));
 const AGE_GROUP_INFO_BY_ID = Object.fromEntries(AGE_GROUP_INFO.map((g) => [g.id, g]));
 function fmtAges(ages) { return ages.length > 1 ? `${ages[0]} or ${ages[1]}` : `${ages[0]}`; }
@@ -1561,27 +1569,42 @@ class Component extends DCLogic {
     if (!f.consent) return 'Please read and agree to the Medical Declaration & Consent before submitting.';
     const check = this._playerAgeCheck(f);
     if (check.status === 'blocked') return 'Please resolve the age group mismatch below before submitting.';
-    if (check.status === 'playUp' && !f.playUpConsent) return 'Please consent to the player playing up one age group before submitting.';
+    if (check.status === 'playUp' && !f.playUpConsent) return 'Please consent to the player playing up before submitting.';
     return '';
   }
 
   // Returns { status: 'ok' | 'playUp' | 'blocked', message }.
-  // 'playUp': player is exactly one age group younger than the selected
-  // group — UAERF/World Rugby best practice allows this with parent
-  // consent, so we surface a mandatory consent checkbox instead of a hard
-  // block. Any other mismatch (2+ groups off, or too old) stays blocked.
+  // 'playUp': player is young enough to be allowed up with parent consent
+  // rather than hard-blocked. Normally that means exactly one age group
+  // younger (UAERF/World Rugby best practice). The four girls' groups
+  // (TWO_YEAR_PLAYUP_GROUP_IDS below) allow up to TWO age groups younger —
+  // added 28 Jul 2026 after a real U14G QR registration (age 12) was
+  // wrongly blocked: the girls' QR/contact ladder has no group at age 12
+  // (U12G QR is age 11, U14G QR is age 13), so the one-hop PREV_GROUP_ID
+  // chain skips straight past a real 12-year-old. Any other mismatch stays
+  // blocked.
   _playerAgeCheck(f) {
     if (!f.dob || !f.ageGroup) return { status: 'ok', message: '' };
     const cutoffAge = calcAge(f.dob, AGE_GRADE_CUTOFF_DATE);
     const info = AGE_GROUP_INFO_BY_NAME[f.ageGroup];
     if (!cutoffAge || !info) return { status: 'ok', message: '' };
     if (info.ages.includes(cutoffAge.years)) return { status: 'ok', message: '' };
-    const prevInfo = AGE_GROUP_INFO_BY_ID[PREV_GROUP_ID[info.id]];
-    if (prevInfo && prevInfo.ages.includes(cutoffAge.years)) {
-      return {
-        status: 'playUp',
-        message: `This player's age at the 31 Aug 2026 cut-off fits ${prevInfo.name}, one age group younger than ${f.ageGroup}. Playing up one age group is permitted with parent/guardian consent.`,
-      };
+    if (TWO_YEAR_PLAYUP_GROUP_IDS.includes(info.id)) {
+      const groupsYoung = info.ages[0] - cutoffAge.years;
+      if (groupsYoung === 1 || groupsYoung === 2) {
+        return {
+          status: 'playUp',
+          message: `This player is ${cutoffAge.years} at the 31 Aug 2026 cut-off — ${groupsYoung === 1 ? 'one age group' : 'two age groups'} younger than ${f.ageGroup}. ${f.ageGroup} is one of the girls' age groups, where UAERF rules allow playing up to two age groups with parent/guardian consent.`,
+        };
+      }
+    } else {
+      const prevInfo = AGE_GROUP_INFO_BY_ID[PREV_GROUP_ID[info.id]];
+      if (prevInfo && prevInfo.ages.includes(cutoffAge.years)) {
+        return {
+          status: 'playUp',
+          message: `This player's age at the 31 Aug 2026 cut-off fits ${prevInfo.name}, one age group younger than ${f.ageGroup}. Playing up one age group is permitted with parent/guardian consent.`,
+        };
+      }
     }
     return {
       status: 'blocked',

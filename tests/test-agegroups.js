@@ -181,6 +181,20 @@ eq('the server carries the same play-up chain', A.PREV_GROUP_ID, clientPrevGroup
 eq('every non-youngest group has a previous group', Object.keys(A.PREV_GROUP_ID).length, 14);
 check('U6 has no previous group — it is the youngest', !('u6' in A.PREV_GROUP_ID));
 
+/* Same drift check for the wide (two-year) girls' play-up list, added
+   28 Jul 2026. Pulled out of the page the same way as PREV_GROUP_ID above. */
+function clientTwoYearPlayUpGroupIds() {
+  const t = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  const i = t.indexOf('const TWO_YEAR_PLAYUP_GROUP_IDS = [');
+  const j = t.indexOf('];', i);
+  check('the client TWO_YEAR_PLAYUP_GROUP_IDS was found in the page', i >= 0 && j > i);
+  if (i < 0 || j <= i) return [];
+  const src = t.slice(i + 'const TWO_YEAR_PLAYUP_GROUP_IDS = '.length, j + 1);
+  // eslint-disable-next-line no-eval
+  return eval('(' + src + ')');
+}
+eq('the server carries the same wide play-up group list', A.TWO_YEAR_PLAYUP_GROUP_IDS, clientTwoYearPlayUpGroupIds());
+
 /* Lands a player at exactly `age` at the 31 Aug 2026 cut-off: 1 January of the
    right birth year has already had its birthday by then, so the cut-off age
    is simply 2026 minus the birth year. */
@@ -224,20 +238,44 @@ section('The age check — boundary sweep, all fifteen groups');
 A.AGE_GROUPS.forEach((g) => {
   const lowest = Math.min(...g.ages);
   const highest = Math.max(...g.ages);
+  const isWide = A.TWO_YEAR_PLAYUP_GROUP_IDS.includes(g.id);
 
   /* One year OLD of the band: always blocked. There is no "play up" for being
-     too old — the rule only ever lets a player down one group, never up. */
+     too old — the rule only ever lets a player down one group, never up,
+     even for the four wide (two-year) girls' groups. */
   const tooOld = A.ageGroupCheck(dobAtCutoffAge(highest + 1), g.name);
   check(`${g.name}: one year older than the band is blocked`, tooOld.status === 'blocked', tooOld.status);
 
-  /* One year YOUNG of the band. If the previous group in the chain actually
-     covers that age, it's a play-up; otherwise it's blocked. U6 has no
-     previous group at all, so it can only ever be blocked here. */
+  /* One year YOUNG of the band. The four wide girls' groups (u12g, u14g,
+     u16g, u18g) are always a play-up here, by plain arithmetic, regardless
+     of whether the PREV_GROUP_ID chain happens to cover that age — that gap
+     (U14G QR's chain skips age 12 entirely) is exactly why the wide rule
+     exists. Every other group still depends on the chain. */
   const prevInfo = A.AGE_GROUP_BY_ID[A.PREV_GROUP_ID[g.id]];
   const tooYoung = A.ageGroupCheck(dobAtCutoffAge(lowest - 1), g.name);
-  const expectPlayUp = !!(prevInfo && prevInfo.ages.includes(lowest - 1));
+  const expectPlayUp = isWide || !!(prevInfo && prevInfo.ages.includes(lowest - 1));
   check(`${g.name}: one year younger than the band is ${expectPlayUp ? 'a play-up' : 'blocked'}`,
     tooYoung.status === (expectPlayUp ? 'playUp' : 'blocked'), tooYoung.status);
+
+  /* Two years YOUNG of the band. The four wide girls' groups always allow
+     this by arithmetic. For everyone else it still runs through the chain —
+     and for U16B/U18B/U16G/U18G-shaped bands, the PREV_GROUP_ID target is
+     itself a two-year band, so the chain can ALSO call this a play-up (e.g.
+     U18B's previous group is U16B, ages 14 or 15 — both are "two years
+     young" or "one year young" of U18B's 16 and both are already a
+     legitimate play-up today, wide list or not). Not a new rule; just not
+     assumed away here. */
+  const wayTooYoung = A.ageGroupCheck(dobAtCutoffAge(lowest - 2), g.name);
+  const expectPlayUp2 = isWide || !!(prevInfo && prevInfo.ages.includes(lowest - 2));
+  check(`${g.name}: two years younger than the band is ${expectPlayUp2 ? 'a play-up' : 'blocked'}`,
+    wayTooYoung.status === (expectPlayUp2 ? 'playUp' : 'blocked'), wayTooYoung.status);
+
+  /* Three years young: blocked even for the wide groups — the allowance
+     stops at two, it does not become unlimited. */
+  const farTooYoung = A.ageGroupCheck(dobAtCutoffAge(lowest - 3), g.name);
+  const expectPlayUp3 = !isWide && !!(prevInfo && prevInfo.ages.includes(lowest - 3));
+  check(`${g.name}: three years younger than the band is ${expectPlayUp3 ? 'a play-up' : 'blocked (even when wide)'}`,
+    farTooYoung.status === (expectPlayUp3 ? 'playUp' : 'blocked'), farTooYoung.status);
 });
 
 /* ---- the girls' chain, checked separately from the boys' ---------------- */
@@ -249,10 +287,45 @@ A.AGE_GROUPS.forEach((g) => {
 eq('u14g plays up into u12g, not u13', A.PREV_GROUP_ID.u14g, 'u12g');
 eq('u16g plays up into u14g, not u16b\'s u14b', A.PREV_GROUP_ID.u16g, 'u14g');
 eq('u18g plays up into u16g, not u18b\'s u16b', A.PREV_GROUP_ID.u18g, 'u16g');
+/* The PREV_GROUP_ID chain above still exists and is still checked (the
+   drift test elsewhere pins it), but for these four groups it is no longer
+   what ageGroupCheck() actually uses — TWO_YEAR_PLAYUP_GROUP_IDS's plain
+   arithmetic is. Confirmed here so a future edit can't quietly stop calling
+   it for these ids without a test noticing. */
+eq('u12g/u14g/u16g/u18g are exactly the wide play-up group',
+  JSON.stringify([...A.TWO_YEAR_PLAYUP_GROUP_IDS].sort()),
+  JSON.stringify(['u12g', 'u14g', 'u16g', 'u18g']));
+/* A hardcoded, literal restatement of the same fact — deliberately NOT
+   derived from A.TWO_YEAR_PLAYUP_GROUP_IDS, unlike the boundary sweep above,
+   so a fault that widens the exported list itself (e.g. sneaking u16b in)
+   cannot also move this expectation and slip through unnoticed. */
+['u16b'].forEach((id) => {
+  check(`u16b is never in the wide play-up list, no matter what the export says`,
+    !A.TWO_YEAR_PLAYUP_GROUP_IDS.includes(id), A.TWO_YEAR_PLAYUP_GROUP_IDS);
+});
+
+/* ---- the real-world case that started this: a 12-year-old girl in U14G -- */
+/* U14G QR is age 13; U12G QR is age 11. There is no girls' group at 12 at
+   all, so the one-hop chain used to block this outright — the exact
+   registration Jay found rejected (Mike Yohotu, DOB 1 Sep 2013). Now it must
+   be a play-up, one age group young, described in plain language rather than
+   naming a group that doesn't exist for this age. */
 {
-  const r = A.ageGroupCheck(dobAtCutoffAge(11), 'U14G QR'); // 11 fits U12G, not U13
-  eq('a girl one year young for U14G is flagged against U12G', r.status, 'playUp');
-  check('…named correctly, not U13', /U12G QR/.test(r.message), r.message);
+  const r = A.ageGroupCheck(dobAtCutoffAge(12), 'U14G QR');
+  eq('a 12-year-old girl registering for U14G QR is a play-up, not blocked', r.status, 'playUp');
+  check('…the message says one age group, not two', /one age group younger/.test(r.message), r.message);
+  check('…the message names U14G QR', /U14G QR/.test(r.message), r.message);
+}
+{
+  // 11 fits U12G QR's own band, which is two age groups below U14G QR (13 - 11 = 2).
+  const r = A.ageGroupCheck(dobAtCutoffAge(11), 'U14G QR');
+  eq('a girl two years young for U14G QR is also a play-up', r.status, 'playUp');
+  check('…the message says two age groups', /two age groups younger/.test(r.message), r.message);
+}
+{
+  // 10 is three years young of U14G QR's band (13) — outside even the wide allowance.
+  const r = A.ageGroupCheck(dobAtCutoffAge(10), 'U14G QR');
+  eq('a girl three years young for U14G QR is blocked, not a play-up', r.status, 'blocked');
 }
 
 /* ======================================================================

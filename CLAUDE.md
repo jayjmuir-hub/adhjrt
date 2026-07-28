@@ -926,6 +926,47 @@ unknown-group fallback (18) — so a lookup made case-insensitive returned the s
 answer either way and the check passed on the fault. It uses U16G (12) now. Only
 injecting the fault found it.
 
+### The wide (two-year) girls' play-up allowance (added 28 Jul 2026)
+
+**Real registration found a real gap.** A parent tried to register a genuine
+12-year-old girl (Mike Yohotu, DOB 1 Sep 2013) for U14G QR (age 13) and was
+blocked outright. U14G QR's one-hop `PREV_GROUP_ID` chain points at U12G QR,
+which is age **11** — there is no girls-specific group at age 12 at all, so a
+real 12-year-old falls straight through the gap the one-hop chain assumes
+doesn't exist.
+
+**Decision (Jay, 28 Jul 2026):** all four girls' groups — `u12g` (U12G QR),
+`u14g` (U14G QR), `u16g` (U16G Contact), `u18g` (U18G Contact) —
+`TWO_YEAR_PLAYUP_GROUP_IDS` in both copies — now allow play-up **up to two age
+groups young**, not one, and the basis is **plain arithmetic on the group's
+lowest age**, not the `PREV_GROUP_ID` chain. Every other group is unaffected
+and still uses the one-hop chain exactly as before.
+
+⚠️ **U16G and U18G are Contact (tackle), not Quick Rip like U12G/U14G.**
+Extending a two-year-younger tolerance to a contact age grade is a materially
+different injury/age-grade-safety call than doing so for non-contact QR — Jay
+chose to include all four explicitly, not just the two literally named "QR".
+
+**Mechanism is unchanged — same flag, same consent checkbox, same submit-time
+gate.** This is not a new feature, just a wider version of the existing one:
+`ageGroupCheck()` / `_playerAgeCheck()` still return
+`{status: 'ok'|'playUp'|'blocked'}`, a `playUp` roster row is still flagged,
+not gated, and a `playUp` on the standalone player form still requires the
+same `playUpConsent` checkbox before it can submit. The wording of the
+checkbox and the client's generic "please consent" message were both
+loosened from "one age group" to a neutral "as described above" /
+"before submitting", since the specific message above it now correctly says
+either one or two groups.
+
+**The confirmation email now says so.** `playerEmail()` in `_email.js` reads
+`d['play-up-consent']` (already collected, previously never rendered) and, when
+`'Yes'`, suffixes the Age group row with `(playing up)` and adds a sentence to
+the closing paragraph naming the player and crediting parent/guardian consent.
+Team registration emails are unaffected — a coach's whole-squad play-up flag
+is not something a team email can attribute to any one parent's consent.
+`tests/test-email.js` is the first test file to actually render these
+templates rather than mocking `sendConfirmation()` out whole.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not

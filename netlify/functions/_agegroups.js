@@ -92,6 +92,14 @@ const PREV_GROUP_ID = {
   u7: 'u6', u8: 'u7', u9: 'u8', u10: 'u9', u11: 'u10', u12: 'u11', u12g: 'u11',
   u13: 'u12', u14b: 'u13', u14g: 'u12g', u16b: 'u14b', u16g: 'u14g', u18b: 'u16b', u18g: 'u16g',
 };
+// All four girls' groups — U12G/U14G QR (non-contact) and U16G/U18G Contact —
+// get a wider, arithmetic-based play-up allowance (up to two age groups
+// young) instead of the one-hop PREV_GROUP_ID chain above. Added 28 Jul 2026
+// at Jay's explicit instruction, covering all four groups including the two
+// contact ones — flagging once, here, that U16G/U18G are tackle formats, not
+// non-contact QR like U12G/U14G, so the injury/age-grade profile of playing
+// two years up is materially different there. See claude/spec-age-validation.md.
+const TWO_YEAR_PLAYUP_GROUP_IDS = ['u12g', 'u14g', 'u16g', 'u18g'];
 
 // UAERF age-grade cut-off: a player's age group is fixed by their age at
 // midnight 31 August 2026 (start of the 2026/27 season) — "Under X" means
@@ -118,12 +126,20 @@ function fmtAges(ages) { return ages.length > 1 ? `${ages[0]} or ${ages[1]}` : `
 
    Returns { status: 'ok' | 'playUp' | 'blocked', message }.
      'ok'      — nothing to flag.
-     'playUp'  — exactly one age group young. ALLOWED, not refused — see
-                 claude/spec-age-validation.md decision 1: a coach entering a
-                 whole squad cannot give parental consent on a parent's
-                 behalf, so this is flagged for /organizer to chase rather
-                 than blocked outright.
-     'blocked' — anything else (too old, or more than one group young).
+     'playUp'  — young enough to be allowed up with parent/guardian consent
+                 rather than refused. Normally exactly one age group young
+                 (the PREV_GROUP_ID chain). The four girls' groups in
+                 TWO_YEAR_PLAYUP_GROUP_ID allow up to TWO age groups young
+                 instead, via plain arithmetic on info.ages[0] rather than the
+                 chain — added 28 Jul 2026 because the girls' QR/contact
+                 ladder has no group at every age (U12G QR is 11, U14G QR is
+                 13; there is no girls-specific group at 12), so the one-hop
+                 chain wrongly blocked a real 12-year-old registering for
+                 U14G QR. See claude/spec-age-validation.md decision 1: a
+                 coach entering a whole squad cannot give parental consent on
+                 a parent's behalf, so this is flagged for /organizer to
+                 chase rather than blocked outright.
+     'blocked' — anything else (too old, or more groups young than allowed).
                  Refused — the same rule the player form has always had. */
 function ageGroupCheck(dob, groupName) {
   if (!dob || !groupName) return { status: 'ok', message: '' };
@@ -131,12 +147,22 @@ function ageGroupCheck(dob, groupName) {
   const info = AGE_GROUP_BY_NAME[groupName];
   if (!cutoffAge || !info) return { status: 'ok', message: '' };
   if (info.ages.includes(cutoffAge.years)) return { status: 'ok', message: '' };
-  const prevInfo = AGE_GROUP_BY_ID[PREV_GROUP_ID[info.id]];
-  if (prevInfo && prevInfo.ages.includes(cutoffAge.years)) {
-    return {
-      status: 'playUp',
-      message: `This player's age at the 31 Aug 2026 cut-off fits ${prevInfo.name}, one age group younger than ${groupName}. Playing up one age group is permitted with parent/guardian consent.`,
-    };
+  if (TWO_YEAR_PLAYUP_GROUP_IDS.includes(info.id)) {
+    const groupsYoung = info.ages[0] - cutoffAge.years;
+    if (groupsYoung === 1 || groupsYoung === 2) {
+      return {
+        status: 'playUp',
+        message: `This player is ${cutoffAge.years} at the 31 Aug 2026 cut-off — ${groupsYoung === 1 ? 'one age group' : 'two age groups'} younger than ${groupName}. ${groupName} is one of the girls' age groups, where UAERF rules allow playing up to two age groups with parent/guardian consent.`,
+      };
+    }
+  } else {
+    const prevInfo = AGE_GROUP_BY_ID[PREV_GROUP_ID[info.id]];
+    if (prevInfo && prevInfo.ages.includes(cutoffAge.years)) {
+      return {
+        status: 'playUp',
+        message: `This player's age at the 31 Aug 2026 cut-off fits ${prevInfo.name}, one age group younger than ${groupName}. Playing up one age group is permitted with parent/guardian consent.`,
+      };
+    }
   }
   return {
     status: 'blocked',
@@ -146,5 +172,5 @@ function ageGroupCheck(dob, groupName) {
 
 module.exports = {
   AGE_GROUPS, AGE_GROUP_BY_NAME, AGE_GROUP_BY_ID, MAX_SQUAD_ANY_GROUP, squadCap,
-  PREV_GROUP_ID, AGE_GRADE_CUTOFF_DATE, calcAge, fmtAges, ageGroupCheck,
+  PREV_GROUP_ID, TWO_YEAR_PLAYUP_GROUP_IDS, AGE_GRADE_CUTOFF_DATE, calcAge, fmtAges, ageGroupCheck,
 };

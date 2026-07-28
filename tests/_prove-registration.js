@@ -34,6 +34,7 @@ const NEEDED = [
   'Organizer.dc.html',
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
+  path.join('netlify', 'functions', '_agegroups.js'),
   path.join('netlify', 'functions', '_scoring.js'),
   path.join('netlify', 'functions', '_publish.js'),
   path.join('netlify', 'functions', '_password.js'),
@@ -630,6 +631,62 @@ const FAULTS = [
     apply: () => patch('Organizer.dc.html', '${splitLabel(byBlock[b].length)}: ', ''),
     expect: ['the tooltip spells it out'],
   },
+
+  /* ---- the age-group table ---------------------------------------------
+     The squad cap is about to be enforced server-side for the first time, so
+     the server's copy of the table drifting from the client's stops being
+     cosmetic and starts letting oversized squads into a contact age grade. */
+
+  {
+    name: "U16B's squad cap is raised on the server only (18 -> 20)",
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "{ id: 'u16b', name: 'U16B Contact', ages: [14, 15], format: '12s', squad: 18 },",
+      "{ id: 'u16b', name: 'U16B Contact', ages: [14, 15], format: '12s', squad: 20 },"),
+    expect: ['U16B Contact squad cap', 'exactly the client table'],
+  },
+  {
+    name: "U16G's squad is 'tidied' to match the boys' group of the same age",
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "{ id: 'u16g', name: 'U16G Contact', ages: [14, 15], format: '7s', squad: 12 },",
+      "{ id: 'u16g', name: 'U16G Contact', ages: [14, 15], format: '7s', squad: 18 },"),
+    expect: ['U16G Contact squad cap', 'exactly the client table'],
+  },
+  {
+    name: 'an unrecognised age group falls back to the SMALLEST cap instead of the largest',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      '  return g ? g.squad : MAX_SQUAD_ANY_GROUP;',
+      '  return g ? g.squad : 12;'),
+    expect: ['falls back to the largest cap'],
+  },
+  {
+    name: 'squadCap is made case-insensitive, so a near-miss quietly resolves',
+    suite: 'test-agegroups.js',
+    apply: () => {
+      const f = path.join('netlify', 'functions', '_agegroups.js');
+      patch(f, 'AGE_GROUP_BY_NAME[g.name] = g;', 'AGE_GROUP_BY_NAME[g.name.toLowerCase()] = g;');
+      patch(f, "  const g = AGE_GROUP_BY_NAME[typeof name === 'string' ? name : ''];",
+        "  const g = AGE_GROUP_BY_NAME[typeof name === 'string' ? name.trim().toLowerCase() : ''];");
+    },
+    expect: ['the wrong case is not the same group', 'trailing space is not the same group'],
+  },
+  {
+    name: 'an age-group id drifts away from the one the venue layout keys on',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "{ id: 'u12g', name: 'U12G QR',", "{ id: 'u12girls', name: 'U12G QR',"),
+    expect: ['is an age group the venue layout knows', 'exactly the client table'],
+  },
+  {
+    name: 'MAX_SQUAD_ANY_GROUP is typed as a constant and left behind',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      'const MAX_SQUAD_ANY_GROUP = Math.max(...AGE_GROUPS.map((g) => g.squad));',
+      'const MAX_SQUAD_ANY_GROUP = 15;'),
+    expect: ['the largest squad anywhere is 18', 'derived from the table'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -640,7 +697,7 @@ const problems = [];
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
- 'test-venue-splits.js'].forEach((f) => {
+ 'test-venue-splits.js', 'test-agegroups.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

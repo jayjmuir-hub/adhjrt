@@ -547,6 +547,36 @@ is the PUBLISHED copy and the only thing the public sees.
   `teamNamesFromRegistrations()` is the single source of the naming rule and the
   import review table reads it too, so the two cannot drift.
 
+## Age groups, server side (added 28 Jul 2026)
+
+`netlify/functions/_agegroups.js` carries the fifteen age groups — id, name,
+`ages` at the UAERF cut-off, format, `squad` cap. It is a **second copy** of
+`AGE_GROUP_INFO` in `Quins JRT.dc.html`, for the same no-build-step reason
+`DEFAULT_VENUE` is duplicated. `test-agegroups.js` compares them deep-equal.
+
+**Why it exists: the squad cap has never been enforced.** `_squadCap()` runs in
+the browser only, so anyone editing the page could register a squad of any size
+and nothing downstream noticed. The submission gateway (sub-project 1,
+`claude/plan-submission-gateway.md`) is the first thing that will check it
+server-side.
+
+- `squadCap(name)` matches the group name **exactly** and falls back to
+  `MAX_SQUAD_ANY_GROUP` (18) when it does not recognise it — same rule as the
+  client, so a roster typed before a group is chosen is never refused. The
+  fallback can only ever be *more* permissive than the real cap.
+- ⚠️ **Do not "tidy" the caps.** All four girls' groups play 7s with a squad of
+  12, including U16G and U18G, which is why they differ from the boys' groups of
+  the same age. They are not derivable from a rule.
+- The ids must match the ones `DEFAULT_VENUE` keys its `groups` object on — a
+  drift there silently detaches a registration from the day it plays.
+  `test-agegroups.js` asserts that too.
+
+⚠️ **A test whose two possible answers are the same number proves nothing.** The
+first version of the case-sensitivity check used U16B, whose cap (18) is also the
+unknown-group fallback (18) — so a lookup made case-insensitive returned the same
+answer either way and the check passed on the fault. It uses U16G (12) now. Only
+injecting the fault found it.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not
@@ -1399,8 +1429,9 @@ build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
-pitch / split model and the account rules — **960 checks** across five files —
-plus `_prove-registration.js`, the fault-injection script (**70 faults**, all of
+pitch / split model, the age-group table and the account rules — **1,019
+checks** across six files — plus `_prove-registration.js`, the fault-injection
+script (**76 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

@@ -867,4 +867,20 @@ const rosterDobAtCutoffAge = (age) => `${2026 - age}-01-01`;
 
 }
 
+section('The top nav has an Organizer link, not just the footer (added 28 Jul 2026)');
+{
+  /* Jay found the only way into /organizer was the footer link — added 28 Jul
+     2026 after he asked for one at the top too. Plain markup, not a {{ token
+     }}, so a text check is the right tool here (contrast with the binding
+     contract above, which is for the parts renderVals() actually drives). */
+  const page = readRepo('Quins JRT.dc.html');
+  const navStart = page.indexOf('<nav class="hdr-nav"');
+  const navEnd = page.indexOf('</nav>', navStart);
+  check('the header nav block was found', navStart >= 0 && navEnd > navStart);
+  const nav = page.slice(navStart, navEnd);
+  check('the top nav links to Organizer.dc.html', /href="Organizer\.dc\.html"/.test(nav));
+  check('the footer link still exists too — this is additive, not a replacement',
+    /href="Organizer\.dc\.html"/.test(page.slice(navEnd)));
+}
+
 main().then(() => summary('test-registration-panel.js'));

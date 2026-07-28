@@ -1756,6 +1756,14 @@ const FAULTS = [
       "  if (aAge !== bAge) return aAge - bAge;\n  return 0;"),
     expect: ['within the same club, submission order is preserved (A1 before A3)'],
   },
+  {
+    name: 'the top-nav Organizer link is removed, leaving only the footer one',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '        <a href="Organizer.dc.html" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n',
+      ''),
+    expect: ['the top nav links to Organizer.dc.html'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

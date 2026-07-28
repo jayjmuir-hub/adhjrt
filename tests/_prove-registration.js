@@ -793,6 +793,95 @@ const FAULTS = [
       "const TEAM_FIELDS = ['submittedAt', 'club'];\n\nfunction getAuth() {"),
     expect: ['has no TEAM_FIELDS of its own'],
   },
+
+  /* ---- the allow-list ---------------------------------------------------
+     The gateway turns an endpoint Netlify Forms used to guard into a public,
+     unauthenticated one that writes children's data to a sheet and sends mail
+     from our own domain. This is the filter that decides what it will even
+     look at. */
+
+  {
+    name: 'the allow-list is removed and every submitted field is kept',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    if (allowed.indexOf(k) >= 0) clean[k] = src[k];\n    else dropped.push(k);',
+      '    clean[k] = src[k];'),
+    expect: ['an unknown field is dropped', 'a submitted team code never gets in'],
+  },
+  {
+    name: 'the generated team code becomes something the body can supply',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      'num-players', 'notes', 'players',\n    ],",
+      "      'num-players', 'notes', 'players', 'team-code',\n    ],"),
+    expect: ['a submitted team code never gets in'],
+  },
+  {
+    name: 'the clean object gets a prototype back',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  const clean = Object.create(null);', '  const clean = {};'),
+    expect: ['no prototype at all'],
+  },
+  {
+    name: 'an unknown form name is cleaned to nothing instead of refused',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  if (!spec) return null;',
+      '  if (!spec) return { clean: Object.create(null), dropped: [] };'),
+    expect: ['an unknown form is refused'],
+  },
+  {
+    name: 'the form name is matched case-insensitively, so two spellings exist',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  const spec = FORMS[typeof form === 'string' ? form : ''];",
+      "  const spec = FORMS[typeof form === 'string' ? form.toLowerCase() : ''];"),
+    expect: ['the wrong case is not the same form'],
+  },
+  {
+    name: 'the honeypot is filtered out before validation can look at it',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '  const allowed = spec.fields.concat([HONEYPOT]);', '  const allowed = spec.fields;'),
+    expect: ['bot-field is allowed through'],
+  },
+  {
+    name: 'the honeypot is made a real field, so a bot trap becomes a sheet write',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      'num-players', 'notes', 'players',\n    ],",
+      "      'num-players', 'notes', 'players', 'bot-field',\n    ],"),
+    expect: ['not in either field list by accident', 'has a column to go in'],
+  },
+  {
+    name: 'a dropped field stops being reported, so nothing can be logged',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    else dropped.push(k);', '    else if (false) dropped.push(k);'),
+    expect: ['reported by name so it can be logged', 'all three are reported'],
+  },
+  {
+    name: 'a real column is dropped from the field list, so nobody can ever fill it',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      'club', 'age-group', 'preferred-pool',", "      'club', 'age-group',"),
+    expect: ['is a field a coach can fill in'],
+  },
+  {
+    name: 'a team field is added to the player form, where it has no column',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      'medical-notes', 'consent', 'play-up-consent',",
+      "      'medical-notes', 'consent', 'play-up-consent', 'head-coach-name',"),
+    expect: ['has a column to go in', 'a TEAM field on the player form is dropped'],
+  },
+  {
+    name: 'the two forms are pointed at the same sheet',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    sheetEnv: 'GOOGLE_SHEET_ID_PLAYERS',", "    sheetEnv: 'GOOGLE_SHEET_ID_TEAMS',"),
+    expect: ['players go to the players sheet', 'the two are not the same sheet'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

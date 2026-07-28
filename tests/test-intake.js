@@ -284,6 +284,156 @@ section('The three copies are down to one');
   check('…and USER_ENTERED has not crept back', !/USER_ENTERED'/.test(writer.replace(/\/\*[\s\S]*?\*\//g, '')));
 }
 
+/* ====================================================================== */
+section('The allow-list — what may reach the sheet at all');
+
+/* WHY THIS EXISTS. Until the gateway, Netlify Forms decided what a submission
+   contained. From the gateway on, the REQUEST BODY decides — and the request
+   body is public input to an unauthenticated endpoint that writes rows into a
+   sheet holding children's names, dates of birth and medical notes, and sends
+   email from admin@adhjrt.com to an address taken out of that same body.
+
+   So: an explicit list of what a form may carry, and anything else is dropped.
+   Dropped rather than refused, because a browser extension or a corporate proxy
+   adding a field must not cost a coach their registration — but the drop is
+   REPORTED, so it can be logged by NAME. Never by value. */
+
+{
+  const { clean, dropped } = I.cleanSubmission('team-registration', {
+    club: 'Test Club',
+    'head-coach-email': 'coach@example.com',
+    'not-a-field': 'x',
+  });
+  check('a known field survives', clean.club === 'Test Club');
+  check('another one does too', clean['head-coach-email'] === 'coach@example.com');
+  check('an unknown field is dropped', !('not-a-field' in clean));
+  eq('…and reported by name so it can be logged', dropped, ['not-a-field']);
+  eq('nothing else was invented', Object.keys(clean).length, 2);
+}
+
+/* THE TWO THAT MATTER MOST. Both are generated server-side. Accepting either
+   from the body would let anyone stamp their own submission time, or claim a
+   team code that already belongs to another club — and the team code is what
+   the sheet, the draw and the printed pitch flags all key on.
+
+   _intake.js already spreads them after the data so a row builder cannot be
+   overridden, but that is a second line of defence. This is the first: they
+   never get that far. */
+{
+  const { clean, dropped } = I.cleanSubmission('team-registration', {
+    submittedAt: '1999-01-01T00:00:00.000Z',
+    'team-code': 'HACK9',
+    'team-name': 'HACK9',
+  });
+  check('a submitted timestamp never gets in', !('submittedAt' in clean));
+  check('a submitted team code never gets in', !('team-code' in clean));
+  check('nor the name the email prints it under', !('team-name' in clean));
+  eq('all three are reported', dropped.length, 3);
+  eq('and nothing at all survived', Object.keys(clean).length, 0);
+}
+
+/* A submitted "__proto__" on a plain {} does not become an own property — it
+   walks the prototype chain instead, which is a different and worse surprise.
+   Nothing here needs a prototype at all. */
+{
+  const { clean } = I.cleanSubmission('team-registration', JSON.parse('{"__proto__":{"squad":999},"club":"Test Club"}'));
+  check('the result has no prototype at all', Object.getPrototypeOf(clean) === null);
+  check('a polluting key does not land', clean.squad === undefined);
+  check('…and the real field still does', clean.club === 'Test Club');
+  check('Object.prototype is untouched', ({}).squad === undefined);
+}
+
+/* Each form carries its own fields. A team field on the player form is not a
+   near miss to be forgiven — it means the caller has confused the two, and
+   writing it would put it in a column that means something else. */
+{
+  const { clean, dropped } = I.cleanSubmission('player-registration', {
+    'medical-notes': 'none', 'head-coach-name': 'wrong form',
+  });
+  check('a player field survives', clean['medical-notes'] === 'none');
+  check('a TEAM field on the player form is dropped', !('head-coach-name' in clean));
+  eq('…and reported', dropped, ['head-coach-name']);
+}
+{
+  const { clean } = I.cleanSubmission('team-registration', { dob: '2011-01-01' });
+  check('a PLAYER field on the team form is dropped', !('dob' in clean));
+}
+
+/* An unknown form is refused outright rather than cleaned to nothing. "We do
+   not know what this is" and "this is a valid form with no fields filled in"
+   are different answers and the caller has to be able to tell them apart. */
+check('an unknown form is refused', I.cleanSubmission('nope', {}) === null);
+check('a missing form is refused', I.cleanSubmission(undefined, {}) === null);
+check('a null form is refused', I.cleanSubmission(null, {}) === null);
+check('a non-string form is refused', I.cleanSubmission(42, {}) === null);
+/* Exact match. The gateway must not accept "Team-Registration" as a near miss,
+   or two spellings of one form exist and only one of them is tested. */
+check('the wrong case is not the same form', I.cleanSubmission('Team-Registration', {}) === null);
+
+/* Junk in the data half must give an empty result, not a throw — this runs on
+   a public endpoint and an exception there is a 500 with no explanation. */
+eq('null data gives nothing, not a throw', Object.keys(I.cleanSubmission('team-registration', null).clean).length, 0);
+eq('a string instead of an object gives nothing', Object.keys(I.cleanSubmission('team-registration', 'x').clean).length, 0);
+eq('an array gives nothing', Object.keys(I.cleanSubmission('team-registration', ['club']).clean).length, 0);
+
+/* The honeypot is allowed THROUGH the filter so validation can look at it, but
+   it is not a sheet column, so it can never be written. Both halves matter. */
+{
+  const { clean } = I.cleanSubmission('team-registration', { 'bot-field': '' });
+  check('bot-field is allowed through for the honeypot check', 'bot-field' in clean);
+  check('…but it is not a team sheet column', I.TEAM_COLUMNS.indexOf('bot-field') < 0);
+  check('…nor a player one', I.PLAYER_COLUMNS.indexOf('bot-field') < 0);
+  check('…so it can never reach a row', I.teamRow(clean, 'TST1', 'x').indexOf('') >= 0
+    && I.teamRow({ 'bot-field': 'caught you' }, 'TST1', 'x').every((c) => c !== 'caught you'));
+}
+
+/* ====================================================================== */
+section('The allow-list and the columns cannot drift apart');
+
+/* Every field a form accepts must have somewhere to go, and every column
+   except the generated ones must be fillable. Either gap is silent: a field
+   that is accepted but has no column is thrown away after validation passes,
+   and a column with no field is a permanently empty column nobody notices. */
+{
+  const GENERATED = ['submittedAt', 'team-code'];
+
+  const teamFields = I.FORMS['team-registration'].fields;
+  teamFields.forEach((f) => {
+    check(`team field "${f}" has a column to go in`, I.TEAM_COLUMNS.indexOf(f) >= 0);
+  });
+  I.TEAM_COLUMNS.filter((c) => GENERATED.indexOf(c) < 0).forEach((c) => {
+    check(`team column "${c}" is a field a coach can fill in`, teamFields.indexOf(c) >= 0);
+  });
+
+  const playerFields = I.FORMS['player-registration'].fields;
+  playerFields.forEach((f) => {
+    check(`player field "${f}" has a column to go in`, I.PLAYER_COLUMNS.indexOf(f) >= 0);
+  });
+  I.PLAYER_COLUMNS.filter((c) => GENERATED.indexOf(c) < 0).forEach((c) => {
+    check(`player column "${c}" is a field somebody can fill in`, playerFields.indexOf(c) >= 0);
+  });
+
+  check('the honeypot is not in either field list by accident',
+    teamFields.indexOf('bot-field') < 0 && playerFields.indexOf('bot-field') < 0);
+  eq('the two forms are the only ones there are', Object.keys(I.FORMS).sort(),
+    ['player-registration', 'team-registration']);
+}
+
+/* The form names have to be the ones the page actually submits, or the gateway
+   refuses every real registration and accepts none. Read out of the page. */
+{
+  const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  Object.keys(I.FORMS).forEach((name) => {
+    check(`the page really submits "${name}"`, page.indexOf(`'form-name': '${name}'`) >= 0, name);
+  });
+}
+
+/* Each form knows which sheet it belongs to, by env var NAME. Never a value. */
+eq('teams go to the teams sheet', I.FORMS['team-registration'].sheetEnv, 'GOOGLE_SHEET_ID_TEAMS');
+eq('players go to the players sheet', I.FORMS['player-registration'].sheetEnv, 'GOOGLE_SHEET_ID_PLAYERS');
+check('the two are not the same sheet',
+  I.FORMS['team-registration'].sheetEnv !== I.FORMS['player-registration'].sheetEnv);
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 

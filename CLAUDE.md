@@ -578,6 +578,33 @@ emergency-contact box. The sheet is what somebody rings from at a tournament.
   makes a typed `=` a live formula in a sheet holding children's names, dates of
   birth and medical notes, and eats the `+` off every phone number.
 
+### The allow-list (added 28 Jul 2026)
+
+`cleanSubmission(form, data)` in `_intake.js` decides what a submission may
+contain at all. Until the gateway, Netlify Forms decided that. From the gateway
+on the **request body** decides — and the body is public input to an
+unauthenticated endpoint that writes children's data to a sheet and sends mail
+from `admin@adhjrt.com` to an address taken out of that same body.
+
+- Unknown keys are **dropped, not refused** — a browser extension or a corporate
+  proxy adding a field must not cost a coach their registration — but the drop
+  is **reported by NAME** so it can be logged. ⚠️ Never log a field VALUE.
+- `submittedAt`, `team-code` and `team-name` are absent from both field lists.
+  All three are generated. The team code is what the sheet, the draw and the
+  printed pitch flags key on, so a body that could supply its own would let
+  anyone claim another club's.
+- The form name is matched **exactly**, and an unknown one returns `null` rather
+  than an empty result — "we do not know what this is" and "a valid form with
+  nothing filled in" are different answers and the caller needs both.
+- The result is `Object.create(null)`. On a plain `{}` a submitted `__proto__`
+  does not become an own property, it walks the prototype chain — a worse
+  surprise than being dropped.
+- `bot-field` (the honeypot) is allowed **through** the filter so validation can
+  see it, but it is not a sheet column, so it can never be written.
+- **The field lists and the columns are asserted against each other both ways.**
+  A field with no column is silently thrown away after validation passes; a
+  column with no field is permanently empty and nobody notices.
+
 ⚠️ **A no-op is not a fault.** The first version of the range fault hardcoded
 `A:N` — which is the correct answer today, so nothing changed and nothing was
 caught, correctly. The real mistake is adding a column *and* leaving the range
@@ -1466,8 +1493,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It currently holds the registration window, the Venue & days views, the main
 pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,087 checks** across seven files — plus `_prove-registration.js`,
-the fault-injection script (**87 faults**, all of
+rules — **1,178 checks** across seven files — plus `_prove-registration.js`,
+the fault-injection script (**98 faults**, all of
 which must be caught by the check that claims to guard them, and none of which
 may be "caught" by the suite throwing).
 

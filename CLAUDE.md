@@ -967,6 +967,44 @@ is not something a team email can attribute to any one parent's consent.
 `tests/test-email.js` is the first test file to actually render these
 templates rather than mocking `sendConfirmation()` out whole.
 
+## The Teams/Players tables are grouped by club and age group (added 28 Jul 2026)
+
+**Jay asked whether filtering `/organizer`'s Teams or Players tab by one age
+group groups the results per club, and whether filtering by one club groups
+its results per age group.** Before this, neither: `_filteredTeams()` and
+`_filteredPlayers()` in `Organizer.dc.html` only filtered — rows kept
+whatever order they arrived from the sheet in, i.e. submission order, so two
+entries from the same club would only land next to each other by
+coincidence.
+
+**One compound sort answers both questions.** Every row is now sorted by
+`byClubThenAgeGroup()` — club name first (case-insensitive), then the
+group's real youngest-to-oldest band, then `submittedAt` as a stable
+tiebreak. Filtering to one age group makes the age-group key a constant
+across every visible row, so the club key is what actually orders them:
+clubs land grouped. Filtering to one club makes the club key the constant,
+so the age-group key orders them instead: that club's age groups land
+grouped, youngest first. No separate code path exists for either direction —
+it is the same two-key sort in both cases, because whichever filter is
+active is what turns its own key into a no-op.
+
+⚠️ **The age-group band is NOT alphabetical.** `AGE_GROUP_ORDER` maps each
+group's name (as the sheet stores it, e.g. `"U12G QR"`) to its position in
+`MANAGER_AGE_GROUPS`, which is already in real age order. A plain string sort
+would put `"U12G QR"` after `"U18B Contact"` (`'1'` == `'1'`, then `'2'` vs
+`'8'`) — wrong, since 12 is younger than 18. An unrecognised group name sorts
+last rather than throwing.
+
+**`exportCsv()` reads through the same two filtered methods**, so the CSV
+export is grouped identically to what's on screen — one code path, not two
+that could disagree.
+
+`tests/test-organizer-grouping.js` drives the real component (`build()`,
+same pattern as `test-venue-map.js`) with fixtures whose submission order
+deliberately disagrees with both the club-alphabetical and age-band order,
+so a fault that quietly left sheet order untouched, or that only partially
+sorted, could not pass by coincidence.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not

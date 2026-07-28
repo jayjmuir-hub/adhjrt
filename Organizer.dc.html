@@ -704,6 +704,41 @@ const MANAGER_AGE_GROUPS = [
   { id: 'u18b', name: 'U18B Contact' }, { id: 'u18g', name: 'U18G Contact' },
 ];
 
+/* Youngest-to-oldest position of each age group NAME, as the sheet stores it
+   (e.g. "U12G QR"), reusing MANAGER_AGE_GROUPS rather than a third list —
+   used to sort the Teams/Players tables below into age-band order rather
+   than the alphabetical order a plain string sort would give ("U12G QR"
+   would otherwise sort after "U18B Contact"). */
+const AGE_GROUP_ORDER = Object.fromEntries(MANAGER_AGE_GROUPS.map((g, i) => [g.name, i]));
+
+/* Added 28 Jul 2026 — Jay asked whether filtering by one age group across all
+   clubs groups the rows per club, and whether filtering by one club across
+   all age groups groups its rows per age group. Neither did: the tables were
+   a flat, unsorted list in sheet/submission order.
+
+   ONE COMPOUND SORT ANSWERS BOTH QUESTIONS AT ONCE. Sort every row by club
+   first, then by age-group band: when a specific age group is selected every
+   visible row already shares that age group, so the club key is what
+   actually orders them — clubs land grouped together. Symmetrically, when a
+   specific club is selected every visible row already shares that club, so
+   the age-group key is what actually orders them — that club's age groups
+   land grouped together, youngest to oldest. No separate code path is needed
+   for either case; the same two-key sort produces the right grouping in both
+   because whichever filter is active turns its own key into a constant.
+
+   An unrecognised age-group name (should never happen — AGE_GROUP_ORDER
+   mirrors AGE_GROUP_INFO/AGE_GROUPS) sorts last rather than throwing. */
+function byClubThenAgeGroup(a, b) {
+  const clubCmp = String(a.club || '').localeCompare(String(b.club || ''), undefined, { sensitivity: 'base' });
+  if (clubCmp) return clubCmp;
+  const aAge = AGE_GROUP_ORDER[a.ageGroup] ?? 999;
+  const bAge = AGE_GROUP_ORDER[b.ageGroup] ?? 999;
+  if (aAge !== bAge) return aAge - bAge;
+  // Same club, same age group: keep submission order stable rather than
+  // leaving it to the sort algorithm's whim.
+  return String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''));
+}
+
 /* ---------------- The pitch schematic ----------------
    A drawing of where each age group plays, on the Venue & days tab.
 
@@ -2075,7 +2110,7 @@ class Component extends DCLogic {
         if (!this.matches(hay, search)) return false;
       }
       return true;
-    });
+    }).sort(byClubThenAgeGroup);
   }
   _filteredPlayers() {
     const { players, search, clubFilter, ageFilter } = this.state;
@@ -2087,7 +2122,7 @@ class Component extends DCLogic {
         if (!this.matches(hay, search)) return false;
       }
       return true;
-    });
+    }).sort(byClubThenAgeGroup);
   }
 
   renderVals() {

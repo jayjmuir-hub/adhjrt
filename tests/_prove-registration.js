@@ -1702,6 +1702,60 @@ const FAULTS = [
       "  const closing = 'Nothing further is needed from you now. Pool draws, kick-off times and pitch allocations are published closer to the tournament, and we will be in touch before the weekend. If anything above looks wrong, just reply to this email.';"),
     expect: ['the closing paragraph names the player as playing up'],
   },
+
+  /* ---- the Teams/Players tables grouping by club and age group — added
+     28 Jul 2026, in answer to Jay asking whether filtering by one age group
+     groups the rows by club, and filtering by one club groups the rows by
+     age group. Neither did until this change; these faults are aimed at the
+     sort actually running and at the age-band ordering being real, not
+     alphabetical. */
+
+  {
+    name: 'the sort is removed from _filteredTeams(), so teams go back to raw sheet order',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "      return true;\n    }).sort(byClubThenAgeGroup);\n  }\n  _filteredPlayers() {",
+      "      return true;\n    });\n  }\n  _filteredPlayers() {"),
+    expect: ['clubs are grouped together, not left in submission order'],
+  },
+  {
+    name: 'the sort is removed from _filteredPlayers() only, so the two tables disagree',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "      return true;\n    }).sort(byClubThenAgeGroup);\n  }\n\n  renderVals() {",
+      "      return true;\n    });\n  }\n\n  renderVals() {"),
+    expect: ['players are grouped by club within the filtered age group too'],
+  },
+  {
+    name: 'the age-group order table is swapped for a plain alphabetical string sort',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  const aAge = AGE_GROUP_ORDER[a.ageGroup] ?? 999;\n  const bAge = AGE_GROUP_ORDER[b.ageGroup] ?? 999;\n  if (aAge !== bAge) return aAge - bAge;",
+      "  const aAge = String(a.ageGroup || ''), bAge = String(b.ageGroup || '');\n  if (aAge !== bAge) return aAge < bAge ? -1 : 1;"),
+    expect: ['age groups are grouped in real youngest-to-oldest order, not alphabetically'],
+  },
+  {
+    /* NOT `localeCompare()` with no options — Node's default locale already
+       sorts case-insensitively at the primary level, so dropping just the
+       `{ sensitivity: 'base' }` option is a no-op fault, caught nothing the
+       first time this was written. The fault has to actually switch to raw
+       code-point comparison, where every capital letter (65-90) sorts before
+       every lowercase one (97-122) regardless of the real alphabet. */
+    name: 'the club comparison stops being case-insensitive (falls back to raw code-point order)',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  const clubCmp = String(a.club || '').localeCompare(String(b.club || ''), undefined, { sensitivity: 'base' });",
+      "  const aClub = String(a.club || ''), bClub = String(b.club || '');\n  const clubCmp = aClub < bClub ? -1 : aClub > bClub ? 1 : 0;"),
+    expect: ['a lowercase club name still sorts alphabetically, not after every capitalised one'],
+  },
+  {
+    name: 'ties within the same club and age group are left unstable instead of falling back to submission order',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  if (aAge !== bAge) return aAge - bAge;\n  // Same club, same age group: keep submission order stable rather than\n  // leaving it to the sort algorithm's whim.\n  return String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''));",
+      "  if (aAge !== bAge) return aAge - bAge;\n  return 0;"),
+    expect: ['within the same club, submission order is preserved (A1 before A3)'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1713,7 +1767,7 @@ console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
- 'test-functions-load.js', 'test-email.js'].forEach((f) => {
+ 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

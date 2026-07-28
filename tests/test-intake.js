@@ -462,7 +462,9 @@ section('Validation — the rules, server side for the first time');
    — see the agreement section below, which reads it out of the page. */
 
 const V = (form, data) => I.validateSubmission(form, I.cleanSubmission(form, data).clean);
-const A_GROUPS = require(path.join(repoRoot(), 'netlify', 'functions', '_agegroups.js')).AGE_GROUPS;
+const AG = require(path.join(repoRoot(), 'netlify', 'functions', '_agegroups.js'));
+const A_GROUPS = AG.AGE_GROUPS;
+const AG_BY_NAME = AG.AGE_GROUP_BY_NAME;
 
 /* A submission with everything filled in. Every value is invented. */
 const goodTeam = () => ({
@@ -576,31 +578,41 @@ PLAYER_REQUIRED.forEach((f) => {
 
 /* ---- the squad cap, enforced for the first time ------------------------ */
 
-const roster = (n) => JSON.stringify(
-  Array.from({ length: n }, (_, i) => ({ firstName: `P${i}`, lastName: 'Player', dob: '2011-01-01' }))
+/* Every invented player's dob is picked to FIT the group under test — the
+   squad cap and the age check (sub-project 2, below) are two different rules
+   and this section tests the cap only. A fixed dob that happened to suit
+   U16B only would silently start failing here the moment the age check
+   existed, for a reason this section has nothing to do with. `ageFitDob`
+   lands a player at the group's youngest age at the cut-off; group is
+   optional so the "roster doesn't even matter" cases (an unrecognised
+   age-group, for instance) can still call roster() with no group. */
+const ageFitDob = (group) => `${2026 - group.ages[0]}-01-01`;
+const roster = (n, group) => JSON.stringify(
+  Array.from({ length: n }, (_, i) => ({ firstName: `P${i}`, lastName: 'Player', dob: group ? ageFitDob(group) : '2011-01-01' }))
 );
 
 {
   /* U16B is 18, U16G is 12 — different numbers, so a cap read off the wrong
      group cannot pass by coincidence. */
-  const at18 = goodTeam(); at18.players = roster(18);
+  const u16b = AG_BY_NAME['U16B Contact']; const u16g = AG_BY_NAME['U16G Contact'];
+  const at18 = goodTeam(); at18.players = roster(18, u16b);
   check('18 players in U16B is exactly the cap and is allowed', V('team-registration', at18).ok === true,
     V('team-registration', at18).error);
 
-  const over = goodTeam(); over.players = roster(19);
+  const over = goodTeam(); over.players = roster(19, u16b);
   const r = V('team-registration', over);
   check('19 is one too many', r.ok === false);
   eq('…and the sentence is the one the browser uses',
     r.error, 'U16B Contact squads are a maximum of 18 players and you have listed 19. Please remove 1.');
 
-  const g = goodTeam(); g['age-group'] = 'U16G Contact'; g.players = roster(13);
+  const g = goodTeam(); g['age-group'] = 'U16G Contact'; g.players = roster(13, u16g);
   eq('the cap follows the GROUP, not the biggest number in the tournament',
     V('team-registration', g).error,
     'U16G Contact squads are a maximum of 12 players and you have listed 13. Please remove 1.');
 
-  const g12 = goodTeam(); g12['age-group'] = 'U16G Contact'; g12.players = roster(12);
+  const g12 = goodTeam(); g12['age-group'] = 'U16G Contact'; g12.players = roster(12, u16g);
   check('12 in U16G is allowed', V('team-registration', g12).ok === true);
-  const g13 = goodTeam(); g13['age-group'] = 'U16G Contact'; g13.players = roster(18);
+  const g13 = goodTeam(); g13['age-group'] = 'U16G Contact'; g13.players = roster(18, u16g);
   check('18 in U16G is NOT allowed, even though 18 is a cap somewhere',
     V('team-registration', g13).ok === false);
 
@@ -620,16 +632,16 @@ const roster = (n) => JSON.stringify(
    So the invariant to assert is the one that actually holds: no roster can get
    past this larger than the biggest squad in the tournament. */
 {
-  const huge = goodTeam(); huge.players = roster(31);
+  const huge = goodTeam(); huge.players = roster(31, AG_BY_NAME['U16B Contact']);
   check('31 players is refused', V('team-registration', huge).ok === false);
   check('…as is anything over the largest cap in the tournament, in every group',
     A_GROUPS.every((g) => {
-      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad + 1);
+      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad + 1, g);
       return V('team-registration', d).ok === false;
     }));
   check('…while exactly the cap is allowed in every group',
     A_GROUPS.every((g) => {
-      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad);
+      const d = goodTeam(); d['age-group'] = g.name; d.players = roster(g.squad, g);
       return V('team-registration', d).ok === true;
     }));
   check('the biggest squad anywhere is 18, so nothing larger can ever be stored',
@@ -651,6 +663,115 @@ const roster = (n) => JSON.stringify(
 {
   const d = goodTeam(); d.players = '[]';
   check('an empty JSON array is fine', V('team-registration', d).ok === true);
+}
+
+/* ---- the roster's dates of birth — sub-project 2, added 28 Jul 2026 ---- */
+
+/* No new rule: this is ageGroupCheck()'s rule (in _agegroups.js, itself a
+   copy of _playerAgeCheck()), reused here rather than reimplemented. See
+   claude/spec-age-validation.md and claude/plan-age-validation.md. */
+
+const AG_CHECK = AG.ageGroupCheck;
+const dobAtCutoffAge = (age) => `${2026 - age}-01-01`;
+const players = (list) => JSON.stringify(list);
+
+{
+  /* A row with no name at all is never inspected — every roster starts with
+     blank rows and none of them may block anything. */
+  const d = goodTeam(); d.players = players([{ firstName: '', lastName: '', dob: '' }]);
+  check('an untouched blank row is not checked at all', V('team-registration', d).ok === true);
+}
+{
+  /* Confirmed with Jay, 28 Jul 2026: a named row with no date of birth blocks
+     the whole squad, the same way the player form requires one. Otherwise a
+     coach could leave every dob blank and this project would check nothing. */
+  const d = goodTeam(); d.players = players([{ firstName: 'A', lastName: 'Player', dob: '' }]);
+  const r = V('team-registration', d);
+  check('a named row with no dob is refused', r.ok === false);
+  eq('…with a sentence that says so', r.error, 'Please give a date of birth for every named player.');
+  eq('…pointing at the roster field', r.field, 'players');
+
+  const onlyLast = goodTeam(); onlyLast.players = players([{ firstName: '', lastName: 'Player', dob: '' }]);
+  check('a last-name-only row still counts as named', V('team-registration', onlyLast).ok === false);
+}
+{
+  /* A play-up player — exactly one age group young — passes through. It
+     cannot be gated on consent server-side: that is a checkbox a PARENT
+     ticks on the player form, and a coach entering a whole squad cannot tick
+     it for them. Spec decision 1. */
+  const d = goodTeam(); // U16B Contact
+  d.players = players([{ firstName: 'Play', lastName: 'Up', dob: dobAtCutoffAge(13) }]); // fits U14B
+  const check1 = AG_CHECK(dobAtCutoffAge(13), 'U16B Contact');
+  eq('sanity: the shared function agrees this is a play-up case', check1.status, 'playUp');
+  eq('a play-up roster is accepted, not refused', V('team-registration', d).ok, true);
+}
+{
+  /* Two or more groups out, or too old: a hard block, same as the player
+     form has always had. */
+  const d = goodTeam();
+  d.players = players([{ firstName: 'Too', lastName: 'Old', dob: dobAtCutoffAge(30) }]);
+  const r = V('team-registration', d);
+  check('a badly out-of-range player blocks the whole squad', r.ok === false);
+  check('…naming the player', /Too Old/.test(r.error || ''), r.error);
+  eq('…pointing at the roster field', r.field, 'players');
+  /* The core sentence has to be the SAME one ageGroupCheck() produces for the
+     identical input — not a hand-typed copy that can drift from it. */
+  const expected = AG_CHECK(dobAtCutoffAge(30), 'U16B Contact').message;
+  check('…and ends with ageGroupCheck()\'s own sentence, unmodified',
+    (r.error || '').endsWith(expected), r.error);
+}
+{
+  /* An unnamed player (row 1) blocks; the SECOND named row is the one
+     reported, proving the loop doesn't stop at the first row regardless of
+     content — it inspects every named row. */
+  const d = goodTeam();
+  d.players = players([
+    { firstName: 'Fine', lastName: 'Player', dob: dobAtCutoffAge(15) },
+    { firstName: 'Bad', lastName: 'Player', dob: dobAtCutoffAge(30) },
+  ]);
+  const r = V('team-registration', d);
+  check('the second row is checked too, not just the first', r.ok === false && /Bad Player/.test(r.error), r.error);
+}
+{
+  /* The boundary sweep from test-agegroups.js, run again but THROUGH
+     validateSubmission() — this is what actually proves the two call sites
+     agree, not just that each works alone. */
+  check('every group’s boundary answer matches ageGroupCheck() when run through validateSubmission()',
+    A_GROUPS.every((g) => {
+      const lowest = Math.min(...g.ages);
+      const dob = dobAtCutoffAge(lowest - 1);
+      const expected = AG_CHECK(dob, g.name).status;
+      const d = goodTeam(); d['age-group'] = g.name;
+      d.players = players([{ firstName: 'P', lastName: 'One', dob }]);
+      const r = V('team-registration', d);
+      const gotBlocked = r.ok === false && /P One/.test(r.error || '');
+      return expected === 'blocked' ? gotBlocked : r.ok === true;
+    }));
+}
+
+/* ---- the browser and the server say the same sentence, for the age check too ---- */
+{
+  const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  /* _playerAgeCheck()'s blocked-message template, pulled out of the page
+     rather than retyped — if the wording ever moves in the page this test
+     must not need hand-editing to keep matching. */
+  const m = /return \{\s*status: 'blocked',\s*message: `([\s\S]*?)`,\s*\};/.exec(page);
+  check('the blocked-message template was found in the page', !!m);
+  if (m) {
+    const d = goodTeam();
+    d.players = players([{ firstName: 'Wrong', lastName: 'Age', dob: dobAtCutoffAge(30) }]);
+    const r = V('team-registration', d);
+    /* Build the expected sentence by substituting the same template's
+       placeholders the same way ageGroupCheck() does, and check the server's
+       refusal ends with EXACTLY that text. */
+    const groupName = 'U16B Contact';
+    const info = AG.AGE_GROUP_BY_NAME[groupName];
+    const expected = m[1]
+      .replace(/\$\{f\.ageGroup\}/g, groupName)
+      .replace(/\$\{fmtAges\(info\.ages\)\}/g, AG.fmtAges(info.ages))
+      .replace(/\$\{cutoffAge\.years\}/g, '30');
+    check('…and the server ends with that exact sentence', (r.error || '').endsWith(expected), `got: ${r.error}\nwant suffix: ${expected}`);
+  }
 }
 
 /* ---- length caps ------------------------------------------------------ */
@@ -682,8 +803,14 @@ eq('notes get more room', I.MAX_NOTES_CHARS, 2000);
 {
   /* The squad list is JSON and legitimately long, so it has its own ceiling —
      but it still has one. Without it the only limit on a request is the body
-     size, and this is a public endpoint. */
-  const over = goodTeam(); over.players = JSON.stringify([{ firstName: 'x'.repeat(9000) }]);
+     size, and this is a public endpoint.
+
+     lastName and dob are filled in and age-appropriate so this row is refused
+     for exactly ONE reason — its length — rather than also tripping the
+     roster age check (sub-project 2) for a missing dob, which would make this
+     assertion pass even with the real ceiling deleted. */
+  const over = goodTeam();
+  over.players = JSON.stringify([{ firstName: 'x'.repeat(9000), lastName: 'Player', dob: '2011-01-01' }]);
   check('a squad list cannot be unbounded', V('team-registration', over).ok === false);
 }
 

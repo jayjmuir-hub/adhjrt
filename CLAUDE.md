@@ -807,7 +807,8 @@ hits out and asserts the window still starts at the first.
 `validateSubmission(form, clean)` in `_intake.js`. **No new rules** — every one
 is already applied in the browser. What is new is that the browser was the ONLY
 place they were applied, so anyone editing the page could register a squad of
-any size for a contact age grade. Ages are sub-project 2 and deliberately absent.
+any size for a contact age grade. The roster's dates of birth are checked here
+too, as of sub-project 2 — see "Age validation on the roster" below.
 
 **The wording is copied character for character** from `submitTeam()` and
 `_playerFormError()`, and `test-intake.js` reads both out of the page and fails
@@ -866,6 +867,58 @@ server-side.
 - The ids must match the ones `DEFAULT_VENUE` keys its `groups` object on — a
   drift there silently detaches a registration from the day it plays.
   `test-agegroups.js` asserts that too.
+
+### Age validation on the roster (added 28 Jul 2026 — sub-project 2)
+
+**The team registration form never checked a player's date of birth against
+the age group they were entered into.** All the age logic lived on the
+*player* form only (`_playerAgeCheck()`); a coach entering a whole squad at
+once had no check at all. Design decisions:
+`claude/spec-age-validation.md`; the plan: `claude/plan-age-validation.md`.
+
+**No new rule — the existing one, reused.** `_agegroups.js` now carries a
+server copy of the same rule `_playerAgeCheck()` already runs on the player
+form: `PREV_GROUP_ID`, `AGE_GRADE_CUTOFF_DATE`, `calcAge()` and `fmtAges()` are
+copied character for character, and `ageGroupCheck(dob, groupName)` is the
+server's version of the check. `test-agegroups.js` compares `PREV_GROUP_ID`
+against the client's copy the same way it already compared `AGE_GROUP_INFO`,
+and sweeps the boundary — one year either side of every group's band, for all
+fifteen groups, not one example.
+
+⚠️ **A different algorithm that happens to agree today is not good enough.**
+`calcAge()` stays a literal `Date`-based copy rather than being rewritten as
+"safer" string arithmetic — a different implementation is one more thing that
+can drift from the client with no test able to see it. It is timezone-safe as
+written: it never round-trips through UTC, unlike the registration window's
+dates (see below), so whatever timezone the runtime is in, the calendar day it
+reads back out is the one that was typed in.
+
+**Exactly one age group young is a PLAY-UP, allowed through, not blocked.** On
+the player form this is gated on a parent ticking a consent box. A coach
+entering a whole squad cannot tick that box on a parent's behalf, so a play-up
+roster row is simply flagged — client side in amber under the row, nothing
+gated on it — and lets the squad submit. **Anything worse (two groups out, or
+too old) is a hard block**, both client and server side, same rule the player
+form has always had. Nothing is written to the sheet for the flag: it is
+derivable later from the stored `dob` and the team's stored `age-group`, so it
+needs no column of its own. Where it eventually surfaces in `/organizer` is
+still an open question, tied to the separate "squad list is invisible in
+`/organizer`" question — see `claude/state-of-play.md`.
+
+**A named roster row with no date of birth blocks the whole squad.**
+Confirmed with Jay, 28 Jul 2026, both client and server side — the same
+requirement the player form has always had for `dob`. The alternative (let it
+through unchecked) would mean a coach could leave every date of birth blank and
+this project would check nothing. A row nobody has touched (both names blank)
+is never inspected at all — every roster starts with several blank rows and
+none of them may block a submission on their own.
+
+**The roster's date of birth input changed to three dropdowns**, matching the
+player form, via the same `composeDob()` — not a second date-composition
+function. The team form's roster rows used to be a native `<input
+type="date">`; see "Date of birth is stored as `yyyy-mm-dd`" above for why the
+player form never used one, and the same trap (`31 February` silently rolling
+forward to `3 March`) applied here too.
 
 ⚠️ **A test whose two possible answers are the same number proves nothing.** The
 first version of the case-sensitivity check used U16B, whose cap (18) is also the

@@ -31,7 +31,7 @@
 // — is the check that catches that, and it could not be written at all while
 // the two halves lived in different files.
 
-const { squadCap, AGE_GROUP_BY_NAME } = require('./_agegroups');
+const { squadCap, AGE_GROUP_BY_NAME, ageGroupCheck } = require('./_agegroups');
 const { checkRate } = require('./_ratelimit');
 /* Also dependency-free, so it is required directly rather than injected — one
    less thing the adapter can hand over wrongly. googleapis and the mailer are
@@ -176,7 +176,8 @@ function cleanSubmission(form, data) {
    NO NEW RULES. Every one of these is already applied in the browser. The
    point is that until the gateway that was the ONLY place they were applied,
    so anyone editing the page could register a squad of any size for a contact
-   age grade. Ages are sub-project 2 and are deliberately not here.
+   age grade. The roster's dates of birth are checked here too, as of
+   sub-project 2 (28 Jul 2026) — see step 7, below the squad cap.
 
    THE WORDING IS COPIED CHARACTER FOR CHARACTER from submitTeam() and
    _playerFormError() in "Quins JRT.dc.html", so a coach sees the same sentence
@@ -317,7 +318,44 @@ function validateSubmission(form, clean) {
     }
   }
 
-  /* 7. LENGTH. Last, so a coach fixes the obvious things first. */
+  /* 7. THE ROSTER'S DATES OF BIRTH — sub-project 2, added 28 Jul 2026.
+        No new rule: this is _playerAgeCheck()'s rule, reused server-side via
+        ageGroupCheck() in _agegroups.js, the same duplication pattern the
+        squad cap and the age-group table above already use in this file.
+
+        A named row with no date of birth is refused outright — confirmed
+        with Jay, 28 Jul 2026 — the same requirement the player form has
+        always had for `dob`. Skipping a blank date of birth would leave the
+        whole check optional at the coach's discretion, which defeats the
+        point of adding it.
+
+        A play-up player (exactly one age group young) is let through. It
+        cannot be gated on consent here — that is a checkbox a PARENT ticks on
+        the player form, and a coach entering a whole squad cannot tick it on
+        a parent's behalf. See claude/spec-age-validation.md decision 1: it is
+        flagged for /organizer to chase, not blocked. Nothing is written for
+        it — the flag is derivable later from the stored dob and age group,
+        so it needs no column of its own. */
+  if (roster) {
+    const named = roster.filter((p) => p && typeof p === 'object'
+      && (text(p.firstName).trim() || text(p.lastName).trim()));
+    for (const p of named) {
+      if (!filled(p.dob)) {
+        return bad('Please give a date of birth for every named player.', 'players');
+      }
+    }
+    for (let i = 0; i < named.length; i++) {
+      const p = named[i];
+      const check = ageGroupCheck(text(p.dob), groupName);
+      if (check.status === 'blocked') {
+        const who = [text(p.firstName).trim(), text(p.lastName).trim()].filter(Boolean).join(' ') || `player ${i + 1}`;
+        return bad(`${who}: ${check.message}`, 'players');
+      }
+      // 'playUp' and 'ok' both pass through unchanged — neither writes anything extra.
+    }
+  }
+
+  /* 8. LENGTH. Last, so a coach fixes the obvious things first. */
   for (const f of spec.fields) {
     const max = LONG_FIELDS.indexOf(f) >= 0 ? MAX_NOTES_CHARS : MAX_FIELD_CHARS;
     if (f === 'players') continue;   // has its own ceiling, checked above

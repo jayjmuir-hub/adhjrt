@@ -154,6 +154,108 @@ eq('every name is indexed', Object.keys(A.AGE_GROUP_BY_NAME).length, 15);
 }
 
 /* ======================================================================
+   THE AGE CHECK — sub-project 2, added 28 Jul 2026.
+   ------------------------------------------------------------------------
+   ageGroupCheck() is copied character for character out of _playerAgeCheck()
+   in "Quins JRT.dc.html" (minus the playUpConsent handling, a UI concept).
+   PREV_GROUP_ID, AGE_GRADE_CUTOFF_DATE and calcAge() are the same verbatim-
+   copy pattern the age table above already uses, so the drift check below is
+   the same shape as "the two copies agree".
+   ====================================================================== */
+section('The age check — the two copies agree');
+
+/* Pull PREV_GROUP_ID out of the page the same way clientTable() pulls
+   AGE_GROUP_INFO. */
+function clientPrevGroupId() {
+  const t = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  const i = t.indexOf('const PREV_GROUP_ID = {');
+  const j = t.indexOf('\n};', i);
+  check('the client PREV_GROUP_ID was found in the page', i >= 0 && j > i);
+  if (i < 0 || j <= i) return {};
+  const src = t.slice(i + 'const PREV_GROUP_ID = '.length, j + 2);
+  // eslint-disable-next-line no-eval
+  return eval('(' + src + ')');
+}
+
+eq('the server carries the same play-up chain', A.PREV_GROUP_ID, clientPrevGroupId());
+eq('every non-youngest group has a previous group', Object.keys(A.PREV_GROUP_ID).length, 14);
+check('U6 has no previous group — it is the youngest', !('u6' in A.PREV_GROUP_ID));
+
+/* Lands a player at exactly `age` at the 31 Aug 2026 cut-off: 1 January of the
+   right birth year has already had its birthday by then, so the cut-off age
+   is simply 2026 minus the birth year. */
+const dobAtCutoffAge = (age) => `${2026 - age}-01-01`;
+
+/* ---- nothing to check without both pieces ------------------------------ */
+eq('no dob, nothing to check', A.ageGroupCheck('', 'U16B Contact').status, 'ok');
+eq('no group, nothing to check', A.ageGroupCheck(dobAtCutoffAge(20), '').status, 'ok');
+eq('an unparsable dob does not throw', A.ageGroupCheck('not-a-date', 'U16B Contact').status, 'ok');
+
+/* ---- the message text, character for character -------------------------- */
+{
+  const playUp = A.ageGroupCheck(dobAtCutoffAge(13), 'U16B Contact'); // 13 fits U14B
+  eq('the play-up sentence', playUp.status, 'playUp');
+  eq('…word for word',
+    playUp.message,
+    "This player's age at the 31 Aug 2026 cut-off fits U14B Contact, one age group younger than U16B Contact. Playing up one age group is permitted with parent/guardian consent.");
+
+  const blocked = A.ageGroupCheck(dobAtCutoffAge(20), 'U16B Contact');
+  eq('the blocked sentence', blocked.status, 'blocked');
+  eq('…word for word',
+    blocked.message,
+    'U16B Contact is for players who are 14 or 15 years old at the UAERF age-grade cut-off (31 Aug 2026). Based on this date of birth, the player is 20 at that cut-off — please check the date of birth or select the correct age group.');
+}
+
+/* ---- U16/U18 done properly: a two-year band is NOT a boundary case ------ */
+/* U16B/U16G/U18B/U18G all span two years. Both years are 'ok' — this is not
+   a play-up situation and must never be treated as one. */
+[['U16B Contact', 14], ['U16B Contact', 15], ['U16G Contact', 14], ['U16G Contact', 15],
+  ['U18B Contact', 16], ['U18B Contact', 17], ['U18G Contact', 16], ['U18G Contact', 17]].forEach(([name, age]) => {
+  eq(`${name} at age ${age} is simply ok, not a boundary case`,
+    A.ageGroupCheck(dobAtCutoffAge(age), name).status, 'ok');
+});
+
+/* ---- the boundary sweep, all fifteen groups, both edges ----------------- */
+/* Not one example. For every group: one year younger than its lowest age, and
+   one year older than its highest age. That is 30 cases, not counting the
+   groups above already swept for their two-year band. */
+section('The age check — boundary sweep, all fifteen groups');
+
+A.AGE_GROUPS.forEach((g) => {
+  const lowest = Math.min(...g.ages);
+  const highest = Math.max(...g.ages);
+
+  /* One year OLD of the band: always blocked. There is no "play up" for being
+     too old — the rule only ever lets a player down one group, never up. */
+  const tooOld = A.ageGroupCheck(dobAtCutoffAge(highest + 1), g.name);
+  check(`${g.name}: one year older than the band is blocked`, tooOld.status === 'blocked', tooOld.status);
+
+  /* One year YOUNG of the band. If the previous group in the chain actually
+     covers that age, it's a play-up; otherwise it's blocked. U6 has no
+     previous group at all, so it can only ever be blocked here. */
+  const prevInfo = A.AGE_GROUP_BY_ID[A.PREV_GROUP_ID[g.id]];
+  const tooYoung = A.ageGroupCheck(dobAtCutoffAge(lowest - 1), g.name);
+  const expectPlayUp = !!(prevInfo && prevInfo.ages.includes(lowest - 1));
+  check(`${g.name}: one year younger than the band is ${expectPlayUp ? 'a play-up' : 'blocked'}`,
+    tooYoung.status === (expectPlayUp ? 'playUp' : 'blocked'), tooYoung.status);
+});
+
+/* ---- the girls' chain, checked separately from the boys' ---------------- */
+/* u14g -> u12g -> u11 is a DIFFERENT chain from the boys' u14b -> u13 -> u12,
+   even though both groups sit at the same age. A lookup that accidentally
+   fell through to the boys' chain would silently drift a girl into the wrong
+   group and every check above would still pass, because it sweeps id-by-id
+   rather than comparing the two streams to each other. */
+eq('u14g plays up into u12g, not u13', A.PREV_GROUP_ID.u14g, 'u12g');
+eq('u16g plays up into u14g, not u16b\'s u14b', A.PREV_GROUP_ID.u16g, 'u14g');
+eq('u18g plays up into u16g, not u18b\'s u16b', A.PREV_GROUP_ID.u18g, 'u16g');
+{
+  const r = A.ageGroupCheck(dobAtCutoffAge(11), 'U14G QR'); // 11 fits U12G, not U13
+  eq('a girl one year young for U14G is flagged against U12G', r.status, 'playUp');
+  check('…named correctly, not U13', /U12G QR/.test(r.message), r.message);
+}
+
+/* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`:
 
      * U16B's cap changed on the server only -> "U16B Contact squad cap"

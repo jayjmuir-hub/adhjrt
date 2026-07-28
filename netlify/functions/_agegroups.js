@@ -63,6 +63,88 @@ function squadCap(name) {
   return g ? g.squad : MAX_SQUAD_ANY_GROUP;
 }
 
+/* ============================================================
+   THE AGE CHECK — sub-project 2, added 28 Jul 2026.
+   ------------------------------------------------------------
+   Everything below is copied CHARACTER FOR CHARACTER out of
+   "Quins JRT.dc.html" — PREV_GROUP_ID, AGE_GRADE_CUTOFF_DATE, calcAge() and
+   fmtAges() are the exact same names and the exact same logic
+   _playerAgeCheck() already runs for the parent's form. Same reasoning as the
+   table above: no build step means no way to have one copy, so this is a
+   second copy with a test that fails if it drifts (test-agegroups.js).
+
+   A DIFFERENT ALGORITHM THAT AGREES TODAY IS NOT GOOD ENOUGH. It would be one
+   more thing that can drift from the client with no test able to see it. This
+   stays a literal copy on purpose, even though calcAge()'s Date arithmetic
+   could be rewritten as pure string math.
+
+   calcAge()'s `new Date(dobStr + 'T00:00:00')` is timezone-safe here in a way
+   the registration window's dates were NOT (see _registration.js): it never
+   round-trips through UTC, so whatever timezone the runtime happens to be in,
+   the calendar year/month/day read back out are the same ones that were
+   typed in. Do not "fix" this into an explicit-offset version — that is the
+   shape of the bug this comment is warning against, not a fix for one. */
+
+// The next-younger group in each stream — the group actually one step below
+// in the real competition structure, not just "one year younger" (e.g.
+// U16B's previous group is U14B, since there's no U15B).
+const PREV_GROUP_ID = {
+  u7: 'u6', u8: 'u7', u9: 'u8', u10: 'u9', u11: 'u10', u12: 'u11', u12g: 'u11',
+  u13: 'u12', u14b: 'u13', u14g: 'u12g', u16b: 'u14b', u16g: 'u14g', u18b: 'u16b', u18g: 'u16g',
+};
+
+// UAERF age-grade cut-off: a player's age group is fixed by their age at
+// midnight 31 August 2026 (start of the 2026/27 season) — "Under X" means
+// they are exactly X−1 on that date. Emirati U18 players use a 31 December
+// cut-off instead per UAERF rules; that nationality-specific exception isn't
+// enforced here since the form doesn't collect nationality.
+const AGE_GRADE_CUTOFF_DATE = new Date(2026, 7, 31); // 31 Aug 2026, local time
+
+function calcAge(dobStr, asOf) {
+  const dob = new Date(dobStr + 'T00:00:00');
+  if (isNaN(dob.getTime())) return null;
+  let years = asOf.getFullYear() - dob.getFullYear();
+  let months = asOf.getMonth() - dob.getMonth();
+  if (asOf.getDate() < dob.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) return null;
+  return { years, months, birthYear: dob.getFullYear() };
+}
+function fmtAges(ages) { return ages.length > 1 ? `${ages[0]} or ${ages[1]}` : `${ages[0]}`; }
+
+/* Reused, not reimplemented, wherever possible — this IS _playerAgeCheck()'s
+   rule, minus the playUpConsent handling, which is a UI concept (a checkbox
+   a parent ticks) rather than something the server checks.
+
+   Returns { status: 'ok' | 'playUp' | 'blocked', message }.
+     'ok'      — nothing to flag.
+     'playUp'  — exactly one age group young. ALLOWED, not refused — see
+                 claude/spec-age-validation.md decision 1: a coach entering a
+                 whole squad cannot give parental consent on a parent's
+                 behalf, so this is flagged for /organizer to chase rather
+                 than blocked outright.
+     'blocked' — anything else (too old, or more than one group young).
+                 Refused — the same rule the player form has always had. */
+function ageGroupCheck(dob, groupName) {
+  if (!dob || !groupName) return { status: 'ok', message: '' };
+  const cutoffAge = calcAge(dob, AGE_GRADE_CUTOFF_DATE);
+  const info = AGE_GROUP_BY_NAME[groupName];
+  if (!cutoffAge || !info) return { status: 'ok', message: '' };
+  if (info.ages.includes(cutoffAge.years)) return { status: 'ok', message: '' };
+  const prevInfo = AGE_GROUP_BY_ID[PREV_GROUP_ID[info.id]];
+  if (prevInfo && prevInfo.ages.includes(cutoffAge.years)) {
+    return {
+      status: 'playUp',
+      message: `This player's age at the 31 Aug 2026 cut-off fits ${prevInfo.name}, one age group younger than ${groupName}. Playing up one age group is permitted with parent/guardian consent.`,
+    };
+  }
+  return {
+    status: 'blocked',
+    message: `${groupName} is for players who are ${fmtAges(info.ages)} years old at the UAERF age-grade cut-off (31 Aug 2026). Based on this date of birth, the player is ${cutoffAge.years} at that cut-off — please check the date of birth or select the correct age group.`,
+  };
+}
+
 module.exports = {
   AGE_GROUPS, AGE_GROUP_BY_NAME, AGE_GROUP_BY_ID, MAX_SQUAD_ANY_GROUP, squadCap,
+  PREV_GROUP_ID, AGE_GRADE_CUTOFF_DATE, calcAge, fmtAges, ageGroupCheck,
 };

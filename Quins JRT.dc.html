@@ -892,13 +892,42 @@
                   <span style="font-size:12px;font-weight:700;color:{{ teamPlayerCountColor }}">{{ teamPlayerCount }} / {{ squadCap }}</span>
                 </div>
                 <button onClick="{{ onAddPlayer }}" disabled="{{ addPlayerDisabled }}" style="{{ addPlayerStyle }}">+ Add player</button>
-                <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+                  <!-- Sub-project 2: three dropdowns, same as the parent's form, rather than
+                       <input type="date">. A native date field silently accepts 31 February and
+                       rolls it forward to 3 March; composeDob() refuses to. See CLAUDE.md,
+                       "Date of birth is stored as yyyy-mm-dd". -->
                   <sc-for list="{{ teamPlayerRows }}" as="p" hint-placeholder-count="0">
-                    <div style="display:grid;grid-template-columns:1fr 1fr 130px 32px;gap:8px;align-items:center">
-                      <input value="{{ p.firstName }}" onInput="{{ p.onFirstName }}" placeholder="First name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
-                      <input value="{{ p.lastName }}" onInput="{{ p.onLastName }}" placeholder="Last name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
-                      <input type="date" value="{{ p.dob }}" onInput="{{ p.onDob }}" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
-                      <button onClick="{{ p.onRemove }}" aria-label="Remove player" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:none;color:#fff;cursor:pointer;font-size:16px">&times;</button>
+                    <div style="display:flex;flex-direction:column;gap:4px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)">
+                      <div style="display:grid;grid-template-columns:1fr 1fr 0.7fr 1.15fr 0.85fr 32px;gap:8px;align-items:center">
+                        <input value="{{ p.firstName }}" onInput="{{ p.onFirstName }}" placeholder="First name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
+                        <input value="{{ p.lastName }}" onInput="{{ p.onLastName }}" placeholder="Last name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
+                        <select value="{{ p.dobDay }}" onChange="{{ p.onDobDay }}" aria-label="Player day of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 6px;color:#fff;font-size:13px">
+                          <option value="">Day</option>
+                          <sc-for list="{{ dobDayOptions }}" as="d" hint-placeholder-count="31"><option value="{{ d }}">{{ d }}</option></sc-for>
+                        </select>
+                        <select value="{{ p.dobMonth }}" onChange="{{ p.onDobMonth }}" aria-label="Player month of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 6px;color:#fff;font-size:13px">
+                          <option value="">Month</option>
+                          <sc-for list="{{ dobMonthOptions }}" as="m" hint-placeholder-count="12"><option value="{{ m.v }}">{{ m.n }}</option></sc-for>
+                        </select>
+                        <select value="{{ p.dobYear }}" onChange="{{ p.onDobYear }}" aria-label="Player year of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 6px;color:#fff;font-size:13px">
+                          <option value="">Year</option>
+                          <sc-for list="{{ dobYearOptions }}" as="y" hint-placeholder-count="19"><option value="{{ y }}">{{ y }}</option></sc-for>
+                        </select>
+                        <button onClick="{{ p.onRemove }}" aria-label="Remove player" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:none;color:#fff;cursor:pointer;font-size:16px">&times;</button>
+                      </div>
+                      <sc-if value="{{ p.dobImpossible }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:12px;color:#ff6b6b;font-weight:700">That date doesn't exist &mdash; please check the day and month.</div>
+                      </sc-if>
+                      <sc-if value="{{ p.missingDob }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:12px;color:#ff6b6b;font-weight:700">Please give a date of birth for this player.</div>
+                      </sc-if>
+                      <sc-if value="{{ p.ageBlockedMessage }}" hint-placeholder-val="">
+                        <div style="font-size:12px;color:#ff6b6b;font-weight:700">{{ p.ageBlockedMessage }}</div>
+                      </sc-if>
+                      <sc-if value="{{ p.agePlayUpMessage }}" hint-placeholder-val="">
+                        <div style="font-size:12px;color:#f5c518;font-weight:700">{{ p.agePlayUpMessage }}</div>
+                      </sc-if>
                     </div>
                   </sc-for>
                 </div>
@@ -1568,15 +1597,47 @@ class Component extends DCLogic {
     return g ? g.squad : MAX_SQUAD_ANY_GROUP;
   }
 
+  /* Sub-project 2 — the age check on the coach's roster, added 28 Jul 2026.
+     REUSES _playerAgeCheck() rather than reimplementing it: a roster row has
+     no ageGroup of its own — the whole team shares f.ageGroup — so it's
+     adapted into the shape _playerAgeCheck() already understands instead of
+     writing a second version of the same rule. */
+  _rosterPlayerAgeCheck(player, teamForm) {
+    return this._playerAgeCheck({ dob: player.dob, ageGroup: teamForm.ageGroup });
+  }
+
   addTeamPlayer() {
     this.setState((s) => {
       if (s.teamForm.players.length >= this._squadCap(s.teamForm)) return {};
-      return { teamForm: { ...s.teamForm, players: [...s.teamForm.players, { firstName: '', lastName: '', dob: '' }] } };
+      return {
+        teamForm: {
+          ...s.teamForm,
+          players: [...s.teamForm.players, { firstName: '', lastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '' }],
+        },
+      };
     });
   }
   setTeamPlayerField(idx, field, val) {
     this.setState((s) => ({
       teamForm: { ...s.teamForm, players: s.teamForm.players.map((p, i) => (i === idx ? { ...p, [field]: val } : p)) },
+    }));
+  }
+  /* One roster-row dropdown changed: store the part, then recompose the whole
+     via composeDob() — the ONLY thing that decides the stored yyyy-mm-dd shape.
+     Mirrors setPlayerDobPart(); reused as a pattern rather than a second date
+     input, same reason the player form doesn't use a native <input type="date">
+     — see CLAUDE.md, "Date of birth is stored as yyyy-mm-dd". */
+  setTeamPlayerDobPart(idx, part, val) {
+    this.setState((s) => ({
+      teamForm: {
+        ...s.teamForm,
+        players: s.teamForm.players.map((p, i) => {
+          if (i !== idx) return p;
+          const next = { ...p, [part]: val };
+          next.dob = composeDob(next.dobDay, next.dobMonth, next.dobYear);
+          return next;
+        }),
+      },
     }));
   }
   removeTeamPlayer(idx) {
@@ -1640,6 +1701,31 @@ class Component extends DCLogic {
     const f = this.state.teamForm;
     if (!effClub(f) || !f.preferredPool || !f.ageGroup || !f.headCoachName.trim() || !f.headCoachEmail.trim()) {
       this.setState({ teamError: 'Please fill in club, age group, preferred pool, head coach name and head coach email.' });
+      return;
+    }
+    /* Sub-project 2 — the roster's ages, gated before the squad cap. A row
+       nobody has touched (both names blank) is never inspected, so the blank
+       rows every form starts with can't block anything on their own.
+
+       A named row with no date of birth blocks submission — confirmed with
+       Jay, 28 Jul 2026 — the same requirement the player form has always had.
+       Checked before the age check itself, since a row with no dob has
+       nothing for _playerAgeCheck to evaluate and would otherwise silently
+       read as 'ok', which is exactly the gap this project exists to close. */
+    const namedRows = f.players.filter((p) => p.firstName.trim() || p.lastName.trim());
+    if (namedRows.some((p) => !p.dob)) {
+      this.setState({ teamError: 'Please give a date of birth for every named player.' });
+      return;
+    }
+    /* Anything worse than one group young is a hard block, same rule the
+       player form has always had. One group young (play-up) is let through —
+       see spec decision 1: a coach cannot give parental consent on a
+       parent's behalf, so that case is flagged on the row instead, not gated
+       here. The specific sentence is already on screen under the row; this
+       message just points at it, the same pattern _playerFormError() uses
+       for "Please resolve the age group mismatch below". */
+    if (namedRows.some((p) => this._rosterPlayerAgeCheck(p, f).status === 'blocked')) {
+      this.setState({ teamError: 'Please resolve the age issues flagged below before submitting.' });
       return;
     }
     /* Only reachable by picking a SMALLER age group after filling the roster -
@@ -1851,13 +1937,31 @@ class Component extends DCLogic {
     const rs = this.regState();
     const rc = this.regCopy();
     const open = rs.open;
-    const teamPlayerRows = this.state.teamForm.players.map((p, idx) => ({
-      firstName: p.firstName, lastName: p.lastName, dob: p.dob,
-      onFirstName: (e) => this.setTeamPlayerField(idx, 'firstName', e.target.value),
-      onLastName: (e) => this.setTeamPlayerField(idx, 'lastName', e.target.value),
-      onDob: (e) => this.setTeamPlayerField(idx, 'dob', e.target.value),
-      onRemove: () => this.removeTeamPlayer(idx),
-    }));
+    const teamPlayerRows = this.state.teamForm.players.map((p, idx) => {
+      /* Only a row with a name typed in is checked at all — the blank rows
+         every roster starts with must never show a false alarm. */
+      const named = !!(p.firstName.trim() || p.lastName.trim());
+      const ageCheck = named ? this._rosterPlayerAgeCheck(p, this.state.teamForm) : { status: 'ok', message: '' };
+      return {
+        firstName: p.firstName, lastName: p.lastName, dob: p.dob,
+        dobDay: p.dobDay, dobMonth: p.dobMonth, dobYear: p.dobYear,
+        onFirstName: (e) => this.setTeamPlayerField(idx, 'firstName', e.target.value),
+        onLastName: (e) => this.setTeamPlayerField(idx, 'lastName', e.target.value),
+        onDobDay: (e) => this.setTeamPlayerDobPart(idx, 'dobDay', e.target.value),
+        onDobMonth: (e) => this.setTeamPlayerDobPart(idx, 'dobMonth', e.target.value),
+        onDobYear: (e) => this.setTeamPlayerDobPart(idx, 'dobYear', e.target.value),
+        onRemove: () => this.removeTeamPlayer(idx),
+        /* All three parts chosen but composeDob refused them - 31 February
+           and friends. Same check the player form runs. */
+        dobImpossible: !!(p.dobDay && p.dobMonth && p.dobYear && !p.dob),
+        /* Distinct from dobImpossible: this is "hasn't finished picking a
+           date" (or hasn't started), not "picked an impossible one" — the two
+           messages would otherwise both fire on the same row. */
+        missingDob: named && !p.dob && !(p.dobDay && p.dobMonth && p.dobYear),
+        ageBlockedMessage: ageCheck.status === 'blocked' ? ageCheck.message : '',
+        agePlayUpMessage: ageCheck.status === 'playUp' ? ageCheck.message : '',
+      };
+    });
     const teamPlayerCount = this.state.teamForm.players.length;
     const squadCap = this._squadCap(this.state.teamForm);
     const atMax = teamPlayerCount >= squadCap;

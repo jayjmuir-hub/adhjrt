@@ -997,6 +997,102 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    if (!Array.isArray(roster)) {', '    if (false) {'),
     expect: ['is refused', 'points at admin@adhjrt.com'],
   },
+
+  /* ---- the roster's dates of birth — sub-project 2, added 28 Jul 2026 ----
+     No new rule: this reuses ageGroupCheck() (_agegroups.js), itself a copy
+     of _playerAgeCheck(). These faults are aimed at whether it is actually
+     WIRED IN — server side, and separately, client side — not at the rule
+     itself, which the age-check faults further down already cover. */
+
+  {
+    name: 'the missing-dob check on a named roster row is removed',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      if (!filled(p.dob)) {\n        return bad('Please give a date of birth for every named player.', 'players');\n      }",
+      '      if (false) { /* removed */ }'),
+    expect: ['a named row with no dob is refused', 'a last-name-only row still counts as named'],
+  },
+  {
+    name: 'a play-up player is blocked server-side instead of let through',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "      if (check.status === 'blocked') {", "      if (check.status !== 'ok') {"),
+    expect: ['a play-up roster is accepted, not refused'],
+  },
+  {
+    name: 'the roster age loop is scoped to every row, not just the named ones',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "    const named = roster.filter((p) => p && typeof p === 'object'\n      && (text(p.firstName).trim() || text(p.lastName).trim()));",
+      '    const named = roster;'),
+    expect: ['an untouched blank row is not checked at all'],
+  },
+  {
+    name: 'the age check stops running server-side at all',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      '    for (let i = 0; i < named.length; i++) {\n      const p = named[i];\n      const check = ageGroupCheck(text(p.dob), groupName);',
+      '    for (let i = 0; i < 0; i++) {\n      const p = named[i];\n      const check = ageGroupCheck(text(p.dob), groupName);'),
+    expect: ['a badly out-of-range player blocks the whole squad'],
+  },
+  {
+    name: 'PREV_GROUP_ID drifts from the client (u16b points at u12 instead of u14b)',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "u16b: 'u14b', u16g: 'u14g',", "u16b: 'u12', u16g: 'u14g',"),
+    expect: ['the server carries the same play-up chain', 'U16B Contact: one year younger than the band is a play-up'],
+  },
+  {
+    name: 'the cut-off date drifts by a year, shifting every boundary at once',
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      'const AGE_GRADE_CUTOFF_DATE = new Date(2026, 7, 31);',
+      'const AGE_GRADE_CUTOFF_DATE = new Date(2027, 7, 31);'),
+    /* A single boundary case could miss this if it happened to land on a
+       group whose neighbour still lines up by coincidence — this is exactly
+       why the sweep runs across all fifteen groups rather than one. */
+    expect: ['one year older than the band is blocked', 'one year younger than the band is'],
+  },
+  {
+    name: "U6's play-up chain is invented, even though it is the youngest group",
+    suite: 'test-agegroups.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      "const PREV_GROUP_ID = {\n  u7: 'u6',", "const PREV_GROUP_ID = {\n  u6: 'u7', u7: 'u6',"),
+    expect: ['U6 has no previous group'],
+  },
+  {
+    name: 'the client/server age-message agreement check is fooled by a reworded server sentence',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_agegroups.js'),
+      'please check the date of birth or select the correct age group.',
+      'please check the date of birth or pick a different age group.'),
+    expect: ['the server ends with that exact sentence'],
+  },
+  {
+    name: 'the client-side missing-dob gate on the roster is removed',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "    if (namedRows.some((p) => !p.dob)) {\n      this.setState({ teamError: 'Please give a date of birth for every named player.' });\n      return;\n    }",
+      '    if (false) { /* removed */ }'),
+    expect: ['a named row missing its dob is caught before any request'],
+  },
+  {
+    name: 'the client-side blocked-row gate on the roster is removed',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "    if (namedRows.some((p) => this._rosterPlayerAgeCheck(p, f).status === 'blocked')) {",
+      "    if (false && namedRows.some((p) => this._rosterPlayerAgeCheck(p, f).status === 'blocked')) {"),
+    expect: ['a blocked row is caught before any request'],
+  },
+  {
+    name: 'the client-side roster gate is scoped to EVERY row, so blank rows block a fresh form',
+    suite: 'test-registration-panel.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "    const namedRows = f.players.filter((p) => p.firstName.trim() || p.lastName.trim());",
+      '    const namedRows = f.players;'),
+    expect: ['an untouched blank row does not block submission'],
+  },
+
   {
     name: 'the honeypot REFUSES instead of silently accepting, telling a bot it was seen',
     suite: 'test-intake.js',

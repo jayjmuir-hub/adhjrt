@@ -488,6 +488,37 @@ try {
 }
 
 /* ======================================================================== */
+section('Every {{ token }} the team roster row uses is returned (sub-project 2)');
+
+try {
+  const markup = slice(HOME,
+    '<label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYERS</label>',
+    '<input value="" style="position:absolute;left:-9999px" tabIndex="-1" aria-hidden="true">');
+  const { plain, scoped } = tokensIn(markup);
+  check('the roster markup was found and has bindings', plain.length > 2, `${plain.length} tokens`);
+
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: 'A', lastName: 'Player', dob: '2011-01-01', dobDay: '1', dobMonth: '01', dobYear: '2011' }] } };
+  const vals = c.renderVals();
+  plain.forEach((t) => check(`renderVals returns {{ ${t} }}`, Object.prototype.hasOwnProperty.call(vals, t)));
+
+  /* The loop-scoped ones — validate-bindings.js skips these by design, same as
+     the Registration panel's rp/rw/rm above, so this is the only thing
+     checking a roster row actually carries what the markup asks of it. */
+  check('teamPlayerRows is a real list', Array.isArray(vals.teamPlayerRows) && vals.teamPlayerRows.length === 1);
+  (scoped.get('p') ? [...scoped.get('p')] : []).forEach((prop) => {
+    check(`every roster row carries p.${prop}`, prop in vals.teamPlayerRows[0]);
+  });
+  /* And the dropdown option lists the row's selects read from — reused from
+     the player form, not a second copy. */
+  ['dobDayOptions', 'dobMonthOptions', 'dobYearOptions'].forEach((t) =>
+    check(`renderVals returns {{ ${t} }} for the roster dropdowns too`, Array.isArray(vals[t]) && vals[t].length > 0));
+} catch (e) {
+  check('the roster row bindings could be checked', false, e.stack || e.message);
+}
+
+/* ======================================================================== */
 section('fmtCountdown reads like a person wrote it');
 
 eq('two weeks out', REG.fmtCountdown(14 * 86400000), 'in 14 days');
@@ -696,6 +727,92 @@ const dead = () => { throw new TypeError('Failed to fetch'); };
   check('…and is only shown when there is one', vals.teamHasCode === true);
   const c2 = build('Quins JRT.dc.html');
   eq('…with nothing shown before a submission', c2.renderVals().teamHasCode, false);
+}
+
+/* ---- sub-project 2: the roster's ages, driven through the real component ---- */
+
+/* No new rule: _rosterPlayerAgeCheck() reuses _playerAgeCheck() (see
+   claude/spec-age-validation.md, claude/plan-age-validation.md), so this
+   drives the actual page code rather than a re-implementation of the rule. */
+const rosterDobAtCutoffAge = (age) => `${2026 - age}-01-01`;
+{
+  const dobAtCutoffAge = rosterDobAtCutoffAge;
+
+  /* A blank, untouched row must never show a false alarm — every roster
+     starts with several of them. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: '', lastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '' }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('an untouched row shows nothing', !row.ageBlockedMessage && !row.agePlayUpMessage && !row.missingDob, JSON.stringify(row));
+}
+{
+  /* A named row with an impossible date shows "doesn't exist", not the
+     missing-dob message — the two must not both fire on the same row. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: 'A', lastName: 'Player', dob: '', dobDay: '31', dobMonth: '02', dobYear: '2011' }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('31 February shows as impossible', row.dobImpossible === true);
+  check('…not as a missing dob', row.missingDob === false);
+}
+{
+  /* A named row with a play-up dob is flagged amber, not blocked, and the
+     message names the group it actually fits. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: 'Play', lastName: 'Up', dob: rosterDobAtCutoffAge(13), dobDay: '1', dobMonth: '01', dobYear: '2013' }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('a play-up row is flagged, not blocked', !row.ageBlockedMessage && !!row.agePlayUpMessage, JSON.stringify(row));
+  check('…naming U14B Contact', /U14B Contact/.test(row.agePlayUpMessage), row.agePlayUpMessage);
+}
+{
+  /* A named row two groups out is blocked, red, on the row. */
+  const c = build('Quins JRT.dc.html');
+  c.state = { ...c.state, teamForm: { ...c.state.teamForm, ageGroup: 'U16B Contact',
+    players: [{ firstName: 'Too', lastName: 'Old', dob: rosterDobAtCutoffAge(30), dobDay: '1', dobMonth: '01', dobYear: '1996' }] } };
+  const row = c.renderVals().teamPlayerRows[0];
+  check('an out-of-range row is blocked', !!row.ageBlockedMessage && !row.agePlayUpMessage, JSON.stringify(row));
+}
+
+/* ---- the submit-time gate ---- */
+
+{
+  /* A named row with no dob is caught before any request — same pattern the
+     "obviously incomplete form" check above uses. */
+  let called = false;
+  const st = await submitWith(async () => { called = true; return { ok: true, status: 200, json: async () => ({ ok: true }) }; },
+    'team', { ageGroup: 'U16B Contact', players: [{ firstName: 'A', lastName: 'Player', dob: '', dobDay: '', dobMonth: '', dobYear: '' }] });
+  check('a named row missing its dob is caught before any request', called === false);
+  eq('…with the missing-dob sentence', st.teamError, 'Please give a date of birth for every named player.');
+}
+{
+  /* A blocked row is caught before any request; the generic message points at
+     the row, matching _playerFormError()'s "resolve the age group mismatch
+     below" pattern rather than repeating the row's own sentence twice. */
+  let called = false;
+  const st = await submitWith(async () => { called = true; return { ok: true, status: 200, json: async () => ({ ok: true }) }; },
+    'team', { ageGroup: 'U16B Contact', players: [{ firstName: 'Too', lastName: 'Old', dob: '1996-01-01' }] });
+  check('a blocked row is caught before any request', called === false);
+  eq('…with the generic pointer sentence', st.teamError, 'Please resolve the age issues flagged below before submitting.');
+}
+{
+  /* A play-up row is NOT gated — the coach cannot consent for a parent, so
+     the squad still submits. This is the check that most directly proves
+     spec decision 1 actually holds in the client code, not just the server. */
+  let called = false;
+  const st = await submitWith(async () => { called = true; return { ok: true, status: 200, json: async () => ({ ok: true, teamCode: 'TST1' }) }; },
+    'team', { ageGroup: 'U16B Contact', players: [{ firstName: 'Play', lastName: 'Up', dob: '2013-01-01' }] });
+  check('a play-up row is allowed through to the server', called === true);
+  check('…and the squad actually submits', st.teamSubmitted === true, st.teamError);
+}
+{
+  /* An UNTOUCHED blank row (never given a name) must never block a squad that
+     is otherwise complete — every roster starts with one. */
+  let called = false;
+  const st = await submitWith(async () => { called = true; return { ok: true, status: 200, json: async () => ({ ok: true, teamCode: 'TST1' }) }; },
+    'team', { ageGroup: 'U16B Contact', players: [{ firstName: '', lastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '' }] });
+  check('an untouched blank row does not block submission', called === true, st.teamError);
 }
 
 }

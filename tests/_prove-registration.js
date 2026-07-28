@@ -1795,6 +1795,28 @@ const FAULTS = [
     expect: ['the first group carries a count of the rows inside it', 'that one group holds both rows'],
   },
 
+  /* ---- CSV export turning phone numbers into formulas — added 28 Jul 2026
+     after Jay reported phone numbers showing as equations when he opened the
+     exported CSV. Every stored phone number starts with "+", which Excel and
+     Google Sheets both read as the start of a formula in a CSV cell. */
+
+  {
+    name: 'csvSafe() stops guarding a leading "+" (and friends), so phone numbers go back to being read as formulas',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "  static csvSafe(v) {\n    const s = String(v || '');\n    return /^[=+\\-@]/.test(s) ? \"'\" + s : s;\n  }",
+      "  static csvSafe(v) {\n    return String(v || '');\n  }"),
+    expect: ['a phone number starting with + is prefixed so it is not read as a formula'],
+  },
+  {
+    name: 'exportCsv() stops routing cell values through csvSafe() at all',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      "lines.push(vals.map((v) => '\"' + Component.csvSafe(v).replace(/\"/g, '\"\"') + '\"').join(','));",
+      "lines.push(vals.map((v) => '\"' + String(v || '').replace(/\"/g, '\"\"') + '\"').join(','));"),
+    expect: ['exportCsv() actually runs every cell through csvSafe(), not just the raw value'],
+  },
+
   {
     name: 'the top-nav Organizer link is removed, leaving only the footer one',
     suite: 'test-registration-panel.js',

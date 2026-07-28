@@ -250,6 +250,31 @@ section('A single club with two age groups still only gets one header row, not o
   eq('that one group holds both rows', vals.teamGroups[0].count, 2);
 }
 
+section('CSV export does not let a leading "+" turn a phone number into a formula (added 28 Jul 2026)');
+{
+  /* Jay reported phone numbers showing up as equations when he opened the
+     exported CSV. Every stored phone number starts with "+" (e.g.
+     "+971569135186"), and Excel/Sheets both treat a CSV cell starting with
+     =, +, -, or @ as a formula to evaluate, not literal text. csvSafe()
+     prefixes those cells with a leading apostrophe, which Excel/Sheets
+     hide on display but which forces the cell to be read as text. */
+  const c = build();
+  const safe = c.constructor.csvSafe;
+  eq('a phone number starting with + is prefixed so it is not read as a formula',
+    safe('+971569135186'), "'+971569135186");
+  eq('a value starting with = is guarded the same way', safe('=1+1'), "'=1+1");
+  eq('a value starting with - is guarded the same way', safe('-5'), "'-5");
+  eq('a value starting with @ is guarded the same way', safe('@someone'), "'@someone");
+  eq('an ordinary name is left completely untouched — no stray apostrophe',
+    safe('Jason Muir'), 'Jason Muir');
+  eq('an empty/missing value stays empty, not just an apostrophe', safe(''), '');
+  eq('undefined is treated the same as empty', safe(undefined), '');
+
+  const src = readRepo('Organizer.dc.html');
+  check('exportCsv() actually runs every cell through csvSafe(), not just the raw value',
+    /vals\.map\(\(v\) => '"' \+ Component\.csvSafe\(v\)\.replace\(\/"\/g, '""'\)/.test(src));
+}
+
 section('exportCsv() reads rows through the same sorted method, so the CSV is grouped too');
 {
   const c = build();

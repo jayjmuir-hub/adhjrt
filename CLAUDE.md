@@ -1026,6 +1026,18 @@ itself sort anything, it just chunks an already-grouped list. If it were ever
 called on unsorted rows, the same club appearing twice non-consecutively
 would produce two separate header blocks instead of one.
 
+**CSV export was turning phone numbers into formulas (added 28 Jul 2026).**
+Jay reported phone numbers showing up as equations when he opened the
+exported CSV in Excel/Sheets. Every stored phone number starts with `+`
+(e.g. `+971569135186`), and both Excel and Google Sheets read a CSV cell
+starting with `=`, `+`, `-`, or `@` as the start of a formula, not literal
+text. `Component.csvSafe()` prefixes any such cell with a leading apostrophe
+before it goes into the CSV — Excel/Sheets hide that apostrophe on display
+but treat the cell as forced text, so the number reads normally instead of
+evaluating (or erroring) as a formula. Applied to every cell in `exportCsv()`,
+not just the phone columns, since name/notes fields are free text a coach or
+parent could type anything into.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not

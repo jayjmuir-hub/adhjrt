@@ -1756,6 +1756,45 @@ const FAULTS = [
       "  if (aAge !== bAge) return aAge - bAge;\n  return 0;"),
     expect: ['within the same club, submission order is preserved (A1 before A3)'],
   },
+  /* ---- the club sub-header rows on those same tables — added 28 Jul 2026
+     after Jay looked at three sorted players from two clubs and could not
+     tell they were grouped at all. groupRowsByClub() turns the flat sorted
+     list into [{ club, count, rows }], and the template renders one header
+     row per group instead of one flat list of <tr>s. */
+
+  {
+    name: 'groupRowsByClub() stops starting a new group when the club changes, so everything lands in one group',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      '    if (!current || current.club !== r.club) {',
+      '    if (!current) {'),
+    expect: ['teams are split into one group per club, in the order clubs first appear'],
+  },
+  {
+    name: 'the teams table template stops showing the count next to the club name in its header row',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }}</td>'),
+    expect: ['the teams table template actually renders a club header row per group'],
+  },
+  {
+    name: 'the players table template stops showing the count next to the club name in its header row',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }}</td>'),
+    expect: ['the players table template actually renders a club header row per group'],
+  },
+  {
+    name: 'groupRowsByClub() stops counting past the group\'s first row (count frozen at 1)',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch('Organizer.dc.html',
+      '      current = { club: r.club, count: 0, rows: [] };\n      groups.push(current);\n    }\n    current.count += 1;',
+      '      current = { club: r.club, count: 1, rows: [] };\n      groups.push(current);\n    }'),
+    expect: ['the first group carries a count of the rows inside it', 'that one group holds both rows'],
+  },
+
   {
     name: 'the top-nav Organizer link is removed, leaving only the footer one',
     suite: 'test-registration-panel.js',

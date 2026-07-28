@@ -193,6 +193,63 @@ section('An unrecognised age-group name sorts last instead of throwing');
   eq('the unrecognised group sorts after every real one', rows.map((r) => r.teamName), ['Normal', 'Weird']);
 }
 
+section('A club sub-header row is rendered before each club\'s block (added 28 Jul 2026)');
+{
+  /* Jay looked at three players from two clubs, all sorted correctly, and
+     could not tell they were grouped at all — a sorted list with no visual
+     break looks identical to an unsorted one at a glance. renderVals() now
+     hands the template teamGroups/playerGroups — [{ club, count, rows }] —
+     instead of a flat list, so the template can render an actual header row
+     per club rather than relying on the reader to notice the club column
+     repeating. */
+  const c = build();
+  c.state = {
+    ...c.state,
+    teams: [
+      team('Abu Dhabi Harlequins', 'U14B Contact', 'Mike Yohotu', '2026-01-01'),
+      team('Abu Dhabi Harlequins', 'U16B Contact', 'Tyler Muir', '2026-01-02'),
+      team('Dubai Exiles', 'U16B Contact', 'Joe Mama', '2026-01-03'),
+    ],
+    players: [
+      player('Abu Dhabi Harlequins', 'U14B Contact', 'Mike Yohotu', '2026-01-01'),
+      player('Abu Dhabi Harlequins', 'U16B Contact', 'Tyler Muir', '2026-01-02'),
+      player('Dubai Exiles', 'U16B Contact', 'Joe Mama', '2026-01-03'),
+    ],
+    clubFilter: '', ageFilter: '',
+  };
+  const vals = c.renderVals();
+  eq('teams are split into one group per club, in the order clubs first appear',
+    vals.teamGroups.map((g) => g.club), ['Abu Dhabi Harlequins', 'Dubai Exiles']);
+  eq('the first group carries a count of the rows inside it',
+    vals.teamGroups[0].count, 2);
+  eq('each group\'s rows are the matching, still-sorted rows',
+    vals.teamGroups[0].rows.map((r) => r.teamName), ['Mike Yohotu', 'Tyler Muir']);
+  eq('the same grouping applies to players, not just teams',
+    vals.playerGroups.map((g) => `${g.club}:${g.count}`), ['Abu Dhabi Harlequins:2', 'Dubai Exiles:1']);
+
+  const src = readRepo('Organizer.dc.html');
+  check('the teams table template actually renders a club header row per group',
+    /<sc-for list="\{\{ teamGroups \}\}" as="g"[^>]*>[\s\S]{0,500}\{\{ g\.club \}\}[\s\S]{0,80}\{\{ g\.count \}\}/.test(src));
+  check('the players table template actually renders a club header row per group',
+    /<sc-for list="\{\{ playerGroups \}\}" as="g"[^>]*>[\s\S]{0,500}\{\{ g\.club \}\}[\s\S]{0,80}\{\{ g\.count \}\}/.test(src));
+}
+
+section('A single club with two age groups still only gets one header row, not one per row');
+{
+  const c = build();
+  c.state = {
+    ...c.state,
+    teams: [
+      team('Antelope RFC', 'U8 Tag', 'A-young', '2026-01-01'),
+      team('Antelope RFC', 'U18B Contact', 'A-old', '2026-01-02'),
+    ],
+    clubFilter: 'Antelope RFC', ageFilter: '',
+  };
+  const vals = c.renderVals();
+  eq('one club, however many age groups, is exactly one group', vals.teamGroups.length, 1);
+  eq('that one group holds both rows', vals.teamGroups[0].count, 2);
+}
+
 section('exportCsv() reads rows through the same sorted method, so the CSV is grouped too');
 {
   const c = build();

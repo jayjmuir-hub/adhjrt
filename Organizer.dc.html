@@ -614,21 +614,26 @@
               </tr>
             </thead>
             <tbody>
-              <sc-for list="{{ teamRows }}" as="r" hint-placeholder-count="6">
-                <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                  <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
-                  <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
-                  <td style="padding:12px 14px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
-                  <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
+              <sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">
+                <tr>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
+                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                    <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
+                    <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
+                    <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
+                    <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">{{ r.numPlayers }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
+                  </tr>
+                </sc-for>
               </sc-for>
             </tbody>
           </table>
@@ -648,21 +653,26 @@
               </tr>
             </thead>
             <tbody>
-              <sc-for list="{{ playerRows }}" as="r" hint-placeholder-count="6">
-                <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                  <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.club }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.parentName }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px">{{ r.emergencyContact }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
-                  <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
-                  <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
+              <sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">
+                <tr>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
+                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                    <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
+                    <td style="padding:12px 14px;font-size:13px">{{ r.club }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px">{{ r.parentName }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px">{{ r.emergencyContact }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
+                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
+                  </tr>
+                </sc-for>
               </sc-for>
             </tbody>
           </table>
@@ -737,6 +747,35 @@ function byClubThenAgeGroup(a, b) {
   // Same club, same age group: keep submission order stable rather than
   // leaving it to the sort algorithm's whim.
   return String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''));
+}
+
+/* Added 28 Jul 2026 — the compound sort above puts same-club rows next to
+   each other, but a plain sorted list gives no VISIBLE sign of that: Jay
+   looked at three players from two clubs and had no way to tell they were
+   grouped at all. This turns the flat, already-sorted list into
+   [{ club, count, rows }, ...] — one entry per club, in the order the club
+   first appears — so the table can render an actual sub-header row ("CLUB
+   NAME (n)") before each club's block instead of relying on the reader to
+   notice the club column repeating.
+
+   Must run AFTER byClubThenAgeGroup, on rows already in that order — this
+   only splits an already-grouped list into chunks, it does not itself sort
+   anything. A club appearing twice non-consecutively (which the sort above
+   should never produce) would show as two separate header blocks rather
+   than throwing, since group boundaries are detected by "club changed since
+   the previous row", not by a first pass over the whole list. */
+function groupRowsByClub(rows) {
+  const groups = [];
+  let current = null;
+  rows.forEach((r) => {
+    if (!current || current.club !== r.club) {
+      current = { club: r.club, count: 0, rows: [] };
+      groups.push(current);
+    }
+    current.count += 1;
+    current.rows.push(r);
+  });
+  return groups;
 }
 
 /* ---------------- The pitch schematic ----------------
@@ -2272,9 +2311,9 @@ class Component extends DCLogic {
       onExport: () => this.exportCsv(),
 
       teamHeaders: ['Submitted', 'Club', 'Team Code', 'Age Group', 'Pool Req', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
-      teamRows, teamsEmpty: teamRows.length === 0,
+      teamRows, teamGroups: groupRowsByClub(teamRows), teamsEmpty: teamRows.length === 0,
       playerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Age Group', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
-      playerRows, playersEmpty: playerRows.length === 0,
+      playerRows, playerGroups: groupRowsByClub(playerRows), playersEmpty: playerRows.length === 0,
     };
   }
 }

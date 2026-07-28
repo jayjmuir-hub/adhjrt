@@ -1005,6 +1005,27 @@ deliberately disagrees with both the club-alphabetical and age-band order,
 so a fault that quietly left sheet order untouched, or that only partially
 sorted, could not pass by coincidence.
 
+**A sorted list is not a visibly grouped one (added 28 Jul 2026).** Jay
+looked at three players from two clubs, correctly sorted, and could not tell
+they were grouped — a sort with no visual break looks identical to sheet
+order at a glance. `groupRowsByClub()` turns the already-sorted flat list
+into `[{ club, count, rows }, ...]` — one entry per club, in the order the
+club first appears — and `renderVals()` hands this as `teamGroups`/
+`playerGroups` instead of `teamRows`/`playerRows`. The template renders a
+highlighted sub-header row (`CLUB NAME (n)`, spanning all 12 columns) before
+each club's block, via a nested `<sc-for>` (outer over the groups, inner over
+`g.rows`) — the same nested-list pattern `Scores & Standings.dc.html` already
+uses for pools. `teamRows`/`playerRows` themselves are unchanged and still
+feed `exportCsv()`, so the CSV stays a plain sorted list without header rows
+mixed into the data — the sub-header is a display-only concern.
+
+⚠️ **Group boundaries are detected by "club changed since the previous row",
+not by a first pass over the whole list.** This only works because the input
+is already sorted by `byClubThenAgeGroup()` — `groupRowsByClub()` does not
+itself sort anything, it just chunks an already-grouped list. If it were ever
+called on unsorted rows, the same club appearing twice non-consecutively
+would produce two separate header blocks instead of one.
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not

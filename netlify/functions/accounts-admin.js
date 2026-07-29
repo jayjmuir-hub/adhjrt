@@ -60,7 +60,10 @@ exports.handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({
           ok: true,
-          accounts: accounts.map(({ passwordHash, ...rest }) => rest),
+          // googleSub is an internal Google account id, not meant for display —
+          // stripped the same way passwordHash is. signInMethod is a display-only
+          // convenience for the Accounts tab (added with Google sign-in support).
+          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: googleSub ? 'Google' : 'Password' })),
         }),
       };
     }

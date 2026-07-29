@@ -26,7 +26,10 @@ $tests = @(
   'test-agegroups.js',
   'test-intake.js',
   'test-functions-load.js',
-  'test-accounts.js'
+  'test-accounts.js',
+  'test-organizer-grouping.js',
+  'test-email.js',
+  'test-google-auth.js'
 )
 
 Write-Host ''

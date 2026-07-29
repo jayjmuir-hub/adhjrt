@@ -87,6 +87,13 @@ export function organizerLogin({ username, password }) {
   return { ok: true, session, token: makeToken({ username: account.username, role: 'organizer' }) };
 }
 
+/* Google sign-in has no local-preview equivalent — it needs a real Google
+   Cloud OAuth client and a real deployed origin, neither of which exist in
+   local preview. Refusing plainly here beats silently doing nothing. */
+export function googleAuth() {
+  return { ok: false, error: 'Google sign-in only works once this site is deployed (it needs a real OAuth origin) — use username/password here in local preview.' };
+}
+
 /* -------- Manager -------- */
 export function managerSignup({ name, username, password, inviteCode }) {
   if (!name || !username || !password || !inviteCode) return { ok: false, error: 'All fields are required.' };

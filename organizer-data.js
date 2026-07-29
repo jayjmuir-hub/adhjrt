@@ -92,6 +92,44 @@ export async function signup({ name, title, username, password, inviteCode }) {
   return { ok: false, error: json.error || 'Could not create account.' };
 }
 
+// Google sign-in (added 29 Jul 2026) — an ADDITIONAL way in, not a
+// replacement for username/password. See netlify/functions/google-auth.js
+// for the full contract; this just forwards the ID token Google's Identity
+// Services library hands the page after someone clicks the Google button.
+//
+//   - no inviteCode, existing Google-linked account -> { ok, session }
+//   - no inviteCode, no account yet                -> { ok, needsSignup, name }
+//   - inviteCode supplied (first-time sign-up)      -> { ok, session } or
+//                                                      { ok, pending, message }
+//   - anything wrong                                -> { ok: false, error }
+//
+// role is always 'organizer' here — Scores & Standings.dc.html calls the
+// same endpoint with role 'manager' for the Manager area's own sign-in.
+export async function googleAuth({ idToken, inviteCode, username, name, title }) {
+  const r = await tryFetchJson('/.netlify/functions/google-auth', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, role: 'organizer', inviteCode, username, name, title }),
+  });
+  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role: 'organizer', inviteCode, username, name, title });
+  if (json.ok && json.needsSignup) return { ok: true, needsSignup: true, name: json.name };
+  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
+  if (json.ok) {
+    const session = { ...json.session, token: json.token };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    return { ok: true, session };
+  }
+  return { ok: false, error: json.error || 'Could not sign in with Google.' };
+}
+
+// The Client ID the page needs to render the Google button — see
+// netlify/functions/google-config.js. Returns null (not an error) if it
+// isn't configured yet, so the page can just not show the button.
+export async function googleClientId() {
+  const r = await tryFetchJson('/.netlify/functions/google-config', { method: 'GET' });
+  if (!r.real) return null;
+  return (r.json && r.json.clientId) || null;
+}
+
 export function currentSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);

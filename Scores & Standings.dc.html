@@ -307,6 +307,35 @@
             <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
             <button onClick="{{ onLogin }}" style="width:100%;background:#E11B22;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Sign in</button>
             <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New manager? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+
+            <!-- Google sign-in (added 29 Jul 2026) — same pattern as
+                 Organizer.dc.html. Only appears once GOOGLE_CLIENT_ID is set
+                 in Netlify; password sign-in above is unaffected either way. -->
+            <sc-if value="{{ hasGoogleSignIn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;margin:20px 0 4px">
+                <div style="flex:1;height:1px;background:rgba(255,255,255,0.12)"></div>
+                <div style="font-size:11px;color:#7f8794;font-weight:700;letter-spacing:.5px">OR</div>
+                <div style="flex:1;height:1px;background:rgba(255,255,255,0.12)"></div>
+              </div>
+              <div id="google-signin-btn-mgr" style="display:flex;justify-content:center;margin-top:10px"></div>
+              <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ googleError }}</div></sc-if>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ isGoogleCodeView }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;margin-bottom:6px">One more step</div>
+            <p style="color:#aeb4bf;font-size:14px;margin-bottom:20px">Signed in with Google as <strong style="color:#fff">{{ googlePendingName }}</strong>. Requires the invite code for your age group. New accounts also need approval before signing in.</p>
+            <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Your login username will be</div>
+              <div style="font-size:22px;font-weight:800;color:#F5C518;margin-top:2px">{{ googleUserPreview }}</div>
+            </div>
+            <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">INVITE CODE (for your age group)</label>
+            <div style="position:relative;margin:6px 0 16px">
+              <input type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+              <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
+            </div>
+            <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>
+            <button onClick="{{ onGoogleSignupSubmit }}" disabled="{{ googleBusy }}" style="width:100%;background:#17A34A;color:#fff;font-family:'Barlow';font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ googleSignupLabel }}</button>
+            <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Not you? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
           </sc-if>
           <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
             <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:6px">Account created</div>
@@ -1019,6 +1048,12 @@ class Component extends DCLogic {
     showLoginPass: false, showSignupPass: false, showSignupCode: false, showCpCurrent: false, showCpNew: false,
     signupName: '', signupUser: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     signupPending: false, signupPendingMessage: '',
+    /* Google sign-in (added 29 Jul 2026) — same shape as Organizer.dc.html.
+       googleClientId stays '' when GOOGLE_CLIENT_ID isn't set in Netlify
+       (local preview, or before Jay finishes the one-time setup); the button
+       simply never appears and password sign-in is unaffected. */
+    googleClientId: '', googleBusy: false, googleError: '',
+    googlePendingToken: '', googlePendingName: '', googleCode: '', showGoogleCode: false,
     drafts: {}, savedIds: {},
     publishState: null, publishBusy: false,
     bulkBusy: false, bulkMsg: '',
@@ -1075,6 +1110,25 @@ class Component extends DCLogic {
     this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: linked ? propAge : (firstComp && firstComp.id) }, () => {
       this.loadPublic();
     });
+
+    /* Google sign-in is an enhancement only — anything that goes wrong here
+       (no client id configured, the GIS script failing to load, a network
+       hiccup) must never block password sign-in. Same pattern as
+       Organizer.dc.html's componentDidMount. */
+    try {
+      const clientId = await api.googleClientId();
+      if (clientId) {
+        this.setState({ googleClientId: clientId });
+        await this.loadGoogleScript();
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+          window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => this.onGoogleCredential(r) });
+          this.renderGoogleButton();
+          this._googleButtonMode = 'login';
+        }
+      }
+    } catch (e) {
+      // Enhancement only — see comment above.
+    }
   }
 
   componentDidUpdate(prevProps) {
@@ -1088,6 +1142,92 @@ class Component extends DCLogic {
       if (grp && grp.hasStandings) {
         this.setState({ selectedAgeId: a }, () => this.loadPublic());
       }
+    }
+
+    // Google button: the login view sits inside an sc-if, so switching away
+    // and back (sign in <-> create account) unmounts and remounts its div —
+    // re-render whenever authMode comes back to 'login' while signed out.
+    const { authMode, session, googleClientId } = this.state;
+    if (!session && authMode === 'login' && googleClientId && this._googleButtonMode !== 'login') {
+      this._googleButtonMode = 'login';
+      this.renderGoogleButton();
+    } else if (authMode !== 'login') {
+      this._googleButtonMode = null;
+    }
+  }
+
+  /* Loads Google Identity Services once and caches the in-flight promise —
+     same as Organizer.dc.html's loadGoogleScript(). */
+  loadGoogleScript() {
+    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
+    if (this._googleScriptPromise) return this._googleScriptPromise;
+    this._googleScriptPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true; s.defer = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Could not load Google sign-in.'));
+      document.head.appendChild(s);
+    });
+    return this._googleScriptPromise;
+  }
+
+  renderGoogleButton() {
+    const el = document.getElementById('google-signin-btn-mgr');
+    if (el && window.google && window.google.accounts && window.google.accounts.id) {
+      el.innerHTML = '';
+      window.google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', width: 336, text: 'signin_with' });
+    }
+  }
+
+  /* Fired by Google's own button once someone picks an account. idToken is
+     verified server-side on every call — nothing here is trusted client-side. */
+  async onGoogleCredential(response) {
+    const { api } = this.state;
+    const idToken = response && response.credential;
+    if (!idToken) return;
+    this.setState({ googleBusy: true, googleError: '', loginError: '' });
+    const res = await api.googleAuth({ idToken });
+    if (res.ok && res.needsSignup) {
+      this.setState({
+        googleBusy: false, authMode: 'google-code',
+        googlePendingToken: idToken, googlePendingName: res.name || '',
+        googleCode: '', googleError: '',
+      });
+      return;
+    }
+    if (res.ok && res.pending) {
+      // Reuses the existing "Account created" pending view.
+      this.setState({ googleBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message });
+      return;
+    }
+    if (res.ok) {
+      this.setState({ googleBusy: false, session: res.session, drafts: {} }, () => this.loadAdmin());
+      return;
+    }
+    this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.', loginError: res.error || 'Could not sign in with Google.' });
+  }
+
+  /* The invite-code step after a first-time Google sign-in — same
+     dedupe-retry-on-409 shape as doSignup() below. No title field: managers
+     don't have one, same as manager-signup.js. */
+  async doGoogleSignup() {
+    const { api, googlePendingToken, googlePendingName, googleCode } = this.state;
+    const base = this.usernameFromName(googlePendingName) || 'manager';
+    this.setState({ googleBusy: true, googleError: '' });
+    let username = base, attempt = 0, res;
+    while (attempt < 30) {
+      res = await api.googleAuth({ idToken: googlePendingToken, inviteCode: googleCode, username, name: googlePendingName || undefined });
+      if (res.ok || res.error !== 'That username is already taken.') break;
+      attempt += 1;
+      username = base + (attempt + 1);
+    }
+    if (res.ok && res.pending) {
+      this.setState({ googleBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message, googlePendingToken: '', googleCode: '' });
+    } else if (res.ok) {
+      this.setState({ googleBusy: false, session: res.session, googlePendingToken: '', googleCode: '', drafts: {} }, () => this.loadAdmin());
+    } else {
+      this.setState({ googleBusy: false, googleError: res.error });
     }
   }
 
@@ -2823,8 +2963,24 @@ class Component extends DCLogic {
       isSignupPendingView: s.authMode === 'signup' && s.signupPending,
       isSignupFormView: s.authMode === 'signup' && !s.signupPending,
       signupPendingMessage: s.signupPendingMessage,
-      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '' }),
-      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
+      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '', googleError: '' }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false, googleError: '', googlePendingToken: '', googlePendingName: '' }),
+
+      /* Google sign-in (added 29 Jul 2026) */
+      hasGoogleSignIn: !!s.googleClientId,
+      googleError: s.googleError,
+      isGoogleCodeView: s.authMode === 'google-code',
+      googlePendingName: s.googlePendingName,
+      googleUserPreview: this.usernameFromName(s.googlePendingName) || '—',
+      googleCode: s.googleCode,
+      onGoogleCode: (e) => this.setState({ googleCode: e.target.value }),
+      onGoogleCodeKey: (e) => { if (e.key === 'Enter') this.doGoogleSignup(); },
+      googleCodeType: s.showGoogleCode ? 'text' : 'password',
+      googleCodeToggleLabel: s.showGoogleCode ? 'HIDE' : 'SHOW',
+      onToggleGoogleCode: () => this.setState((st) => ({ showGoogleCode: !st.showGoogleCode })),
+      googleBusy: s.googleBusy,
+      googleSignupLabel: s.googleBusy ? 'Creating…' : 'Create account',
+      onGoogleSignupSubmit: () => this.doGoogleSignup(),
       signupName: s.signupName, signupUserPreview: this.usernameFromName(s.signupName) || '—', signupPass: s.signupPass, signupCode: s.signupCode,
       signupError: s.signupError, signupBusy: s.signupBusy, signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       onSignupName: (e) => this.setState({ signupName: e.target.value }),

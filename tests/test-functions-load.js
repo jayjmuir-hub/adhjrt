@@ -74,6 +74,22 @@ function installStubs() {
       hashSync: () => 'stub', compareSync: () => false,
       hash: async () => 'stub', compare: async () => false,
     },
+    /* google-auth-library — added with Google sign-in support. verifyIdToken
+       answers with a plausible-but-fake identity rather than throwing, for
+       the same reason the sheets stub above returns instead of throws: a
+       throwing stub would turn every call into a 500 and hide exactly the
+       faults this file exists to catch. Nothing here is a real Google
+       identity — google-auth.js's OWN checks (googleSub match, invite code)
+       are what this file is verifying survive being called at all. */
+    'google-auth-library': {
+      OAuth2Client: function OAuth2Client() {
+        return {
+          verifyIdToken: async () => ({
+            getPayload: () => ({ sub: 'stub-sub', email: 'stub@example.com', name: 'Stub Name', email_verified: true }),
+          }),
+        };
+      },
+    },
   };
 
   const realResolve = Module._resolveFilename;
@@ -96,7 +112,7 @@ const restore = installStubs();
    nothing reaches a real service. */
 ['SESSION_SECRET', 'GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY',
   'GOOGLE_SHEET_ID_TEAMS', 'GOOGLE_SHEET_ID_PLAYERS', 'MS_TENANT_ID', 'MS_CLIENT_ID',
-  'MS_CLIENT_SECRET', 'MAIL_FROM'].forEach((k) => { if (!process.env[k]) process.env[k] = 'test-not-a-real-value'; });
+  'MS_CLIENT_SECRET', 'MAIL_FROM', 'GOOGLE_CLIENT_ID'].forEach((k) => { if (!process.env[k]) process.env[k] = 'test-not-a-real-value'; });
 
 /* ====================================================================== */
 section('Every function file loads');

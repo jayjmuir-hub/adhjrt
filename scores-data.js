@@ -1709,6 +1709,37 @@ export function currentSession() {
 }
 export function logout() { localStorage.removeItem(SESSION_KEY); }
 
+// Google sign-in for managers (added 29 Jul 2026) — same google-auth.js
+// endpoint organizer-data.js's googleAuth() calls, just role: 'manager'
+// instead of 'organizer'. Which age group a NEW account gets is still
+// decided entirely by which invite code was entered (see manager-signup.js
+// and MANAGER_INVITE_CODES) — Google only supplies a verified identity,
+// never a role or an age group.
+export async function googleAuth({ idToken, inviteCode, username, name }) {
+  const r = await tryFetchJson('/.netlify/functions/google-auth', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, role: 'manager', inviteCode, username, name }),
+  });
+  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role: 'manager', inviteCode, username, name });
+  if (json.ok && json.needsSignup) return { ok: true, needsSignup: true, name: json.name };
+  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
+  if (json.ok) {
+    const session = { ...json.session, token: json.token };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true, session };
+  }
+  return { ok: false, error: json.error || 'Could not sign in with Google.' };
+}
+
+// The Client ID the page needs to render the Google button — see
+// netlify/functions/google-config.js. null means Google sign-in isn't
+// configured (local preview, or GOOGLE_CLIENT_ID not set yet in Netlify).
+export async function googleClientId() {
+  const r = await tryFetchJson('/.netlify/functions/google-config', { method: 'GET' });
+  if (!r.real) return null;
+  return (r.json && r.json.clientId) || null;
+}
+
 // Registrations for the signed-in manager's OWN age group (teams + players,
 // including medical notes and emergency contacts — a manager is responsible
 // for player safety in their group). The server (get-my-registrations.js)

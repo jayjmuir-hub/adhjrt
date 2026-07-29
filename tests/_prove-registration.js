@@ -61,6 +61,9 @@ const NEEDED = [
   path.join('netlify', 'functions', 'manager-signup.js'),
   path.join('netlify', 'functions', 'organizer-login.js'),
   path.join('netlify', 'functions', 'manager-login.js'),
+  path.join('netlify', 'functions', '_googleAuth.js'),
+  path.join('netlify', 'functions', 'google-auth.js'),
+  path.join('netlify', 'functions', 'google-config.js'),
 ];
 
 /* Copies with the line endings NORMALISED to LF.
@@ -1870,6 +1873,64 @@ const FAULTS = [
       ''),
     expect: ['the top nav links to Organizer.dc.html'],
   },
+
+  /* Google sign-in (added 29 Jul 2026). */
+  {
+    name: '_googleAuth.js stops checking the audience, so a token minted for a different app would verify here too',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_googleAuth.js'),
+      'const ticket = await getClient().verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });',
+      'const ticket = await getClient().verifyIdToken({ idToken });'),
+    expect: ['verifies against OUR OWN client id as the audience, not just any valid Google token'],
+  },
+  {
+    name: '_googleAuth.js stops refusing an unverified email',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_googleAuth.js'),
+      "    if (payload.email_verified === false) return null;\n",
+      ''),
+    expect: ['refuses a token whose email Google has not itself verified'],
+  },
+  {
+    name: 'google-auth.js starts matching an existing account by email instead of googleSub',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "const existing = accounts.find((a) => a.googleSub === identity.sub);",
+      "const existing = accounts.find((a) => a.email === identity.email);"),
+    expect: ['looks up the account by the STORED googleSub, not by email'],
+  },
+  {
+    name: 'google-auth.js stops refusing a duplicate username when signing up via Google',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "    if (accounts.some((a) => a.username === uname)) {\n      return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'That username is already taken.' }) };\n    }\n",
+      ''),
+    expect: ['a duplicate username is refused with the exact same message as every other signup path'],
+  },
+  {
+    name: 'google-auth.js leaves passwordHash undefined instead of an explicit null on a Google-created account',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "      passwordHash: null, // signed in with Google, not a password — see verifyPassword callers, none of which this account ever reaches\n",
+      ''),
+    expect: ['the created account stores no password — passwordHash is explicitly null, not omitted'],
+  },
+  {
+    name: 'accounts-admin.js stops stripping googleSub from the account listing',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: googleSub ? 'Google' : 'Password' })),",
+      "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: rest.googleSub ? 'Google' : 'Password' })),"),
+    expect: ['googleSub is stripped from the listing the same way passwordHash is'],
+  },
+  {
+    name: 'google-auth.js goes back to hardcoding every Google-created organiser’s title, ignoring a custom one',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "...(role === 'manager' ? { ageGroupId } : { title: title || 'Organizer' }),",
+      "...(role === 'manager' ? { ageGroupId } : { title: 'Organizer' }),"),
+    expect: ['an organiser can still set a custom title, same default as organizer-signup.js — not hardcoded to "Organizer"'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1881,7 +1942,7 @@ console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
- 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js'].forEach((f) => {
+ 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

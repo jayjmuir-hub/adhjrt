@@ -32,6 +32,7 @@ const NEEDED = [
   'organizer-data.js',
   'Quins JRT.dc.html',
   'Organizer.dc.html',
+  'Scores & Standings.dc.html',
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1931,6 +1932,54 @@ const FAULTS = [
       "...(role === 'manager' ? { ageGroupId } : { title: 'Organizer' }),"),
     expect: ['an organiser can still set a custom title, same default as organizer-signup.js — not hardcoded to "Organizer"'],
   },
+  {
+    name: 'onScoresAgeChange loses its same-id guard, re-reloading a group that hasn’t changed',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "        if (!id || id === this.state.fxSelectedId) return;\n",
+      "        if (!id) return;\n"),
+    expect: ['picking the SAME age group elsewhere is a no-op', '…and does not needlessly reload the schedule'],
+  },
+  {
+    name: 'onScoresAgeChange stops checking the id against fxAgeGroups, adopting anything handed to it',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "        const grp = (this.state.fxAgeGroups || []).find((a) => a.id === id);\n        if (!grp) return;\n",
+      "        const grp = (this.state.fxAgeGroups || []).find((a) => a.id === id);\n"),
+    expect: ['an id the Fixtures section does not recognise is ignored, not adopted'],
+  },
+  {
+    name: 'the public Results tab stops reporting its own pick upward at all',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "      onSelect: () => this.setState({ selectedAgeId: a.id }, () => {\n        this.loadPublic();\n        if (typeof this.props.onAgeChange === 'function') this.props.onAgeChange(a.id);\n      }),",
+      "      onSelect: () => this.setState({ selectedAgeId: a.id }, () => {\n        this.loadPublic();\n      }),"),
+    expect: ['…and reports the pick upward through onAgeChange, exactly once'],
+  },
+  {
+    name: 'the public Results tab calls onAgeChange unconditionally, throwing on the standalone /scores page',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "        if (typeof this.props.onAgeChange === 'function') this.props.onAgeChange(a.id);",
+      "        this.props.onAgeChange(a.id);"),
+    expect: ['clicking a tab on the standalone /scores page (no onAgeChange prop) does not throw'],
+  },
+  {
+    name: 'loadEditor loses its ageChanged guard, re-firing onAgeChange on every editor reload',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "    if (ageChanged && typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);",
+      "    if (typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);"),
+    expect: ['reloading the SAME age group (a save, a publish, a regenerate...) does not fire again'],
+  },
+  {
+    name: 'loadEditor stops reporting a manager/organiser’s age group upward at all',
+    suite: 'test-fixtures-results-sync.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "    if (ageChanged && typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);\n",
+      ''),
+    expect: ['a manager landing on their own age group reports it upward'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1942,7 +1991,8 @@ console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
- 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js'].forEach((f) => {
+ 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
+ 'test-fixtures-results-sync.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

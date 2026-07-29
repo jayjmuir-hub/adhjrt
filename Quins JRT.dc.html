@@ -589,7 +589,7 @@
         <a href="/app" style="flex:none;background:#17A34A;color:#fff;font-weight:800;font-size:15px;letter-spacing:.5px;padding:14px 28px;border-radius:10px;text-transform:uppercase;white-space:nowrap;transition:transform .18s ease,filter .18s ease" style-hover="transform:translateY(-2px);filter:brightness(1.08)">Use the app</a>
       </div>
       <div data-reveal style="position:relative;background:#0C0C0E;border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:6px;overflow:hidden">
-        <dc-import name="Scores & Standings" age="{{ fxSelectedId }}" hint-size="100%,640px" style="display:block;width:100%;border-radius:14px;overflow:hidden"></dc-import>
+        <dc-import name="Scores & Standings" age="{{ fxSelectedId }}" on-age-change="{{ onScoresAgeChange }}" hint-size="100%,640px" style="display:block;width:100%;border-radius:14px;overflow:hidden"></dc-import>
 
         <!-- No veil here on purpose. The embedded Scores & Standings app
              shows its own per-age-group "coming soon" panel, so nothing
@@ -2017,6 +2017,18 @@ class Component extends DCLogic {
     return {
       accent,
       fxSelectedId: this.state.fxSelectedId,
+      // Reverse of the `age` prop below: the embedded Results/Manager widget
+      // calls this when a visitor picks an age group there (or a manager logs
+      // into their own group, or an organiser switches the admin picker), so
+      // the Fixtures section follows instead of staying stuck wherever it
+      // started. Unknown/empty ids and a no-op (same id already selected) are
+      // both ignored — see the comment on this in Scores & Standings.dc.html.
+      onScoresAgeChange: (id) => {
+        if (!id || id === this.state.fxSelectedId) return;
+        const grp = (this.state.fxAgeGroups || []).find((a) => a.id === id);
+        if (!grp) return;
+        this.setState({ fxSelectedId: id, fxSchedule: null, fxTeamFilter: '' }, () => this.loadSchedule(id));
+      },
       fixtureAgeTabs, fixturePools,
       isU16BFixtures, fixtureKnockout,
       /* Veil for the fixture grid only. It fails closed — while the schedule

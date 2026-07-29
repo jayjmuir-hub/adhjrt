@@ -1980,6 +1980,80 @@ const FAULTS = [
       ''),
     expect: ['a manager landing on their own age group reports it upward'],
   },
+  {
+    name: 'runSimulateTournament’s pass-1 isFinal filter is inverted, so pass 1 no longer walks over the double-bracket semis',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "      for (const slot of knockout) {\n        if (isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n        if (r && r.ok) knockoutGames++; else failed++;\n      }\n\n      // Pass 2:",
+      "      for (const slot of knockout) {\n        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n        if (r && r.ok) knockoutGames++; else failed++;\n      }\n\n      // Pass 2:"),
+    expect: ['pass 1 walked over the semis'],
+  },
+  {
+    name: 'runSimulateTournament’s second knockout pass (the regenerate + walk-the-finals block) is deleted, so no group ever gets its finals scored',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "      // Pass 2: regenerate now the semis have winners — this is what fills in\n"
+      + "      // the finals for a double-bracket group — save it, and walk those over.\n"
+      + "      this.setState({ simProgress: `${ag.name} — finals…` });\n"
+      + "      knockout = await api.autoKnockoutSlots(ag.id, session);\n"
+      + "      saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout }), session);\n"
+      + "      if (!saved || !saved.ok) failed++;\n"
+      + "      for (const slot of knockout) {\n"
+      + "        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n"
+      + "        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n"
+      + "        if (r && r.ok) knockoutGames++; else failed++;\n"
+      + "      }\n\n",
+      ''),
+    expect: ['CUP was seeded straight from pool winners and walked over', '…and only THEN did pass 2 walk over the finals, fed from the semi winners/losers'],
+  },
+  {
+    name: 'runSimulateTournament stops special-casing festival groups (U6/U7), so it tries to score matches the API refuses',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "      // Festival groups (U6/U7): no standings, no knockout, no scores allowed\n"
+      + "      // by the API at all — just publish whatever draw they have.\n"
+      + "      if (!ag.hasStandings) {\n"
+      + "        const res = await api.publishDraw(ag.id, session);\n"
+      + "        if (res && res.ok) published++;\n"
+      + "        else if (!(res && /nothing to publish|save a draw/i.test(res.error || ''))) failed++;\n"
+      + "        continue;\n"
+      + "      }\n\n",
+      ''),
+    expect: ['pools/knockout/published counts are exact, not just non-zero, and nothing failed'],
+  },
+  {
+    name: 'onSimulateTournament loses its typed-word check, running on ANY input to the confirm dialog',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "        if (typed.trim().toUpperCase() !== 'SIMULATE') {\n"
+      + "          this.setState({ simMsg: `Not run — you typed \"${typed.trim()}\" rather than SIMULATE.` });\n"
+      + "          return;\n"
+      + "        }\n"
+      + "        this.runSimulateTournament();",
+      "        this.runSimulateTournament();"),
+    expect: ['a near-miss is refused, not run'],
+  },
+  {
+    name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 7-8 November',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "  onSimulateTournament() {\n    if (this.isTournamentDayNow()) return;\n    this.promptModal(",
+      "  onSimulateTournament() {\n    this.promptModal("),
+    expect: ['on a real tournament day, pressing Simulate does not even open the confirm dialog'],
+  },
+  {
+    name: 'runResetSimulation stops clearing the generated knockout, leaving a reset tournament with a stale bracket',
+    suite: 'test-simulate-tournament.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "        if (draw) {\n"
+      + "          const saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout: [] }), session);\n"
+      + "          if (!saved || !saved.ok) failed++;\n"
+      + "        }",
+      "        if (draw) {\n"
+      + "          /* knockout clear intentionally skipped */\n"
+      + "        }"),
+    expect: ['u9\'s saved draw had its knockout cleared'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -1992,7 +2066,7 @@ seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
- 'test-fixtures-results-sync.js'].forEach((f) => {
+ 'test-fixtures-results-sync.js', 'test-simulate-tournament.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

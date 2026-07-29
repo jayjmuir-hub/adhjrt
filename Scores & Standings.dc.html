@@ -985,6 +985,32 @@
                 </div>
               </sc-if>
 
+              <!-- ===== SIMULATE A TOURNAMENT (organisers only, testing) ===== -->
+              <sc-if value="{{ isOrganiserView }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(225,27,34,0.3);border-radius:12px;background:rgba(225,27,34,0.05)">
+                  <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Simulate a tournament</div>
+                  <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
+                  <div style="font-size:12px;line-height:1.6;color:#5a616d;margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:#8b93a3">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
+
+                  <sc-if value="{{ cleanIsMatchDay }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#f5c518;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 7 or 8 November.</div>
+                  </sc-if>
+
+                  <sc-if value="{{ cleanNotMatchDay }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                      <button onClick="{{ onSimulateTournament }}" disabled="{{ simBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Simulate whole tournament</button>
+                      <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
+                    </div>
+                    <sc-if value="{{ simProgress }}" hint-placeholder-val="">
+                      <div style="margin-top:12px;font-size:13px;color:#aeb4bf;font-weight:600">{{ simProgress }}</div>
+                    </sc-if>
+                    <sc-if value="{{ simMsg }}" hint-placeholder-val="">
+                      <div style="margin-top:12px;font-size:13px;color:#3bd070;font-weight:700;line-height:1.5">{{ simMsg }}</div>
+                    </sc-if>
+                  </sc-if>
+                </div>
+              </sc-if>
+
               <!-- ===== SCORING RULES (organisers only) =====
                    What counts at this age group. Changing it here changes the
                    score entry form and how totals are worked out — the server
@@ -1059,6 +1085,7 @@ class Component extends DCLogic {
     bulkBusy: false, bulkMsg: '',
     clashBusy: false, clashResult: null,
     cleanBusy: false, cleanLoaded: false, cleanInv: null, cleanMsg: '', cleanProgress: '',
+    simBusy: false, simMsg: '', simProgress: '',
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
@@ -1731,6 +1758,182 @@ class Component extends DCLogic {
       this.loadPublic();
     });
   }
+
+  /* ---------------- SIMULATE A TOURNAMENT (organisers only, testing) ----------------
+     Publishes every age group, then records a walkover for the FIRST team listed
+     in every pool match (home always wins), generates the knockout stage from
+     the resulting standings, walks over the knockout matches too (semi-finals
+     first, then the finals once their teams are known from those winners), and
+     publishes again so the finished bracket is visible. All for exercising the
+     public pages, the app and the score-entry flow end to end without waiting
+     for a real result.
+
+     Deliberately reuses exactly the same api.* calls the real editor UI does
+     (submitResult, autoKnockoutSlots, saveDraw, publishDraw) rather than a
+     dedicated bulk endpoint — same server-side checks a real score goes
+     through (age-group permission, festival-group refusal, write-and-verify),
+     same withTeamNames() rule every other saveDraw call site goes through, no
+     second way for the draw or a result to be written.
+
+     Two-pass knockout, and this is what makes it work for BOTH bracket shapes
+     without a special case: the plain waterfall (Cup/Bowl/Plate/Shield seeded
+     straight from pool position) has no semis at all, so the first pass's
+     "walk over anything that isn't a final" loop matches nothing there and the
+     finals are already fully seeded — the second pass's regenerate is a no-op
+     and its "walk over the finals" loop does the real work. U16B/U16G's double
+     bracket DOES have semis (TSF1/TSF2/BSF1/BSF2); the first pass walks those
+     over, and only then does regenerating pick up real winners/losers for
+     Cup/Bowl/Plate/Shield, which the second pass then walks over.
+
+     U6/U7 refuse scores at the API (FESTIVAL_AGE_IDS in _scoring.js) and have
+     no knockout — just published, same as any other group with a saved draw. */
+  onSimulateTournament() {
+    if (this.isTournamentDayNow()) return;
+    this.promptModal(
+      'Simulate the WHOLE tournament, for testing? This publishes every age group, records a walkover '
+      + '(the first team listed wins) for every pool match, generates the knockout stage and walks that over '
+      + 'too including the finals — overwriting any score already recorded for a match, real or otherwise. '
+      + 'Type SIMULATE to confirm.',
+      '',
+      (typed) => {
+        if (typed.trim().toUpperCase() !== 'SIMULATE') {
+          this.setState({ simMsg: `Not run — you typed "${typed.trim()}" rather than SIMULATE.` });
+          return;
+        }
+        this.runSimulateTournament();
+      },
+    );
+  }
+  async runSimulateTournament() {
+    const { api, session, ageGroups } = this.state;
+    if (!api || !session) return;
+    this.setState({ simBusy: true, simMsg: '', simProgress: 'Starting…' });
+    const isFinal = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+    let pools = 0, knockoutGames = 0, published = 0, failed = 0;
+    for (const ag of (ageGroups || [])) {
+      this.setState({ simProgress: `${ag.name}…` });
+
+      // Festival groups (U6/U7): no standings, no knockout, no scores allowed
+      // by the API at all — just publish whatever draw they have.
+      if (!ag.hasStandings) {
+        const res = await api.publishDraw(ag.id, session);
+        if (res && res.ok) published++;
+        else if (!(res && /nothing to publish|save a draw/i.test(res.error || ''))) failed++;
+        continue;
+      }
+
+      const draw = await api.getDraw(ag.id, session);
+      if (!draw) { failed++; continue; }
+
+      this.setState({ simProgress: `${ag.name} — pool matches…` });
+      for (const slot of (draw.slots || [])) {
+        if (!slot.home || !slot.away) continue;
+        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
+        if (r && r.ok) pools++; else failed++;
+      }
+
+      // Pass 1: seed the knockout stage from the now-final standings, save it,
+      // and walk over anything that already has both teams and ISN'T a final
+      // (the double-bracket semis; a no-op for the plain waterfall groups).
+      this.setState({ simProgress: `${ag.name} — knockout…` });
+      let knockout = await api.autoKnockoutSlots(ag.id, session);
+      let saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout }), session);
+      if (!saved || !saved.ok) failed++;
+      for (const slot of knockout) {
+        if (isFinal(slot.id) || !slot.home || !slot.away) continue;
+        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
+        if (r && r.ok) knockoutGames++; else failed++;
+      }
+
+      // Pass 2: regenerate now the semis have winners — this is what fills in
+      // the finals for a double-bracket group — save it, and walk those over.
+      this.setState({ simProgress: `${ag.name} — finals…` });
+      knockout = await api.autoKnockoutSlots(ag.id, session);
+      saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout }), session);
+      if (!saved || !saved.ok) failed++;
+      for (const slot of knockout) {
+        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;
+        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
+        if (r && r.ok) knockoutGames++; else failed++;
+      }
+
+      this.setState({ simProgress: `${ag.name} — publishing…` });
+      const pubRes = await api.publishDraw(ag.id, session);
+      if (pubRes && pubRes.ok) published++; else failed++;
+    }
+    const msg = `Simulated ${pools} pool result${pools === 1 ? '' : 's'} and ${knockoutGames} knockout result${knockoutGames === 1 ? '' : 's'}, `
+      + `published ${published} age group${published === 1 ? '' : 's'}.`
+      + (failed ? ` ${failed} step${failed === 1 ? '' : 's'} failed — press again to retry.` : '');
+    this.setState({ simBusy: false, simProgress: '', simMsg: msg });
+    if (this.state.editorAgeId) this.loadAdmin(this.state.editorAgeId);
+    this.loadPublic();
+  }
+
+  /* Undoes exactly what a simulation does — and only that. Saved pools and
+     team assignments are a real editing decision an organiser may have made
+     by hand and are left alone; only the results a simulate/real score entry
+     produces and the knockout bracket a simulation generates come back out.
+     (For clearing REGISTERED-team draws entirely, see "Clear the rehearsal
+     data" above — a bigger, separate operation on purpose.) */
+  onResetSimulation() {
+    if (this.isTournamentDayNow()) return;
+    this.promptModal(
+      'Reset the simulated tournament? This unpublishes every age group, removes every recorded result '
+      + '(one at a time, the same write-and-verify way a real score is removed) and clears the generated '
+      + 'knockout bracket for each age group — saved pools and team assignments are left untouched. '
+      + 'Type RESET to confirm.',
+      '',
+      (typed) => {
+        if (typed.trim().toUpperCase() !== 'RESET') {
+          this.setState({ simMsg: `Not reset — you typed "${typed.trim()}" rather than RESET.` });
+          return;
+        }
+        this.runResetSimulation();
+      },
+    );
+  }
+  async runResetSimulation() {
+    const { api, session, ageGroups } = this.state;
+    if (!api || !session) return;
+    this.setState({ simBusy: true, simMsg: '', simProgress: 'Starting…' });
+    let unpublished = 0, cleared = 0, failed = 0;
+
+    const stored = await api.allResults();
+    const ids = Object.keys(stored || {});
+
+    for (const ag of (ageGroups || [])) {
+      this.setState({ simProgress: `${ag.name} — unpublishing…` });
+      const unpub = await api.unpublishDraw(ag.id, session);
+      if (unpub && unpub.ok) unpublished++; else failed++;
+
+      const agIds = ids.filter((id) => api.ageGroupOfMatch(id) === ag.id);
+      if (agIds.length) {
+        this.setState({ simProgress: `${ag.name} — removing ${agIds.length} result${agIds.length === 1 ? '' : 's'}…` });
+        for (const id of agIds) {
+          try {
+            const r = await api.clearResult(id, session);
+            if (r && r.ok === false) failed++; else cleared++;
+          } catch (e) { failed++; }
+        }
+      }
+
+      if (ag.hasStandings) {
+        this.setState({ simProgress: `${ag.name} — clearing the generated knockout…` });
+        const draw = await api.getDraw(ag.id, session);
+        if (draw) {
+          const saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout: [] }), session);
+          if (!saved || !saved.ok) failed++;
+        }
+      }
+    }
+
+    const msg = `Unpublished ${unpublished} age group${unpublished === 1 ? '' : 's'}, removed ${cleared} result${cleared === 1 ? '' : 's'}.`
+      + (failed ? ` ${failed} step${failed === 1 ? '' : 's'} failed — press again to retry.` : '');
+    this.setState({ simBusy: false, simProgress: '', simMsg: msg });
+    if (this.state.editorAgeId) this.loadAdmin(this.state.editorAgeId);
+    this.loadPublic();
+  }
+
   async onSaveDraw() {
     const { api, editorDraw, editorAgeId, session } = this.state;
     this.setState({ editorBusy: true, editorMsg: '' });
@@ -3108,6 +3311,13 @@ class Component extends DCLogic {
       onUnpublishDraw: () => this.onUnpublishDraw(),
       onPublishAll: () => this.onPublishAll(),
       onUnpublishAll: () => this.onUnpublishAll(),
+
+      // ---- simulate a tournament (organisers only, testing) ----
+      onSimulateTournament: () => this.onSimulateTournament(),
+      onResetSimulation: () => this.onResetSimulation(),
+      simBusy: s.simBusy,
+      simMsg: s.simMsg,
+      simProgress: s.simProgress,
 
       // ---- clearing the rehearsal data (organisers only) ----
       onLoadCleanup: () => this.loadCleanupInventory(),

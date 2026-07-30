@@ -882,9 +882,9 @@ function groupRowsByClub(rows) {
    `assets/venue-map.png` is a wayfinding map of the whole complex: it draws ONE
    outline per block (D3, C4, B1 — which is the athletics track) with a name and
    a car-park number, and it neither names nor divides what is inside them. But
-   the layout's pitches are D3A/D3B, C4A/C4B, B1A..B1D — and those sub-pitch
-   names are OURS (see CLAUDE.md, Venue section). Drawing a box labelled "B1C"
-   on that image would mean inventing where B1C sits, and then showing that
+   the layout's pitches are D3a/D3b, C4a/C4b, B1a..B1d — and those sub-pitch
+   names are OURS (see CLAUDE.md, Venue section). Drawing a box labelled "B1c"
+   on that image would mean inventing where B1c sits, and then showing that
    invention on the screen an organiser uses to make real decisions.
 
    So this is a schematic: blocks in roughly their real relative positions for
@@ -1040,7 +1040,7 @@ function splitLabel(surfaceCount) {
   return `${surfaceCount} surfaces`;
 }
 
-/* 'D5A' -> 'D5', 'C4B' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
+/* 'D5a' -> 'D5', 'C4b' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
    sub-pitch; everything up to and including the last digit is the block.
 
    The tail is at most ONE letter and it is anchored, which pins the whole thing
@@ -1919,7 +1919,7 @@ class Component extends DCLogic {
 
   /* Moving a group to the other day CLEARS its pitches, because the two days
      have different pitch lists and silently keeping names that happen to exist
-     on both (B1A, D2 …) would put a group on a pitch nobody chose for it. */
+     on both (B1a, D2 …) would put a group on a pitch nobody chose for it. */
   setGroupDay(ageId, dayId) {
     const v = this.state.venue;
     if (!v) return;

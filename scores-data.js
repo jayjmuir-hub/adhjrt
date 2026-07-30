@@ -169,7 +169,7 @@ export function scoreTotal(ageGroupId, parts) {
 
    Read off Pitch maps_Final.pdf (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
    26 July 2026 as the same running order for 2026. The sub-pitch letters
-   (B1A..B1D, D3A/D3B and so on) are OURS — the map draws the boxes inside one
+   (B1a..B1d, D3a/D3b and so on) are OURS — the map draws the boxes inside one
    outline without naming them, so these have to match the printed pitch flags.
    ============================================================ */
 export const DEFAULT_VENUE = {
@@ -182,16 +182,16 @@ export const DEFAULT_VENUE = {
        is written out here so every existing reader of `day.pitches` is
        untouched and the two DEFAULT_VENUE copies stay comparable. */
     splits: { D5: 2, D4: 2, D3: 2, D2: 1, D1: 1, C4: 1, C5: 1, B1: 4, A1: 4 },
-    pitches: ['D5A', 'D5B', 'D4A', 'D4B', 'D3A', 'D3B', 'D2', 'D1',
-      'C4', 'C5', 'B1A', 'B1B', 'B1C', 'B1D', 'A1A', 'A1B', 'A1C', 'A1D'],
+    pitches: ['D5a', 'D5b', 'D4a', 'D4b', 'D3a', 'D3b', 'D2', 'D1',
+      'C4', 'C5', 'B1a', 'B1b', 'B1c', 'B1d', 'A1a', 'A1b', 'A1c', 'A1d'],
     groups: {
-      u6:   ['D4A', 'D4B', 'D5A', 'D5B'],   // morning
-      u7:   ['D4A', 'D4B', 'D5A', 'D5B'],   // afternoon, the same four
-      u8:   ['B1A', 'B1B', 'B1C', 'B1D'],
-      u9:   ['A1A', 'A1B', 'A1C', 'A1D'],
+      u6:   ['D4a', 'D4b', 'D5a', 'D5b'],   // morning
+      u7:   ['D4a', 'D4b', 'D5a', 'D5b'],   // afternoon, the same four
+      u8:   ['B1a', 'B1b', 'B1c', 'B1d'],
+      u9:   ['A1a', 'A1b', 'A1c', 'A1d'],
       u10:  ['C5'],
       u11:  ['C4'],
-      u12:  ['D3A', 'D3B'],
+      u12:  ['D3a', 'D3b'],
       u18b: ['D2'],
       u18g: ['D1'],
     },
@@ -201,12 +201,12 @@ export const DEFAULT_VENUE = {
     label: 'Sunday 8 November',
     short: 'Sun',
     splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
-    pitches: ['D3', 'D2', 'D1', 'C4A', 'C4B', 'C5', 'B1A', 'B1B', 'A1A', 'A1B'],
+    pitches: ['D3', 'D2', 'D1', 'C4a', 'C4b', 'C5', 'B1a', 'B1b', 'A1a', 'A1b'],
     groups: {
-      u12g: ['B1A', 'B1B'],
-      u13:  ['C4A', 'C4B'],
+      u12g: ['B1a', 'B1b'],
+      u13:  ['C4a', 'C4b'],
       u14b: ['D3'],
-      u14g: ['A1A', 'A1B'],
+      u14g: ['A1a', 'A1b'],
       u16b: ['D2', 'D1'],
       u16g: ['C5'],
     },
@@ -222,7 +222,7 @@ export const DEFAULT_VENUE = {
    Keep in step with _venue.js. test-venue-splits.js compares them. */
 export const MAIN_PITCHES = ['D5', 'D4', 'D3', 'D2', 'D1', 'C4', 'C5', 'C3', 'C2', 'C1', 'B1', 'A1', 'A2', 'A3', 'A4'];
 export const SPLITS = [1, 2, 4];
-const SPLIT_SUFFIXES = { 1: [''], 2: ['A', 'B'], 4: ['A', 'B', 'C', 'D'] };
+const SPLIT_SUFFIXES = { 1: [''], 2: ['a', 'b'], 4: ['a', 'b', 'c', 'd'] };
 
 export function derivePitches(splits) {
   const out = [];
@@ -243,14 +243,18 @@ export function remapGroupPitches(list, oldSplits, newSplits) {
   const kept = [];
   const add = (name) => { if (!kept.includes(name)) kept.push(name); };
   (Array.isArray(list) ? list : []).forEach((p) => {
-    const name = typeof p === 'string' ? p.trim().toUpperCase() : '';
-    if (!name) return;
-    const m = name.match(/^(.*[0-9])([A-Z])?$/);
-    const main = m ? m[1] : name;
+    /* Only uppercased to FIND the main pitch (MAIN_PITCHES entries are all
+       upper), never to store — the canonical suffix is lowercase, and this
+       must hand back exactly the pitch a saved fixture is sitting on when
+       nothing about its split has changed. */
+    const raw = typeof p === 'string' ? p.trim() : '';
+    if (!raw) return;
+    const m = raw.toUpperCase().match(/^(.*[0-9])([A-Z])?$/);
+    const main = m ? m[1] : raw.toUpperCase();
     const before = Number((oldSplits || {})[main]);
     const after = Number((newSplits || {})[main]);
     if (SPLITS.indexOf(after) < 0) return;
-    if (before === after) { add(name); return; }
+    if (before === after) { add(raw); return; }       // untouched — keep as stored
     SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));
   });
   return kept;
@@ -870,7 +874,7 @@ export function poolEndMins(startMins, count) {
        reported separately as something still to do.
      - two bookings on one pitch at DIFFERENT times. That is a time-share, which
        is exactly how D4/D5 ran U5/6 in the morning and U7 in the afternoon.
-     - bookings on different DAYS that happen to share a pitch name. B1A, D1 and
+     - bookings on different DAYS that happen to share a pitch name. B1a, D1 and
        D2 exist on both days and are completely unrelated bookings.
      - touching exactly: one ends 10:00, the next starts 10:00. Half-open ranges,
        so [08:00,10:00) and [10:00,12:00) do not overlap.

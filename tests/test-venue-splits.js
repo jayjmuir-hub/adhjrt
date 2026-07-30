@@ -73,8 +73,8 @@ eq('whole, halves, quarters — nothing else', V.SPLITS, [1, 2, 4]);
 section('Deriving surfaces from a split');
 
 eq('whole keeps the bare name', V.derivePitches({ D2: 1 }), ['D2']);
-eq('halves get A and B', V.derivePitches({ D3: 2 }), ['D3A', 'D3B']);
-eq('quarters get A to D', V.derivePitches({ B1: 4 }), ['B1A', 'B1B', 'B1C', 'B1D']);
+eq('halves get A and B', V.derivePitches({ D3: 2 }), ['D3a', 'D3b']);
+eq('quarters get A to D', V.derivePitches({ B1: 4 }), ['B1a', 'B1b', 'B1c', 'B1d']);
 eq('a pitch absent from splits contributes nothing', V.derivePitches({}), []);
 eq('an illegal split is skipped, not guessed at', V.derivePitches({ D3: 3 }), []);
 eq('a zero means not in use', V.derivePitches({ D3: 0 }), []);
@@ -118,24 +118,24 @@ section('A group keeps the same GROUND when a split changes');
   const R = V.remapGroupPitches;
 
   /* Whole -> halves: it had all of it, it still has all of it. */
-  eq('splitting a whole pitch gives both halves', R(['D3'], { D3: 1 }, { D3: 2 }), ['D3A', 'D3B']);
-  eq('splitting into quarters gives all four', R(['D3'], { D3: 1 }, { D3: 4 }), ['D3A', 'D3B', 'D3C', 'D3D']);
+  eq('splitting a whole pitch gives both halves', R(['D3'], { D3: 1 }, { D3: 2 }), ['D3a', 'D3b']);
+  eq('splitting into quarters gives all four', R(['D3'], { D3: 1 }, { D3: 4 }), ['D3a', 'D3b', 'D3c', 'D3d']);
 
   /* Halves -> whole: there is one pitch now and they are on it. */
-  eq('merging halves gives the whole pitch', R(['D3A', 'D3B'], { D3: 2 }, { D3: 1 }), ['D3']);
-  eq('…even for a group that only had one half', R(['D3A'], { D3: 2 }, { D3: 1 }), ['D3']);
-  eq('quarters merged to halves', R(['B1A', 'B1C'], { B1: 4 }, { B1: 2 }), ['B1A', 'B1B']);
+  eq('merging halves gives the whole pitch', R(['D3a', 'D3b'], { D3: 2 }, { D3: 1 }), ['D3']);
+  eq('…even for a group that only had one half', R(['D3a'], { D3: 2 }, { D3: 1 }), ['D3']);
+  eq('quarters merged to halves', R(['B1a', 'B1c'], { B1: 4 }, { B1: 2 }), ['B1a', 'B1b']);
 
   /* Nothing else moves. */
   eq('an untouched pitch is left alone', R(['D2', 'D1'], { D2: 1, D1: 1 }, { D2: 1, D1: 1 }), ['D2', 'D1']);
   eq('only the changed pitch is remapped',
-    R(['D3', 'D2'], { D3: 1, D2: 1 }, { D3: 2, D2: 1 }), ['D3A', 'D3B', 'D2']);
+    R(['D3', 'D2'], { D3: 1, D2: 1 }, { D3: 2, D2: 1 }), ['D3a', 'D3b', 'D2']);
 
   /* A pitch taken out of the day is gone, and the group loses it — there is no
      honest place to put it. */
   eq('a pitch removed from the day is dropped', R(['D3', 'D2'], { D3: 1, D2: 1 }, { D2: 1 }), ['D2']);
 
-  eq('no duplicates come out', R(['B1A', 'B1B'], { B1: 2 }, { B1: 1 }), ['B1']);
+  eq('no duplicates come out', R(['B1a', 'B1b'], { B1: 2 }, { B1: 1 }), ['B1']);
   eq('junk in gives an empty list', R(null, {}, {}), []);
   eq('an empty list stays empty', R([], { D3: 2 }, { D3: 1 }), []);
 
@@ -181,17 +181,17 @@ section('What the server will and will not store');
   eq('…and for Sunday', migV.day2.splits, V.DEFAULT_VENUE.day2.splits);
   eq('…leaving the surfaces identical', migV.day1.pitches, V.DEFAULT_VENUE.day1.pitches);
 
-  eq('splitsFromPitches reads quarters', V.splitsFromPitches(['B1A', 'B1B', 'B1C', 'B1D']), { B1: 4 });
-  eq('…halves', V.splitsFromPitches(['D3A', 'D3B']), { D3: 2 });
+  eq('splitsFromPitches reads quarters', V.splitsFromPitches(['B1a', 'B1b', 'B1c', 'B1d']), { B1: 4 });
+  eq('…halves', V.splitsFromPitches(['D3a', 'D3b']), { D3: 2 });
   eq('…and a whole pitch', V.splitsFromPitches(['D2']), { D2: 1 });
   /* Three surfaces is somebody's half-finished edit. Rounding UP invents a
      fourth, which is recoverable; rounding down deletes a real one, which is
      not. */
-  eq('an odd count rounds up rather than dropping a surface', V.splitsFromPitches(['B1A', 'B1B', 'B1C']), { B1: 4 });
+  eq('an odd count rounds up rather than dropping a surface', V.splitsFromPitches(['B1a', 'B1b', 'B1c']), { B1: 4 });
 
   [
     ['a split of three', (x) => { x.day1.splits.D3 = 3; }],
-    ['a split of zero dressed up as a value', (x) => { x.day1.splits.D3 = 0; x.day1.groups.u12 = ['D3A']; }],
+    ['a split of zero dressed up as a value', (x) => { x.day1.splits.D3 = 0; x.day1.groups.u12 = ['D3a']; }],
     ['a pitch nobody has heard of', (x) => { x.day1.splits.ZZ9 = 2; }],
     ['a group on a surface that does not exist', (x) => { x.day1.groups.u12 = ['D9Z']; }],
   ].forEach(([label, damage]) => {
@@ -242,7 +242,7 @@ section('The panel, driven');
        choice from throwing. */
     const style = (n, i) => ((sat(n).choices[i] || {}).style || '');
     check('D3 shows as in use', sat('D3').inUse === true);
-    check('…listing its halves', /D3A · D3B/.test(sat('D3').surfaceLabel), sat('D3').surfaceLabel);
+    check('…listing its halves', /D3a · D3b/.test(sat('D3').surfaceLabel), sat('D3').surfaceLabel);
     check('C1 shows as not used today', sat('C1').inUse === false);
     check('…and says so in words', /not used/i.test(sat('C1').surfaceLabel), sat('C1').surfaceLabel);
 
@@ -257,9 +257,9 @@ section('The panel, driven');
     const u8 = vals.vGroups.find((g) => g.id === 'u8');
     const b1 = u8.pitchGroups.find((p) => p.main === 'B1');
     check('U8 has a B1 group of surfaces', !!b1);
-    eq('…with all four quarters', b1.surfaces.map((x) => x.name), ['B1A', 'B1B', 'B1C', 'B1D']);
+    eq('…with all four quarters', b1.surfaces.map((x) => x.name), ['B1a', 'B1b', 'B1c', 'B1d']);
     check('…all ticked', b1.allOn === true);
-    eq('…labelled by their letter, not repeating the pitch name', b1.surfaces.map((x) => x.short), ['A', 'B', 'C', 'D']);
+    eq('…labelled by their letter, not repeating the pitch name', b1.surfaces.map((x) => x.short), ['a', 'b', 'c', 'd']);
     check('only pitches in use that day are offered',
       u8.pitchGroups.every((p) => Number(V.DEFAULT_VENUE.day1.splits[p.main]) > 0));
     const u11 = vals.vGroups.find((g) => g.id === 'u11');
@@ -288,7 +288,7 @@ section('Changing a split in the panel');
     const c = fresh();
     c.setPitchSplit('day1', 'D3', 1);
     eq('the split is stored', c.state.venue.day1.splits.D3, 1);
-    check('the surfaces are rebuilt', c.state.venue.day1.pitches.includes('D3') && !c.state.venue.day1.pitches.includes('D3A'));
+    check('the surfaces are rebuilt', c.state.venue.day1.pitches.includes('D3') && !c.state.venue.day1.pitches.includes('D3a'));
     eq('U12 keeps the ground it had, under the new name', c.state.venue.day1.groups.u12, ['D3']);
     check('nobody else is touched', JSON.stringify(c.state.venue.day1.groups.u11) === JSON.stringify(['C4']));
     check('the layout is now dirty', c.venueDirty() === true);
@@ -298,8 +298,8 @@ section('Changing a split in the panel');
   {
     const c = fresh();
     c.setPitchSplit('day1', 'C4', 4);
-    eq('U11 gets all four quarters', c.state.venue.day1.groups.u11, ['C4A', 'C4B', 'C4C', 'C4D']);
-    eq('…and the surfaces exist', c.state.venue.day1.pitches.filter((p) => p.indexOf('C4') === 0), ['C4A', 'C4B', 'C4C', 'C4D']);
+    eq('U11 gets all four quarters', c.state.venue.day1.groups.u11, ['C4a', 'C4b', 'C4c', 'C4d']);
+    eq('…and the surfaces exist', c.state.venue.day1.pitches.filter((p) => p.indexOf('C4') === 0), ['C4a', 'C4b', 'C4c', 'C4d']);
   }
 
   /* Setting the same split again is a no-op, not a dirty flag. */
@@ -339,25 +339,25 @@ section('Changing a split in the panel');
   /* A change that would strand SAVED FIXTURES warns before doing it. */
   {
     const c = fresh();
-    c.setState({ venueUsage: { day1: { D3A: 6, D3B: 6 } } });
+    c.setState({ venueUsage: { day1: { D3a: 6, D3b: 6 } } });
     c.setPitchSplit('day1', 'D3', 1);
     check('a split with saved matches on it asks first', !!c.state.modal);
     const m2 = c.state.modal || {};   // same reason as above — report, do not throw
     check('…and says how many', /12 saved matches/.test(m2.title), m2.title);
-    check('…and which surfaces go', /D3A, D3B/.test(m2.title), m2.title);
+    check('…and which surfaces go', /D3a, D3b/.test(m2.title), m2.title);
     check('…and warns that fixtures do not follow', /fixtures do not/i.test(m2.title));
   }
 
   /* Taking a whole main pitch for a group in one click. */
   {
     const c = fresh();
-    const surfaces = ['B1A', 'B1B', 'B1C', 'B1D'];
+    const surfaces = ['B1a', 'B1b', 'B1c', 'B1d'];
     c.toggleGroupMain('u9', 'day1', 'B1', surfaces, true);
     eq('U9 picks up every quarter of B1', c.state.venue.day1.groups.u9.filter((p) => p.indexOf('B1') === 0), surfaces);
-    check('…without losing what it already had', c.state.venue.day1.groups.u9.includes('A1A'));
+    check('…without losing what it already had', c.state.venue.day1.groups.u9.includes('A1a'));
     c.toggleGroupMain('u9', 'day1', 'B1', surfaces, false);
     check('…and drops them all again', !c.state.venue.day1.groups.u9.some((p) => p.indexOf('B1') === 0));
-    check('…still keeping the rest', c.state.venue.day1.groups.u9.includes('A1A'));
+    check('…still keeping the rest', c.state.venue.day1.groups.u9.includes('A1a'));
   }
 }
 

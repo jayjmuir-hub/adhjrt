@@ -131,12 +131,12 @@ section('Pitches land in the right block');
 
 {
   const blockOf = (m, pitch) => (m.blocks.find((b) => b.pitches.some((p) => p.name === pitch)) || {}).name;
-  eq('D5A is in block D5', blockOf(sat, 'D5A'), 'D5');
-  eq('D5B is in block D5 too', blockOf(sat, 'D5B'), 'D5');
+  eq('D5a is in block D5', blockOf(sat, 'D5a'), 'D5');
+  eq('D5b is in block D5 too', blockOf(sat, 'D5b'), 'D5');
   eq('D2 is its own block', blockOf(sat, 'D2'), 'D2');
-  eq('B1C is in block B1', blockOf(sat, 'B1C'), 'B1');
-  eq('A1D is in block A1', blockOf(sat, 'A1D'), 'A1');
-  eq('C4A on Sunday is in block C4', blockOf(sun, 'C4A'), 'C4');
+  eq('B1c is in block B1', blockOf(sat, 'B1c'), 'B1');
+  eq('A1d is in block A1', blockOf(sat, 'A1d'), 'A1');
+  eq('C4a on Sunday is in block C4', blockOf(sun, 'C4a'), 'C4');
   eq('C5 on Sunday is its own block', blockOf(sun, 'C5'), 'C5');
 
   check('Saturday groups 18 pitches into 9 blocks', sat.blocks.length === 9, String(sat.blocks.length));
@@ -206,11 +206,11 @@ section('blockOfPitch, including the names nobody expects');
     })[0];
     return m.blocks.map((b) => b.name);
   };
-  eq('a trailing letter is a sub-pitch', probe(['D5A', 'D5B']), ['D5']);
+  eq('a trailing letter is a sub-pitch', probe(['D5a', 'D5b']), ['D5']);
   eq('no trailing letter is the block itself', probe(['D2']), ['D2']);
   eq('two digits stay with the block', probe(['D12A', 'D12B']), ['D12']);
   eq('a name with no digit becomes its own block', probe(['Track']), ['TRACK']);
-  eq('case is normalised so c4a and C4A are one block', probe(['C4A', 'c4b']), ['C4']);
+  eq('case is normalised so c4a and C4a are one block', probe(['C4a', 'c4b']), ['C4']);
   eq('different blocks stay apart', probe(['D1', 'D2']), ['D1', 'D2']);
   /* An unknown block must still be drawn, below the map rather than dropped. */
   const odd = C.venueMaps({
@@ -229,13 +229,13 @@ section('Who is on each pitch');
   eq('C5 on Saturday is U10', cell(sat, 'C5').who, 'U10');
   eq('C4 on Saturday is U11', cell(sat, 'C4').who, 'U11');
   eq('D2 on Saturday is U18B', cell(sat, 'D2').who, 'U18B');
-  eq('B1A on Saturday is U8', cell(sat, 'B1A').who, 'U8');
-  eq('B1A on SUNDAY is U12G, not U8', cell(sun, 'B1A').who, 'U12G');
+  eq('B1a on Saturday is U8', cell(sat, 'B1a').who, 'U8');
+  eq('B1a on SUNDAY is U12G, not U8', cell(sun, 'B1a').who, 'U12G');
   eq('D3 on Sunday is U14B', cell(sun, 'D3').who, 'U14B');
 
   /* The same pitch NAME exists on both days and they are unrelated fields — the
      clash check already treats them separately and so must the drawing. */
-  check('the two B1As are different cells', cell(sat, 'B1A') !== cell(sun, 'B1A'));
+  check('the two B1As are different cells', cell(sat, 'B1a') !== cell(sun, 'B1a'));
 
   /* A single-group cell is tinted with that group's own colour, not a generic
      "in use" colour — otherwise the drawing carries no information a list did
@@ -254,20 +254,20 @@ section('A time-share is drawn as a time-share, NOT as a problem');
   /* U6 and U7 hold the same four pitches on purpose: U6 in the morning, U7 in
      the afternoon. This is the assertion that stops the drawing crying wolf on
      the one arrangement that was set up deliberately. */
-  const d4a = cell(sat, 'D4A');
-  eq('D4A names both groups', d4a.who, 'U6 · U7');
+  const d4a = cell(sat, 'D4a');
+  eq('D4a names both groups', d4a.who, 'U6 · U7');
   check('…as a split of both colours', d4a.style.includes('linear-gradient'), d4a.style);
   check('…and NOT in a warning colour', !/f5c518|E11B22|ff8a8a/i.test(d4a.style.replace(/linear-gradient\([^)]*\)/, '')), d4a.style);
   check('the tooltip says it is a time-share, not a clash', /time-share, not a clash/i.test(d4a.title), d4a.title);
   check('the tooltip names both groups in full', /U6 Tag/.test(d4a.title) && /U7 Tag/.test(d4a.title), d4a.title);
 
   /* All four shared pitches, not just the one. */
-  ['D4A', 'D4B', 'D5A', 'D5B'].forEach((p) =>
+  ['D4a', 'D4b', 'D5a', 'D5b'].forEach((p) =>
     eq(`${p} is shared by U6 and U7`, cell(sat, p).who, 'U6 · U7'));
 
   const note = (sat.notes || []).find((n) => /Time-shared/i.test(n.text));
   check('Saturday reports the time-share in its notes', !!note, JSON.stringify(sat.notes));
-  check('…naming all four pitches', note && ['D4A', 'D4B', 'D5A', 'D5B'].every((p) => note.text.includes(p)), note && note.text);
+  check('…naming all four pitches', note && ['D4a', 'D4b', 'D5a', 'D5b'].every((p) => note.text.includes(p)), note && note.text);
   check('…and explaining that the Fixture Editor keeps them apart by time',
     note && /Fixture Editor/.test(note.text), note && note.text);
   check('…in a neutral colour, not amber or red', note && !/f5c518|E11B22/i.test(note.style), note && note.style);
@@ -455,7 +455,7 @@ section('The map view: placing blocks on the real image');
      is no room on it for four pitch names. The schematic is where those live. */
   eq('the chip names the groups on the block', blk('C4').mapWho, 'U11');
   eq('a shared block names both', (C.venueMaps(clone(VENUE), { D4: { x: 20, y: 21 } }, true)[0].blocks.find((b) => b.name === 'D4') || {}).mapWho, 'U6 · U7');
-  check('the tooltip lists the actual pitches', /D3A, D3B/.test(blk('D3').mapTitle), blk('D3').mapTitle);
+  check('the tooltip lists the actual pitches', /D3a, D3b/.test(blk('D3').mapTitle), blk('D3').mapTitle);
   check('…and the group in full', /U12 Mixed Contact/.test(blk('D3').mapTitle), blk('D3').mapTitle);
 
   const free = C.venueMaps({ day1: { label: 'x', pitches: ['D1'], groups: {} }, day2: { label: 'y', pitches: [], groups: {} } }, { D1: { x: 5, y: 5 } }, true)[0];
@@ -912,7 +912,7 @@ section('The map labels can actually be read');
     eq('B1 is in quarters', blk('B1').mapSplit, '×4');
     eq('C4 is whole', blk('C4').mapSplit, '×1');
     check('the tooltip spells it out', /halves/.test(blk('D3').mapTitle), blk('D3').mapTitle);
-    check('…and still names every surface', /D3A, D3B/.test(blk('D3').mapTitle), blk('D3').mapTitle);
+    check('…and still names every surface', /D3a, D3b/.test(blk('D3').mapTitle), blk('D3').mapTitle);
 
     /* An empty block is legible too — it is the one an organiser is looking
        for when a pitch has nobody on it. */
@@ -931,13 +931,13 @@ section('The map labels can actually be read');
      * blockOfPitch stops normalising case -> "case is normalised"
      * the sub-pitch letter no longer
        stripped (every pitch its own
-       block)                             -> "D5A is in block D5" and the block counts
+       block)                             -> "D5a is in block D5" and the block counts
      * BLOCK_GRID entry for B1 removed    -> "block B1 has a place on the drawing"
      * two blocks given the same cell     -> "no two blocks are placed in the same cell"
      * the shared-pitch branch made to
        use the warning colour             -> "NOT in a warning colour"
      * the shared branch made to show
-       only the first group                -> "D4A names both groups"
+       only the first group                -> "D4a names both groups"
      * unused pitches no longer reported  -> "named in the notes"
      * a pitch silently dropped from a
        block                              -> "every Saturday pitch is drawn exactly once"

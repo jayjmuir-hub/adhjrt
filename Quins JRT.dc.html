@@ -1908,7 +1908,12 @@ class Component extends DCLogic {
     const fxSchedule = this.state.fxSchedule;
     const isU16BFixtures = ['u16b', 'u16g'].includes(this.state.fxSelectedId);
     const fxFilter = this.state.fxTeamFilter;
-    const gameMatchesFilter = (g) => !fxFilter || g.home === fxFilter || g.away === fxFilter;
+    // Compares by CODE, not by whatever's in home/away — pool games still
+    // carry the teamLabel()'d full name in home/away at this point (the
+    // override to codes happens below, in the fixturePools map), while
+    // knockout entries never had a separate code field and are already raw
+    // codes in home/away. (g.homeCode || g.home) covers both shapes.
+    const gameMatchesFilter = (g) => !fxFilter || (g.homeCode || g.home) === fxFilter || (g.awayCode || g.away) === fxFilter;
     let fixtureTeamOptions = [];
     let fixturePools = [];
     let fixtureKnockout = null;
@@ -1919,13 +1924,21 @@ class Component extends DCLogic {
     // rows have a homeCode/awayCode alongside the teamLabel()'d display name.
     const logoOf = (code) => (fxApi && fxApi.teamLogoSrc && code ? fxApi.teamLogoSrc(code) : '');
     if (fxSchedule) {
+      // Jay, 30 Jul: show the team CODE in the fixtures section too, matching
+      // /app and /scores (and the knockout/bracket rows further down this
+      // same page, which already showed the code). teamSet/fixtureTeamOptions
+      // is built from the codes so the "Filter by team" dropdown's VALUE
+      // matches what gameMatchesFilter compares against; the dropdown's
+      // visible LABEL still runs the code through teamLabel() below so it
+      // reads as a name, not a bare code.
       const teamSet = new Set();
-      fxSchedule.pools.forEach((p) => p.games.forEach((g) => { teamSet.add(g.home); teamSet.add(g.away); }));
+      fxSchedule.pools.forEach((p) => p.games.forEach((g) => { teamSet.add(g.homeCode); teamSet.add(g.awayCode); }));
       fixtureTeamOptions = Array.from(teamSet).sort();
       fixturePools = fxSchedule.pools.map((p) => ({
         ...p,
         games: p.games.filter(gameMatchesFilter).map((g) => ({
           ...g,
+          home: g.homeCode, away: g.awayCode,
           homeLogoSrc: logoOf(g.homeCode), hasHomeLogo: !!logoOf(g.homeCode),
           awayLogoSrc: logoOf(g.awayCode), hasAwayLogo: !!logoOf(g.awayCode),
         })),

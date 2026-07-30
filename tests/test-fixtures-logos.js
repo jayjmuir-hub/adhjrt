@@ -125,6 +125,64 @@ section('Pool games: renderVals computes per-team logo fields from the raw code'
 }
 
 /* ======================================================================== */
+section('Pool games: fixtures section shows the CODE, matching /app and /scores (added 30 Jul 2026)');
+{
+  // Jay: "we need to use the prefix names in the fixtures section too."
+  // Before this fix, pool games displayed the teamLabel()'d full club name
+  // (getSchedule()'s `home`/`away`) while knockout/bracket rows on the same
+  // page already showed the raw code — this fixture deliberately makes the
+  // full name and the code look nothing alike, so a regression back to the
+  // full name can't hide behind a fixture where they happen to match.
+  const schedule = {
+    awaitingPublication: false,
+    pools: [{
+      name: 'POOL A',
+      games: [
+        { home: 'Abu Dhabi Harlequins 1st XV', away: 'Dubai Exiles 1st XV', homeCode: 'ADH1', awayCode: 'DE1', homeScore: 12, awayScore: 7, time: '09:00', pitch: '1' },
+      ],
+    }],
+    knockout: [],
+  };
+  const c = homeWithSchedule(schedule);
+  const vals = c.renderVals();
+  const g = vals.fixturePools[0].games[0];
+  eq('pool game home slot displays the raw code, not the expanded full name', g.home, 'ADH1');
+  eq('pool game away slot displays the raw code, not the expanded full name', g.away, 'DE1');
+}
+
+/* ======================================================================== */
+section('Filter by team: the dropdown\'s values and the match test both key off CODE, not name (added 30 Jul 2026)');
+{
+  // Before this fix, fixtureTeamOptions/gameMatchesFilter were built from the
+  // teamLabel()'d full name — which never equalled a knockout entry's raw
+  // code, so filtering silently never matched anything in the bracket/
+  // knockout view. This proves the dropdown offers codes as its option
+  // values and that picking one narrows BOTH the pool list and the knockout
+  // list correctly.
+  const schedule = {
+    awaitingPublication: false,
+    pools: [{
+      name: 'POOL A',
+      games: [
+        { home: 'Abu Dhabi Harlequins 1st XV', away: 'Dubai Exiles 1st XV', homeCode: 'ADH1', awayCode: 'DE1', homeScore: 12, awayScore: 7, time: '09:00', pitch: '1' },
+        { home: 'Dubai Sharks 1st XV', away: 'Dubai Tigers 1st XV', homeCode: 'DS1', awayCode: 'DT1', homeScore: 3, awayScore: 3, time: '09:20', pitch: '2' },
+      ],
+    }],
+    knockout: [
+      { id: 'sf1', label: 'Semi 1', home: 'ADH1', away: 'DS1', homeScore: null, awayScore: null, time: '13:00', pitch: '1' },
+    ],
+  };
+  const c = homeWithSchedule(schedule);
+  c.state = { ...c.state, fxTeamFilter: 'ADH1' };
+  const vals = c.renderVals();
+  eq('team-select option VALUES are codes (so they can match a knockout entry\'s raw code)',
+    vals.fixtureTeamSelectOptions.map((o) => o.code).sort().join(','), 'ADH1,DE1,DS1,DT1');
+  eq('picking a code filters pool games down to the ones involving it', vals.fixturePools[0].games.length, 1);
+  check('...and the knockout entry involving the same code also survives the filter',
+    (vals.fixtureKnockout || []).some((k) => k.id === 'sf1'));
+}
+
+/* ======================================================================== */
 section('Knockout/bracket entries: dim() computes the same fields from home/away directly');
 {
   // getSchedule()'s knockout entries carry the raw CODE straight in home/away

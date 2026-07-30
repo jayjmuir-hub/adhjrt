@@ -27,17 +27,39 @@ function local() {
 }
 
 // Tries the real Netlify Function; if it can't even be reached, or
-// doesn't return valid JSON (both signs no backend is deployed here),
-// signals the caller to use the local fallback instead. A real error
-// response from an actually-deployed function (wrong password, etc.)
-// is still valid JSON, so it's trusted as-is and never falls back.
+// answers 404 (both signs no backend is deployed here — a plain static
+// server has no /.netlify/functions/* route to serve), signals the caller
+// to use the local fallback instead. A real error response from an
+// actually-deployed function (wrong password, etc.) is still valid JSON,
+// so it's trusted as-is and never falls back.
+//
+// 30 Jul: this used to treat ANY non-JSON body as "no backend here" —
+// including a genuinely deployed function returning a broken response
+// (a Netlify platform error page, a crash, a timeout, all of which are
+// HTML/plain text, not JSON). That silently substituted fake local-preview
+// data (or a fake "success") for a real outage. Only a 404 means "not
+// deployed"; any other non-JSON response is a real, live problem and is
+// now surfaced as an error instead of masked.
 async function tryFetchJson(url, opts) {
+  let res;
   try {
-    const res = await fetch(url, opts);
-    const text = await res.text();
-    try { return { real: true, json: JSON.parse(text) }; } catch (e) { return { real: false }; }
+    res = await fetch(url, opts);
   } catch (e) {
-    return { real: false };
+    return { real: false }; // couldn't even reach the network
+  }
+  let text = '';
+  try { text = await res.text(); } catch (e) { /* fall through - body unreadable */ }
+  try {
+    const parsed = JSON.parse(text);
+    // Guard against a technically-valid-JSON body that isn't an object
+    // (e.g. `null`, a bare string) — every caller does `json.ok`/`json.X`.
+    if (!parsed || typeof parsed !== 'object') {
+      return { real: true, json: { ok: false, error: 'Unexpected response from the server.' } };
+    }
+    return { real: true, json: parsed };
+  } catch (e) {
+    if (res.status === 404) return { real: false }; // no backend deployed here
+    return { real: true, json: { ok: false, error: 'Server error. Please try again in a moment.' } };
   }
 }
 
@@ -148,7 +170,11 @@ export async function getRegistrations() {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${session.token}` },
   });
-  if (r.real) return r.json.ok ? { teams: r.json.teams, players: r.json.players } : { teams: [], players: [] };
+  // 30 Jul: a failed load used to come back as plain empty arrays,
+  // indistinguishable from "nobody's registered yet." `error` is new and
+  // additive — every existing caller destructuring {teams, players} is
+  // unaffected; loadData() is the one that now checks it.
+  if (r.real) return r.json.ok ? { teams: r.json.teams, players: r.json.players } : { teams: [], players: [], error: r.json.error || 'Could not load teams and players.' };
   return (await local()).sampleRegistrations();
 }
 
@@ -158,11 +184,15 @@ function authHeaders() {
   return session && session.token ? { 'Authorization': `Bearer ${session.token}` } : {};
 }
 
+// 30 Jul: used to return a bare array, so a real failure silently looked
+// exactly like "no accounts" (same class of bug as getRegistrations() above).
+// Now returns { accounts, error } — both call sites (Organizer.dc.html's
+// loadData/refreshAccounts) destructure both.
 export async function listAccounts() {
   const session = currentSession();
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', { headers: authHeaders() });
-  if (r.real) return r.json.ok ? r.json.accounts : [];
-  return (await local()).accountsList(session && session.token);
+  if (r.real) return r.json.ok ? { accounts: r.json.accounts } : { accounts: [], error: r.json.error || 'Could not load accounts.' };
+  return { accounts: await (await local()).accountsList(session && session.token) };
 }
 
 export async function approveAccount(username) {

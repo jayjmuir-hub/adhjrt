@@ -755,13 +755,30 @@ function local() {
   if (!localBackendPromise) localBackendPromise = import(new URL('local-backend.js', document.baseURI).href);
   return localBackendPromise;
 }
+// 30 Jul: only a 404 means "no backend deployed here" (a plain static
+// server has no /.netlify/functions/* route). Any other non-JSON response
+// (a Netlify platform error page, a crash, a timeout) means a real,
+// deployed backend is having a real problem, and is now surfaced as an
+// error instead of silently falling back to fake local-preview data — see
+// the matching comment in organizer-data.js.
 async function tryFetchJson(url, opts) {
+  let res;
   try {
-    const res = await fetch(url, opts);
-    const text = await res.text();
-    try { return { real: true, json: JSON.parse(text) }; } catch (e) { return { real: false }; }
+    res = await fetch(url, opts);
   } catch (e) {
-    return { real: false };
+    return { real: false }; // couldn't even reach the network
+  }
+  let text = '';
+  try { text = await res.text(); } catch (e) { /* fall through - body unreadable */ }
+  try {
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object') {
+      return { real: true, json: { ok: false, error: 'Unexpected response from the server.' } };
+    }
+    return { real: true, json: parsed };
+  } catch (e) {
+    if (res.status === 404) return { real: false }; // no backend deployed here
+    return { real: true, json: { ok: false, error: 'Server error. Please try again in a moment.' } };
   }
 }
 

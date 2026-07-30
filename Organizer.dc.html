@@ -210,6 +210,17 @@
         <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
       </div>
 
+      <!-- 30 Jul: a failed load used to leave teams/players/accounts as empty
+           arrays with nothing to say why — indistinguishable from "nobody's
+           registered yet." This banner only shows when loadData() actually
+           failed, and offers the one thing that usually fixes it (retry). -->
+      <sc-if value="{{ dataError }}" hint-placeholder-val="">
+        <div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#ff8a8a;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span>{{ dataError }}</span>
+          <button onClick="{{ onRetryLoad }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Retry</button>
+        </div>
+      </sc-if>
+
       <!-- registration window tab -->
       <sc-if value="{{ isRegistration }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
@@ -1076,7 +1087,7 @@ class Component extends DCLogic {
     googleClientId: '', googleBusy: false, googleError: '',
     googlePendingToken: '', googlePendingName: '', googleTitle: '', googleCode: '', showGoogleCode: false,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
-    teams: [], players: [], accounts: [],
+    teams: [], players: [], accounts: [], dataError: '',
     /* The venue layout being edited. `venue` is the working copy the form
        mutates; `venueSaved` is what the server last confirmed, so the Save
        button can tell whether anything actually changed. Both null until the
@@ -1264,14 +1275,28 @@ class Component extends DCLogic {
   }
 
   async loadData(api) {
-    const [data, accounts] = await Promise.all([api.getRegistrations(), api.listAccounts()]);
-    this.setState({ teams: data.teams, players: data.players, accounts });
+    const [data, acctResult] = await Promise.all([api.getRegistrations(), api.listAccounts()]);
+    // 30 Jul: a failed load (a broken deployed backend, not "nothing's
+    // registered yet") now says so, with a Retry button, instead of leaving
+    // the Teams/Players/Accounts tables silently empty. See getRegistrations()/
+    // listAccounts() in organizer-data.js for where `error` comes from.
+    const dataError = data.error || acctResult.error || '';
+    this.setState({ teams: data.teams, players: data.players, accounts: acctResult.accounts, dataError });
   }
 
   async refreshAccounts() {
     const { api } = this.state;
-    const accounts = await api.listAccounts();
-    this.setState({ accounts });
+    const acctResult = await api.listAccounts();
+    // Only ever RAISES dataError here, never silently clears one — this is
+    // called after a single approve/reject action, and a pre-existing error
+    // from the Teams/Players load must survive an unrelated accounts refresh
+    // succeeding. A full loadData() (via Retry) is what clears it.
+    this.setState((s) => ({ accounts: acctResult.accounts, dataError: acctResult.error || s.dataError }));
+  }
+
+  onRetryLoad() {
+    const { api } = this.state;
+    if (api) this.loadData(api);
   }
 
   /* Everything the Venue tab binds to, kept out of renderVals() so that method
@@ -2581,6 +2606,7 @@ class Component extends DCLogic {
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
+      dataError: s.dataError, onRetryLoad: () => this.onRetryLoad(),
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),

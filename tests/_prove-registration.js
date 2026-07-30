@@ -428,10 +428,10 @@ const FAULTS = [
        mistake, not something adjacent to it. */
     apply: () => {
       const f = path.join('netlify', 'functions', 'organizer-login.js');
-      patch(f, "const { loadAccounts, verifyPassword, sign } = require('./_auth');",
-        "const { loadAccounts, verifyPassword, sign, passwordProblem } = require('./_auth');");
-      patch(f, "    if (!account || !(await verifyPassword(password || '', account.passwordHash))) {",
-        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !(await verifyPassword(password || '', account.passwordHash))) {");
+      patch(f, "const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');",
+        "const { loadAccounts, verifyPassword, sign, blobStore, passwordProblem } = require('./_auth');");
+      patch(f, "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
+        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {");
     },
     expect: ['does NOT check password length'],
   },

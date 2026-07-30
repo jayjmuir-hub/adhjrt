@@ -16,6 +16,14 @@
 const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
 const { readGroup, writeGroup } = require('./_results');
+const { MAX_FIELD_CHARS } = require('./_intake');
+
+// 30 Jul: every free-text field on the public registration form is capped at
+// MAX_FIELD_CHARS (see _intake.js) before it's ever stored — this was the one
+// free-text field a manager can write that skipped that cap entirely, and
+// get-results.js serves it back to every visitor of the public Standings
+// page, unauthenticated. Same cap, same reasoning.
+const clip = (s) => String(s || '').trim().slice(0, MAX_FIELD_CHARS) || null;
 
 const WALKOVER_SCORE = 20;
 
@@ -134,8 +142,8 @@ exports.handler = async (event) => {
       awayDrops: wo ? 0 : (awayParts.drops || 0),
       homeCards: Number(data.homeCards || 0), awayCards: Number(data.awayCards || 0),
       walkover: wo,
-      spiritNomineeHome: (data.spiritNomineeHome || '').trim() || null,
-      spiritNomineeAway: (data.spiritNomineeAway || '').trim() || null,
+      spiritNomineeHome: clip(data.spiritNomineeHome),
+      spiritNomineeAway: clip(data.spiritNomineeAway),
       submittedBy: session.username, submittedAt: new Date().toISOString(),
     };
 

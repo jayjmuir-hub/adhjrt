@@ -22,12 +22,12 @@
 //   tournament-wide decision, not a per-age-group one — same reasoning as
 //   venue-layout.js and scoring-rules.js.
 //
-// ⚠️ THIS IS DISPLAY ONLY. It decides what the site SHOWS. Nothing yet stops a
-// submission arriving outside the window, because submissions still go straight
-// to Netlify Forms — moving them behind a validating function is sub-project 1
-// in claude/spec-registration-window.md. When that gateway is built, it calls
-// registrationState() from _registration.js and refuses with a real error. Until
-// then the only thing keeping the public out is the site-wide Netlify password.
+// This file itself is display only — it decides what the site SHOWS, nothing
+// more. The actual gate is enforced elsewhere: submit-registration.js calls
+// registrationState() before writing anything and refuses with a real error
+// outside the window (see _intake.js, step 4). That was still the plan when
+// this comment was first written; it's since been built — noted 30 Jul so
+// the next reader doesn't re-open a decision that's already done.
 
 const { verify, getBearerToken, blobStore } = require('./_auth');
 const {

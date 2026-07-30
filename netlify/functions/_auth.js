@@ -67,6 +67,14 @@ function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
+/* 30 Jul: a token used to be valid forever — nothing ever checked `iat`
+   against the current time, so the only way to end a lost/stolen session was
+   rotating SESSION_SECRET for every signed-in person at once. Fourteen days
+   comfortably outlasts a tournament weekend (the longest anyone genuinely
+   needs to stay signed in without re-entering a password) while capping how
+   long a token found on a lost or resold phone keeps working. */
+const SESSION_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
 function sign(payload) {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error('SESSION_SECRET is not set');
@@ -85,7 +93,11 @@ function verify(token) {
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-    return JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    // A token with no `iat` at all predates this check (or is malformed) —
+    // treat it as expired rather than trusting it forever.
+    if (!Number.isFinite(payload.iat) || Date.now() - payload.iat > SESSION_MAX_AGE_MS) return null;
+    return payload;
   } catch (e) {
     return null;
   }

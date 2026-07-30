@@ -249,18 +249,26 @@
           </sc-if>
 
           <!-- bracket -->
-          <!-- Codes are used in the tables so they fit on a phone; spelled out here. -->
+          <!-- Codes are used everywhere on this page so they fit on a phone.
+               One small toggle spells them out on demand, rather than a card
+               sitting under the tables permanently. -->
       <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
-        <div style="background:#151517;border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px 20px;margin-bottom:30px">
-          <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7f8794;margin-bottom:10px">Team key</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px">
-            <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
-              <div style="display:flex;align-items:center;gap:11px">
-                <span style="flex:none;min-width:56px;text-align:center;background:#fff;color:#0C0C0E;font-family:'Anton';font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px">{{ k.code }}</span>
-                <span style="font-size:13.5px;color:#cdd2da">{{ k.name }}</span>
+        <div style="text-align:center;margin-bottom:30px">
+          <button onClick="{{ onToggleTeamKey }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:100px;font-weight:700;font-size:12px;letter-spacing:.3px;border:1.5px solid rgba(255,255,255,0.16);background:#151517;color:#aeb4bf;cursor:pointer">
+            <span style="width:7px;height:7px;border-radius:2px;background:#7f8794"></span>{{ teamKeyButtonLabel }}
+          </button>
+          <sc-if value="{{ showTeamKey }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px 20px;margin-top:12px;text-align:left">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px">
+                <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="flex:none;min-width:56px;text-align:center;background:#fff;color:#0C0C0E;font-family:'Anton';font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px">{{ k.code }}</span>
+                    <span style="font-size:13.5px;color:#cdd2da">{{ k.name }}</span>
+                  </div>
+                </sc-for>
               </div>
-            </sc-for>
-          </div>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 
@@ -1094,6 +1102,7 @@ class Component extends DCLogic {
     newTeamInputs: {},
     importOpen: false, importMode: 'add', importRows: [], importNote: '',
     modal: null, modalValue: '',
+    showTeamKey: false,
   };
 
   // ---- Generic in-app modal (replaces window.prompt/window.confirm,
@@ -2662,6 +2671,9 @@ class Component extends DCLogic {
   toggleRegTeam(key) {
     this.setState((s) => ({ regExpanded: { ...s.regExpanded, [key]: !s.regExpanded[key] } }));
   }
+  toggleTeamKey() {
+    this.setState((s) => ({ showTeamKey: !s.showTeamKey }));
+  }
   setRegSort(which, key) {
     this.setState((s) => {
       if (which === 'p') {
@@ -2732,7 +2744,10 @@ class Component extends DCLogic {
         const q = r.rank <= this._advance(st);
         return {
           ...r,
-          team: (s.api ? s.api.teamLabel(r.team, s.selectedAgeId) : r.team),
+          /* Codes everywhere now (was teamLabel - the full club name) so the
+             pool table matches every other public view; the Team key toggle
+             below spells codes out on demand. */
+          team: (s.api ? s.api.teamShort(r.team) : r.team),
           marginText: (r.margin > 0 ? '+' : '') + r.margin,
           rankColor: q ? '#3bd070' : '#7f8794',
           rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
@@ -3147,7 +3162,12 @@ class Component extends DCLogic {
       /* Nothing is shown publicly until an organiser publishes. An
          auto-generated draw is sample data and must never reach parents. */
       awaitingPublication: !!(st && st.awaitingPublication),
-      teamKeyList: (s.api && s.api.teamKey ? s.api.teamKey() : []),
+      /* Passing selectedAgeId (this was calling teamKey() with no argument)
+         so the key lists the draw's own teams for whichever age group is
+         being viewed, not the hardcoded 9-team placeholder set. */
+      teamKeyList: (s.api && s.api.teamKey ? s.api.teamKey(s.selectedAgeId) : []),
+      showTeamKey: s.showTeamKey, onToggleTeamKey: () => this.toggleTeamKey(),
+      teamKeyButtonLabel: s.showTeamKey ? 'Hide team key' : 'Show team key',
       showTables: !!(st && st.ageGroup.hasStandings && !st.awaitingPublication), pools, bracket, hasBracket: hasBracket && !(st && st.awaitingPublication),
       isU16BSpecial, doubleBrackets, awardsSummary, awardsReady: awardsSummary.some((a) => a.ready),
       knockoutSeeds, seedsReady: seedsReadyFlag,
@@ -3493,17 +3513,17 @@ class Component extends DCLogic {
     };
   }
 
-  /* Every team string that reaches the screen goes through teamLabel: it maps
-     a code to its club name and shortens "Abu Dhabi" to "AD". The brackets,
-     the knockout seeding list and the awards cards were printing the raw draw
-     value, which is why they read "Abu Dhabi Harlequins 1" while the pool
-     fixtures on the same page read "AD Harlequins 1". Compare on the RAW value
-     and only label on the way out - winner/home identity checks must not be
-     done on display strings. */
+  /* Every team string that reaches the screen goes through _tn. It used to
+     call teamLabel (the full club name) — now it calls teamShort so the
+     brackets, the knockout seeding list, the awards cards and the finals list
+     all read as codes, matching the pool tables and the /app match-day
+     experience. teamShort still shortens "Abu Dhabi" to "AD" on a hand-typed
+     custom draw. Compare on the RAW value and only shorten on the way out -
+     winner/home identity checks must not be done on display strings. */
   _tn(v) {
     const api = this.state.api;
     if (!v) return v;
-    return (api && api.teamLabel) ? api.teamLabel(v, this.state.selectedAgeId) : v;
+    return (api && api.teamShort) ? api.teamShort(v) : v;
   }
 
   _fmtMatch(g) {

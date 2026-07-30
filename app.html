@@ -194,7 +194,13 @@ tr.me td:nth-child(1),tr.me td:nth-child(2){background:#fffdf4}
   .tscroll th,.tscroll td{padding-left:4px;padding-right:4px}
 }
 /* Was nine full-width rows — on a phone, taller than the table it was there
-   to explain. Now a wrapped row of small chips. */
+   to explain. Now a wrapped row of small chips, and — since every match row,
+   table and bracket shows the code by default — opened on demand from a
+   small pill rather than sitting under every tab all the time. */
+.keybtn{display:inline-flex;align-items:center;gap:5px;margin:0 0 12px;padding:6px 13px;
+        border-radius:100px;font-weight:700;font-size:12px;border:1.5px solid var(--line);
+        background:#fff;color:var(--muted)}
+.keybtn::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--ink);flex:none}
 .keygrid{display:flex;flex-wrap:wrap;gap:6px;background:#fff;padding:11px 12px}
 .keyrow{display:inline-flex;align-items:center;gap:6px;background:var(--paper);
         border:1px solid var(--line);border-radius:100px;padding:3px 10px 3px 3px}
@@ -620,13 +626,17 @@ function comingSoon(what, agId){
     <div>The draw for ${esc(ageName(agId))} hasn’t been released. It will appear here as soon as the organisers publish it.</div>
   </div></div>`;
 }
-/* Codes are used in every row and table because they fit; this is where they
-   are spelled out. Shown under Fixtures and Tables, not on Today. */
-function teamKeyCard(){
+/* Every row, table and bracket now shows the code (ADH1) rather than the full
+   club name — a phone screen has room for one or the other, and codes are
+   what fits everywhere consistently. This is the one place the mapping is
+   spelled out, and it is opt-in: a small "Key" pill under the section title
+   opens it in the existing bottom sheet, rather than a card repeated at the
+   foot of Fixtures, Results AND Tables every time you switch tabs. */
+function teamKeyList(){
   const list = (api.teamKey ? api.teamKey(S.browseId) : []);
-  if (!list.length) return '';
+  if (!list.length) return [];
   /* Only explain codes that are actually visible. A custom draw carries full
-     club names everywhere, so there is no code to decode and the card drops out
+     club names everywhere, so there is no code to decode and the key drops out
      entirely rather than listing nine codes that appear nowhere. */
   const shown = new Set();
   const fx = S.fixtures;
@@ -635,11 +645,17 @@ function teamKeyCard(){
     if (m.away) shown.add(m.away);
   });
   ((S.standings || {}).pools || []).forEach(p => (p.teams || []).forEach(t => shown.add(t)));
-  const used = list.filter(k => shown.has(k.code));
+  return list.filter(k => shown.has(k.code));
+}
+function teamKeyContent(){
+  const used = teamKeyList();
   if (!used.length) return '';
-  return `<div class="sec-t">Team key</div><div class="card"><div class="keygrid">
+  return `<div class="card"><div class="keygrid">
     ${used.map(k => `<span class="keyrow"><span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></span>`).join('')}
   </div></div>`;
+}
+function teamKeyButton(){
+  return teamKeyList().length ? `<button class="keybtn" data-act="teamkey">Key</button>` : '';
 }
 
 /* hideScore: Fixtures is the schedule now — when and where. Scores have
@@ -654,7 +670,7 @@ function matchRow(m, agId, hideScore){
     + (r && hideScore ? `<span class="chip chip-ft">Full time</span>` : '');
   return `<button class="mrow ${mine?'mine':''}" data-match="${esc(m.id)}">
     <div><div class="mtime">${esc(m.time || '')}</div><div class="mpitch">${esc(m.pitch || 'TBD')}</div></div>
-    <div><div class="mteams">${esc(m.home ? tName(m.home) : 'TBD')} <span class="muted">v</span> ${esc(m.away ? tName(m.away) : 'TBD')}</div>
+    <div><div class="mteams">${esc(m.home ? tShort(m.home) : 'TBD')} <span class="muted">v</span> ${esc(m.away ? tShort(m.away) : 'TBD')}</div>
       <div class="mmeta">${meta}</div></div>
     <div>${r && !hideScore ? `<span class="mscore">${r.homeScore}&ndash;${r.awayScore}</span>` : ICON.chev}</div>
   </button>`;
@@ -679,7 +695,7 @@ function render(animate){
 }
 
 function followCard(){
-  const following = S.team ? tName(S.team) : (S.ageId ? ageName(S.ageId) : null);
+  const following = S.team ? tShort(S.team) : (S.ageId ? ageName(S.ageId) : null);
   if (!following) {
     return `<button class="tcard" data-act="follow" style="width:100%;text-align:left">
       <div class="tcard-k">Get started</div>
@@ -700,7 +716,7 @@ function followCard(){
     const at = kickoffAt(next, S.ageId);
     const opp = S.team ? (sameTeam(next.home, S.team) ? next.away : next.home) : `${next.home} v ${next.away}`;
     inner = `<div class="tcard-m" style="margin-top:12px">
-        <strong style="color:#fff">${S.team ? 'v ' + esc(tName(opp)) : esc(opp)}</strong><br>
+        <strong style="color:#fff">${S.team ? 'v ' + esc(tShort(opp)) : esc(opp)}</strong><br>
         ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
       </div>${at && untilText(at) ? `<div class="kick"><div style="flex:none;padding-left:14px;padding-right:14px"><b>${esc(untilText(at))}</b></div></div>` : ''}`;
   } else if (fx && fx.awaitingPublication) {
@@ -711,13 +727,13 @@ function followCard(){
 
   const lastLine = last
     ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
-         Last: ${esc(tName(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tName(last.away))}</div>` : '';
+         Last: ${esc(tShort(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tShort(last.away))}</div>` : '';
 
   return `<div class="tcard">
     <button class="tcard-cta" data-act="follow">Change</button>
     <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
     <div class="tcard-n">${esc(following)}</div>
-    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(S.team)} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
+    ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(tName(S.team))} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
     ${inner}${lastLine}
   </div>`;
 }
@@ -804,7 +820,7 @@ function resultsList(fx, showFilter){
 function teamSeg(){
   const showFilter = S.team && S.browseId === S.ageId;
   return { showFilter, seg: showFilter ? `<div class="seg">
-      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(tName(S.team))}</button>
+      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(tShort(S.team))}</button>
       <button data-seg="all" class="${!S.onlyMine?'on':''}">All matches</button>
     </div>` : '' };
 }
@@ -812,16 +828,16 @@ function teamSeg(){
 /* Results is its own tab. Fixtures no longer repeats the scores. */
 function viewResults(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Results</div>${pills()}${dayTag(S.browseId)}`;
+  const head = `<div class="sec-t">Results</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
   if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (fx.awaitingPublication) return head + comingSoon('Results', S.browseId);
   const { showFilter, seg } = teamSeg();
-  return head + seg + resultsList(fx, showFilter) + teamKeyCard();
+  return head + seg + resultsList(fx, showFilter);
 }
 
 function viewFixtures(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Fixtures</div>${pills()}${dayTag(S.browseId)}`;
+  const head = `<div class="sec-t">Fixtures</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
   if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
 
@@ -840,14 +856,13 @@ function viewFixtures(){
   const ko = (fx.knockout || []).filter(k => k.home || k.away);
   return head + seg
     + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
-    + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId,true)).join('')}</div>` : '')
-    + teamKeyCard();
+    + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId,true)).join('')}</div>` : '');
 }
 
 /* ---------------- Tables ---------------- */
 function viewTables(){
   const st = S.standings;
-  const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}`;
+  const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
   if (!st) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
   if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
   if (!st.ageGroup.hasStandings) return head +
@@ -868,7 +883,7 @@ function viewTables(){
         <td>${t.PF}</td><td>${t.PA}</td><td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table></div>
       <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · +/- points difference · Pts league points. On a narrow phone PF and PA (points for and against) are hidden to make the table fit; turn the phone sideways to see them. The position and team columns stay put if you do need to scroll.</div>
     </div>`;
-  }).join('') + teamKeyCard();
+  }).join('');
 }
 
 /* ---------------- More ---------------- */
@@ -937,6 +952,7 @@ function act(a){
     `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
      <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">
        Zayed Sports City, Abu Dhabi · enter via Gate 16.</p>`);
+  if (a === 'teamkey') return openSheet('Team key', teamKeyContent());
 }
 
 /* Two-stage: age group always, then narrow to a team once the draw exists. */
@@ -961,11 +977,11 @@ function openTeamPick(){
      what you are on now. */
   openSheet('Choose your team', `<div class="card">
       <button class="row" data-pick-team=""><div><b>All teams</b><small>${!S.team ? 'Currently following' : 'Follow the whole age group'}</small></div>${ICON.chev}</button>
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tName(t))}</b><small>${S.team === t ? 'Currently following' : esc(t)}</small></div>${ICON.chev}</button>`).join('')}
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tShort(t))}</b><small>${S.team === t ? 'Currently following' : esc(tName(t))}</small></div>${ICON.chev}</button>`).join('')}
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
-    toast(S.team ? 'Following ' + tName(S.team) : 'Following ' + ageName(S.ageId));
+    toast(S.team ? 'Following ' + tShort(S.team) : 'Following ' + ageName(S.ageId));
   });
 }
 
@@ -1023,7 +1039,7 @@ function openMatch(id){
   };
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home?tName(m.home):'TBD')} v ${esc(m.away?tName(m.away):'TBD')}</b>
+      <div class="row"><div><b>${esc(m.home?tShort(m.home):'TBD')} v ${esc(m.away?tShort(m.away):'TBD')}</b>
         <small>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
         <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
@@ -1049,12 +1065,12 @@ function openMatch(id){
     </div>`;
 
   openSheet('Enter score', head + `<div id="scErr"></div>
-    ${sideInputs('home', m.home ? tName(m.home) : 'Home')}
-    ${sideInputs('away', m.away ? tName(m.away) : 'Away')}
+    ${sideInputs('home', m.home ? tShort(m.home) : 'Home')}
+    ${sideInputs('away', m.away ? tShort(m.away) : 'Away')}
     <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
-      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tName(m.home):'Home')} awarded the match</option>
-      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tName(m.away):'Away')} awarded the match</option>
+      <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tShort(m.home):'Home')} awarded the match</option>
+      <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tShort(m.away):'Away')} awarded the match</option>
     </select><p class="muted" style="font-size:12px;margin-top:6px">A walk-over is recorded as 20&ndash;0 with 4 tries.</p></div>
     <button class="btn btn-g" id="sgo">${r?'Update result':'Save result'}</button>
     ${r ? `<button class="btn btn-o" id="sclr" style="margin-top:10px;color:#c0392b">Clear result</button>

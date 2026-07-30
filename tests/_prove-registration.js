@@ -651,7 +651,7 @@ const FAULTS = [
     name: 'the block name on the map shrinks back to 11px',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "mapNameStyle: 'font-weight:900;font-size:14px;", "mapNameStyle: 'font-weight:900;font-size:11px;"),
+      "mapNameStyle: 'font-weight:900;font-size:16px;", "mapNameStyle: 'font-weight:900;font-size:11px;"),
     expect: ['the block name is at least 14px'],
   },
   {

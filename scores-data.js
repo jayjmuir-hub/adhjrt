@@ -1420,7 +1420,15 @@ export async function getSchedule(agId) {
 
   const pools = draw.pools.map((p) => {
     const slots = slotsForPool(draw, p.id);
-    const games = slots.map((s) => ({ home: teamLabel(s.home, ag.id), away: teamLabel(s.away, ag.id), time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id) }));
+    // homeCode/awayCode ride alongside the display name — teamLabel() below
+    // is a one-way trip (a code in, a readable name out), so anything that
+    // wants the club's crest (keyed by code, not name — see teamLogoSrc())
+    // needs the raw code kept around too, not reconstructed from the name.
+    const games = slots.map((s) => ({
+      home: teamLabel(s.home, ag.id), away: teamLabel(s.away, ag.id),
+      homeCode: s.home, awayCode: s.away,
+      time: fmtTime(s.startMins), pitch: s.pitch || 'TBD', ...scoreOf(s.id),
+    }));
     return { id: p.id, name: p.name, games };
   });
 

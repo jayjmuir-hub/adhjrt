@@ -284,7 +284,7 @@
               <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-bottom:14px">Cup, Bowl, Plate &amp; Shield Finals</div>
               <div style="display:flex;gap:20px;flex-wrap:wrap">
                 <sc-for list="{{ bracket }}" as="round" hint-placeholder-count="2">
-                  <div style="flex:1;min-width:240px">
+                  <div style="flex:1;min-width:240px;max-width:320px">
                     <div style="font-weight:800;letter-spacing:1px;color:#3bd070;font-size:12px;text-transform:uppercase;margin-bottom:10px">{{ round.round }}</div>
                     <sc-for list="{{ round.games }}" as="g" hint-placeholder-count="2">
                       <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:12px">

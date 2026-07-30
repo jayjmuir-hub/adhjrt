@@ -332,35 +332,47 @@
           <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
-                <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Venue &amp; days</div>
-                <p style="color:#7f8794;font-size:13px;margin:0;line-height:1.5">The pitches running on each day, and which day each age group plays. <b style="color:#aeb4bf">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
+                <div style="font-family:'Anton';font-size:21px;text-transform:uppercase;margin-bottom:6px">Venue &amp; days</div>
+                <p style="color:#7f8794;font-size:16px;margin:0;line-height:1.65">The pitches running on each day, and which day each age group plays. <b style="color:#aeb4bf">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:14px;padding:12px 16px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
                 <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
               </div>
             </div>
 
-            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ vError }}</div></sc-if>
-            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:13px;font-weight:600">{{ vSuccess }}</div></sc-if>
+            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#ff8a8a;font-size:14px;font-weight:600">{{ vError }}</div></sc-if>
+            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:14px;font-weight:600">{{ vSuccess }}</div></sc-if>
 
             <sc-if value="{{ vHasProblems }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:11px 13px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
+              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:12px 14px">
+                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
                 <sc-for list="{{ vProblems }}" as="pr" hint-placeholder-count="2">
-                  <div style="color:#ff8a8a;font-size:13px;line-height:1.6">&bull; {{ pr }}</div>
+                  <div style="color:#ff8a8a;font-size:14px;line-height:1.65">&bull; {{ pr }}</div>
                 </sc-for>
               </div>
             </sc-if>
 
             <sc-if value="{{ vHasWarnings }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:6px">Worth a look — you can still save</div>
+              <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:12px 14px">
+                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:7px">Worth a look — you can still save</div>
                 <sc-for list="{{ vWarnings }}" as="wn" hint-placeholder-count="2">
-                  <div style="color:#f5c518;font-size:13px;line-height:1.6">&bull; {{ wn }}</div>
+                  <div style="color:#f5c518;font-size:14px;line-height:1.65">&bull; {{ wn }}</div>
                 </sc-for>
               </div>
             </sc-if>
+          </div>
+
+          <!-- DAY TAB — one day's cards on screen at a time. Added 30 Jul:
+               with both days' pitch grids, pitch lists and age groups all
+               stacked at once the tab ran to several screens of scrolling
+               even before you'd looked at anything. Positions on the map are
+               shared across both days (see the map-view copy below), so
+               nothing about the map itself needed a day split — only the
+               THREE cards further down that are genuinely per-day. -->
+          <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px;margin-bottom:16px;max-width:460px">
+            <button onClick="{{ onDayTab1 }}" style="{{ dayTab1Style }}">{{ dayTab1Label }}</button>
+            <button onClick="{{ onDayTab2 }}" style="{{ dayTab2Style }}">{{ dayTab2Label }}</button>
           </div>
 
           <!-- WHERE EACH GROUP PLAYS — two views of the same derived data.
@@ -376,7 +388,7 @@
           <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
               <div style="flex:1;min-width:220px">
-                <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Where each group plays</div>
+                <div style="font-family:'Anton';font-size:19px;text-transform:uppercase">Where each group plays &mdash; {{ vDayViewLabel }}</div>
               </div>
               <div style="display:flex;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px">
                 <button onClick="{{ onViewSchematic }}" style="{{ vViewSchematicStyle }}">Schematic</button>
@@ -385,160 +397,178 @@
             </div>
 
             <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
-              <p style="color:#7f8794;font-size:12px;margin:0 0 18px;line-height:1.5">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
+              <p style="color:#7f8794;font-size:15px;margin:0 0 18px;line-height:1.65">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
             </sc-if>
 
             <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#7f8794;font-size:12px;margin:0 0 14px;line-height:1.5">The real Zayed Sports City map. <b style="color:#aeb4bf">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#aeb4bf">shared across both days</b>, because a block is the same field on Saturday as on Sunday. Save with the button at the top of the tab.</p>
+              <p style="color:#7f8794;font-size:15px;margin:0 0 14px;line-height:1.65">The real Zayed Sports City map. <b style="color:#aeb4bf">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#aeb4bf">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
                 <button onClick="{{ onToggleMapLock }}" style="{{ vLockStyle }}">{{ vLockLabel }}</button>
-                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#7f8794;font-weight:700;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
+                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#7f8794;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
                 <sc-if value="{{ vUnlocked }}" hint-placeholder-val="{{ false }}">
-                  <span style="font-size:12px;color:#f5c518;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
+                  <span style="font-size:14px;color:#f5c518;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
                 </sc-if>
               </div>
             </sc-if>
 
             <sc-for list="{{ vMaps }}" as="vm" hint-placeholder-count="2">
-              <div style="margin-bottom:22px">
-                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-                  <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;color:{{ vm.tint }}">{{ vm.label }}</div>
-                  <div style="font-size:12px;color:#7f8794;font-weight:600">{{ vm.summary }}</div>
-                </div>
-
-                <sc-if value="{{ vm.isEmpty }}" hint-placeholder-val="{{ false }}">
-                  <div style="font-size:12px;color:#7f8794;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
-                </sc-if>
-
-                <!-- MAP VIEW. The image is pointer-events:none so it can
-                     never swallow a drag, and each block captures the pointer
-                     on the way down so a fast drag cannot outrun a small chip
-                     and drop it. -->
-                <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
-                  <div id="{{ vm.mapId }}" style="{{ vm.mapBoxStyle }}">
-                    <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
-                    <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
-                      <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
-                        <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">
-                          <div style="display:flex;align-items:baseline;justify-content:center;gap:5px">
-                            <div style="{{ blk.mapNameStyle }}">{{ blk.name }}</div>
-                            <div style="{{ blk.mapSplitStyle }}">{{ blk.mapSplit }}</div>
-                          </div>
-                          <div style="{{ blk.mapWhoStyle }}">{{ blk.mapWho }}</div>
-                        </div>
-                      </sc-if>
-                    </sc-for>
+              <sc-if value="{{ vm.isCurrentDay }}">
+                <div style="margin-bottom:22px">
+                  <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                    <div style="font-size:14px;color:#7f8794;font-weight:600">{{ vm.summary }}</div>
                   </div>
 
-                  <sc-if value="{{ vm.hasStrays }}" hint-placeholder-val="{{ false }}">
-                    <div style="margin-top:10px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:10px 12px">
-                      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:7px">Not on the map yet</div>
-                      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
-                        <sc-for list="{{ vm.strays }}" as="st" hint-placeholder-count="1">
-                          <button onClick="{{ st.onPlace }}" style="background:#0C0C0E;border:1px dashed rgba(245,197,24,0.6);color:#f5c518;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
-                        </sc-for>
-                      </div>
-                    </div>
+                  <sc-if value="{{ vm.isEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:14px;color:#7f8794;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
                   </sc-if>
-                </sc-if>
 
-                <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
-                  <div style="{{ vm.gridStyle }}">
-                    <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
-                      <div style="{{ blk.style }}">
-                        <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:6px">{{ blk.name }}</div>
-                        <div style="display:flex;flex-wrap:wrap;gap:5px">
-                          <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
-                            <div style="{{ pp.style }}" title="{{ pp.title }}">
-                              <div style="font-weight:800;font-size:11px;letter-spacing:.3px">{{ pp.name }}</div>
-                              <div style="font-size:10px;font-weight:700;margin-top:2px;color:{{ pp.whoColor }}">{{ pp.who }}</div>
+                  <!-- MAP VIEW. The image is pointer-events:none so it can
+                       never swallow a drag, and each block captures the pointer
+                       on the way down so a fast drag cannot outrun a small chip
+                       and drop it. -->
+                  <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
+                    <div id="{{ vm.mapId }}" style="{{ vm.mapBoxStyle }}">
+                      <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                      <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
+                        <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
+                          <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">
+                            <div style="display:flex;align-items:baseline;justify-content:center;gap:5px">
+                              <div style="{{ blk.mapNameStyle }}">{{ blk.name }}</div>
+                              <div style="{{ blk.mapSplitStyle }}">{{ blk.mapSplit }}</div>
                             </div>
+                            <div style="{{ blk.mapWhoStyle }}">{{ blk.mapWho }}</div>
+                          </div>
+                        </sc-if>
+                      </sc-for>
+                    </div>
+
+                    <sc-if value="{{ vm.hasStrays }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:10px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
+                        <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:8px">Not on the map yet</div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                          <sc-for list="{{ vm.strays }}" as="st" hint-placeholder-count="1">
+                            <button onClick="{{ st.onPlace }}" style="background:#0C0C0E;border:1px dashed rgba(245,197,24,0.6);color:#f5c518;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
                           </sc-for>
                         </div>
                       </div>
-                    </sc-for>
-                  </div>
-                </sc-if>
+                    </sc-if>
+                  </sc-if>
 
-                <sc-if value="{{ vm.hasNotes }}" hint-placeholder-val="{{ false }}">
-                  <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:8px">
-                    <sc-for list="{{ vm.notes }}" as="nt" hint-placeholder-count="2">
-                      <span style="{{ nt.style }}">{{ nt.text }}</span>
-                    </sc-for>
-                  </div>
-                </sc-if>
-              </div>
+                  <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
+                    <div style="{{ vm.gridStyle }}">
+                      <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
+                        <div style="{{ blk.style }}">
+                          <div style="font-size:13px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:8px">{{ blk.name }}</div>
+                          <div style="display:flex;flex-wrap:wrap;gap:7px">
+                            <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
+                              <div style="{{ pp.style }}" title="{{ pp.title }}">
+                                <div style="font-weight:800;font-size:14px;letter-spacing:.3px">{{ pp.name }}</div>
+                                <div style="font-size:13px;font-weight:700;margin-top:3px;color:{{ pp.whoColor }}">{{ pp.who }}</div>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ vm.hasNotes }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+                      <sc-for list="{{ vm.notes }}" as="nt" hint-placeholder-count="2">
+                        <span style="{{ nt.style }}">{{ nt.text }}</span>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
             </sc-for>
           </div>
 
           <!-- one card per day: the pitch list -->
+          <!-- Only the selected day's card renders, per the day tab above —
+               test-venue-map.js's binding scan uses the exact comment text
+               just above as its end marker, so it is left untouched and this
+               note lives on its own line instead. -->
           <sc-for list="{{ vDays }}" as="d" hint-placeholder-count="2">
-            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
-              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-                <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:{{ d.tint }}">{{ d.label }}</div>
-                <div style="font-size:12px;color:#7f8794;font-weight:600">{{ d.summary }}</div>
-              </div>
-              <p style="color:#7f8794;font-size:12px;margin:0 0 12px;line-height:1.5">{{ d.hint }}</p>
-
-              <!-- Every main pitch, whether or not it is used today. A pitch
-                   you are not using is a decision, and one you cannot see is
-                   one you cannot change. Names are derived from the split, so
-                   there is nothing to type and nothing to mistype. -->
-              <sc-for list="{{ d.mains }}" as="mp" hint-placeholder-count="15">
-                <div style="{{ mp.rowStyle }}">
-                  <div style="font-weight:800;font-size:13px;color:#fff">{{ mp.name }}</div>
-                  <div>
-                    <div style="font-size:11px;font-weight:600;color:{{ mp.surfaceColor }}">{{ mp.surfaceLabel }}</div>
-                    <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:10px;font-weight:700;color:#f5c518;margin-top:2px">{{ mp.usageLabel }}</div></sc-if>
-                  </div>
-                  <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
-                    <sc-for list="{{ mp.choices }}" as="sc" hint-placeholder-count="4">
-                      <button onClick="{{ sc.onPick }}" style="{{ sc.style }}">{{ sc.label }}</button>
-                    </sc-for>
-                  </div>
+            <sc-if value="{{ d.isCurrentDay }}">
+              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+                  <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;color:{{ d.tint }}">Pitches &mdash; {{ d.label }}</div>
+                  <div style="font-size:14px;color:#7f8794;font-weight:600">{{ d.summary }}</div>
                 </div>
-              </sc-for>
-              <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#f5c518;font-weight:600;margin-top:10px">Nothing is in use on this day yet.</div></sc-if>
-            </div>
+                <p style="color:#7f8794;font-size:15px;margin:0 0 12px;line-height:1.65">{{ d.hint }}</p>
+
+                <!-- Every main pitch, whether or not it is used today. A pitch
+                     you are not using is a decision, and one you cannot see is
+                     one you cannot change. Names are derived from the split, so
+                     there is nothing to type and nothing to mistype. -->
+                <sc-for list="{{ d.mains }}" as="mp" hint-placeholder-count="15">
+                  <div style="{{ mp.rowStyle }}">
+                    <div style="font-weight:800;font-size:17px;color:#fff">{{ mp.name }}</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:{{ mp.surfaceColor }}">{{ mp.surfaceLabel }}</div>
+                      <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:700;color:#f5c518;margin-top:3px">{{ mp.usageLabel }}</div></sc-if>
+                    </div>
+                    <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+                      <sc-for list="{{ mp.choices }}" as="sc" hint-placeholder-count="4">
+                        <button onClick="{{ sc.onPick }}" style="{{ sc.style }}">{{ sc.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#f5c518;font-weight:600;margin-top:10px">Nothing is in use on this day yet.</div></sc-if>
+              </div>
+            </sc-if>
           </sc-for>
 
-          <!-- one row per age group: day selector + its pitches -->
+          <!-- one row per age group: collapsed to a single line by default —
+               name, day and how many pitches it has picked — click to expand
+               and edit its pitches. Only groups on the selected day (or with
+               no day set at all, which needs fixing either way) show here. -->
           <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
-            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Age groups</div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Tick the pitches each group uses. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#aeb4bf">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
+            <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:4px">Age groups &mdash; {{ vDayViewLabel }}</div>
+            <p style="color:#7f8794;font-size:15px;margin:0 0 16px;line-height:1.65">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#aeb4bf">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
 
             <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="15">
-              <div style="display:grid;grid-template-columns:190px 130px 1fr;gap:12px;align-items:start;padding:12px 0;border-top:1px solid rgba(255,255,255,0.07)">
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:#fff">{{ g.name }}</div>
-                  <div style="font-size:11px;color:#5a616d;font-weight:600;letter-spacing:.4px">{{ g.id }}</div>
-                </div>
-                <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;color-scheme:dark">
-                  <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
-                    <option value="{{ dop.value }}">{{ dop.label }}</option>
-                  </sc-for>
-                </select>
-                <div>
-                  <!-- Grouped by main pitch. Flat, eighteen surfaces read as
-                       eighteen identical boxes; grouped, they read as the
-                       pitches actually are. The name button takes or drops the
-                       whole pitch in one click. -->
-                  <div style="display:flex;gap:12px;flex-wrap:wrap">
-                    <sc-for list="{{ g.pitchGroups }}" as="pg" hint-placeholder-count="4">
-                      <div style="display:inline-flex;align-items:center;gap:7px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:5px 9px">
-                        <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
-                        <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
-                          <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:{{ pt.color }};cursor:pointer">
-                            <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:14px;height:14px;accent-color:#17A34A">
-                            {{ pt.short }}
-                          </label>
+              <sc-if value="{{ g.isCurrentDay }}">
+                <div style="border-top:1px solid rgba(255,255,255,0.07)">
+                  <div style="display:flex;align-items:center;gap:16px;padding:17px 4px;flex-wrap:wrap">
+                    <div onClick="{{ g.onToggleExpand }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:220px;cursor:pointer">
+                      <div style="width:18px;color:#7f8794;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
+                      <div style="font-size:18px;font-weight:700;color:#fff">{{ g.name }}</div>
+                    </div>
+                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px;color-scheme:dark">
+                      <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
+                        <option value="{{ dop.value }}">{{ dop.label }}</option>
+                      </sc-for>
+                    </select>
+                    <div style="{{ g.pickedStyle }}">{{ g.pickedLabel }}</div>
+                  </div>
+
+                  <sc-if value="{{ g.expanded }}">
+                    <div style="padding:0 4px 20px 32px">
+                      <!-- Grouped by main pitch. Flat, eighteen surfaces read as
+                           eighteen identical boxes; grouped, they read as the
+                           pitches actually are. The name button takes or drops
+                           the whole pitch in one click. -->
+                      <div style="display:flex;gap:14px;flex-wrap:wrap">
+                        <sc-for list="{{ g.pitchGroups }}" as="pg" hint-placeholder-count="4">
+                          <div style="display:inline-flex;align-items:center;gap:9px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:7px 13px">
+                            <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
+                            <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
+                              <label style="display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:{{ pt.color }};cursor:pointer">
+                                <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:19px;height:19px;accent-color:#17A34A">
+                                {{ pt.short }}
+                              </label>
+                            </sc-for>
+                          </div>
                         </sc-for>
                       </div>
-                    </sc-for>
-                  </div>
-                  <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#f5c518;font-weight:600;margin-top:4px">No pitches chosen yet</div></sc-if>
+                      <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#f5c518;font-weight:600;margin-top:10px">No pitches chosen yet</div></sc-if>
+                    </div>
+                  </sc-if>
                 </div>
-              </div>
+              </sc-if>
             </sc-for>
           </div>
 
@@ -644,13 +674,19 @@
       </sc-if>
 
       <!-- teams table -->
+      <!-- Jay, 30 Jul: with 256+ teams this div used to grow to whatever
+           height the full table needed, so its own overflow-x scrollbar sat
+           at the very bottom of that — hundreds of rows below the visible
+           screen, effectively unreachable. Capping the height and scrolling
+           BOTH axes inside a bounded box keeps the horizontal scrollbar (and
+           the sticky header below) always within reach. -->
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
           <table style="width:100%;min-width:1100px">
             <thead>
               <tr style="background:#151517">
                 <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
@@ -700,13 +736,16 @@
       </sc-if>
 
       <!-- players table -->
+      <!-- Same fix as the teams table above: with 3,800+ players this div's
+           overflow-x scrollbar was unreachable at the bottom of the whole
+           list. Bounded height + both-axis scroll + sticky header. -->
       <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
           <table style="width:100%;min-width:1200px">
             <thead>
               <tr style="background:#151517">
                 <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
@@ -843,9 +882,9 @@ function groupRowsByClub(rows) {
    `assets/venue-map.png` is a wayfinding map of the whole complex: it draws ONE
    outline per block (D3, C4, B1 — which is the athletics track) with a name and
    a car-park number, and it neither names nor divides what is inside them. But
-   the layout's pitches are D3A/D3B, C4A/C4B, B1A..B1D — and those sub-pitch
-   names are OURS (see CLAUDE.md, Venue section). Drawing a box labelled "B1C"
-   on that image would mean inventing where B1C sits, and then showing that
+   the layout's pitches are D3a/D3b, C4a/C4b, B1a..B1d — and those sub-pitch
+   names are OURS (see CLAUDE.md, Venue section). Drawing a box labelled "B1c"
+   on that image would mean inventing where B1c sits, and then showing that
    invention on the screen an organiser uses to make real decisions.
 
    So this is a schematic: blocks in roughly their real relative positions for
@@ -1001,7 +1040,7 @@ function splitLabel(surfaceCount) {
   return `${surfaceCount} surfaces`;
 }
 
-/* 'D5A' -> 'D5', 'C4B' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
+/* 'D5a' -> 'D5', 'C4b' -> 'C4', 'D2' -> 'D2'. A single trailing letter marks a
    sub-pitch; everything up to and including the last digit is the block.
 
    The tail is at most ONE letter and it is anchored, which pins the whole thing
@@ -1060,6 +1099,19 @@ class Component extends DCLogic {
        deliberate unlock first. */
     vLocked: true,
     vDrag: null,
+    /* Which day's cards are on screen. Both days used to render stacked, one
+       under the other, which meant scrolling past a whole day you were not
+       looking at just to reach the other one — added 30 Jul after Jay found
+       the tab "too busy". Defaulting to day1 rather than remembering the last
+       tab is deliberate: reopening the tab is rare enough that a predictable
+       starting point beats a remembered one. */
+    vDayView: 'day1',
+    /* Which age-group rows are expanded, keyed by group id. Collapsed by
+       default for the same reason — fifteen rows of eight tiny checkboxes
+       each, all open at once, was the single biggest source of clutter on
+       this tab. A row's pitch picks are still one click away, nothing here
+       removes any control, it just hides it until asked for. */
+    vExpandedGroups: {},
     /* The registration window being edited. Same shape as the venue pair above:
        `reg` is the working copy the form mutates, `regSaved` is what the server
        last confirmed, so Save can tell whether anything actually changed. Both
@@ -1228,7 +1280,7 @@ class Component extends DCLogic {
      empty. validate-bindings.js guards it. */
   venueVals(s) {
     const v = s.venue;
-    const viewBase = 'font-weight:700;font-size:12px;padding:7px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;';
+    const viewBase = 'font-weight:700;font-size:14px;padding:9px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const viewOn = viewBase + 'background:#E11B22;color:#fff;';
     const viewOff = viewBase + 'background:transparent;color:#aeb4bf;';
     const problems = v ? this.venueProblems() : [];
@@ -1237,6 +1289,12 @@ class Component extends DCLogic {
 
     const dayTint = { day1: '#E11B22', day2: '#17A34A' };
     const MAINS = (s.api && s.api.MAIN_PITCHES) || [];
+    /* Which day's cards are visible. Falls back to day1 for any stale/unknown
+       value rather than showing neither day's cards. */
+    const dayView = s.vDayView === 'day2' ? 'day2' : 'day1';
+    const dayTabBase = 'flex:1;font-weight:800;font-size:16px;padding:13px 18px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;';
+    const dayLabel = (id) => (v ? (v[id].label || (id === 'day1' ? 'Day 1' : 'Day 2')) : (id === 'day1' ? 'Day 1' : 'Day 2'));
+    const activeDayLabel = dayLabel(dayView);
     const SPLIT_CHOICES = [
       { value: 0, label: 'Not used' },
       { value: 1, label: 'Whole' },
@@ -1268,12 +1326,12 @@ class Component extends DCLogic {
              renames them out from under the draw, so the count is shown before
              the change rather than after it. */
           usageLabel: used ? `${used} saved match${used === 1 ? '' : 'es'}` : '',
-          rowStyle: 'display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,0.07)',
+          rowStyle: 'display:grid;grid-template-columns:70px 1fr auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid rgba(255,255,255,0.07)',
           choices: SPLIT_CHOICES.map((c) => ({
             label: c.label,
             style: (n === c.value)
-              ? 'font-weight:800;font-size:11px;padding:6px 11px;border-radius:7px;cursor:pointer;background:#17A34A;color:#fff;border:1px solid #17A34A;white-space:nowrap'
-              : 'font-weight:700;font-size:11px;padding:6px 11px;border-radius:7px;cursor:pointer;background:transparent;color:#7f8794;border:1px solid rgba(255,255,255,0.16);white-space:nowrap',
+              ? 'font-weight:800;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:#17A34A;color:#fff;border:1px solid #17A34A;white-space:nowrap'
+              : 'font-weight:700;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:transparent;color:#7f8794;border:1px solid rgba(255,255,255,0.16);white-space:nowrap',
             onPick: () => this.setPitchSplit(id, main, c.value),
           })),
         };
@@ -1283,10 +1341,11 @@ class Component extends DCLogic {
         id,
         label: day.label,
         tint: dayTint[id],
+        isCurrentDay: id === dayView,
         summary: `${surfaceCount} playing surface${surfaceCount === 1 ? '' : 's'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${day.date}`,
         hint: id === 'day1'
-          ? 'The 2025 running order: D5, D4 and D3 in halves, B1 and A1 in quarters, D2, D1, C4 and C5 whole.'
-          : 'The 2025 running order: C4, B1 and A1 in halves, everything else whole. D4 and D5 are not used on Sunday.',
+          ? 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today. 2025’s running order: D5, D4 and D3 in halves, B1 and A1 in quarters, D2, D1, C4 and C5 whole.'
+          : 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today. 2025’s running order: C4, B1 and A1 in halves, everything else whole. D4 and D5 are not used on Sunday.',
         mains,
         noPitches: surfaceCount === 0,
       };
@@ -1295,10 +1354,21 @@ class Component extends DCLogic {
     const groups = !v ? [] : MANAGER_AGE_GROUPS.map((g) => {
       const dayId = ['day1', 'day2'].find((d) => g.id in (v[d].groups || {})) || '';
       const chosen = dayId ? (v[dayId].groups[g.id] || []) : [];
+      const expanded = !!(s.vExpandedGroups || {})[g.id];
       return {
         id: g.id,
         name: g.name,
         dayValue: dayId,
+        /* A group with no day set at all cannot be filtered into either tab
+           sensibly, so it shows on both — the problems list already flags it
+           as something to fix before saving, and hiding it here would make
+           that easier to miss, not harder. */
+        isCurrentDay: !dayId || dayId === dayView,
+        expanded,
+        expandArrow: expanded ? '▾' : '▸',
+        onToggleExpand: () => this.toggleGroupExpanded(g.id),
+        pickedLabel: chosen.length ? `${chosen.length} pitch${chosen.length === 1 ? '' : 'es'} picked` : 'No pitches picked yet',
+        pickedStyle: chosen.length ? 'font-size:14px;color:#7f8794;font-weight:600;white-space:nowrap' : 'font-size:14px;color:#f5c518;font-weight:700;white-space:nowrap',
         // "Not set" only appears when a group really is on neither day, which
         // the problems list already flags as something to fix before saving.
         dayOptions: (dayId ? [] : [{ value: '', label: 'Not set' }]).concat([
@@ -1321,7 +1391,7 @@ class Component extends DCLogic {
               whole: surfaces.length === 1,
               allOn: onCount === surfaces.length && surfaces.length > 0,
               someOn: onCount > 0,
-              headStyle: `font-size:10px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#fff' : '#5a616d'}`,
+              headStyle: `font-size:13px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#fff' : '#5a616d'}`,
               /* One click to take or drop a whole pitch. With quarters that is
                  four ticks saved every time, and taking all four is the common
                  case — U8 has all of B1. */
@@ -1339,10 +1409,21 @@ class Component extends DCLogic {
       };
     });
 
+    const rawMaps = this.venueMaps(v, s.venuePositions, s.vLocked);
+    const maps = rawMaps.map((m) => ({ ...m, isCurrentDay: m.id === dayView }));
+
     return {
       vDays: days,
       vGroups: groups,
-      vMaps: this.venueMaps(v, s.venuePositions, s.vLocked),
+      vMaps: maps,
+      vDayView: dayView,
+      vDayViewLabel: activeDayLabel,
+      dayTab1Label: dayLabel('day1'),
+      dayTab2Label: dayLabel('day2'),
+      dayTab1Style: dayTabBase + (dayView === 'day1' ? 'background:#E11B22;color:#fff;' : 'background:transparent;color:#aeb4bf;'),
+      dayTab2Style: dayTabBase + (dayView === 'day2' ? 'background:#17A34A;color:#fff;' : 'background:transparent;color:#aeb4bf;'),
+      onDayTab1: () => this.setVenueDayView('day1'),
+      onDayTab2: () => this.setVenueDayView('day2'),
       vIsSchematic: s.vView !== 'map',
       vIsMapView: s.vView === 'map',
       vViewSchematicStyle: s.vView !== 'map' ? viewOn : viewOff,
@@ -1353,8 +1434,8 @@ class Component extends DCLogic {
       vUnlocked: !s.vLocked,
       vLockLabel: s.vLocked ? 'Locked — tap to move blocks' : 'Unlocked — drag the blocks',
       vLockStyle: s.vLocked
-        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap'
-        : 'background:#f5c518;border:1px solid #f5c518;color:#0C0C0E;font-weight:800;font-size:12px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap',
+        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap'
+        : 'background:#f5c518;border:1px solid #f5c518;color:#0C0C0E;font-weight:800;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap',
       onToggleMapLock: () => this.toggleMapLock(),
       onResetPositions: () => this.doResetPositions(),
       vBusy: s.vBusy,
@@ -1367,8 +1448,8 @@ class Component extends DCLogic {
       vSaveDisabled: s.vBusy || !dirty || problems.length > 0,
       vSaveLabel: s.vBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       vSaveStyle: (s.vBusy || !dirty || problems.length > 0)
-        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
-        : 'background:#17A34A;color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onVenueSave: () => this.doSaveVenue(),
       onVenueReset: () => this.doResetVenue(),
     };
@@ -1452,7 +1533,7 @@ class Component extends DCLogic {
         return {
           name: b,
           known: !!BLOCK_GRID[b],
-          style: `grid-area:${area};background:#0C0C0E;border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:9px 10px 10px`,
+          style: `grid-area:${area};background:#0C0C0E;border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:12px 13px 13px`,
 
           /* --- the map view --- */
           placed,
@@ -1482,9 +1563,9 @@ class Component extends DCLogic {
              rather than coloured — a second colour would have to be contrast-
              checked against the tint all over again, and there is no shade that
              works on all fifteen. Opacity keeps whatever chipInk() proved. */
-          mapNameStyle: 'font-weight:900;font-size:14px;letter-spacing:.3px;line-height:1.15',
-          mapSplitStyle: 'font-size:10px;font-weight:800;letter-spacing:.4px;opacity:.72;text-transform:uppercase',
-          mapWhoStyle: 'font-size:11px;font-weight:800;line-height:1.2;margin-top:1px;opacity:.92',
+          mapNameStyle: 'font-weight:900;font-size:16px;letter-spacing:.3px;line-height:1.2',
+          mapSplitStyle: 'font-size:12px;font-weight:800;letter-spacing:.4px;opacity:.72;text-transform:uppercase',
+          mapWhoStyle: 'font-size:13px;font-weight:800;line-height:1.25;margin-top:2px;opacity:.92',
           pitches: byBlock[b].map((p) => {
             const users = usersOf[p] || [];
             const tints = users.map((ag) => AGE_TINT[ag] || '#7f8794');
@@ -1513,7 +1594,7 @@ class Component extends DCLogic {
             }
             return {
               name: p, who, whoColor, title,
-              style: `min-width:52px;background:${bg};border:${border};border-radius:7px;padding:5px 7px;text-align:center;color:#fff`,
+              style: `min-width:70px;background:${bg};border:${border};border-radius:10px;padding:8px 10px;text-align:center;color:#fff`,
             };
           }),
 
@@ -1553,7 +1634,7 @@ class Component extends DCLogic {
         label: day.label || id,
         tint: dayTint[id],
         summary: `${pitches.length} pitch${pitches.length === 1 ? '' : 'es'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${pitches.length - unused.length} in use`,
-        gridStyle: 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;align-items:start',
+        gridStyle: 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start',
         blocks,
         notes,
         hasNotes: notes.length > 0,
@@ -1659,6 +1740,13 @@ class Component extends DCLogic {
 
   toggleMapLock() { this.setState((s) => ({ vLocked: !s.vLocked, vDrag: null })); }
   setVenueView(view) { this.setState({ vView: view, vDrag: null }); }
+  /* Switching tabs does not clear which age-group rows are expanded — a row
+     you opened on Day 1 stays open if you come back to Day 1 later, rather
+     than every switch quietly closing everything you had open. */
+  setVenueDayView(id) { this.setState({ vDayView: id }); }
+  toggleGroupExpanded(id) {
+    this.setState((s) => ({ vExpandedGroups: { ...s.vExpandedGroups, [id]: !s.vExpandedGroups[id] } }));
+  }
 
   doResetPositions() {
     this.confirmModal(
@@ -1831,7 +1919,7 @@ class Component extends DCLogic {
 
   /* Moving a group to the other day CLEARS its pitches, because the two days
      have different pitch lists and silently keeping names that happen to exist
-     on both (B1A, D2 …) would put a group on a pitch nobody chose for it. */
+     on both (B1a, D2 …) would put a group on a pitch nobody chose for it. */
   setGroupDay(ageId, dayId) {
     const v = this.state.venue;
     if (!v) return;

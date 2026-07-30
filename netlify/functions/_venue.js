@@ -24,7 +24,7 @@
 /* Read off Pitch maps_Final.pdf (Saturday 25 / Sunday 26 October 2025), which
    Jay confirmed on 26 July 2026 is the same running order for 2026.
 
-   Sub-pitch letters (B1A..B1D, A1A..A1D, D3A/D3B, C4A/C4B, D4A/D4B, D5A/D5B)
+   Sub-pitch letters (B1a..B1d, A1a..A1d, D3a/D3b, C4a/C4b, D4a/D4b, D5a/D5b)
    are OURS. The map draws the boxes inside one red outline and does not name
    them individually, so these names have to match whatever goes on the printed
    pitch flags. Confirm before the signage is ordered.
@@ -43,16 +43,16 @@ const DEFAULT_VENUE = {
        `day.pitches` keeps working untouched. validateVenue() rebuilds `pitches`
        from `splits` on every save, so the two cannot drift. */
     splits: { D5: 2, D4: 2, D3: 2, D2: 1, D1: 1, C4: 1, C5: 1, B1: 4, A1: 4 },
-    pitches: ['D5A', 'D5B', 'D4A', 'D4B', 'D3A', 'D3B', 'D2', 'D1',
-      'C4', 'C5', 'B1A', 'B1B', 'B1C', 'B1D', 'A1A', 'A1B', 'A1C', 'A1D'],
+    pitches: ['D5a', 'D5b', 'D4a', 'D4b', 'D3a', 'D3b', 'D2', 'D1',
+      'C4', 'C5', 'B1a', 'B1b', 'B1c', 'B1d', 'A1a', 'A1b', 'A1c', 'A1d'],
     groups: {
-      u6:   ['D4A', 'D4B', 'D5A', 'D5B'],   // morning
-      u7:   ['D4A', 'D4B', 'D5A', 'D5B'],   // afternoon, the same four
-      u8:   ['B1A', 'B1B', 'B1C', 'B1D'],
-      u9:   ['A1A', 'A1B', 'A1C', 'A1D'],
+      u6:   ['D4a', 'D4b', 'D5a', 'D5b'],   // morning
+      u7:   ['D4a', 'D4b', 'D5a', 'D5b'],   // afternoon, the same four
+      u8:   ['B1a', 'B1b', 'B1c', 'B1d'],
+      u9:   ['A1a', 'A1b', 'A1c', 'A1d'],
       u10:  ['C5'],
       u11:  ['C4'],
-      u12:  ['D3A', 'D3B'],
+      u12:  ['D3a', 'D3b'],
       u18b: ['D2'],
       u18g: ['D1'],
     },
@@ -62,12 +62,12 @@ const DEFAULT_VENUE = {
     label: 'Sunday 8 November',
     short: 'Sun',
     splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
-    pitches: ['D3', 'D2', 'D1', 'C4A', 'C4B', 'C5', 'B1A', 'B1B', 'A1A', 'A1B'],
+    pitches: ['D3', 'D2', 'D1', 'C4a', 'C4b', 'C5', 'B1a', 'B1b', 'A1a', 'A1b'],
     groups: {
-      u12g: ['B1A', 'B1B'],
-      u13:  ['C4A', 'C4B'],
+      u12g: ['B1a', 'B1b'],
+      u13:  ['C4a', 'C4b'],
       u14b: ['D3'],
-      u14g: ['A1A', 'A1B'],
+      u14g: ['A1a', 'A1b'],
       u16b: ['D2', 'D1'],
       u16g: ['C5'],
     },
@@ -99,8 +99,8 @@ const DAY_IDS = ['day1', 'day2'];
    A SPLIT IS PER DAY, not per pitch. This is not a nicety — the weekend already
    runs that way, and a single split per pitch would break it:
 
-     D3   halves on Saturday (D3A/D3B), WHOLE on Sunday
-     C4   whole on Saturday,            HALVES on Sunday (C4A/C4B)
+     D3   halves on Saturday (D3a/D3b), WHOLE on Sunday
+     C4   whole on Saturday,            HALVES on Sunday (C4a/C4b)
      B1   quarters on Saturday,         halves on Sunday
      A1   quarters on Saturday,         halves on Sunday
 
@@ -114,10 +114,10 @@ const MAIN_PITCHES = ['D5', 'D4', 'D3', 'D2', 'D1', 'C4', 'C5', 'C3', 'C2', 'C1'
    you are marking out with cones, and allowing them would put a third suffix
    letter into names that everything downstream parses. */
 const SPLITS = [1, 2, 4];
-const SPLIT_SUFFIXES = { 1: [''], 2: ['A', 'B'], 4: ['A', 'B', 'C', 'D'] };
+const SPLIT_SUFFIXES = { 1: [''], 2: ['a', 'b'], 4: ['a', 'b', 'c', 'd'] };
 
 /* splits -> the playable surface names, in MAIN_PITCHES order.
-   { D3: 2, D2: 1 } -> ['D3A', 'D3B', 'D2']
+   { D3: 2, D2: 1 } -> ['D3a', 'D3b', 'D2']
 
    A whole pitch keeps the bare name, which is what makes this backwards
    compatible: every saved fixture on 'D2' still means D2. */
@@ -157,7 +157,7 @@ function splitsFromPitches(pitches) {
   return out;
 }
 
-/* Renaming caused by a split change, e.g. { D3: ['D3A', 'D3B'] } when D3 goes
+/* Renaming caused by a split change, e.g. { D3: ['D3a', 'D3b'] } when D3 goes
    from whole to halves.
 
    THE INVARIANT: a group keeps the same GROUND, only the names change. Split a
@@ -171,14 +171,18 @@ function remapGroupPitches(list, oldSplits, newSplits) {
   const kept = [];
   const add = (name) => { if (!kept.includes(name)) kept.push(name); };
   (Array.isArray(list) ? list : []).forEach((p) => {
-    const name = typeof p === 'string' ? p.trim().toUpperCase() : '';
-    if (!name) return;
-    const m = name.match(/^(.*[0-9])([A-Z])?$/);
-    const main = m ? m[1] : name;
+    /* Only uppercased to FIND the main pitch (MAIN_PITCHES entries are all
+       upper), never to store — the canonical suffix is lowercase, and this
+       must hand back exactly the pitch a saved fixture is sitting on when
+       nothing about its split has changed. */
+    const raw = typeof p === 'string' ? p.trim() : '';
+    if (!raw) return;
+    const m = raw.toUpperCase().match(/^(.*[0-9])([A-Z])?$/);
+    const main = m ? m[1] : raw.toUpperCase();
     const before = Number((oldSplits || {})[main]);
     const after = Number((newSplits || {})[main]);
     if (SPLITS.indexOf(after) < 0) return;            // the pitch left the day
-    if (before === after) { add(name); return; }      // untouched
+    if (before === after) { add(raw); return; }       // untouched — keep as stored
     SPLIT_SUFFIXES[after].forEach((suffix) => add(main + suffix));
   });
   return kept;

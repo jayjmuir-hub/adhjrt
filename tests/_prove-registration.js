@@ -248,7 +248,7 @@ const FAULTS = [
        makes the two forms identical when the tail is one anchored letter. The
        code comment claiming otherwise was wrong and has been corrected. This is
        the real fault in the same function. */
-    name: 'blockOfPitch stops normalising case (c4b and C4A become two blocks)',
+    name: 'blockOfPitch stops normalising case (c4b and C4a become two blocks)',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html', '  return (m ? m[1] : s).toUpperCase();', '  return (m ? m[1] : s);'),
     expect: ['case is normalised'],
@@ -257,7 +257,7 @@ const FAULTS = [
     name: 'the sub-pitch letter is no longer stripped (every pitch its own block)',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html', '  return (m ? m[1] : s).toUpperCase();', '  return s.toUpperCase();'),
-    expect: ['D5A is in block D5', 'groups 18 pitches into 9 blocks'],
+    expect: ['D5a is in block D5', 'groups 18 pitches into 9 blocks'],
   },
   {
     name: 'B1 loses its place on the drawing',
@@ -293,7 +293,7 @@ const FAULTS = [
     name: 'a shared pitch shows only the first group',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html', "              who = users.map((a) => a.toUpperCase()).join(' · ');", '              who = users[0].toUpperCase();'),
-    expect: ['D4A names both groups'],
+    expect: ['D4a names both groups'],
   },
   {
     name: 'unused pitches stop being reported',
@@ -490,7 +490,7 @@ const FAULTS = [
   {
     name: 'halves are suffixed 1/2 instead of A/B',
     suite: 'test-venue-splits.js',
-    apply: () => patchPitchModel("2: ['A', 'B'],", "2: ['1', '2'],"),
+    apply: () => patchPitchModel("2: ['a', 'b'],", "2: ['1', '2'],"),
     /* The one that matters is the shipped-layout check: renaming a suffix
        renames every surface the site already has fixtures on. */
     expect: ['Saturday derives exactly the shipped surfaces', 'halves get A and B'],
@@ -651,7 +651,7 @@ const FAULTS = [
     name: 'the block name on the map shrinks back to 11px',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "mapNameStyle: 'font-weight:900;font-size:14px;", "mapNameStyle: 'font-weight:900;font-size:11px;"),
+      "mapNameStyle: 'font-weight:900;font-size:16px;", "mapNameStyle: 'font-weight:900;font-size:11px;"),
     expect: ['the block name is at least 14px'],
   },
   {

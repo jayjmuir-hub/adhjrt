@@ -208,6 +208,17 @@ tr.me td:nth-child(1),tr.me td:nth-child(2){background:#fffdf4}
          font-size:10.5px;letter-spacing:.4px;padding:3px 6px;border-radius:5px}
 .keyname{font-size:11.5px;color:var(--text);white-space:nowrap}
 
+/* A club's crest, shown to the left of its code wherever the code appears.
+   Fixed square box with object-fit:contain so a tall crest and a wide
+   wordmark logo both sit at the same height; a white backing plate keeps a
+   transparent-background logo legible on the app's dark cards too. Absent
+   entirely (via tBadge()/tLogoImg() returning '') for a club with no logo
+   on file, rather than showing a broken image. */
+.tlogo{width:16px;height:16px;border-radius:4px;object-fit:contain;background:#fff;
+       vertical-align:-3px;margin-right:5px;flex:none}
+.tlogo-lg{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#fff;
+          vertical-align:-6px;margin-right:8px;flex:none}
+
 /* forms + sheet */
 .sheet-scrim{position:fixed;inset:0;background:rgba(12,12,14,.5);z-index:60;opacity:0;
              pointer-events:none;transition:opacity .25s}
@@ -476,6 +487,20 @@ const tName = (code, agId) =>
 /* The short form for the standings column and the bracket, where a full club
    name does not fit. */
 const tShort = (code) => (api.teamShort ? api.teamShort(code) : code) || code || '';
+/* The club's crest for a code, or '' if this club has no logo on file (an
+   "Other" free-text registration, or a hand-typed full name). */
+const tLogoSrc = (code) => (api.teamLogoSrc ? api.teamLogoSrc(code) : '') || '';
+/* Small crest + code, safe HTML for any spot that already shows tShort().
+   Falls back to just the code — no broken image — when there is no crest. */
+function tBadge(code){
+  const src = tLogoSrc(code);
+  return (src ? `<img class="tlogo" src="${esc(src)}" alt="">` : '') + esc(tShort(code));
+}
+/* The larger crest used once per screen — the Following card's headline. */
+function tLogoImg(code){
+  const src = tLogoSrc(code);
+  return src ? `<img class="tlogo-lg" src="${esc(src)}" alt="">` : '';
+}
 
 function phase(){
   const n = Date.now();
@@ -651,7 +676,7 @@ function teamKeyContent(){
   const used = teamKeyList();
   if (!used.length) return '';
   return `<div class="card"><div class="keygrid">
-    ${used.map(k => `<span class="keyrow"><span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></span>`).join('')}
+    ${used.map(k => `<span class="keyrow">${k.logoSrc ? `<img class="tlogo" src="${esc(k.logoSrc)}" alt="">` : ''}<span class="keycode">${esc(k.code)}</span><span class="keyname">${esc(k.name)}</span></span>`).join('')}
   </div></div>`;
 }
 function teamKeyButton(){
@@ -670,7 +695,7 @@ function matchRow(m, agId, hideScore){
     + (r && hideScore ? `<span class="chip chip-ft">Full time</span>` : '');
   return `<button class="mrow ${mine?'mine':''}" data-match="${esc(m.id)}">
     <div><div class="mtime">${esc(m.time || '')}</div><div class="mpitch">${esc(m.pitch || 'TBD')}</div></div>
-    <div><div class="mteams">${esc(m.home ? tShort(m.home) : 'TBD')} <span class="muted">v</span> ${esc(m.away ? tShort(m.away) : 'TBD')}</div>
+    <div><div class="mteams">${m.home ? tBadge(m.home) : 'TBD'} <span class="muted">v</span> ${m.away ? tBadge(m.away) : 'TBD'}</div>
       <div class="mmeta">${meta}</div></div>
     <div>${r && !hideScore ? `<span class="mscore">${r.homeScore}&ndash;${r.awayScore}</span>` : ICON.chev}</div>
   </button>`;
@@ -716,7 +741,7 @@ function followCard(){
     const at = kickoffAt(next, S.ageId);
     const opp = S.team ? (sameTeam(next.home, S.team) ? next.away : next.home) : `${next.home} v ${next.away}`;
     inner = `<div class="tcard-m" style="margin-top:12px">
-        <strong style="color:#fff">${S.team ? 'v ' + esc(tShort(opp)) : esc(opp)}</strong><br>
+        <strong style="color:#fff">${S.team ? 'v ' + tBadge(opp) : esc(opp)}</strong><br>
         ${esc(next.time || '')} &middot; ${esc(next.pitch || 'Pitch TBD')} &middot; ${esc(next.poolName || next.round || '')}
       </div>${at && untilText(at) ? `<div class="kick"><div style="flex:none;padding-left:14px;padding-right:14px"><b>${esc(untilText(at))}</b></div></div>` : ''}`;
   } else if (fx && fx.awaitingPublication) {
@@ -727,12 +752,12 @@ function followCard(){
 
   const lastLine = last
     ? `<div class="tcard-m" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)">
-         Last: ${esc(tShort(last.home))} ${last.result.homeScore}&ndash;${last.result.awayScore} ${esc(tShort(last.away))}</div>` : '';
+         Last: ${tBadge(last.home)} ${last.result.homeScore}&ndash;${last.result.awayScore} ${tBadge(last.away)}</div>` : '';
 
   return `<div class="tcard">
     <button class="tcard-cta" data-act="follow">Change</button>
     <div class="tcard-k">${S.team ? 'Following' : 'Following age group'}</div>
-    <div class="tcard-n">${esc(following)}</div>
+    <div class="tcard-n">${S.team ? tLogoImg(S.team) : ''}${esc(following)}</div>
     ${S.team ? `<div class="tcard-m" style="margin-top:4px">${esc(tName(S.team))} &middot; ${esc(ageName(S.ageId))}</div>` : ''}
     ${inner}${lastLine}
   </div>`;
@@ -820,7 +845,7 @@ function resultsList(fx, showFilter){
 function teamSeg(){
   const showFilter = S.team && S.browseId === S.ageId;
   return { showFilter, seg: showFilter ? `<div class="seg">
-      <button data-seg="mine" class="${S.onlyMine?'on':''}">${esc(tShort(S.team))}</button>
+      <button data-seg="mine" class="${S.onlyMine?'on':''}">${tBadge(S.team)}</button>
       <button data-seg="all" class="${!S.onlyMine?'on':''}">All matches</button>
     </div>` : '' };
 }
@@ -879,7 +904,7 @@ function viewTables(){
     return `<div class="sec-t">${esc(p.name)}</div><div class="card"><div class="tscroll"><table>
       <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>+/−</th><th>Pts</th></tr></thead>
       <tbody>${rows.map((t,i) => `<tr class="${i<adv?'q':''} ${sameTeam(t.team, S.team)?'me':''}">
-        <td>${i+1}</td><td>${esc(tShort(t.team))}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
+        <td>${i+1}</td><td>${tBadge(t.team)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td>
         <td>${t.PF}</td><td>${t.PA}</td><td>${t.PF-t.PA>0?'+':''}${t.PF-t.PA}</td><td class="pts">${t.pts}</td></tr>`).join('')}</tbody></table></div>
       <div class="legend">Green bar = qualifies for the knockout stage. P played · W/D/L won, drawn, lost · +/- points difference · Pts league points. On a narrow phone PF and PA (points for and against) are hidden to make the table fit; turn the phone sideways to see them. The position and team columns stay put if you do need to scroll.</div>
     </div>`;
@@ -977,7 +1002,7 @@ function openTeamPick(){
      what you are on now. */
   openSheet('Choose your team', `<div class="card">
       <button class="row" data-pick-team=""><div><b>All teams</b><small>${!S.team ? 'Currently following' : 'Follow the whole age group'}</small></div>${ICON.chev}</button>
-      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${esc(tShort(t))}</b><small>${S.team === t ? 'Currently following' : esc(tName(t))}</small></div>${ICON.chev}</button>`).join('')}
+      ${teams.map(t => `<button class="row" data-pick-team="${esc(t)}"><div><b>${tBadge(t)}</b><small>${S.team === t ? 'Currently following' : esc(tName(t))}</small></div>${ICON.chev}</button>`).join('')}
     </div>`);
   document.querySelectorAll('[data-pick-team]').forEach(b => b.onclick = () => {
     S.team = b.dataset.pickTeam || null; saveFollow(); closeSheet(); S.onlyMine = true; render();
@@ -1039,7 +1064,7 @@ function openMatch(id){
   };
 
   const head = `<div class="card" style="margin-bottom:16px">
-      <div class="row"><div><b>${esc(m.home?tShort(m.home):'TBD')} v ${esc(m.away?tShort(m.away):'TBD')}</b>
+      <div class="row"><div><b>${m.home?tBadge(m.home):'TBD'} v ${m.away?tBadge(m.away):'TBD'}</b>
         <small>${esc(m.poolName||m.round||'')} &middot; ${esc(m.time||'')} &middot; ${esc(m.pitch||'Pitch TBD')}${at&&untilText(at)?' &middot; '+esc(untilText(at)):''}</small></div></div>
       ${r ? `<div class="row"><div><b style="font-family:'Anton';font-size:26px">${r.homeScore} &ndash; ${r.awayScore}</b>
         <small>Tries ${r.homeTries||0}&ndash;${r.awayTries||0}${r.walkover?' &middot; walk-over':''}</small></div></div>` : ''}
@@ -1053,9 +1078,11 @@ function openMatch(id){
      The total updates as you type — nobody adds up 5s, 2s and 3s under
      pressure at a pitch — and the server recomputes it from the same rules. */
   const parts = api.scoringFor(agId);
+  /* label is already-safe HTML (a crest + escaped code, or a plain literal
+     like 'Home') — built by the caller via tBadge(), never raw user input. */
   const sideInputs = (side, label) => `
     <div class="scoreblock">
-      <div class="sb-head"><span>${esc(label)}</span><b id="tot-${side}">0</b></div>
+      <div class="sb-head"><span>${label}</span><b id="tot-${side}">0</b></div>
       ${parts.map(k => `
         <div class="sb-row">
           <label for="${side}-${k}">${esc(api.scoreLabel(k))} <span class="sb-pts">${api.scorePoints(k)} pts</span></label>
@@ -1065,8 +1092,8 @@ function openMatch(id){
     </div>`;
 
   openSheet('Enter score', head + `<div id="scErr"></div>
-    ${sideInputs('home', m.home ? tShort(m.home) : 'Home')}
-    ${sideInputs('away', m.away ? tShort(m.away) : 'Away')}
+    ${sideInputs('home', m.home ? tBadge(m.home) : 'Home')}
+    ${sideInputs('away', m.away ? tBadge(m.away) : 'Away')}
     <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo">
       <option value="">No walk-over</option>
       <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tShort(m.home):'Home')} awarded the match</option>

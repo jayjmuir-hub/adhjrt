@@ -124,7 +124,11 @@
                 <sc-for list="{{ pool.rows }}" as="r" hint-placeholder-count="3">
                   <div style="{{ r.rowStyle }}">
                     <div style="text-align:center;font-weight:800;color:{{ r.rankColor }}">{{ r.rank }}</div>
-                    <div style="font-weight:700;display:flex;align-items:center;gap:8px">{{ r.team }}<sc-if value="{{ r.coinToss }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:#0C0C0E;background:#f5c518;padding:2px 6px;border-radius:100px">COIN TOSS</span></sc-if></div>
+                    <div style="font-weight:700;display:flex;align-items:center;gap:8px">
+                      <sc-if value="{{ r.hasLogo }}" hint-placeholder-val="{{ false }}">
+                        <img src="{{ r.logoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px">
+                      </sc-if>
+                      {{ r.team }}<sc-if value="{{ r.coinToss }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:#0C0C0E;background:#f5c518;padding:2px 6px;border-radius:100px">COIN TOSS</span></sc-if></div>
                     <div style="text-align:center;color:#aeb4bf">{{ r.P }}</div>
                     <div style="text-align:center;color:#aeb4bf">{{ r.W }}</div>
                     <div style="text-align:center;color:#aeb4bf">{{ r.D }}</div>
@@ -162,10 +166,10 @@
                     </div>
                     <sc-if value="{{ a.ready }}" hint-placeholder-val="{{ false }}">
                       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Winner</div>
-                      <div style="font-weight:800;font-size:18px;color:#fff;line-height:1.2;margin-bottom:16px">{{ a.winner }}</div>
+                      <div style="font-weight:800;font-size:18px;color:#fff;line-height:1.2;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px"><sc-if value="{{ a.hasWinnerLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ a.winnerLogoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px"></sc-if>{{ a.winner }}</div>
                       <div style="height:1px;background:rgba(255,255,255,0.1);margin:0 0 16px"></div>
                       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#7f8794;text-transform:uppercase;margin-bottom:4px">Runner-up</div>
-                      <div style="font-weight:600;font-size:15px;color:#aeb4bf;line-height:1.2">{{ a.runnerUp }}</div>
+                      <div style="font-weight:600;font-size:15px;color:#aeb4bf;line-height:1.2;display:flex;align-items:center;justify-content:center;gap:7px"><sc-if value="{{ a.hasRunnerUpLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ a.runnerUpLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ a.runnerUp }}</div>
                     </sc-if>
                   </div>
                 </sc-for>
@@ -186,7 +190,7 @@
                     <sc-for list="{{ knockoutSeeds }}" as="s" hint-placeholder-count="8">
                       <div style="display:grid;grid-template-columns:44px 1fr 110px 140px;gap:12px;align-items:center;padding:13px 18px;border-top:1px solid rgba(255,255,255,0.06)">
                         <div style="font-family:'Anton';font-size:19px;color:#7f8794">{{ s.seed }}</div>
-                        <div style="font-weight:700;font-size:15px;color:#fff">{{ s.team }}</div>
+                        <div style="font-weight:700;font-size:15px;color:#fff;display:flex;align-items:center;gap:8px"><sc-if value="{{ s.hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ s.logoSrc }}" alt="" style="flex:none;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ s.team }}</div>
                         <div style="font-size:12px;font-weight:700;color:#7f8794">{{ s.poolLabel }} &middot; {{ s.rankLabel }}</div>
                         <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:{{ s.bracketColor }};text-transform:uppercase;text-align:right">{{ s.bracket }}</div>
                       </div>
@@ -211,9 +215,9 @@
                           <div>
                             <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#7f8794;text-transform:uppercase;margin-bottom:9px;text-align:center">{{ c.label }}</div>
                             <div style="background:#1c1d20;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px 22px;box-shadow:0 10px 24px rgba(0,0,0,.3)">
-                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="display:flex;align-items:center;gap:7px;min-width:0"><sc-if value="{{ c.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ c.homeLogoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span></span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
                               <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
-                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="display:flex;align-items:center;gap:7px;min-width:0"><sc-if value="{{ c.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ c.awayLogoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span></span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
                             </div>
                           </div>
                         </sc-for>
@@ -234,9 +238,9 @@
                               <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:{{ c.labelColor }};text-transform:uppercase">{{ c.label }}</div>
                             </div>
                             <div style="background:{{ c.cardBg }};border:1.5px solid {{ c.borderColor }};border-radius:16px;padding:20px 22px;box-shadow:{{ c.cardShadow }}">
-                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.homeColor }};font-weight:{{ c.homeWeight }};font-size:17px;gap:12px"><span style="display:flex;align-items:center;gap:7px;min-width:0"><sc-if value="{{ c.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ c.homeLogoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.home }}</span></span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.homeScore }}</span></div>
                               <div style="height:1px;background:rgba(255,255,255,0.08);margin:12px 0"></div>
-                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
+                              <div style="display:flex;justify-content:space-between;align-items:center;color:{{ c.awayColor }};font-weight:{{ c.awayWeight }};font-size:17px;gap:12px"><span style="display:flex;align-items:center;gap:7px;min-width:0"><sc-if value="{{ c.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ c.awayLogoSrc }}" alt="" style="flex:none;width:20px;height:20px;object-fit:contain;background:#fff;border-radius:5px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.away }}</span></span><span style="font-family:'Anton';font-size:22px;flex:none">{{ c.awayScore }}</span></div>
                             </div>
                           </div>
                         </sc-for>
@@ -262,6 +266,9 @@
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px">
                 <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
                   <div style="display:flex;align-items:center;gap:11px">
+                    <sc-if value="{{ k.hasLogo }}" hint-placeholder-val="{{ false }}">
+                      <img src="{{ k.logoSrc }}" alt="" style="flex:none;width:22px;height:22px;object-fit:contain;background:#fff;border-radius:5px">
+                    </sc-if>
                     <span style="flex:none;min-width:56px;text-align:center;background:#fff;color:#0C0C0E;font-family:'Anton';font-size:13px;letter-spacing:.5px;padding:5px 8px;border-radius:7px">{{ k.code }}</span>
                     <span style="font-size:13.5px;color:#cdd2da">{{ k.name }}</span>
                   </div>
@@ -281,9 +288,9 @@
                     <div style="font-weight:800;letter-spacing:1px;color:#3bd070;font-size:12px;text-transform:uppercase;margin-bottom:10px">{{ round.round }}</div>
                     <sc-for list="{{ round.games }}" as="g" hint-placeholder-count="2">
                       <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.homeColor }};font-weight:{{ g.homeWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.home }}</span><span style="flex:none">{{ g.homeScore }}</span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.homeColor }};font-weight:{{ g.homeWeight }};gap:10px"><span style="display:flex;align-items:center;gap:6px;min-width:0"><sc-if value="{{ g.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ g.homeLogoSrc }}" alt="" style="flex:none;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.home }}</span></span><span style="flex:none">{{ g.homeScore }}</span></div>
                         <div style="height:1px;background:rgba(255,255,255,0.08);margin:8px 0"></div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.awayColor }};font-weight:{{ g.awayWeight }};gap:10px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.away }}</span><span style="flex:none">{{ g.awayScore }}</span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;color:{{ g.awayColor }};font-weight:{{ g.awayWeight }};gap:10px"><span style="display:flex;align-items:center;gap:6px;min-width:0"><sc-if value="{{ g.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ g.awayLogoSrc }}" alt="" style="flex:none;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px"></sc-if><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.away }}</span></span><span style="flex:none">{{ g.awayScore }}</span></div>
                       </div>
                     </sc-for>
                   </div>
@@ -2748,6 +2755,8 @@ class Component extends DCLogic {
              pool table matches every other public view; the Team key toggle
              below spells codes out on demand. */
           team: (s.api ? s.api.teamShort(r.team) : r.team),
+          logoSrc: (s.api && s.api.teamLogoSrc) ? s.api.teamLogoSrc(r.team) : '',
+          hasLogo: !!((s.api && s.api.teamLogoSrc) ? s.api.teamLogoSrc(r.team) : ''),
           marginText: (r.margin > 0 ? '+' : '') + r.margin,
           rankColor: q ? '#3bd070' : '#7f8794',
           rowStyle: 'display:grid;grid-template-columns:44px 1fr 40px 40px 40px 40px 52px 52px 58px 44px 52px;gap:4px;padding:12px 16px;align-items:center;border-top:1px solid rgba(255,255,255,0.07);' +
@@ -2764,8 +2773,11 @@ class Component extends DCLogic {
       games: rnd.games.map((g) => {
         const r = g.result || {};
         const hasScore = r.homeScore != null;
+        const homeLogo = this._logo(g.home), awayLogo = this._logo(g.away);
         return {
           home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
+          homeLogoSrc: homeLogo, hasHomeLogo: !!homeLogo,
+          awayLogoSrc: awayLogo, hasAwayLogo: !!awayLogo,
           homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
           awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
           homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),
@@ -2787,7 +2799,14 @@ class Component extends DCLogic {
       const db = st.doubleBracket;
       const awardRow = (g, tier, color) => {
         const ready = !!(g.winner && g.home && g.away);
-        return { tier, color, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
+        const runnerUpCode = g.winner === g.home ? g.away : g.home;
+        return {
+          tier, color, ready,
+          winner: ready ? this._tn(g.winner) : null,
+          winnerLogoSrc: ready ? this._logo(g.winner) : '', hasWinnerLogo: ready && !!this._logo(g.winner),
+          runnerUp: ready ? this._tn(runnerUpCode) : null,
+          runnerUpLogoSrc: ready ? this._logo(runnerUpCode) : '', hasRunnerUpLogo: ready && !!this._logo(runnerUpCode),
+        };
       };
       awardsSummary = [
         awardRow(db.top.cup, 'Cup', '#f5c518'),
@@ -2828,6 +2847,7 @@ class Component extends DCLogic {
         const mk = (seed, row, poolLabel, bracket) => (!row ? null : {
           seed, team: this._tn(row.team), poolLabel, rankLabel: ordinal(row.rank), bracket,
           bracketColor: bracket === 'Top Bracket' ? '#3bd070' : '#E11B22',
+          logoSrc: this._logo(row.team), hasLogo: !!this._logo(row.team),
         });
         knockoutSeeds = [
           mk(1, A[0], 'Pool A', 'Top Bracket'), mk(2, B[0], 'Pool B', 'Top Bracket'),
@@ -2853,7 +2873,14 @@ class Component extends DCLogic {
           const g = rnd.games[0] || {};
           const meta = tierMeta[rnd.round];
           const ready = !!(g.winner && g.home && g.away);
-          return { ...meta, ready, winner: ready ? this._tn(g.winner) : null, runnerUp: ready ? this._tn(g.winner === g.home ? g.away : g.home) : null };
+          const runnerUpCode = g.winner === g.home ? g.away : g.home;
+          return {
+            ...meta, ready,
+            winner: ready ? this._tn(g.winner) : null,
+            winnerLogoSrc: ready ? this._logo(g.winner) : '', hasWinnerLogo: ready && !!this._logo(g.winner),
+            runnerUp: ready ? this._tn(runnerUpCode) : null,
+            runnerUpLogoSrc: ready ? this._logo(runnerUpCode) : '', hasRunnerUpLogo: ready && !!this._logo(runnerUpCode),
+          };
         })
         .map((a) => ({ ...a, isCup: a.tier === 'Cup', isBowl: a.tier === 'Bowl', isPlate: a.tier === 'Plate', isShield: a.tier === 'Shield' }));
     }
@@ -3165,7 +3192,13 @@ class Component extends DCLogic {
       /* Passing selectedAgeId (this was calling teamKey() with no argument)
          so the key lists the draw's own teams for whichever age group is
          being viewed, not the hardcoded 9-team placeholder set. */
-      teamKeyList: (s.api && s.api.teamKey ? s.api.teamKey(s.selectedAgeId) : []),
+      teamKeyList: (() => {
+        const raw = s.api && s.api.teamKey ? s.api.teamKey(s.selectedAgeId) : [];
+        // Defensive: a test double or an unexpected api shape can hand back
+        // something that isn't an array (seen in test-fixtures-results-sync.js's
+        // simplistic teamKey mock) — fall back to empty rather than crashing.
+        return (Array.isArray(raw) ? raw : []).map((k) => ({ ...k, hasLogo: !!k.logoSrc }));
+      })(),
       showTeamKey: s.showTeamKey, onToggleTeamKey: () => this.toggleTeamKey(),
       teamKeyButtonLabel: s.showTeamKey ? 'Hide team key' : 'Show team key',
       showTables: !!(st && st.ageGroup.hasStandings && !st.awaitingPublication), pools, bracket, hasBracket: hasBracket && !(st && st.awaitingPublication),
@@ -3526,12 +3559,24 @@ class Component extends DCLogic {
     return (api && api.teamShort) ? api.teamShort(v) : v;
   }
 
+  /* The club crest for a raw team code (before _tn shortens it to display
+     form), or '' when the club has none on file. Same "" -> no logo, not a
+     broken image" contract as scores-data.js's own teamLogoSrc(). */
+  _logo(v) {
+    const api = this.state.api;
+    if (!v || !api || !api.teamLogoSrc) return '';
+    return api.teamLogoSrc(v) || '';
+  }
+
   _fmtMatch(g) {
     const colorWin = '#3bd070', colorNorm = '#fff', colorMute = '#7f8794';
     const r = g.result || {};
     const hasScore = r.homeScore != null;
+    const homeLogo = this._logo(g.home), awayLogo = this._logo(g.away);
     return {
       home: this._tn(g.home) || 'TBD', away: this._tn(g.away) || 'TBD',
+      homeLogoSrc: homeLogo, hasHomeLogo: !!homeLogo,
+      awayLogoSrc: awayLogo, hasAwayLogo: !!awayLogo,
       homeScore: hasScore ? (r.walkover === 'home' ? 20 : (r.walkover === 'away' ? 0 : r.homeScore)) : '',
       awayScore: hasScore ? (r.walkover === 'away' ? 20 : (r.walkover === 'home' ? 0 : r.awayScore)) : '',
       homeColor: !g.home ? colorMute : (g.winner === g.home ? colorWin : colorNorm),

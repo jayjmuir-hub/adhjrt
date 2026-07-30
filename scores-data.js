@@ -57,6 +57,23 @@ const TEAM_NAMES = {
   ADSB1:'AD Small Blacks 1',
 };
 
+/* Each club's crest, keyed by CODE PREFIX (the letters before the number) —
+   a club's logo is the same for its 1st and 2nd team in an age group, same
+   as its name. Clubs not listed here (an "Other" free-text registration
+   with no fixed prefix) simply show no logo, rather than a broken image. */
+const TEAM_LOGOS = {
+  ADH:  '/assets/logos/adh.png',
+  DE:   '/assets/logos/de.png',
+  DS:   '/assets/logos/ds.png',
+  DH:   '/assets/logos/dh.png',
+  DT:   '/assets/logos/dt.png',
+  BAR:  '/assets/logos/bar.png',
+  AAA:  '/assets/logos/aaa.png',
+  DD:   '/assets/logos/dd.png',
+  ADSB: '/assets/logos/adsb.png',
+  DW:   '/assets/logos/dw.png',
+};
+
 /* Names that arrived with a draw (draw.teamNames, written by the fixture
    editor's "Import registered teams"). Keyed by AGE GROUP, because _teams.js
    numbers teams within an age group: ADH1 in U16B and ADH1 in U14B are
@@ -101,6 +118,16 @@ export function teamLabel(code, agId) {
    code, so this is safe either way. */
 export function teamShort(code) {
   return String(code || '').replace(/Abu Dhabi/gi, 'AD');
+}
+
+/* The club's crest for a team code, or '' if this club has no logo on file.
+   Strips the trailing number so ADH1 and ADH2 share one crest — the logo is
+   the club's, not the team's. A hand-typed full name (no code pattern) also
+   falls through to '', same failure mode as an unknown club. */
+export function teamLogoSrc(code) {
+  const m = String(code || '').match(/^([A-Za-z]+)\d*$/);
+  const prefix = m ? m[1].toUpperCase() : '';
+  return TEAM_LOGOS[prefix] || '';
 }
 /* Mirrors netlify/functions/_scoring.js so the entry forms can build
    themselves. The server re-derives the total from these same rules, so this
@@ -700,7 +727,7 @@ export function currentRegistrationState(now) {
    hardcoded placeholder clubs. */
 export function teamKey(agId) {
   const map = (agId && DRAW_NAMES[agId]) || TEAM_NAMES;
-  return Object.keys(map).map((c) => ({ code: c, name: teamLabel(c, agId) }));
+  return Object.keys(map).map((c) => ({ code: c, name: teamLabel(c, agId), logoSrc: teamLogoSrc(c) }));
 }
 
 const ALL9 = ['ADH1', 'DE1', 'DS1', 'DH1', 'BAR1', 'AAA1', 'DD1', 'DT1', 'ADSB1'];

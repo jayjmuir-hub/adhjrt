@@ -644,13 +644,19 @@
       </sc-if>
 
       <!-- teams table -->
+      <!-- Jay, 30 Jul: with 256+ teams this div used to grow to whatever
+           height the full table needed, so its own overflow-x scrollbar sat
+           at the very bottom of that — hundreds of rows below the visible
+           screen, effectively unreachable. Capping the height and scrolling
+           BOTH axes inside a bounded box keeps the horizontal scrollbar (and
+           the sticky header below) always within reach. -->
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
           <table style="width:100%;min-width:1100px">
             <thead>
               <tr style="background:#151517">
                 <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
@@ -700,13 +706,16 @@
       </sc-if>
 
       <!-- players table -->
+      <!-- Same fix as the teams table above: with 3,800+ players this div's
+           overflow-x scrollbar was unreachable at the bottom of the whole
+           list. Bounded height + both-axis scroll + sticky header. -->
       <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
           <table style="width:100%;min-width:1200px">
             <thead>
               <tr style="background:#151517">
                 <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>

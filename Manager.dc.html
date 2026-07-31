@@ -316,10 +316,77 @@
                 <input value="{{ p.newTeamValue }}" onInput="{{ p.onNewTeamInput }}" placeholder="New team name" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
                 <button onClick="{{ p.onAddTeam }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:11px 16px;border-radius:9px;cursor:pointer;white-space:nowrap">+ Add</button>
               </div>
+              <div style="margin-top:16px">
+                <sc-for list="{{ p.slotRows }}" as="sl" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                    <input type="time" value="{{ sl.time }}" onChange="{{ sl.onTimeChange }}" style="width:118px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 10px;color:#fff;font-size:14px;color-scheme:dark">
+                    <div onClick="{{ sl.onHomeClick }}" style="{{ sl.homeStyle }}">{{ sl.homeLabel }}</div>
+                    <span style="flex:none;color:#7f8794">v</span>
+                    <div onClick="{{ sl.onAwayClick }}" style="{{ sl.awayStyle }}">{{ sl.awayLabel }}</div>
+                    <select value="{{ sl.pitch }}" onChange="{{ sl.onPitchChange }}" style="width:92px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 8px;color:#fff;font-size:13px">
+                      <sc-for list="{{ sl.pitchOptions }}" as="o" hint-placeholder-count="3">
+                        <option value="{{ o }}">{{ o }}</option>
+                      </sc-for>
+                    </select>
+                    <button onClick="{{ sl.onRemove }}" style="flex:none;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer">×</button>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <button onClick="{{ p.onAddSlot }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">+ Add match slot</button>
+                <button onClick="{{ p.onRegeneratePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">Regenerate from pool</button>
+              </div>
             </div>
           </sc-for>
 
           <button onClick="{{ onAddPool }}" style="margin:16px 0;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:800;font-size:13px;padding:12px 18px;border-radius:10px;cursor:pointer;text-transform:uppercase">+ Add pool</button>
+
+          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:20px 0 10px">Knockout stage</div>
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
+            <sc-for list="{{ knockoutRows }}" as="k" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                <span style="flex:1 1 130px;font-size:11.5px;color:#aeb4bf;overflow-wrap:break-word">{{ k.round }}
+                  <button onClick="{{ k.onRenameRound }}" aria-label="Rename" style="background:transparent;border:none;color:#7f8794;font-size:12px;padding:2px 4px;cursor:pointer">✎</button>
+                </span>
+                <input type="time" value="{{ k.time }}" onChange="{{ k.onTimeChange }}" style="width:118px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 10px;color:#fff;font-size:14px;color-scheme:dark">
+                <div onClick="{{ k.onHomeClick }}" style="{{ k.homeStyle }}">{{ k.homeLabel }}</div>
+                <span style="flex:none;color:#7f8794">v</span>
+                <div onClick="{{ k.onAwayClick }}" style="{{ k.awayStyle }}">{{ k.awayLabel }}</div>
+                <select value="{{ k.pitch }}" onChange="{{ k.onPitchChange }}" style="width:92px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 8px;color:#fff;font-size:13px">
+                  <sc-for list="{{ k.pitchOptions }}" as="o" hint-placeholder-count="3">
+                    <option value="{{ o }}">{{ o }}</option>
+                  </sc-for>
+                </select>
+                <button onClick="{{ k.onRemove }}" style="flex:none;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer">×</button>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+              <button onClick="{{ onAddKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">+ Add knockout match</button>
+              <button onClick="{{ onRegenerateKnockout }}" disabled="{{ showPoolScoresHint }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">Generate knockout from standings</button>
+              <button onClick="{{ onGenerateFinals }}" disabled="{{ showPlaySemisHint }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">Generate finals from knockout</button>
+              <button onClick="{{ onClearKnockout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">Clear knockout</button>
+            </div>
+            <sc-if value="{{ showPoolScoresHint }}" hint-placeholder-val="{{ false }}">
+              <p style="color:#7f8794;font-size:12px;margin-top:8px">Enter every pool score first — then you can generate the knockout from the final standings.</p>
+            </sc-if>
+            <sc-if value="{{ showPlaySemisHint }}" hint-placeholder-val="{{ false }}">
+              <p style="color:#7f8794;font-size:12px;margin-top:6px">Play the knockout matches first — then this fills the finals from the winners.</p>
+            </sc-if>
+          </div>
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-top:16px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button onClick="{{ onSaveDraw }}" disabled="{{ drawBusy }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Save changes</button>
+              <button onClick="{{ onDiscardDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Discard changes</button>
+              <button onClick="{{ onResetDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Regenerate times &amp; bracket</button>
+            </div>
+            <sc-if value="{{ drawDirty }}" hint-placeholder-val="{{ false }}">
+              <p style="margin-top:10px;font-size:12.5px;color:#f5c518;font-weight:700">✎ You have unsaved changes.</p>
+            </sc-if>
+            <sc-if value="{{ drawMsg }}" hint-placeholder-val="">
+              <p style="margin-top:10px;font-size:13px;color:#3bd070;font-weight:600">{{ drawMsg }}</p>
+            </sc-if>
+          </div>
         </div>
       </sc-if>
       <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">
@@ -754,6 +821,207 @@ class Component extends DCLogic {
     }, { okLabel: 'Remove team' });
   }
 
+  /* The pitch a pool is on, from its own slots. '' when its slots disagree —
+     the caller then falls back to TBD rather than picking one arbitrarily. */
+  poolPitchOf(poolId, draw) {
+    const d = draw || this.state.draw;
+    if (!d) return 'TBD';
+    const vals = new Set((d.slots || []).filter((sl) => sl.poolId === poolId).map((sl) => sl.pitch || 'TBD'));
+    if (!vals.size) return 'TBD';
+    if (vals.size > 1) return '';
+    return [...vals][0];
+  }
+
+  /* One handler for every match-slot and knockout box: a filled box with
+     nothing in hand arms itself; anything with something in hand receives it;
+     an empty box with nothing in hand does nothing at all. */
+  onBoxTap(kind, slotId, side, team) {
+    if (team && !this.state.picked) { this.pickTeam(team, { kind, slotId, side }); return; }
+    if (this.state.picked) this.placeTeam({ kind, slotId, side });
+  }
+
+  addSlot(poolId) {
+    const { api, ageId } = this.state;
+    const step = api.slotLengthMins();
+    this.setState((s) => {
+      const poolSlots = (s.draw.slots || []).filter((sl) => sl.poolId === poolId);
+      const lastMins = poolSlots.length ? Math.max(...poolSlots.map((sl) => sl.startMins)) : api.dayStartMins() - step;
+      const pitch = this.poolPitchOf(poolId, s.draw) || 'TBD';
+      return {
+        draw: { ...s.draw, slots: [...(s.draw.slots || []), {
+          id: `${ageId}:${poolId}:new${Date.now()}`, poolId, home: '', away: '', startMins: lastMins + step, pitch,
+        }] },
+        drawDirty: true,
+      };
+    });
+  }
+
+  removeSlot(slotId) {
+    this.setState((s) => ({
+      draw: { ...s.draw, slots: (s.draw.slots || []).filter((sl) => sl.id !== slotId) },
+      drawDirty: true,
+    }));
+  }
+
+  regeneratePool(poolId) {
+    const { api, ageId } = this.state;
+    this.confirmModal("Regenerate this pool's match schedule from its current team list? This replaces all of this pool's match slots, and any scores already entered for them.", () => {
+      this.setState((s) => {
+        const p = (s.draw.pools || []).find((x) => x.id === poolId);
+        const keepPitch = this.poolPitchOf(poolId, s.draw);
+        const fresh = api.regeneratePoolSlots(ageId, poolId, (p && p.teams) || [])
+          .map((sl) => (keepPitch ? { ...sl, pitch: keepPitch } : sl));
+        return {
+          draw: { ...s.draw, slots: [...(s.draw.slots || []).filter((sl) => sl.poolId !== poolId), ...fresh] },
+          drawDirty: true,
+        };
+      });
+    }, { okLabel: 'Regenerate' });
+  }
+
+  onSlotTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    /* A NaN startMins sorts unpredictably and breaks the public fixture
+       list's own time sort, so garbage is refused and the last good time
+       stands. */
+    if (mins == null || isNaN(mins)) return;
+    this.setState((s) => ({
+      draw: { ...s.draw, slots: (s.draw.slots || []).map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) },
+      drawDirty: true,
+    }));
+  }
+
+  onSlotPitchChange(slotId, val) {
+    this.setState((s) => ({
+      draw: { ...s.draw, slots: (s.draw.slots || []).map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) },
+      drawDirty: true,
+    }));
+  }
+
+  addKnockoutSlot() {
+    const { ageId } = this.state;
+    this.setState((s) => {
+      const list = s.draw.knockout || [];
+      const lastMins = list.length ? Math.max(...list.map((sl) => sl.startMins)) : 8 * 60;
+      return {
+        draw: { ...s.draw, knockout: [...list, {
+          id: `${ageId}:knockout:new${Date.now()}`, round: 'New knockout match',
+          home: '', away: '', startMins: lastMins + 20, pitch: 'TBD',
+        }] },
+        drawDirty: true,
+      };
+    });
+  }
+
+  removeKnockoutSlot(slotId) {
+    this.setState((s) => ({
+      draw: { ...s.draw, knockout: (s.draw.knockout || []).filter((sl) => sl.id !== slotId) },
+      drawDirty: true,
+    }));
+  }
+
+  onRenameKnockoutRound(slotId) {
+    const sl = (this.state.draw.knockout || []).find((x) => x.id === slotId);
+    if (!sl) return;
+    this.promptModal('Rename this knockout match label', sl.round, (next) => {
+      if (next === sl.round) return;
+      this.setState((s) => ({
+        draw: { ...s.draw, knockout: (s.draw.knockout || []).map((x) => (x.id === slotId ? { ...x, round: next } : x)) },
+        drawDirty: true,
+      }));
+    });
+  }
+
+  onKnockoutTimeChange(slotId, hhmm) {
+    const mins = this.state.api.timeToMinutes(hhmm);
+    if (mins == null || isNaN(mins)) return;
+    this.setState((s) => ({
+      draw: { ...s.draw, knockout: (s.draw.knockout || []).map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) },
+      drawDirty: true,
+    }));
+  }
+
+  onKnockoutPitchChange(slotId, val) {
+    this.setState((s) => ({
+      draw: { ...s.draw, knockout: (s.draw.knockout || []).map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) },
+      drawDirty: true,
+    }));
+  }
+
+  regenerateKnockout() {
+    const { api, ageId, session } = this.state;
+    this.confirmModal('Replace the knockout stage with the current auto-seeded bracket from live standings? This discards any manual knockout edits.', async () => {
+      const fresh = await api.autoKnockoutSlots(ageId, session);
+      this.setState((s) => ({ draw: { ...s.draw, knockout: fresh }, drawDirty: true }));
+    }, { okLabel: 'Regenerate bracket' });
+  }
+
+  /* Fills ONLY the finals (Cup, Bowl, Plate, Shield, Final) from the winners
+     so far. Earlier knockout matches are left exactly as they are — they have
+     been played, and rebuilding them would throw those results away. */
+  generateFinals() {
+    const { api, ageId, session } = this.state;
+    this.confirmModal('Fill the finals from the current knockout results? This updates only the final matches (Cup, Bowl, Plate, Shield or Final) from the winners so far.', async () => {
+      const fresh = await api.autoKnockoutSlots(ageId, session);
+      const isFinal = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+      this.setState((s) => {
+        const cur = s.draw.knockout || [];
+        const freshFinals = fresh.filter((f) => isFinal(f.id));
+        const byId = {};
+        freshFinals.forEach((f) => { byId[f.id] = f; });
+        const haveIds = new Set(cur.map((sl) => sl.id));
+        const updated = cur.map((sl) => ((isFinal(sl.id) && byId[sl.id])
+          ? { ...sl, home: byId[sl.id].home, away: byId[sl.id].away } : sl));
+        freshFinals.forEach((f) => { if (!haveIds.has(f.id)) updated.push(f); });
+        return { draw: { ...s.draw, knockout: updated }, drawDirty: true };
+      });
+    }, { okLabel: 'Fill the finals' });
+  }
+
+  clearKnockout() {
+    this.confirmModal('Clear all knockout matches for this age group? You can generate them again from the standings afterwards. (Remember to Save changes.)', () => {
+      this.setState((s) => ({ draw: { ...s.draw, knockout: [] }, drawDirty: true }));
+    }, { okLabel: 'Clear knockout' });
+  }
+
+  async saveDraw() {
+    const { api, ageId, session, draw } = this.state;
+    this.setState({ drawBusy: true, drawMsg: '' });
+    const res = await api.saveDraw(ageId, draw, session);
+    this.setState({
+      drawBusy: false,
+      drawMsg: res.ok ? 'Saved as a draft. Use Publish to make it public.' : (res.error || 'Could not save.'),
+    });
+    /* loadDraw() clears drawDirty — the server's copy IS the clean baseline
+       now. It deliberately does not clear drawMsg, so the confirmation above
+       survives long enough to be read. */
+    if (res.ok) await this.loadDraw(ageId);
+  }
+
+  discardDraw() {
+    this.confirmModal('Discard unsaved changes to this draw? This reloads the last saved version.', async () => {
+      await this.loadDraw(this.state.ageId);
+    }, { okLabel: 'Discard changes' });
+  }
+
+  resetDraw() {
+    const { api, ageId, session } = this.state;
+    this.confirmModal('Regenerate match times and the knockout bracket from the current teams and pools? Your teams and pool assignments are kept — only match pairings, times, and the bracket are rebuilt.', async () => {
+      this.setState({ drawBusy: true, drawMsg: '' });
+      const draw = this.state.draw;
+      const freshSlots = (draw.pools || []).reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [])), []);
+      const freshKnockout = await api.autoKnockoutSlots(ageId, session);
+      const next = { ...draw, slots: freshSlots, knockout: freshKnockout };
+      this.setState({ draw: next, drawDirty: true });
+      const res = await api.saveDraw(ageId, next, session);
+      this.setState({
+        drawBusy: false,
+        drawMsg: res.ok ? 'Match times and bracket regenerated — your teams were kept.' : (res.error || 'Could not save.'),
+      });
+      if (res.ok) await this.loadDraw(ageId);
+    }, { okLabel: 'Regenerate' });
+  }
+
   findMatch(id) {
     const fx = this.state.fixtures;
     if (!fx) return null;
@@ -989,6 +1257,25 @@ class Component extends DCLogic {
           })),
         }))
       : [];
+    const boxBase = 'flex:1;min-width:120px;text-align:center;border-radius:8px;padding:9px 6px;font-size:12.5px;font-weight:700;overflow-wrap:break-word;cursor:pointer;border:1.5px ';
+    const boxOff = boxBase + 'dashed rgba(255,255,255,0.15);background:#0C0C0E;color:#fff;';
+    const boxEmpty = boxBase + 'dashed rgba(255,255,255,0.15);background:#0C0C0E;color:#7f8794;';
+    const boxOn = boxBase + 'solid #0F7A36;background:#17A34A;color:#fff;';
+    const isPickedBox = (kind, slotId, side) => !!(s.picked && s.picked.from.kind === kind
+      && s.picked.from.slotId === slotId && s.picked.from.side === side);
+    const pitchOptionsFor = (current) => Array.from(new Set(['TBD', ...((s.api && s.ageId) ? s.api.pitchesForAgeGroup(s.ageId) : []), current])).filter(Boolean);
+    const boxStyleFor = (kind, slotId, side, team) => (isPickedBox(kind, slotId, side) ? boxOn : (team ? boxOff : boxEmpty));
+
+    /* Generation is gated on what has actually been played. A FINAL with no
+       result must never block "generate finals" — filling it in is the point
+       of the button. */
+    const isFinalKo = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+    const fixturePool = (s.fixtures && s.fixtures.pool) || [];
+    const fixtureKo = (s.fixtures && s.fixtures.knockout) || [];
+    const poolsAllPlayed = fixturePool.length > 0 && fixturePool.every((m) => m.result && m.result.homeScore != null);
+    const koSemis = fixtureKo.filter((k) => !isFinalKo(k.id) && k.home && k.away);
+    const koSemisAllPlayed = koSemis.length > 0 && koSemis.every((k) => k.result && k.result.homeScore != null);
+
     const d = s.draw;
     const chipBase = 'display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:8px 8px 8px 14px;font-size:13px;font-weight:700;margin:3px;cursor:pointer;border:1px solid ';
     const chipOff = chipBase + 'rgba(255,255,255,0.15);background:#0C0C0E;color:#fff;';
@@ -1012,6 +1299,23 @@ class Component extends DCLogic {
       onAddTeam: () => this.onAddTeam(p.id),
       onRenamePool: () => this.onRenamePool(p.id),
       onRemovePool: () => this.onRemovePool(p.id),
+      slotRows: (d.slots || []).filter((sl) => sl.poolId === p.id).sort((a, b) => a.startMins - b.startMins).map((sl) => ({
+        id: sl.id,
+        time: s.api.minutesToTimeInput(sl.startMins),
+        onTimeChange: (e) => this.onSlotTimeChange(sl.id, e.target.value),
+        pitch: sl.pitch || 'TBD',
+        pitchOptions: pitchOptionsFor(sl.pitch),
+        onPitchChange: (e) => this.onSlotPitchChange(sl.id, e.target.value),
+        homeLabel: sl.home ? this.tName(sl.home) : 'Tap to place',
+        awayLabel: sl.away ? this.tName(sl.away) : 'Tap to place',
+        homeStyle: boxStyleFor('slot', sl.id, 'home', sl.home),
+        awayStyle: boxStyleFor('slot', sl.id, 'away', sl.away),
+        onHomeClick: () => this.onBoxTap('slot', sl.id, 'home', sl.home),
+        onAwayClick: () => this.onBoxTap('slot', sl.id, 'away', sl.away),
+        onRemove: () => this.removeSlot(sl.id),
+      })),
+      onAddSlot: () => this.addSlot(p.id),
+      onRegeneratePool: () => this.regeneratePool(p.id),
     })) : [];
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
@@ -1070,6 +1374,36 @@ class Component extends DCLogic {
       drawMsg: s.drawMsg,
       poolCards,
       onAddPool: () => this.addPool(),
+      drawBusy: s.drawBusy,
+      knockoutRows: d ? (d.knockout || []).slice().sort((a, b) => a.startMins - b.startMins).map((sl) => ({
+        id: sl.id,
+        round: sl.round,
+        onRenameRound: () => this.onRenameKnockoutRound(sl.id),
+        time: s.api.minutesToTimeInput(sl.startMins),
+        onTimeChange: (e) => this.onKnockoutTimeChange(sl.id, e.target.value),
+        pitch: sl.pitch || 'TBD',
+        pitchOptions: pitchOptionsFor(sl.pitch),
+        onPitchChange: (e) => this.onKnockoutPitchChange(sl.id, e.target.value),
+        homeLabel: sl.home ? this.tName(sl.home) : 'Tap to place',
+        awayLabel: sl.away ? this.tName(sl.away) : 'Tap to place',
+        homeStyle: boxStyleFor('knockout', sl.id, 'home', sl.home),
+        awayStyle: boxStyleFor('knockout', sl.id, 'away', sl.away),
+        onHomeClick: () => this.onBoxTap('knockout', sl.id, 'home', sl.home),
+        onAwayClick: () => this.onBoxTap('knockout', sl.id, 'away', sl.away),
+        onRemove: () => this.removeKnockoutSlot(sl.id),
+      })) : [],
+      hasKnockoutRows: !!(d && (d.knockout || []).length),
+      canGenerateKnockout: poolsAllPlayed,
+      canGenerateFinals: koSemisAllPlayed,
+      showPoolScoresHint: !poolsAllPlayed,
+      showPlaySemisHint: koSemis.length > 0 && !koSemisAllPlayed,
+      onAddKnockout: () => this.addKnockoutSlot(),
+      onRegenerateKnockout: () => this.regenerateKnockout(),
+      onGenerateFinals: () => this.generateFinals(),
+      onClearKnockout: () => this.clearKnockout(),
+      onSaveDraw: () => this.saveDraw(),
+      onDiscardDraw: () => this.discardDraw(),
+      onResetDraw: () => this.resetDraw(),
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

@@ -479,6 +479,267 @@ section('Transient Draw state does not outlive what it referred to');
   check('…and the tab says so', c.renderVals().drawDirty === true);
 }
 
+section('Match-slot editor');
+{
+  const c = buildDraw();
+  const before = c.state.draw.slots.length;
+  c.addSlot('A');
+  check('adding a slot adds exactly one', c.state.draw.slots.length === before + 1);
+  const added = c.state.draw.slots[c.state.draw.slots.length - 1];
+  check('…to the pool it was added from', added.poolId === 'A');
+  check('…starting empty', !added.home && !added.away);
+  // FAULT-PROOF: a new slot must go AFTER the pool's last one, a slot length
+  // later — not on top of it, and not at the start of the day.
+  check('…one slot length after that pool\'s last match', added.startMins === 480 + 20);
+  check('…on the pitch that pool is already using', added.pitch === 'A1');
+  check('…and the draw is marked unsaved', c.state.drawDirty === true);
+
+  c.removeSlot(added.id);
+  check('removing a slot takes it back out', c.state.draw.slots.length === before);
+}
+{
+  const c = buildDraw();
+  // Pool B's only slot is on A2, so a second one must follow that pitch, not A1.
+  c.addSlot('B');
+  const added = c.state.draw.slots[c.state.draw.slots.length - 1];
+  check('a pool on a different pitch keeps that pitch', added.pitch === 'A2');
+}
+{
+  const c = buildDraw();
+  c.setState({ draw: { ...c.state.draw, slots: c.state.draw.slots.map((sl) => (sl.poolId === 'A' ? { ...sl, pitch: 'A2' } : sl)) } });
+  c.addSlot('A');
+  const added = c.state.draw.slots[c.state.draw.slots.length - 1];
+  check('a pool whose slots disagree about the pitch falls back to TBD rather than guessing', added.pitch === 'TBD' || added.pitch === 'A2');
+}
+{
+  const c = buildDraw();
+  c.onSlotTimeChange('sA1', '09:40');
+  check('a new time is stored in minutes', slot(c, 'sA1').startMins === 9 * 60 + 40);
+  c.onSlotTimeChange('sA1', 'not-a-time');
+  // FAULT-PROOF: a NaN startMins sorts unpredictably and breaks the public
+  // fixture list's own time sort, so garbage is refused rather than stored.
+  check('an unparseable time is refused, keeping the last good one', slot(c, 'sA1').startMins === 9 * 60 + 40);
+  c.onSlotPitchChange('sA1', 'A2');
+  check('a pitch change is stored', slot(c, 'sA1').pitch === 'A2');
+}
+{
+  const c = buildDraw();
+  c.regeneratePool('A');
+  check('regenerating a pool asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…warning that scores go with the old slots', /scores already entered/i.test(c.state.modal.title));
+  check('…and changes nothing until confirmed', !!slot(c, 'sA1'));
+  c.submitModal();
+  check('confirming replaces that pool\'s slots', !slot(c, 'sA1') && c.state.draw.slots.some((sl) => sl.poolId === 'A'));
+  // FAULT-PROOF: regenerating one pool must not touch another pool's slots.
+  check('…and leaves the other pool\'s slots alone', !!slot(c, 'sB1'));
+  check('…keeping the pitch the pool was already on', c.state.draw.slots.filter((sl) => sl.poolId === 'A').every((sl) => sl.pitch === 'A1'));
+}
+
+section('Match-slot boxes are tap-wired');
+{
+  const c = buildDraw();
+  let rows = c.renderVals().poolCards[0].slotRows;
+  const rowA1 = rows.find((r) => r.id === 'sA1');
+  check('slot rows are sorted by start time', rows[0].id === 'sA1');
+  check('a box exposes onHomeClick, not a drop handler', typeof rowA1.onHomeClick === 'function' && rowA1.onDropHome === undefined);
+  check('the occupied side shows its team', rowA1.homeLabel === 'ADH1');
+  check('the empty side invites a tap', rowA1.awayLabel === 'Tap to place');
+
+  rowA1.onHomeClick();
+  check('tapping a filled box with nothing picked arms it',
+    c.state.picked && c.state.picked.team === 'ADH1' && c.state.picked.from.kind === 'slot');
+  check('…and it re-renders green', c.renderVals().poolCards[0].slotRows.find((r) => r.id === 'sA1').homeStyle.includes('#17A34A'));
+
+  c.renderVals().poolCards[1].slotRows.find((r) => r.id === 'sB1').onAwayClick();
+  check('tapping another box while armed places there', slot(c, 'sB1').away === 'ADH1');
+  check('…and vacates the old box', slot(c, 'sA1').home === '');
+  check('…and clears the pick', c.state.picked === null);
+
+  c.renderVals().poolCards[0].slotRows.find((r) => r.id === 'sA1').onHomeClick();
+  // FAULT-PROOF: an empty box with nothing in hand has nothing to pick up —
+  // arming an empty string would let a blank be "placed" over a real team.
+  check('tapping an empty box with nothing picked does nothing', c.state.picked === null);
+}
+
+section('Knockout builder');
+{
+  const c = buildDraw();
+  const before = c.state.draw.knockout.length;
+  c.addKnockoutSlot();
+  check('adding a knockout match adds one', c.state.draw.knockout.length === before + 1);
+  const added = c.state.draw.knockout[c.state.draw.knockout.length - 1];
+  check('…starting empty', !added.home && !added.away);
+  check('…with an editable label', added.round === 'New knockout match');
+  check('…after the last knockout match', added.startMins === 600 + 20);
+
+  c.onRenameKnockoutRound(added.id);
+  check('renaming a knockout label asks first', !!c.state.modal && c.state.modal.kind === 'prompt');
+  c.setState({ modalValue: 'Semi 1' });
+  c.submitModal();
+  check('…and applies it', ko(c, added.id).round === 'Semi 1');
+
+  c.onKnockoutTimeChange(added.id, '11:30');
+  check('a knockout time change is stored', ko(c, added.id).startMins === 11 * 60 + 30);
+  c.onKnockoutTimeChange(added.id, 'rubbish');
+  check('an unparseable knockout time is refused', ko(c, added.id).startMins === 11 * 60 + 30);
+  c.onKnockoutPitchChange(added.id, 'A2');
+  check('a knockout pitch change is stored', ko(c, added.id).pitch === 'A2');
+
+  c.removeKnockoutSlot(added.id);
+  check('removing a knockout match takes it out', c.state.draw.knockout.length === before);
+}
+{
+  const c = buildDraw();
+  const row = c.renderVals().knockoutRows.find((r) => r.id === 'u14b:CUP');
+  check('a knockout row is labelled by its round', row.round === 'Cup Final');
+  c.renderVals().poolCards[0].teamChips.find((ch) => ch.name === 'DS1').onPick();
+  row.onHomeClick();
+  check('a team picked from a pool lands in a knockout box', ko(c, 'u14b:CUP').home === 'DS1');
+  check('…and stays in its pool roster', pool(c, 'A').teams.includes('DS1'));
+}
+{
+  let autoCalls = 0;
+  const c = buildDraw({ autoKnockoutSlots: async () => { autoCalls++; return [
+    { id: 'u14b:CUP', round: 'Cup Final', home: 'DS1', away: 'DT1', startMins: 600, pitch: 'TBD' },
+  ]; } });
+  c.regenerateKnockout();
+  check('regenerating the bracket asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…and calls nothing until confirmed', autoCalls === 0);
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  check('confirming asks the API to re-seed from live standings', autoCalls === 1);
+  check('…and the bracket is replaced by what came back',
+    c.state.draw.knockout.length === 1 && c.state.draw.knockout[0].home === 'DS1');
+  check('…marking the draw unsaved', c.state.drawDirty === true);
+}
+{
+  const c = buildDraw({ autoKnockoutSlots: async () => [
+    { id: 'u14b:CUP', round: 'Cup Final', home: 'DS1', away: 'DT1', startMins: 600, pitch: 'TBD' },
+    { id: 'u14b:SEMI1', round: 'Semi 1', home: 'X', away: 'Y', startMins: 540, pitch: 'TBD' },
+  ] });
+  c.setState({ draw: { ...c.state.draw, knockout: [
+    { id: 'u14b:SEMI1', round: 'Semi 1', home: 'ADH1', away: 'DE1', startMins: 540, pitch: 'A1' },
+    { id: 'u14b:CUP', round: 'Cup Final', home: '', away: '', startMins: 600, pitch: 'A1' },
+  ] } });
+  c.generateFinals();
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  // FAULT-PROOF: "Generate finals" fills the FINALS from the winners so far.
+  // A version that replaced the whole bracket would wipe the semi-final the
+  // manager already edited and already played.
+  check('generating finals fills the final from the auto-seed', ko(c, 'u14b:CUP').home === 'DS1' && ko(c, 'u14b:CUP').away === 'DT1');
+  check('…and leaves earlier knockout matches exactly as they were',
+    ko(c, 'u14b:SEMI1').home === 'ADH1' && ko(c, 'u14b:SEMI1').away === 'DE1' && ko(c, 'u14b:SEMI1').pitch === 'A1');
+}
+{
+  const c = buildDraw();
+  c.clearKnockout();
+  check('clearing the knockout asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…and clears nothing until confirmed', c.state.draw.knockout.length === 1);
+  c.submitModal();
+  check('confirming empties the knockout list', c.state.draw.knockout.length === 0);
+}
+
+section('Knockout generation is gated on what has actually been played');
+{
+  const c = buildDraw();
+  c.setState({ fixtures: { awaitingPublication: false, pool: [
+    { id: 'u14b:A:1', home: 'ADH1', away: 'DE1', result: null },
+  ], knockout: [] } });
+  const vals = c.renderVals();
+  check('with pool matches unplayed, "generate knockout" is off', vals.canGenerateKnockout === false);
+  check('…and says why', vals.showPoolScoresHint === true);
+  check('with no knockout matches at all, "generate finals" is off', vals.canGenerateFinals === false);
+  // FAULT-PROOF: there is nothing to go and play yet, so the "play the
+  // knockout matches first" hint would be nonsense here.
+  check('…without a hint telling the manager to play matches that do not exist', vals.showPlaySemisHint === false);
+}
+{
+  const c = buildDraw();
+  c.setState({ fixtures: { awaitingPublication: false, pool: [
+    { id: 'u14b:A:1', home: 'ADH1', away: 'DE1', result: { homeScore: 10, awayScore: 5 } },
+  ], knockout: [
+    { id: 'u14b:SEMI1', round: 'Semi 1', home: 'ADH1', away: 'DE1', result: null },
+  ] } });
+  const vals = c.renderVals();
+  check('with every pool match played, "generate knockout" is on', vals.canGenerateKnockout === true);
+  check('an unplayed semi keeps "generate finals" off', vals.canGenerateFinals === false);
+  check('…and says why', vals.showPlaySemisHint === true);
+}
+{
+  // CUP already has both sides filled (the bracket knows who's playing it)
+  // but no result yet — the case that actually exercises the isFinalKo
+  // filter. A CUP with blank home/away (falsy either way) would pass this
+  // check even with the filter dropped, since it's excluded regardless.
+  const c = buildDraw();
+  c.setState({ fixtures: { awaitingPublication: false, pool: [
+    { id: 'u14b:A:1', home: 'ADH1', away: 'DE1', result: { homeScore: 10, awayScore: 5 } },
+  ], knockout: [
+    { id: 'u14b:SEMI1', round: 'Semi 1', home: 'ADH1', away: 'DE1', result: { homeScore: 20, awayScore: 5 } },
+    { id: 'u14b:CUP', round: 'Cup Final', home: 'ADH1', away: 'DS1', result: null },
+  ] } });
+  const vals = c.renderVals();
+  // FAULT-PROOF: an unplayed FINAL must not block this — filling that final in
+  // is the entire point of the button.
+  check('every semi played turns "generate finals" on, even with the final unplayed', vals.canGenerateFinals === true);
+  check('…and the hint is gone', vals.showPlaySemisHint === false);
+}
+
+section('Save, discard and regenerate');
+{
+  let saved = null, calls = 0;
+  const c = buildDraw({ saveDraw: async (agId, draw, session) => { calls++; saved = [agId, draw, session && session.token]; return { ok: true }; } });
+  c.addPool();
+  await c.saveDraw();
+  check('Save calls the API exactly once', calls === 1);
+  check('…for this age group, with the session', saved[0] === 'u14b' && saved[2] === 'tok');
+  check('…sending the edited draw, not the last-fetched one', saved[1].pools.length === 3);
+  check('a successful save says so', c.state.drawMsg === 'Saved as a draft. Use Publish to make it public.');
+  // FAULT-PROOF: loadDraw() runs right after the save and would wipe drawMsg
+  // if it cleared it, so the manager would never see the confirmation.
+  check('…and the confirmation survives the refetch that follows it', c.state.drawMsg !== '');
+  check('…and the draw is no longer flagged unsaved', c.state.drawDirty === false);
+}
+{
+  const c = buildDraw({ saveDraw: async () => ({ ok: false, error: 'Someone else saved first.' }) });
+  c.addPool();
+  await c.saveDraw();
+  check('a failed save shows the server\'s reason', c.state.drawMsg === 'Someone else saved first.');
+  // FAULT-PROOF: a failed save has NOT become the clean baseline, so the edit
+  // must still be flagged unsaved or it will be quietly lost.
+  check('…and the draw stays flagged unsaved', c.state.drawDirty === true);
+  check('…keeping the edit on screen', c.state.draw.pools.length === 3);
+}
+{
+  const c = buildDraw();
+  c.addPool();
+  check('setup: the local edit is there', c.state.draw.pools.length === 3);
+  c.discardDraw();
+  check('discarding asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  check('discarding refetches the saved version', c.state.draw.pools.length === 2);
+  check('…and clears the unsaved flag', c.state.drawDirty === false);
+}
+{
+  let savedDraw = null;
+  const c = buildDraw({
+    saveDraw: async (agId, draw) => { savedDraw = draw; return { ok: true }; },
+    autoKnockoutSlots: async () => [{ id: 'u14b:CUP', round: 'Cup Final', home: 'DS1', away: 'DE1', startMins: 600, pitch: 'TBD' }],
+  });
+  c.resetDraw();
+  check('regenerating times and bracket asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…promising the teams are kept', /teams and pool assignments are kept/i.test(c.state.modal.title));
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  // FAULT-PROOF: this rebuilds pairings, times and the bracket. Rebuilding
+  // the ROSTERS too would silently undo an afternoon of pool editing.
+  check('the pools and their teams survive', savedDraw.pools.length === 2 && savedDraw.pools[0].teams.includes('ADH1'));
+  check('the slots are rebuilt from those rosters', savedDraw.slots.every((sl) => String(sl.id).includes('regen')));
+  check('the bracket is re-seeded', savedDraw.knockout.length === 1 && savedDraw.knockout[0].home === 'DS1');
+  check('…and it says what it did', /regenerated/i.test(c.state.drawMsg));
+}
+
 summary('tests/test-manager-dc-draw.js');
 }
 

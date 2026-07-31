@@ -282,6 +282,235 @@ section('In-app confirm/prompt modal (window.confirm is blocked in the DC previe
   check('a blank prompt answer does not call back at all', got2 === 'untouched');
 }
 
+section('Today tab');
+{
+  const c = buildManager();
+  await c.boot();
+  const vals = c.renderVals();
+  check('the next unplayed match is offered first', vals.todayHasNext === true && vals.todayNextRows.length === 1);
+  check('…and it is the unplayed one, not the scored one', vals.todayNextRows[0].id === 'u14b:A:1-2');
+  check('…named by team, time and pitch', vals.todayNextRows[0].teams === 'ADH1 v DE1'
+    && vals.todayNextRows[0].time === '09:00' && vals.todayNextRows[0].pitch === 'A1');
+  check('the scored match shows under recent results', vals.todayHasRecent === true
+    && vals.todayRecentRows.length === 1 && vals.todayRecentRows[0].id === 'u14b:A:3-4');
+  // FAULT-PROOF: `includes('15') && includes('10')` would pass with the sides
+  // swapped. The score string is ordered home-then-away.
+  check('…with the score home-then-away', vals.todayRecentRows[0].score === '15–10');
+  check('a row knows how to open the score sheet', typeof vals.todayNextRows[0].onOpen === 'function');
+  vals.todayNextRows[0].onOpen();
+  check('…and does open it on that match', c.state.sheetMatchId === 'u14b:A:1-2');
+}
+{
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false, pool: [
+    { id: `${agId}:A:1-2`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 5, awayScore: 0 } },
+  ], knockout: [] }) });
+  await c.boot();
+  const vals = c.renderVals();
+  check('with everything played there is no "next up"', vals.todayHasNext === false && vals.todayNextRows.length === 0);
+  check('…and the recent list still has the played match', vals.todayHasRecent === true);
+}
+{
+  const c = buildManager({ getFixtures: async () => ({ awaitingPublication: true, pool: [], knockout: [] }) });
+  await c.boot();
+  const vals = c.renderVals();
+  check('an unpublished draw shows the coming-soon state, not an empty list', vals.todayAwaiting === true);
+  check('…naming the age group', /U14 Boys/.test(vals.comingSoonBlurb));
+  check('…and offers no rows at all', vals.todayHasNext === false && vals.todayHasRecent === false);
+}
+{
+  const c = buildManager();
+  c.setState({ ageId: 'u14b', ageGroups: [{ id: 'u14b', name: 'U14 Boys', hasStandings: true }], session: { ageGroupId: 'u14b', token: 't' } });
+  check('before the fetch lands, the tab says it is loading', c.renderVals().todayLoading === true);
+}
+{
+  // A knockout slot with neither team decided is not a fixture anybody can
+  // play, so it must not be offered as "next up".
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
+    pool: [{ id: `${agId}:A:1`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 5, awayScore: 0 } }],
+    knockout: [{ id: `${agId}:CUP`, round: 'Cup Final', home: '', away: '', time: '13:00', pitch: 'A1', result: null }] }) });
+  await c.boot();
+  check('an undecided knockout slot is not offered as the next match', c.renderVals().todayHasNext === false);
+}
+
+section('Fixtures & scoring tab');
+{
+  const c = buildManager();
+  await c.boot();
+  c.go('fixtures');
+  const vals = c.renderVals();
+  check('matches are grouped under their pool', vals.poolGroups.length === 1 && vals.poolGroups[0].name === 'Pool A');
+  // FAULT-PROOF: a flat list would still show both matches. This asserts the
+  // GROUPING, which is the thing the tab exists to do.
+  check('…with both of that pool\'s matches inside the group', vals.poolGroups[0].rows.length === 2);
+  check('the rows carry team names and times', vals.poolGroups[0].rows[0].teams === 'ADH1 v DE1'
+    && vals.poolGroups[0].rows[0].time === '09:00');
+  check('a played match shows its score in the list', vals.poolGroups[0].rows[1].score === '15–10');
+  check('there is no knockout section when there are no knockout matches', vals.hasKnockout === false);
+
+  vals.poolGroups[0].rows[0].onOpen();
+  check('tapping a fixture opens the score sheet on it', c.state.sheetMatchId === 'u14b:A:1-2');
+}
+{
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
+    pool: [
+      { id: `${agId}:A:1`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: null },
+      { id: `${agId}:B:1`, home: 'DS1', away: 'DT1', time: '09:00', pitch: 'A2', poolName: 'Pool B', result: null },
+      { id: `${agId}:A:2`, home: 'DE1', away: 'ADH1', time: '10:00', pitch: 'A1', poolName: 'Pool A', result: null },
+    ],
+    knockout: [
+      { id: `${agId}:CUP`, round: 'Cup Final', home: 'ADH1', away: 'DS1', time: '13:00', pitch: 'A1', result: null },
+      { id: `${agId}:BOWL`, round: 'Bowl Final', home: '', away: '', time: '13:00', pitch: 'A2', result: null },
+    ] }) });
+  await c.boot();
+  c.go('fixtures');
+  const vals = c.renderVals();
+  check('two pools produce two groups', vals.poolGroups.length === 2);
+  check('groups keep first-appearance order', vals.poolGroups[0].name === 'Pool A' && vals.poolGroups[1].name === 'Pool B');
+  check('a later match joins the pool it belongs to, not a new group', vals.poolGroups[0].rows.length === 2);
+  check('decided knockout matches get their own section', vals.hasKnockout === true && vals.knockoutFixtureRows.length === 1);
+  // FAULT-PROOF: an undecided knockout slot has no teams to score, so it must
+  // not appear as a scoreable fixture.
+  check('…and an undecided knockout slot is left out', vals.knockoutFixtureRows[0].id === 'u14b:CUP');
+  check('a knockout row is labelled by its round', vals.knockoutFixtureRows[0].meta === 'Cup Final');
+}
+{
+  const c = buildManager({ getFixtures: async () => ({ awaitingPublication: false, pool: [], knockout: [] }) });
+  await c.boot();
+  c.go('fixtures');
+  const vals = c.renderVals();
+  check('an age group with nothing scheduled says so', vals.fixturesEmpty === true && vals.poolGroups.length === 0);
+}
+{
+  const c = buildManager({ getFixtures: async () => ({ awaitingPublication: true, pool: [], knockout: [] }) });
+  await c.boot();
+  c.go('fixtures');
+  check('an unpublished draw shows coming-soon here too', c.renderVals().fixturesAwaiting === true);
+}
+{
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
+    pool: [{ id: `${agId}:X:1`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', result: null }], knockout: [] }) });
+  await c.boot();
+  c.go('fixtures');
+  check('a match with no poolName still gets a heading rather than disappearing',
+    c.renderVals().poolGroups.length === 1 && c.renderVals().poolGroups[0].name === 'Matches');
+}
+
+section('Results tab');
+{
+  const c = buildManager();
+  await c.boot();
+  c.go('results');
+  const vals = c.renderVals();
+  check('only played matches are listed', vals.resultRows.length === 1 && vals.resultRows[0].id === 'u14b:A:3-4');
+  // FAULT-PROOF: `includes('15') && includes('10')` would still pass with the
+  // sides swapped — the ordered string is the assertion.
+  check('the score reads home-then-away', vals.resultRows[0].score === '15–10');
+  check('the unplayed 09:00 match is not in the results list',
+    vals.resultRows.every((r) => r.time !== '09:00'));
+  vals.resultRows[0].onOpen();
+  check('a result row reopens the score sheet for a correction', c.state.sheetMatchId === 'u14b:A:3-4');
+}
+{
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false, pool: [
+    { id: `${agId}:A:1`, home: 'A', away: 'B', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 1, awayScore: 0 } },
+    { id: `${agId}:A:2`, home: 'C', away: 'D', time: '09:20', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 2, awayScore: 0 } },
+    { id: `${agId}:A:3`, home: 'E', away: 'F', time: '09:40', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 3, awayScore: 0 } },
+  ], knockout: [] }) });
+  await c.boot();
+  c.go('results');
+  // FAULT-PROOF: the most recent result is the one being checked, so it goes
+  // on top. A forward-ordered list would put the oldest first.
+  check('the newest result is first', eq('result order', c.renderVals().resultRows.map((r) => r.id),
+    ['u14b:A:3', 'u14b:A:2', 'u14b:A:1']));
+}
+{
+  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
+    pool: [{ id: `${agId}:A:1`, home: 'A', away: 'B', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: null }], knockout: [] }) });
+  await c.boot();
+  c.go('results');
+  const vals = c.renderVals();
+  check('with nothing played the tab says so', vals.resultsEmpty === true && vals.resultRows.length === 0);
+}
+{
+  const c = buildManager({ getFixtures: async () => ({ awaitingPublication: true, pool: [], knockout: [] }) });
+  await c.boot();
+  c.go('results');
+  check('an unpublished draw shows coming-soon on Results too', c.renderVals().resultsAwaiting === true);
+}
+
+section('Tables tab');
+{
+  const c = buildManager();
+  await c.boot();
+  c.go('tables');
+  const vals = c.renderVals();
+  check('one card per pool', vals.tableCards.length === 1 && vals.tableCards[0].name === 'Pool A');
+  const row = vals.tableCards[0].rows[0];
+  check('the row is numbered from 1', row.pos === 1);
+  check('it names the team', row.team === 'DS1');
+  check('it carries the played/won/drawn/lost figures', row.P === 1 && row.W === 1 && row.D === 0 && row.L === 0);
+  check('it carries points for and against', row.PF === 15 && row.PA === 10);
+  // FAULT-PROOF: the difference is computed, not read — a table that printed
+  // PF again here would look plausible on a 15-10 row but not on this check.
+  check('the difference is PF minus PA, signed', row.diff === '+5');
+  check('it carries the league points', row.pts === 4);
+  check('a qualifying row is marked', row.rowStyle.includes('#17A34A'));
+}
+{
+  const c = buildManager({ getStandings: async () => ({ awaitingPublication: false,
+    ageGroup: { hasStandings: true, name: 'U14 Boys' }, pools: [{ id: 'A', name: 'Pool A' }],
+    tables: { A: [
+      { team: 'DS1', P:2,W:2,D:0,L:0,PF:30,PA:5,pts:8 },
+      { team: 'DT1', P:2,W:0,D:0,L:2,PF:5,PA:30,pts:0 },
+    ] }, _advance: 1 }) });
+  await c.boot();
+  c.go('tables');
+  const rows = c.renderVals().tableCards[0].rows;
+  check('every row is numbered in order', eq('positions', rows.map((r) => r.pos), [1, 2]));
+  check('a negative difference is signed too', rows[1].diff === '-25');
+  // FAULT-PROOF: _advance is 1, so exactly the top row qualifies. Marking
+  // every row (or none) would still render a table that "looks right".
+  check('only the qualifying places are marked', rows[0].rowStyle.includes('#17A34A') && !rows[1].rowStyle.includes('#17A34A'));
+}
+{
+  // pools/tables are non-empty here on purpose: a guard that forgot to check
+  // hasStandings would still render a card, since an empty pools list hides
+  // that bug either way.
+  const c = buildManager({ getStandings: async () => ({ awaitingPublication: false,
+    ageGroup: { hasStandings: false, name: 'U6 Tag' },
+    pools: [{ id: 'A', name: 'Pool A' }], tables: { A: [{ team: 'DS1', P:1,W:1,D:0,L:0,PF:15,PA:10,pts:4 }] }, _advance: 0 }) });
+  await c.boot();
+  c.go('tables');
+  const vals = c.renderVals();
+  check('a festival age group says it keeps no standings', vals.tablesFestival === true);
+  check('…naming the group', /U6 Tag/.test(vals.tablesFestivalBlurb));
+  check('…and shows no table at all', vals.tableCards.length === 0);
+}
+{
+  const c = buildManager({ getStandings: async () => ({ awaitingPublication: false,
+    ageGroup: { hasStandings: true, name: 'U14 Boys' }, pools: [], tables: {}, _advance: 0 }) });
+  await c.boot();
+  c.go('tables');
+  check('a competitive group with no pools yet says so', c.renderVals().tablesEmpty === true);
+}
+{
+  const c = buildManager({ getStandings: async () => ({ awaitingPublication: true }) });
+  await c.boot();
+  c.go('tables');
+  check('an unpublished draw shows coming-soon on Tables', c.renderVals().tablesAwaiting === true);
+  check('…without throwing on the missing ageGroup block', c.renderVals().tableCards.length === 0);
+}
+{
+  const c = buildManager({ getStandings: async () => ({ awaitingPublication: false,
+    ageGroup: { hasStandings: true, name: 'U14 Boys' }, pools: [{ id: 'A', name: 'Pool A' }, { id: 'B', name: 'Pool B' }],
+    tables: { A: [{ team: 'DS1', P:0,W:0,D:0,L:0,PF:0,PA:0,pts:0 }] }, _advance: 1 }) });
+  await c.boot();
+  c.go('tables');
+  const vals = c.renderVals();
+  check('a pool with no table rows yet still gets its card', vals.tableCards.length === 2);
+  check('…with an empty row list rather than a crash', vals.tableCards[1].rows.length === 0);
+}
+
 section('Organizer design system is what this page uses');
 {
   const html = readRepo('Manager.dc.html');

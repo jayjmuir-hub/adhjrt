@@ -98,23 +98,189 @@
            Results (Task 7), Tables (Task 8), Draw (Tasks 9-12),
            Registrations (Task 13). -->
       <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Today</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">{{ todayHeading }}</div>
+
+          <sc-if value="{{ todayLoading }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+
+          <sc-if value="{{ todayAwaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Fixtures not published yet</div>
+              <div style="color:#7f8794;font-size:14px">{{ comingSoonBlurb }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ todayHasNext }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Next up</div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ todayNextRows }}" as="r" hint-placeholder-count="1">
+                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;cursor:pointer;color:#fff">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#7f8794;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#7f8794;margin-top:3px">{{ r.meta }}</div></div>
+                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap;color:#aeb4bf">{{ r.score }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ todayHasRecent }}" hint-placeholder-val="{{ true }}">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Recent results</div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ todayRecentRows }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#fff">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#7f8794;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#7f8794;margin-top:3px">{{ r.meta }}</div></div>
+                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
       <sc-if value="{{ isFixtures }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Fixtures &amp; scoring</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Fixtures &amp; scoring</div>
+
+          <sc-if value="{{ fixturesLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+          <sc-if value="{{ fixturesAwaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Fixtures not published yet</div>
+              <div style="color:#7f8794;font-size:14px">{{ comingSoonBlurb }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fixturesEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No matches</div>
+              <div style="color:#7f8794;font-size:14px">Nothing scheduled here yet.</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ poolGroups }}" as="g" hint-placeholder-count="2">
+            <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#7f8794;margin:18px 0 8px">{{ g.name }}</div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#fff">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#7f8794;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#7f8794;margin-top:3px">{{ r.meta }}</div></div>
+                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ hasKnockout }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:20px 0 10px">Knockout</div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ knockoutFixtureRows }}" as="r" hint-placeholder-count="2">
+                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#fff">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#7f8794;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#7f8794;margin-top:3px">{{ r.meta }}</div></div>
+                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
       <sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Results</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Results</div>
+
+          <sc-if value="{{ resultsLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+          <sc-if value="{{ resultsAwaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Results not published yet</div>
+              <div style="color:#7f8794;font-size:14px">{{ comingSoonBlurb }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ resultsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No results yet</div>
+              <div style="color:#7f8794;font-size:14px">Scores you enter on the Fixtures &amp; scoring tab appear here.</div>
+            </div>
+          </sc-if>
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+            <sc-for list="{{ resultRows }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.08);cursor:pointer;color:#fff">
+                <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#7f8794;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#7f8794;margin-top:3px">{{ r.meta }}</div></div>
+                <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+              </button>
+            </sc-for>
+          </div>
         </div>
       </sc-if>
       <sc-if value="{{ isTables }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Tables</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Tables</div>
+
+          <sc-if value="{{ tablesLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+          <sc-if value="{{ tablesAwaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Standings not published yet</div>
+              <div style="color:#7f8794;font-size:14px">{{ comingSoonBlurb }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tablesFestival }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Festival age group</div>
+              <div style="color:#7f8794;font-size:14px">{{ tablesFestivalBlurb }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tablesEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No pools yet</div>
+              <div style="color:#7f8794;font-size:14px">Nothing to show for this age group.</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ tableCards }}" as="tc" hint-placeholder-count="2">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">{{ tc.name }}</div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+              <div style="overflow-x:auto">
+                <table style="width:100%;font-size:13px;min-width:460px">
+                  <thead><tr>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">#</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:left;background:#0C0C0E">Team</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">P</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">W</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">D</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">L</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">PF</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">PA</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">+/−</th>
+                    <th style="font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#7f8794;font-weight:800;padding:10px 6px;text-align:center;background:#0C0C0E">Pts</th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ tc.rows }}" as="r" hint-placeholder-count="4">
+                      <tr style="{{ r.rowStyle }}">
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.pos }}</td>
+                        <td style="padding:11px 6px;text-align:left;font-weight:600;border-top:1px solid rgba(255,255,255,0.08)">{{ r.team }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.P }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.W }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.D }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.L }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.PF }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.PA }}</td>
+                        <td style="padding:11px 6px;text-align:center;border-top:1px solid rgba(255,255,255,0.08)">{{ r.diff }}</td>
+                        <td style="padding:11px 6px;text-align:center;font-family:'Anton';font-size:16px;border-top:1px solid rgba(255,255,255,0.08)">{{ r.pts }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding:10px 14px;font-size:11px;color:#7f8794;border-top:1px solid rgba(255,255,255,0.08);line-height:1.6">Green bar = qualifies for the knockout stage.</div>
+            </div>
+          </sc-for>
         </div>
       </sc-if>
       <sc-if value="{{ isDraw }}" hint-placeholder-val="{{ false }}">
@@ -467,6 +633,27 @@ class Component extends DCLogic {
     const { api, ageId } = this.state;
     return (api && api.teamLabel ? api.teamLabel(code, ageId) : code) || code || '';
   }
+  /* The short form, for the standings table's pinned team column. */
+  tShort(code) {
+    const { api } = this.state;
+    return (api && api.teamShort ? api.teamShort(code) : code) || code || '';
+  }
+
+  /* The shared row view-model for every match list on this page (Today,
+     Fixtures & scoring, Results). One shape, so the three tabs cannot drift
+     apart the way three separate row templates would. */
+  matchRows(list) {
+    return (list || []).map((m) => ({
+      id: m.id,
+      time: m.time || '',
+      pitch: m.pitch || 'TBD',
+      teams: `${m.home ? this.tName(m.home) : 'TBD'} v ${m.away ? this.tName(m.away) : 'TBD'}`,
+      meta: m.poolName || m.round || '',
+      hasResult: !!m.result,
+      score: m.result ? `${m.result.homeScore}–${m.result.awayScore}` : '',
+      onOpen: () => this.openMatch(m.id),
+    }));
+  }
 
   /* ---- the in-app dialog ----------------------------------------------
      window.confirm / window.prompt are silently blocked inside the DC
@@ -520,6 +707,46 @@ class Component extends DCLogic {
     const woBtn = (on) => 'font-weight:700;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;border:1px solid '
       + (on ? '#E11B22;background:#E11B22;color:#fff' : 'rgba(255,255,255,0.18);background:transparent;color:#cdd2da');
     const sheetR = sheetMatch && sheetMatch.result;
+    const fx = s.fixtures;
+    const fxReady = !!fx && !fx.awaitingPublication;
+    /* A knockout slot with neither side decided is not a fixture anyone can
+       play, so it is excluded everywhere a match list is built. */
+    const playable = fxReady ? (fx.pool || []).concat((fx.knockout || []).filter((k) => k.home || k.away)) : [];
+    const nextUp = playable.find((m) => !m.result) || null;
+    const recent = [...playable].reverse().filter((m) => m.result).slice(0, 3);
+    /* Grouped by pool in FIRST-APPEARANCE order — Object.keys on an object
+       built while walking the list preserves insertion order for string keys,
+       which is the same ordering the old dashboard produced. A match with no
+       poolName still needs a heading or it silently vanishes. */
+    const byPool = {};
+    if (fxReady) (fx.pool || []).forEach((m) => {
+      const k = m.poolName || 'Matches';
+      (byPool[k] = byPool[k] || []).push(m);
+    });
+    const poolGroups = Object.keys(byPool).map((k) => ({ name: k, rows: this.matchRows(byPool[k]) }));
+    const knockoutPlayable = fxReady ? (fx.knockout || []).filter((k) => k.home || k.away) : [];
+    /* Newest first — the result just entered is the one being checked. */
+    const played = [...playable].reverse().filter((m) => m.result);
+    const st = s.standings;
+    const stReady = !!st && !st.awaitingPublication;
+    const stAge = (st && st.ageGroup) || null;
+    const advance = (st && st._advance) || 0;
+    const tableCards = (stReady && stAge && stAge.hasStandings)
+      ? (st.pools || []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          rows: ((st.tables || {})[p.id] || []).map((t, i) => ({
+            pos: i + 1,
+            team: this.tShort(t.team),
+            P: t.P, W: t.W, D: t.D, L: t.L, PF: t.PF, PA: t.PA,
+            diff: `${t.PF - t.PA > 0 ? '+' : ''}${t.PF - t.PA}`,
+            pts: t.pts,
+            /* The green edge is the qualification cue, so it is applied to the
+               top `_advance` rows only — not to every row, and not to none. */
+            rowStyle: i < advance ? 'box-shadow:inset 3px 0 0 #17A34A' : '',
+          })),
+        }))
+      : [];
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
@@ -542,6 +769,34 @@ class Component extends DCLogic {
       isToday: s.tab === 'today', isFixtures: s.tab === 'fixtures',
       isResults: s.tab === 'results', isTables: s.tab === 'tables',
       isDraw: s.tab === 'draw', isRegistrations: s.tab === 'registrations',
+
+      todayLoading: !fx,
+      todayAwaiting: !!(fx && fx.awaitingPublication),
+      todayHeading: this.ageName(s.ageId),
+      todayHasNext: !!nextUp,
+      todayNextRows: nextUp ? this.matchRows([nextUp]) : [],
+      todayHasRecent: recent.length > 0,
+      todayRecentRows: this.matchRows(recent),
+      comingSoonBlurb: `The draw for ${this.ageName(s.ageId)} hasn't been released yet.`,
+
+      fixturesLoading: !fx,
+      fixturesAwaiting: !!(fx && fx.awaitingPublication),
+      fixturesEmpty: fxReady && poolGroups.length === 0 && knockoutPlayable.length === 0,
+      poolGroups,
+      hasKnockout: knockoutPlayable.length > 0,
+      knockoutFixtureRows: this.matchRows(knockoutPlayable),
+
+      resultsLoading: !fx,
+      resultsAwaiting: !!(fx && fx.awaitingPublication),
+      resultsEmpty: fxReady && played.length === 0,
+      resultRows: this.matchRows(played),
+
+      tablesLoading: !st,
+      tablesAwaiting: !!(st && st.awaitingPublication),
+      tablesFestival: !!(stReady && stAge && !stAge.hasStandings),
+      tablesFestivalBlurb: stAge ? `${stAge.name} is non-competitive — no standings are kept.` : '',
+      tablesEmpty: !!(stReady && stAge && stAge.hasStandings && tableCards.length === 0),
+      tableCards,
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

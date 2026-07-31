@@ -284,8 +284,42 @@
         </div>
       </sc-if>
       <sc-if value="{{ isDraw }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Draw</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Draw</div>
+
+          <sc-if value="{{ drawLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+          <sc-if value="{{ drawMissing }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No draw yet</div>
+              <div style="color:#7f8794;font-size:14px">Nothing to edit for {{ ageLabel }}.</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ poolCards }}" as="p" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px;margin:18px 0 10px;flex-wrap:wrap">
+              <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">{{ p.name }}</div>
+              <button onClick="{{ p.onRenamePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer">Rename</button>
+              <button onClick="{{ p.onRemovePool }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer">Delete</button>
+            </div>
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
+              <div onClick="{{ p.onZoneClick }}" style="min-height:48px;padding:10px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.15);border-radius:10px;display:flex;flex-wrap:wrap;align-items:flex-start">
+                <sc-for list="{{ p.teamChips }}" as="ch" hint-placeholder-count="4">
+                  <span onClick="{{ ch.onPick }}" style="{{ ch.chipStyle }}">{{ ch.label }}
+                    <button onClick="{{ ch.onRename }}" aria-label="Rename" style="background:transparent;border:none;color:inherit;font-size:13px;padding:2px 4px;cursor:pointer">✎</button>
+                    <button onClick="{{ ch.onRemove }}" aria-label="Remove" style="background:transparent;border:none;color:inherit;font-size:13px;padding:2px 4px;cursor:pointer">×</button>
+                  </span>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <input value="{{ p.newTeamValue }}" onInput="{{ p.onNewTeamInput }}" placeholder="New team name" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                <button onClick="{{ p.onAddTeam }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:11px 16px;border-radius:9px;cursor:pointer;white-space:nowrap">+ Add</button>
+              </div>
+            </div>
+          </sc-for>
+
+          <button onClick="{{ onAddPool }}" style="margin:16px 0;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:800;font-size:13px;padding:12px 18px;border-radius:10px;cursor:pointer;text-transform:uppercase">+ Add pool</button>
         </div>
       </sc-if>
       <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">
@@ -502,14 +536,222 @@ class Component extends DCLogic {
     this.showToast('Signed out');
   }
 
-  go(tab) { this.setState({ tab }); }
+  go(tab) {
+    const s = this.state;
+    const leavingDraw = s.tab === 'draw' && tab !== 'draw';
+    this.setState({ tab });
+    if (leavingDraw) this.clearDrawTransientState();
+    if (tab === 'draw' && s.drawLoadedFor !== s.ageId && !s.drawDirty) this.loadDraw(s.ageId);
+  }
 
   async load(agId) {
     const { api } = this.state;
-    this.setState({ ageId: agId, fixtures: null, standings: null, spiritAward: null });
+    const keepDraw = this.state.drawDirty;
+    /* load() runs after every score save and clear. Throwing away an
+       in-progress Draw edit at that moment destroys work nobody warned the
+       manager about, so a dirty draft is carried through. There is no
+       age-group switcher on this page for that to race against. */
+    this.setState((s) => ({
+      ageId: agId, fixtures: null, standings: null, spiritAward: null,
+      draw: keepDraw ? s.draw : undefined,
+      drawLoadedFor: keepDraw ? s.drawLoadedFor : null,
+    }));
+    this.clearDrawTransientState();
     const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
     if (this.state.ageId !== agId) return; // a stale response for a group we left
     this.setState({ fixtures: fx, standings: st });
+    if (this.state.tab === 'draw' && !this.state.drawDirty) await this.loadDraw(agId);
+  }
+
+  async loadDraw(agId) {
+    const { api, session } = this.state;
+    this.setState({ draw: null, drawDirty: false }); // a fresh fetch IS the clean baseline
+    this.clearDrawPicks();
+    const draw = await api.getDraw(agId, session);
+    if (this.state.ageId !== agId) return; // stale response guard, same as load()
+    this.setState({ draw, drawLoadedFor: agId });
+  }
+
+  /* Split in two on purpose. clearDrawPicks() is safe to call from loadDraw(),
+     which is also the last step of saveDraw()/doPublish()/doUnpublish()/
+     resetDraw() — each of which has just set drawMsg to the sentence the
+     manager is meant to read. Clearing drawMsg there would wipe it before it
+     was ever painted. clearDrawTransientState() layers drawMsg on top, for the
+     places where there is no such message to protect: load(), leaving the tab,
+     and signing out. */
+  clearDrawPicks() {
+    this.setState({ picked: null, clash: null, importRows: null, importOpen: false, importMode: 'add' });
+  }
+  clearDrawTransientState() {
+    this.clearDrawPicks();
+    this.setState({ drawMsg: '' });
+  }
+
+  /* Tap-to-select, then tap-to-place. This page is phone-primary and HTML5
+     drag-and-drop is unreliable on touch, so there is no dragging anywhere in
+     this editor. Tapping the same team in the same place again deselects. */
+  pickTeam(team, from) {
+    const p = this.state.picked;
+    if (p && p.team === team && this.sameSource(p.from, from)) this.setState({ picked: null });
+    else this.setState({ picked: { team, from } });
+  }
+  sameSource(a, b) {
+    if (!a || !b || a.kind !== b.kind) return false;
+    if (a.kind === 'pool') return a.poolId === b.poolId;
+    return a.slotId === b.slotId && a.side === b.side;
+  }
+  /* Vacates the match slot or knockout side a pick came from. Pool rosters are
+     deliberately NOT touched here — see placeTeam(). */
+  removeFromSource(draw, from) {
+    if (from.kind === 'slot') {
+      const sl = (draw.slots || []).find((x) => x.id === from.slotId);
+      if (sl) sl[from.side] = '';
+    } else if (from.kind === 'knockout') {
+      const sl = (draw.knockout || []).find((x) => x.id === from.slotId);
+      if (sl) sl[from.side] = '';
+    }
+  }
+  placeTeam(dest) {
+    const { picked, draw } = this.state;
+    if (!picked || !draw) return;
+    const { team, from } = picked;
+    const next = JSON.parse(JSON.stringify(draw));
+    // The origin box is always vacated, so a team can never sit in two match
+    // slots at once — that was the drag-and-drop editor's original bug.
+    this.removeFromSource(next, from);
+    if (dest.kind === 'pool') {
+      /* pools[].teams is pool MEMBERSHIP — computeStandings() reads it
+         directly — so moving a team between pools removes it from the old
+         one, but placing it into a match slot or knockout box (below) does
+         not touch any roster. */
+      next.pools = (next.pools || []).map((p) => ({ ...p, teams: (p.teams || []).filter((t) => t !== team) }));
+      const p = next.pools.find((x) => x.id === dest.poolId);
+      if (p && !p.teams.includes(team)) p.teams.push(team);
+    } else if (dest.kind === 'slot') {
+      const sl = (next.slots || []).find((x) => x.id === dest.slotId);
+      if (sl) sl[dest.side] = team;
+    } else if (dest.kind === 'knockout') {
+      const sl = (next.knockout || []).find((x) => x.id === dest.slotId);
+      if (sl) sl[dest.side] = team;
+    }
+    this.setState({ draw: next, picked: null, drawDirty: true });
+  }
+
+  addPool() {
+    this.setState((s) => {
+      const used = (s.draw.pools || []).map((p) => p.id);
+      let nextChar = 'A';
+      for (let i = 0; i < 26; i += 1) {
+        const ch = String.fromCharCode(65 + i);
+        if (used.indexOf(ch) < 0) { nextChar = ch; break; }
+      }
+      return {
+        draw: { ...s.draw, pools: [...(s.draw.pools || []), { id: nextChar, name: `Pool ${nextChar}`, teams: [] }] },
+        drawDirty: true,
+      };
+    });
+  }
+
+  onRenamePool(poolId) {
+    const p = (this.state.draw.pools || []).find((x) => x.id === poolId);
+    if (!p) return;
+    this.promptModal('Rename pool', p.name, (next) => {
+      if (next === p.name) return;
+      this.setState((s) => ({
+        draw: { ...s.draw, pools: (s.draw.pools || []).map((x) => (x.id === poolId ? { ...x, name: next } : x)) },
+        drawDirty: true,
+      }));
+    });
+  }
+
+  onRemovePool(poolId) {
+    this.confirmModal('Delete this pool? This removes all its teams and match slots.', () => {
+      this.setState((s) => {
+        const removed = (s.draw.pools || []).find((p) => p.id === poolId);
+        const removedTeams = new Set((removed && removed.teams) || []);
+        const removedSlotIds = new Set((s.draw.slots || []).filter((sl) => sl.poolId === poolId).map((sl) => sl.id));
+        /* A pick must not outlive the pool it belonged to — neither one taken
+           from its roster nor one taken from one of its match slots, because
+           either could be dropped into a surviving pool a moment later. */
+        const stale = !!(s.picked && (
+          removedTeams.has(s.picked.team)
+          || (s.picked.from.kind === 'slot' && removedSlotIds.has(s.picked.from.slotId))
+        ));
+        return {
+          draw: {
+            ...s.draw,
+            pools: (s.draw.pools || []).filter((p) => p.id !== poolId),
+            slots: (s.draw.slots || []).filter((sl) => sl.poolId !== poolId),
+          },
+          picked: stale ? null : s.picked,
+          drawDirty: true,
+        };
+      });
+    }, { okLabel: 'Delete pool' });
+  }
+
+  onNewTeamInput(poolId, val) {
+    this.setState((s) => ({ newTeamDrafts: { ...s.newTeamDrafts, [poolId]: val } }));
+  }
+
+  onAddTeam(poolId) {
+    const name = String((this.state.newTeamDrafts || {})[poolId] || '').trim();
+    if (!name) return;
+    this.setState((s) => ({
+      draw: {
+        ...s.draw,
+        pools: (s.draw.pools || []).map((p) => (p.id === poolId && p.teams.indexOf(name) < 0
+          ? { ...p, teams: [...p.teams, name] } : p)),
+      },
+      newTeamDrafts: { ...s.newTeamDrafts, [poolId]: '' },
+      drawDirty: true,
+    }));
+  }
+
+  onRenameTeam(poolId, oldName) {
+    this.promptModal('Rename team', oldName, (next) => {
+      if (next === oldName) return;
+      this.setState((s) => ({
+        draw: {
+          ...s.draw,
+          pools: (s.draw.pools || []).map((p) => (p.id === poolId
+            ? { ...p, teams: p.teams.map((t) => (t === oldName ? next : t)) } : p)),
+          /* Every match slot naming the old team follows it, or the slot ends
+             up pointing at a team no roster contains. */
+          slots: (s.draw.slots || []).map((sl) => ({
+            ...sl,
+            home: sl.home === oldName ? next : sl.home,
+            away: sl.away === oldName ? next : sl.away,
+          })),
+          knockout: (s.draw.knockout || []).map((sl) => ({
+            ...sl,
+            home: sl.home === oldName ? next : sl.home,
+            away: sl.away === oldName ? next : sl.away,
+          })),
+        },
+        // The pick held the OLD name — placing it afterwards would resurrect it.
+        picked: (s.picked && s.picked.team === oldName) ? null : s.picked,
+        drawDirty: true,
+      }));
+    });
+  }
+
+  onRemoveTeam(poolId, team) {
+    this.confirmModal(`Remove ${team} from this pool? Any match slots featuring them will show "Tap to place" until reassigned.`, () => {
+      this.setState((s) => ({
+        draw: {
+          ...s.draw,
+          pools: (s.draw.pools || []).map((p) => (p.id === poolId ? { ...p, teams: p.teams.filter((t) => t !== team) } : p)),
+          slots: (s.draw.slots || []).map((sl) => ({
+            ...sl,
+            home: sl.home === team ? '' : sl.home,
+            away: sl.away === team ? '' : sl.away,
+          })),
+        },
+        picked: (s.picked && s.picked.team === team) ? null : s.picked,
+        drawDirty: true,
+      }));
+    }, { okLabel: 'Remove team' });
   }
 
   findMatch(id) {
@@ -747,6 +989,30 @@ class Component extends DCLogic {
           })),
         }))
       : [];
+    const d = s.draw;
+    const chipBase = 'display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:8px 8px 8px 14px;font-size:13px;font-weight:700;margin:3px;cursor:pointer;border:1px solid ';
+    const chipOff = chipBase + 'rgba(255,255,255,0.15);background:#0C0C0E;color:#fff;';
+    const chipOn = chipBase + '#0F7A36;background:#17A34A;color:#fff;';
+    const poolCards = d ? (d.pools || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      teamChips: (p.teams || []).map((t) => ({
+        name: t,
+        label: this.tName(t),
+        chipStyle: (s.picked && s.picked.team === t && s.picked.from.kind === 'pool' && s.picked.from.poolId === p.id) ? chipOn : chipOff,
+        onPick: () => this.pickTeam(t, { kind: 'pool', poolId: p.id }),
+        onRename: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.onRenameTeam(p.id, t); },
+        onRemove: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.onRemoveTeam(p.id, t); },
+      })),
+      /* Only a click on the zone ITSELF places — a click that bubbled up from
+         a chip inside it is that chip's business. */
+      onZoneClick: (e) => { if (!e || e.target === e.currentTarget) this.placeTeam({ kind: 'pool', poolId: p.id }); },
+      newTeamValue: (s.newTeamDrafts || {})[p.id] || '',
+      onNewTeamInput: (e) => this.onNewTeamInput(p.id, e.target.value),
+      onAddTeam: () => this.onAddTeam(p.id),
+      onRenamePool: () => this.onRenamePool(p.id),
+      onRemovePool: () => this.onRemovePool(p.id),
+    })) : [];
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
@@ -797,6 +1063,13 @@ class Component extends DCLogic {
       tablesFestivalBlurb: stAge ? `${stAge.name} is non-competitive — no standings are kept.` : '',
       tablesEmpty: !!(stReady && stAge && stAge.hasStandings && tableCards.length === 0),
       tableCards,
+
+      drawLoading: s.draw === undefined || (s.draw === null && s.drawLoadedFor !== s.ageId),
+      drawMissing: s.draw === null && s.drawLoadedFor === s.ageId,
+      drawDirty: s.drawDirty,
+      drawMsg: s.drawMsg,
+      poolCards,
+      onAddPool: () => this.addPool(),
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

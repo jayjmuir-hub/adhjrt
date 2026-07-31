@@ -119,7 +119,8 @@
   .reg-btn .holo{position:absolute;inset:0;background:linear-gradient(115deg,transparent 25%,rgba(225,27,34,.4) 38%,rgba(255,255,255,.55) 48%,rgba(23,163,74,.4) 58%,transparent 72%);background-size:250% 250%;mix-blend-mode:screen;opacity:0;transition:opacity .3s ease;pointer-events:none}
   .reg-btn:hover{transform:perspective(400px) translateY(-8px) scale(1.08) rotateX(8deg);border-color:var(--glow);box-shadow:0 0 26px 4px var(--glow),0 20px 34px -8px rgba(0,0,0,.6);z-index:5}
   .reg-btn:hover .holo{opacity:.7;animation:holoShift 2.2s ease-in-out infinite}
-  .reg-btn-label{position:relative;z-index:1}
+  .reg-btn-label{position:relative;z-index:1;color:#fff}
+  .reg-btn:hover .reg-btn-label{color:#fff}
   .fmt-numbg{position:absolute;right:-4px;top:-24px;font-family:'Anton';color:rgba(255,255,255,.05);pointer-events:none;display:flex;align-items:baseline;gap:10px;line-height:1}
   .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
   .fmt-numbg .n{font-size:150px}

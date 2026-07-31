@@ -488,14 +488,14 @@
         <div>
           <div style="font-family:'Anton';font-size:clamp(18px,2.2vw,26px);text-transform:uppercase;color:#0C0C0E;margin-bottom:10px">{{ pool.name }}</div>
           <div style="border:1px solid #e2ded4;border-radius:14px;overflow:hidden;background:#fff">
-            <div style="display:grid;grid-template-columns:84px 70px 1fr;gap:8px;padding:11px 16px;background:#EDEBE6;font-size:11px;font-weight:800;letter-spacing:.8px;color:#7a808c">
+            <div style="display:grid;grid-template-columns:84px 70px minmax(0,260px);gap:8px;padding:11px 16px;background:#EDEBE6;font-size:11px;font-weight:800;letter-spacing:.8px;color:#7a808c">
               <div>TIME</div><div>PITCH</div><div>MATCH</div>
             </div>
             <sc-for list="{{ pool.games }}" as="g" hint-placeholder-count="4">
-              <div style="display:grid;grid-template-columns:84px 70px 1fr;gap:8px;padding:12px 16px;align-items:center;border-top:1px solid #EDEBE6">
+              <div style="display:grid;grid-template-columns:84px 70px minmax(0,260px);gap:8px;padding:12px 16px;align-items:center;border-top:1px solid #EDEBE6">
                 <div style="font-weight:800;color:#E11B22;font-size:13px">{{ g.time }}</div>
                 <div style="color:#8b9099;font-size:13px;font-weight:700">{{ g.pitch }}</div>
-                <div style="font-weight:600;font-size:14px;color:#14151A">{{ g.home }} <strong style="color:#E11B22">{{ g.homeScore }}</strong> <span style="color:#a8adb6">v</span> <strong style="color:#E11B22">{{ g.awayScore }}</strong> {{ g.away }}</div>
+                <div style="font-weight:600;font-size:14px;color:#14151A;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><sc-if value="{{ g.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ g.homeLogoSrc }}" alt="" style="flex:none;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ g.home }} <strong style="color:#E11B22">{{ g.homeScore }}</strong> <span style="color:#a8adb6">v</span> <strong style="color:#E11B22">{{ g.awayScore }}</strong> <sc-if value="{{ g.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ g.awayLogoSrc }}" alt="" style="flex:none;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ g.away }}</div>
               </div>
             </sc-for>
           </div>
@@ -510,7 +510,7 @@
         <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7a808c;margin-bottom:10px">Team key</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px 22px">
           <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
-            <div style="font-size:13.5px;color:#5a616d"><strong style="color:#0C0C0E">{{ k.code }}</strong> {{ k.name }}</div>
+            <div style="font-size:13.5px;color:#5a616d;display:flex;align-items:center;gap:6px"><sc-if value="{{ k.hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ k.logoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if><strong style="color:#0C0C0E">{{ k.code }}</strong> {{ k.name }}</div>
           </sc-for>
         </div>
       </div>
@@ -531,8 +531,8 @@
                       <div style="height:76px;display:flex;flex-direction:column;justify-content:center;opacity:{{ sm.opacity }}">
                         <div style="font-size:11px;color:#7a808c;font-weight:700;margin-bottom:4px">{{ sm.time }} · {{ sm.pitch }}</div>
                         <div style="width:220px;height:58px;border:1.5px solid #e2ded4;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ sm.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.homeScore }}</span></div>
-                          <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sm.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.awayScore }}</span></div>
+                          <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ sm.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ sm.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ sm.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.homeScore }}</span></div>
+                          <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ sm.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ sm.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ sm.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.awayScore }}</span></div>
                         </div>
                       </div>
                     </sc-for>
@@ -546,16 +546,16 @@
                   <div style="display:flex;flex-direction:column;justify-content:center;height:176px;width:220px;flex:none;opacity:{{ br.final.opacity }}">
                     <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">{{ br.finalLabel }} · {{ br.final.time }}</div>
                     <div style="width:220px;height:58px;border:2px solid #E11B22;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
-                      <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
+                      <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ br.final.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.final.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
+                      <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ br.final.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.final.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
                     </div>
                   </div>
                 </div>
                 <div style="margin-top:22px;padding-top:16px;border-top:1px dashed #e2ded4;display:flex;flex-direction:column;align-items:center;opacity:{{ br.consolation.opacity }}">
                   <div style="font-size:10px;color:#a8adb6;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">{{ br.consolationLabel }} (consolation) · {{ br.consolation.time }}</div>
                   <div style="width:220px;height:58px;border:1.5px solid #EDEBE6;border-radius:10px;background:#FAF9F6;overflow:hidden;display:flex;flex-direction:column">
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.consolation.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.homeScore }}</span></div>
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.consolation.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.awayScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ br.consolation.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.homeScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ br.consolation.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.awayScore }}</span></div>
                   </div>
                 </div>
               </div>
@@ -584,8 +584,8 @@
                 <div style="display:flex;flex-direction:column;justify-content:center;height:140px;width:220px;flex:none;opacity:{{ br.final.opacity }}">
                   <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">{{ br.finalLabel }} · {{ br.final.time }}</div>
                   <div style="width:220px;height:58px;border:2px solid #E11B22;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
-                    <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ br.final.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.final.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.final.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.homeScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:800;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ br.final.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.final.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.final.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.final.awayScore }}</span></div>
                   </div>
                 </div>
               </div>
@@ -599,8 +599,8 @@
               <div style="width:220px;opacity:{{ wf.opacity }}">
                 <div style="font-size:11px;color:#E11B22;font-weight:800;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;text-align:center">{{ wf.label }} · {{ wf.time }}</div>
                 <div style="width:220px;height:58px;border:1.5px solid #e2ded4;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
-                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6">{{ wf.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.homeScore }}</span></div>
-                  <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ wf.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.awayScore }}</span></div>
+                  <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ wf.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ wf.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ wf.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.homeScore }}</span></div>
+                  <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ wf.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ wf.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ wf.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ wf.awayScore }}</span></div>
                 </div>
               </div>
             </sc-for>
@@ -1951,16 +1951,41 @@ class Component extends DCLogic {
     const fxSchedule = this.state.fxSchedule;
     const isU16BFixtures = ['u16b', 'u16g'].includes(this.state.fxSelectedId);
     const fxFilter = this.state.fxTeamFilter;
-    const gameMatchesFilter = (g) => !fxFilter || g.home === fxFilter || g.away === fxFilter;
+    // Compares by CODE, not by whatever's in home/away — pool games still
+    // carry the teamLabel()'d full name in home/away at this point (the
+    // override to codes happens below, in the fixturePools map), while
+    // knockout entries never had a separate code field and are already raw
+    // codes in home/away. (g.homeCode || g.home) covers both shapes.
+    const gameMatchesFilter = (g) => !fxFilter || (g.homeCode || g.home) === fxFilter || (g.awayCode || g.away) === fxFilter;
     let fixtureTeamOptions = [];
     let fixturePools = [];
     let fixtureKnockout = null;
     let bracketTop = null, bracketBottom = null, waterfallFinals = null, seedBracketList = null;
+    const fxApi = this.state.fxApi;
+    // A club's crest, or '' if it has none on file. Bracket/knockout entries
+    // already store the raw CODE in home/away (see getSchedule()); pool game
+    // rows have a homeCode/awayCode alongside the teamLabel()'d display name.
+    const logoOf = (code) => (fxApi && fxApi.teamLogoSrc && code ? fxApi.teamLogoSrc(code) : '');
     if (fxSchedule) {
+      // Jay, 30 Jul: show the team CODE in the fixtures section too, matching
+      // /app and /scores (and the knockout/bracket rows further down this
+      // same page, which already showed the code). teamSet/fixtureTeamOptions
+      // is built from the codes so the "Filter by team" dropdown's VALUE
+      // matches what gameMatchesFilter compares against; the dropdown's
+      // visible LABEL still runs the code through teamLabel() below so it
+      // reads as a name, not a bare code.
       const teamSet = new Set();
-      fxSchedule.pools.forEach((p) => p.games.forEach((g) => { teamSet.add(g.home); teamSet.add(g.away); }));
+      fxSchedule.pools.forEach((p) => p.games.forEach((g) => { teamSet.add(g.homeCode); teamSet.add(g.awayCode); }));
       fixtureTeamOptions = Array.from(teamSet).sort();
-      fixturePools = fxSchedule.pools.map((p) => ({ ...p, games: p.games.filter(gameMatchesFilter) }));
+      fixturePools = fxSchedule.pools.map((p) => ({
+        ...p,
+        games: p.games.filter(gameMatchesFilter).map((g) => ({
+          ...g,
+          home: g.homeCode, away: g.awayCode,
+          homeLogoSrc: logoOf(g.homeCode), hasHomeLogo: !!logoOf(g.homeCode),
+          awayLogoSrc: logoOf(g.awayCode), hasAwayLogo: !!logoOf(g.awayCode),
+        })),
+      }));
       fixtureKnockout = fxSchedule.knockout ? fxSchedule.knockout.filter(gameMatchesFilter) : null;
 
       // Bracket view uses the FULL (unfiltered) knockout list so the tree
@@ -1970,7 +1995,13 @@ class Component extends DCLogic {
       const dim = (g) => {
         const item = g || { time: '', pitch: 'TBD', home: 'TBD', away: 'TBD' };
         const isDim = !!fxFilter && item.home !== fxFilter && item.away !== fxFilter;
-        return { ...item, opacity: isDim ? 0.35 : 1 };
+        return {
+          ...item, opacity: isDim ? 0.35 : 1,
+          // Knockout slots store the raw code directly in home/away (unlike
+          // pool games, which already went through teamLabel()).
+          homeLogoSrc: logoOf(item.home), hasHomeLogo: !!logoOf(item.home),
+          awayLogoSrc: logoOf(item.away), hasAwayLogo: !!logoOf(item.away),
+        };
       };
       const findLabel = (lbl) => dim(knockoutAll.find((k) => k.label === lbl));
       if (isU16BFixtures && knockoutAll.length) {
@@ -2087,8 +2118,28 @@ class Component extends DCLogic {
       hasBracket: !!(bracketTop || bracketBottom), bracketList,
       hasSeedBracket: !!seedBracketList, seedBracketList,
       noBracketButHasFinals: !!waterfallFinals, waterfallFinals,
-      teamKeyList: (this.state.fxApi && this.state.fxApi.teamKey ? this.state.fxApi.teamKey() : []),
-      fixturePoolsGridStyle: fixturePools.length <= 1 ? 'display:grid;grid-template-columns:minmax(0,560px);justify-content:center;gap:28px' : 'display:grid;grid-template-columns:1fr 1fr;gap:28px',
+      // Passing fxSelectedId (this was calling teamKey() with no argument, so
+      // it always listed the hardcoded 9-team placeholder set instead of
+      // whichever age group's fixtures are actually on screen — same bug
+      // fixed in Scores & Standings.dc.html's own team key).
+      teamKeyList: (() => {
+        const raw = fxApi && fxApi.teamKey ? fxApi.teamKey(this.state.fxSelectedId) : [];
+        // Defensive: see the identical guard in Scores & Standings.dc.html —
+        // a test double can hand back something that isn't an array.
+        return (Array.isArray(raw) ? raw : []).map((k) => ({ ...k, hasLogo: !!k.logoSrc }));
+      })(),
+      // Jay, 30 Jul: with full club names swapped for short codes, the old
+      // 560px single-pool cap left a wide dead strip to the right of the
+      // MATCH column. 460px is the tightest cap that still fits the actual
+      // worst case with room to spare (longest code + a double-digit score
+      // on both sides — "ADSB1 20 v 20 ADSB2" — measured via a headless
+      // Chromium reproduction of this exact grid before picking the number:
+      // that content wraps to a second line below ~408px, so 460px keeps a
+      // safety margin without reintroducing the old empty space). The MATCH
+      // column itself is also capped (below) so this holds at any width,
+      // including the two-pool side-by-side layout on the other branch of
+      // this ternary.
+      fixturePoolsGridStyle: fixturePools.length <= 1 ? 'display:grid;grid-template-columns:minmax(0,460px);justify-content:center;gap:28px' : 'display:grid;grid-template-columns:1fr 1fr;gap:28px',
       fixtureTeamFilter: fxFilter,
       onFixtureTeamChange: (e) => this.setState({ fxTeamFilter: e.target.value }),
       fixtureTeamSelectOptions: fixtureTeamOptions.map((c) => ({

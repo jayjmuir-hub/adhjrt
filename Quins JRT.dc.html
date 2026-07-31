@@ -94,12 +94,15 @@
   .fmt-sub{color:#8c8c93;font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
   /* Age-group trading cards (design handoff: design_handoff_age_group_cards).
      --glow is set per-card from the group's own AGE_GROUP_CARDS.tint (red for
-     Saturday groups, green for Sunday), so one hover rule drives both colors. */
-  .fmt-grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px;margin-top:22px;perspective:600px}
+     Saturday groups, green for Sunday), so one hover rule drives both colors.
+     No perspective on the grid container -- each card bakes its own
+     perspective(400px) into its hover transform, so a card's tilt is
+     self-contained and unaffected by neighboring cards or grid position. */
+  .fmt-grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px;margin-top:22px}
   .fmt-grp{position:relative;aspect-ratio:.85;background:#151517;border:1px solid rgba(255,255,255,.15);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s;transform-style:preserve-3d}
   .fmt-grp-bar{position:absolute;top:0;left:0;right:0;height:4px;z-index:2}
   .fmt-grp .holo{position:absolute;inset:0;background:linear-gradient(115deg,transparent 25%,rgba(225,27,34,.4) 38%,rgba(255,255,255,.55) 48%,rgba(23,163,74,.4) 58%,transparent 72%);background-size:250% 250%;mix-blend-mode:screen;opacity:0;transition:opacity .3s ease;pointer-events:none}
-  .fmt-grp:hover{transform:translateY(-8px) scale(1.08) rotateX(8deg);border-color:var(--glow);box-shadow:0 0 26px 4px var(--glow),0 20px 34px -8px rgba(0,0,0,.6);z-index:5}
+  .fmt-grp:hover{transform:perspective(400px) translateY(-8px) scale(1.08) rotateX(8deg);border-color:var(--glow);box-shadow:0 0 26px 4px var(--glow),0 20px 34px -8px rgba(0,0,0,.6);z-index:5}
   .fmt-grp:hover .holo{opacity:.7;animation:holoShift 2.2s ease-in-out infinite}
   @keyframes holoShift{0%{background-position:0% 0%}50%{background-position:100% 100%}100%{background-position:0% 0%}}
   .fmt-grp-age{font-family:'Anton';font-size:19px;color:#fff;line-height:1;position:relative;z-index:1}

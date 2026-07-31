@@ -425,6 +425,52 @@
               <p style="margin-top:10px;font-size:13px;color:#3bd070;font-weight:600">{{ drawMsg }}</p>
             </sc-if>
           </div>
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-top:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+              <span style="font-family:'Anton';font-size:17px;text-transform:uppercase">Publishing</span>
+              <span style="{{ publishPillStyle }}">{{ publishPillLabel }}</span>
+            </div>
+            <sc-if value="{{ canPublish }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button onClick="{{ onPublish }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ publishLabel }}</button>
+                <sc-if value="{{ isPublished }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ onUnpublish }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Unpublish</button>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ publishBlocked }}" hint-placeholder-val="{{ true }}">
+              <p style="font-size:13px;color:#f5c518;font-weight:600">{{ publishBlockedNote }}</p>
+            </sc-if>
+          </div>
+
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-top:16px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:6px">Check the whole weekend</div>
+            <p style="color:#7f8794;font-size:12.5px;margin-bottom:4px">Every age group is edited on its own, so nothing normally notices when two of them are handed the same pitch at the same time. This reads all 15 and lists every overlap.</p>
+            <p style="color:#7f8794;font-size:12px;margin-bottom:10px">{{ clashScopeNote }}</p>
+            <button onClick="{{ onCheckWeekend }}" disabled="{{ clashBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:800;font-size:13px;padding:12px 18px;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ clashButtonLabel }}</button>
+
+            <sc-if value="{{ clashError }}" hint-placeholder-val="">
+              <div style="margin-top:12px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ clashError }}</div>
+            </sc-if>
+            <sc-if value="{{ clashHeadline }}" hint-placeholder-val="">
+              <div style="margin-top:12px">
+                <p style="font-weight:700;font-size:13.5px">{{ clashHeadline }}</p>
+                <sc-for list="{{ clashLines }}" as="cl" hint-placeholder-count="2">
+                  <div style="margin-top:8px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ cl }}</div>
+                </sc-for>
+                <sc-if value="{{ clashFailedNote }}" hint-placeholder-val="">
+                  <div style="margin-top:8px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#f5c518;font-size:13px;font-weight:600">{{ clashFailedNote }}</div>
+                </sc-if>
+                <sc-if value="{{ clashUnplacedNote }}" hint-placeholder-val="">
+                  <div style="margin-top:8px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#f5c518;font-size:13px;font-weight:600">{{ clashUnplacedNote }}</div>
+                </sc-if>
+                <sc-for list="{{ clashOffAllocationLines }}" as="ol" hint-placeholder-count="1">
+                  <div style="margin-top:8px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#f5c518;font-size:13px;font-weight:600">{{ ol }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
         </div>
       </sc-if>
       <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">
@@ -1212,6 +1258,79 @@ class Component extends DCLogic {
 
   cancelImport() { this.setState({ importOpen: false }); }
 
+  async runWeekendCheck() {
+    const { api, session } = this.state;
+    const { drawsByAge, ageNames, failed } = await api.loadAllDraws(session);
+    return { ...api.weekendClashes(drawsByAge, ageNames), failed, groupCount: Object.keys(drawsByAge).length };
+  }
+
+  /* The clash check runs BEFORE the question, and anything involving this age
+     group goes into the question as a WARNING — never a block. On the morning
+     of the tournament, the person who has to move a game must not be locked
+     out by a validator. */
+  async doPublish() {
+    const { api, ageId, session } = this.state;
+    this.setState({ drawBusy: true, drawMsg: 'Checking the weekend for pitch clashes…' });
+    let warning = '';
+    try {
+      const check = await this.runWeekendCheck();
+      const mine = (check.clashes || []).filter((c) => c.a.agId === ageId || c.b.agId === ageId);
+      if (mine.length) {
+        warning = `${mine.length} pitch clash${mine.length === 1 ? '' : 'es'} involving ${this.ageName(ageId)}:\n\n`
+          + mine.map((c) => '• ' + api.describeClash(c)).join('\n') + '\n\n';
+      }
+    } catch (err) {
+      warning = 'Could not check the rest of the weekend for pitch clashes just now.\n\n';
+    }
+    this.setState({ drawBusy: false, drawMsg: '' });
+    const ask = warning + 'Publish these fixtures for ' + this.ageName(ageId)
+      + '? Parents and coaches will see them on the public fixtures and standings pages straight away.';
+    this.confirmModal(ask, async () => {
+      this.setState({ drawBusy: true, drawMsg: '' });
+      const res = await api.publishDraw(ageId, session);
+      this.setState({
+        drawBusy: false,
+        drawMsg: res.ok ? 'Published — these fixtures are now public.' : (res.error || 'Could not publish.'),
+      });
+      if (res.ok) await this.loadDraw(ageId);
+    }, { okLabel: 'Publish anyway', wide: true });
+  }
+
+  async doUnpublish() {
+    const { api, ageId, session } = this.state;
+    this.confirmModal('Take these fixtures back down? Anyone who has already seen them will find the fixtures replaced by "coming soon" until you publish again. Your draft is kept.', async () => {
+      this.setState({ drawBusy: true, drawMsg: '' });
+      const res = await api.unpublishDraw(ageId, session);
+      this.setState({
+        drawBusy: false,
+        drawMsg: res.ok ? 'Unpublished — the public now sees "coming soon".' : (res.error || 'Could not unpublish.'),
+      });
+      if (res.ok) await this.loadDraw(ageId);
+    }, { okLabel: 'Unpublish' });
+  }
+
+  async checkWeekend() {
+    this.setState({ clashBusy: true, clash: null });
+    let result;
+    try {
+      result = await this.runWeekendCheck();
+    } catch (err) {
+      result = { error: 'Could not read every age group. Try again.' };
+    }
+    this.setState({ clashBusy: false, clash: result });
+  }
+
+  /* Grouped per age group rather than one line per pool: fifteen groups with
+     nothing scheduled would otherwise be forty lines of noise. */
+  clashUnplacedSummary(list) {
+    const by = new Map();
+    (list || []).forEach((bk) => {
+      if (!by.has(bk.agName)) by.set(bk.agName, []);
+      by.get(bk.agName).push(bk.label);
+    });
+    return [...by.entries()].map(([name, labels]) => `${name}: ${labels.join(', ')}`).join(' · ');
+  }
+
   findMatch(id) {
     const fx = this.state.fixtures;
     if (!fx) return null;
@@ -1517,6 +1636,10 @@ class Component extends DCLogic {
       disabled: !!r.skip,
       onPoolChange: (e) => this.setImportRowPool(r.code, e.target.value),
     }));
+    const pubState = (d && d._publish) || {};
+    const canPublish = !!(s.api && s.api.canPublishNow(s.session, pubState));
+    const cl = s.clash;
+    const clashOk = !!(cl && !cl.error);
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
@@ -1615,6 +1738,45 @@ class Component extends DCLogic {
       onImportModeReplace: () => this.setImportMode('replace'),
       onConfirmImport: () => this.confirmImport(),
       onCancelImport: () => this.cancelImport(),
+
+      publishPillLabel: pubState.published ? 'Live' : 'Not published',
+      publishPillStyle: pubState.published
+        ? 'display:inline-block;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:100px;background:rgba(23,163,74,0.15);color:#3bd070'
+        : 'display:inline-block;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:100px;background:#0C0C0E;color:#7f8794;border:1px solid rgba(255,255,255,0.15)',
+      canPublish,
+      publishBlocked: !canPublish,
+      isPublished: !!pubState.published,
+      publishLabel: pubState.published ? 'Republish' : 'Publish fixtures',
+      publishBlockedNote: 'Managers can publish on the tournament days only (7–8 November 2026). Ask a tournament organiser to publish before then.',
+      onPublish: () => this.doPublish(),
+      onUnpublish: () => this.doUnpublish(),
+
+      clashBusy: s.clashBusy,
+      clashButtonLabel: s.clashBusy ? 'Checking all 15 age groups…' : 'Check the whole weekend',
+      onCheckWeekend: () => this.checkWeekend(),
+      /* A manager's check reads their own working draft against everyone
+         else's PUBLISHED fixtures — that limit has to be said, not implied
+         away by a confident "no clashes". */
+      clashScopeNote: (s.api && s.api.isOrganiserSession && s.api.isOrganiserSession(s.session))
+        ? 'You are an organiser, so this reads every age group’s working draft — including changes nobody has published yet.'
+        : 'This reads your own working draft against everyone else’s published fixtures. Another manager’s unsaved edits cannot be seen from here.',
+      hasClashResult: !!cl,
+      clashError: (cl && cl.error) || '',
+      clashHeadline: clashOk
+        ? (cl.clashes.length === 0
+          ? `No pitch clashes. ${cl.placedCount} pool(s)/knockout matches placed across ${cl.groupCount} age groups.`
+          : `${cl.clashes.length} pitch clash(es) across the weekend.`)
+        : '',
+      clashLines: clashOk ? cl.clashes.map((c) => s.api.describeClash(c)) : [],
+      clashFailedNote: (clashOk && cl.failed && cl.failed.length)
+        ? `Could not read: ${cl.failed.join(', ').toUpperCase()} — those age groups are NOT included above, so this is not a complete check.`
+        : '',
+      clashUnplacedNote: (clashOk && cl.unplaced && cl.unplaced.length)
+        ? `Still on TBD, excluded from this check: ${this.clashUnplacedSummary(cl.unplaced)}`
+        : '',
+      clashOffAllocationLines: (clashOk && cl.offAllocation)
+        ? cl.offAllocation.map((bk) => `${bk.agName} ${bk.label} is on ${bk.pitch}, which is not one of its pitches in the venue layout.`)
+        : [],
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

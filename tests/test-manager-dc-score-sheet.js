@@ -57,6 +57,9 @@ function sheetApi(overrides) {
     getFixtures: async () => FIXTURES(),
     getStandings: async () => ({ awaitingPublication: false, ageGroup: { hasStandings: true, name: 'U14 Boys' }, pools: [], tables: {}, _advance: 0 }),
     getSpiritAward: async () => ({ supported: false }),
+    canPublishNow: () => false,
+    isOrganiserSession: () => false,
+    describeClash: (c) => `${c.a.agName} vs ${c.b.agName}`,
   }, overrides || {});
 }
 

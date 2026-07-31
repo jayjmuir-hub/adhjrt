@@ -879,6 +879,149 @@ section('Import registered teams');
   check('…and offers no rows', c.state.importRows.length === 0);
 }
 
+section('Publish and unpublish');
+{
+  const c = buildDraw({ canPublishNow: () => false });
+  const vals = c.renderVals();
+  // FAULT-PROOF: outside the tournament window the button is REPLACED with an
+  // explanation, never shown disabled with no reason given.
+  check('a manager outside the window gets no Publish button', vals.canPublish === false);
+  check('…and an explanation instead', /tournament days|organiser/i.test(vals.publishBlockedNote));
+  check('the state pill says it is not published', /not published/i.test(vals.publishPillLabel));
+}
+{
+  let publishCalls = 0, confirmText = '';
+  const c = buildDraw({ canPublishNow: () => true, publishDraw: async () => { publishCalls++; return { ok: true, published: true }; } });
+  await c.doPublish();
+  confirmText = c.state.modal.title;
+  check('publishing asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…naming the age group and who will see it', /U14 Boys/.test(confirmText) && /parents and coaches/i.test(confirmText));
+  check('…and publishes nothing until confirmed', publishCalls === 0);
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  check('confirming publishes exactly once', publishCalls === 1);
+  check('…and says so', c.state.drawMsg === 'Published — these fixtures are now public.');
+}
+{
+  let unpublishCalls = 0;
+  const c = buildDraw({
+    canPublishNow: () => true,
+    getDraw: async () => ({ ...freshDraw(), _publish: { published: true, publishedAt: '2026-11-07T09:00:00Z', publishedBy: 'x', managerCanPublishNow: true } }),
+    unpublishDraw: async () => { unpublishCalls++; return { ok: true, published: false }; },
+  });
+  await c.loadDraw('u14b');
+  const vals = c.renderVals();
+  check('an already-published draw offers Unpublish', vals.isPublished === true);
+  check('…and the pill says it is live', /live/i.test(vals.publishPillLabel));
+  check('…and the publish button offers a republish', /republish/i.test(vals.publishLabel));
+  await c.doUnpublish();
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  check('unpublishing calls the API exactly once', unpublishCalls === 1);
+  check('…and says what the public now sees', /coming soon/i.test(c.state.drawMsg));
+}
+{
+  const c = buildDraw({ canPublishNow: () => true, publishDraw: async () => ({ ok: false, error: 'Not signed in.' }) });
+  await c.doPublish();
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  check('a failed publish shows the server\'s reason', c.state.drawMsg === 'Not signed in.');
+}
+
+section('Publishing warns about pitch clashes, but never blocks');
+{
+  let loadAllCalls = 0, publishCalls = 0;
+  const c = buildDraw({
+    canPublishNow: () => true,
+    loadAllDraws: async () => { loadAllCalls++; return { drawsByAge: { u14b: {}, u16b: {} }, ageNames: { u14b: 'U14 Boys', u16b: 'U16B' }, failed: [] }; },
+    weekendClashes: () => ({ clashes: [{ dayId: 'day1', dayLabel: 'Saturday', pitch: 'C4', sameAgeGroup: false,
+      a: { agId: 'u14b', agName: 'U14 Boys', label: 'Pool A', startMins: 480, endMins: 600 },
+      b: { agId: 'u16b', agName: 'U16B', label: 'Pool B', startMins: 560, endMins: 660 } }],
+      unplaced: [], offAllocation: [], placedCount: 2 }),
+    describeClash: (cl) => `Pitch ${cl.pitch} clash`,
+    publishDraw: async () => { publishCalls++; return { ok: true, published: true }; },
+  });
+  await c.doPublish();
+  // FAULT-PROOF: publishing used to run no clash check at all.
+  check('publishing runs a weekend clash check first', loadAllCalls === 1);
+  check('a clash involving this age group is folded into the question', /Pitch C4 clash/.test(c.state.modal.title));
+  c.submitModal();
+  await new Promise((r) => setImmediate(r));
+  // FAULT-PROOF the other way: on the morning of the tournament the person who
+  // has to move a game must not be locked out by a validator. It is a warning.
+  check('…and it is a warning, not a block — publish still goes through', publishCalls === 1);
+}
+{
+  const c = buildDraw({
+    canPublishNow: () => true,
+    loadAllDraws: async () => ({ drawsByAge: { u14b: {}, u16b: {} }, ageNames: { u14b: 'U14 Boys', u16b: 'U16B' }, failed: [] }),
+    weekendClashes: () => ({ clashes: [{ dayId: 'day1', dayLabel: 'Saturday', pitch: 'C9', sameAgeGroup: false,
+      a: { agId: 'u16b', agName: 'U16B', label: 'Pool A', startMins: 480, endMins: 600 },
+      b: { agId: 'u16b', agName: 'U16B', label: 'Pool B', startMins: 560, endMins: 660 } }],
+      unplaced: [], offAllocation: [], placedCount: 2 }),
+    describeClash: (cl) => `Pitch ${cl.pitch} clash`,
+  });
+  await c.doPublish();
+  check('a clash between two OTHER age groups is not raised here', !/Pitch C9 clash/.test(c.state.modal.title));
+}
+{
+  const c = buildDraw({ canPublishNow: () => true, loadAllDraws: async () => { throw new Error('network down'); } });
+  await c.doPublish();
+  // FAULT-PROOF: an unreachable check must not silently look like a clean one.
+  check('a clash check that fails says so in the question rather than implying all-clear',
+    /Could not check/i.test(c.state.modal.title));
+}
+
+section('Check the whole weekend');
+{
+  const c = buildDraw({
+    loadAllDraws: async () => ({ drawsByAge: { u14b: {}, u16b: {} }, ageNames: { u14b: 'U14 Boys', u16b: 'U16B' }, failed: [] }),
+    weekendClashes: () => ({ clashes: [{ dayId: 'day1', dayLabel: 'Saturday', pitch: 'C4', sameAgeGroup: false,
+      a: { agId: 'u14b', agName: 'U14 Boys', label: 'Pool A', startMins: 480, endMins: 600 },
+      b: { agId: 'u16b', agName: 'U16B', label: 'Pool B', startMins: 560, endMins: 660 } }],
+      unplaced: [], offAllocation: [], placedCount: 10 }),
+    describeClash: (cl) => `Pitch ${cl.pitch} · ${cl.dayLabel} — ${cl.a.agName} ${cl.a.label} overlaps ${cl.b.agName} ${cl.b.label}`,
+  });
+  await c.checkWeekend();
+  check('the result is stored', c.state.clash && c.state.clash.clashes.length === 1);
+  const vals = c.renderVals();
+  check('the clash is described in one line, from describeClash()', /Pitch C4/.test(vals.clashLines[0]) && /overlaps/.test(vals.clashLines[0]));
+  check('the headline counts them', /1 pitch clash/i.test(vals.clashHeadline));
+}
+{
+  const c = buildDraw({
+    loadAllDraws: async () => ({ drawsByAge: { u14b: {} }, ageNames: { u14b: 'U14 Boys' }, failed: ['u16b', 'u18b'] }),
+    weekendClashes: () => ({ clashes: [],
+      unplaced: [{ agName: 'U14 Boys', label: 'Pool A', pitch: '', dayId: 'day1' }],
+      offAllocation: [{ agName: 'U16B', label: 'Pool B', pitch: 'Z9' }],
+      placedCount: 3 }),
+  });
+  await c.checkWeekend();
+  const vals = c.renderVals();
+  // FAULT-PROOF: a partial result used to render as a confident "No pitch
+  // clashes." with nothing to say two age groups could not be read at all.
+  check('the panel names the age groups it could not read', /U16B/.test(vals.clashFailedNote) && /U18B/.test(vals.clashFailedNote));
+  check('…and says the check is therefore incomplete', /not a complete check/i.test(vals.clashFailedNote));
+  check('the still-TBD bookings excluded from the check are listed', /U14 Boys: Pool A/.test(vals.clashUnplacedNote));
+  check('a booking on a pitch outside its allocation is listed', /Z9/.test(vals.clashOffAllocationLines[0]) && /not one of its pitches/i.test(vals.clashOffAllocationLines[0]));
+  check('the headline still reports the clean clash count', /No pitch clashes/i.test(vals.clashHeadline));
+}
+{
+  const c = buildDraw({ loadAllDraws: async () => { throw new Error('network down'); } });
+  await c.checkWeekend();
+  check('a failed check is recorded as an error rather than crashing the tab', !!c.state.clash.error);
+  check('…and shown', !!c.renderVals().clashError);
+}
+{
+  const c = buildDraw({ isOrganiserSession: () => false });
+  check('a manager is told the check cannot see other managers\' unsaved drafts',
+    /unsaved edits cannot be seen/i.test(c.renderVals().clashScopeNote));
+  const c2 = buildDraw({ isOrganiserSession: () => true });
+  c2.setState({ session: { isOrganizer: true, ageGroupId: '*', token: 'tok' } });
+  check('an organiser is told they are reading every group\'s working draft',
+    /working draft/i.test(c2.renderVals().clashScopeNote));
+}
+
 summary('tests/test-manager-dc-draw.js');
 }
 

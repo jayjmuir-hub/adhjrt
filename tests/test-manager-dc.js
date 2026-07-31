@@ -11,6 +11,51 @@
    tests/test-fixtures-results-sync.js use. Deliberately duplicated per test
    file, matching this project's established convention.
 */
+/* PARITY MATRIX — tests/test-manager-dashboard.js (old file) → this rebuild
+   ------------------------------------------------------------------------
+   Every behaviour the old dashboard's tests proved, and where the same
+   behaviour is proven against Manager.dc.html. Written down because the old
+   file is deleted with Manager.html in the rollout task, and after that this
+   comment is the only record that the swap was not a leap of faith.
+
+     Age-group scoping (u14b, u16b, organiser fallback)      -> test-manager-dc.js, "Boot and age-group scoping"
+     Live scoring rules loaded at boot                       -> test-manager-dc.js, "Parity gap-fills" (source check; componentDidMount does a dynamic import that cannot be driven in Node)
+     Today tab                                                -> test-manager-dc.js, "Today tab"
+     Fixtures tab groups by pool                              -> test-manager-dc.js, "Fixtures & scoring tab"
+     Results tab shows only played matches                    -> test-manager-dc.js, "Results tab"
+     Tables tab                                                -> test-manager-dc.js, "Tables tab"
+     Draw tab (Task 1: read-only shell)                        -> test-manager-dc-draw.js, "loadDraw(): fetching, loading state, and the empty state"
+     Draw tab (Task 2: tap-to-select editor)                   -> test-manager-dc-draw.js, "pickTeam()", "placeTeam()", "Pool CRUD", "Team CRUD"
+     Draw tab (Task 3: slot editor + save/discard/reset)       -> test-manager-dc-draw.js, "Match-slot editor", "Save, discard and regenerate"
+     Draw tab (Task 4: import registered teams)                -> test-manager-dc-draw.js, "Import registered teams"
+     Draw tab (Task 5: knockout builder)                       -> test-manager-dc-draw.js, "Knockout builder"
+     Draw tab (Task 5 gap-fix: finals gating)                  -> test-manager-dc-draw.js, "Knockout generation is gated on what has actually been played"
+     Draw tab (Task 6: publish / unpublish gating)             -> test-manager-dc-draw.js, "Publish and unpublish"
+     Draw tab (Task 7: clash checker)                          -> test-manager-dc-draw.js, "Check the whole weekend"
+     MODERATE 5: clash panel renders failed/unplaced/offAllocation -> test-manager-dc-draw.js, "Check the whole weekend" (second block)
+     MODERATE 6: publish runs a clash check first              -> test-manager-dc-draw.js, "Publishing warns about pitch clashes, but never blocks"
+     MAJOR 3 / MODERATE 7 / MINOR 8: stale picked/clash/drawMsg/importRows -> test-manager-dc-draw.js, "Pool CRUD", "Team CRUD", "Transient Draw state does not outlive what it referred to"
+     MODERATE 4: unsaved Draw edits survive a score save        -> test-manager-dc-draw.js, "Transient Draw state…" (last block)
+     MINOR 9: knockout time input width                        -> No longer applicable — see below
+     MAJOR 2: reflow classnames for the phone media query       -> No longer applicable — see below
+     Registrations tab                                          -> test-manager-dc.js, "Registrations tab"
+     Score sheet: Spirit + Cards                                -> test-manager-dc-score-sheet.js, "The payload sent to submitResult()"
+     Score sheet: spirit tally on Fixtures                       -> test-manager-dc.js, "Spirit of Rugby Award tally on the Fixtures tab"
+     MAJOR 1: Registrations search keeps its state               -> test-manager-dc.js, "Registrations tab" (search block)
+
+   TWO OLD ASSERTIONS ARE RESTATED RATHER THAN PORTED, both about
+   Manager.html's hand-written stylesheet:
+     MINOR 9 (knockout time input width)  -> source check, "Parity gap-fills"
+     MAJOR 2 (media-query reflow classes) -> source check, "Parity gap-fills"
+
+   ONE BEHAVIOUR DELIBERATELY DIFFERS, and is not a parity failure:
+     Manager.html's placeTeam() removed a team from its pool roster when it
+     was placed into a match slot or knockout box. pools[].teams is pool
+     MEMBERSHIP — computeStandings() reads it directly — so that made teams
+     disappear from the public standings. Manager.dc.html keeps the roster,
+     matching the corrected behaviour shipped in Scores & Standings.dc.html.
+     See tests/test-manager-dc-draw.js, "placeTeam(): moves, and the dedup rule".
+*/
 const { readRepo, section, check, eq, summary } = require('./_lib');
 
 class DCLogic {
@@ -705,6 +750,30 @@ section('It is a real component, not a script tag in disguise');
   check('it uses sc-if for the login/dashboard split', /<sc-if value="\{\{ loggedOut \}\}"/.test(html) && /<sc-if value="\{\{ loggedIn \}\}"/.test(html));
   check('it renders the tab strip with sc-for', /<sc-for list="\{\{ tabs \}\}"/.test(html));
   check('there is no plain <script type="module"> page script', !/<script type="module">/.test(html));
+}
+
+section('Parity gap-fills: three old assertions restated for the component build');
+{
+  const html = readRepo('Manager.dc.html');
+  // Old: "Manager.html calls api.loadScoringRules() during boot", proven by
+  // driving the module. componentDidMount cannot be driven in Node (it does a
+  // dynamic import of scores-data.js), so this is asserted at the source — and
+  // the reason it matters is unchanged: without it a manager sees the
+  // hardcoded default scoring rules instead of the organiser's live ones.
+  check('the component loads the live scoring rules at mount', /loadScoringRules\(\)/.test(html));
+  check('…and the venue, before anything renders', /await api\.loadVenue\(\)/.test(html));
+
+  // Old MINOR 9: the knockout time input was 100px and clipped times like
+  // "01:0" — genuinely ambiguous between 1am and 1pm on the finals rows.
+  const koTimeWidths = (html.match(/type="time"[^>]*width:(\d+)px/g) || []).map((m) => Number(m.match(/width:(\d+)px/)[1]));
+  check('every time input is at least 110px wide', koTimeWidths.length > 0 && koTimeWidths.every((w) => w >= 110));
+
+  // Old MAJOR 2: at phone width the fixed-width time/pitch/delete controls
+  // squeezed the two team boxes down to ~24px and team names rendered one
+  // character per line. This build reflows by wrapping instead of by a media
+  // query, so the assertion is that the wrap and the minimum box width exist.
+  check('slot rows wrap rather than squeezing at phone width', /flex-wrap:wrap/.test(html));
+  check('…and a team box has a sane minimum width', /min-width:120px/.test(html));
 }
 
 summary('tests/test-manager-dc.js');

@@ -511,6 +511,173 @@ section('Tables tab');
   check('…with an empty row list rather than a crash', vals.tableCards[1].rows.length === 0);
 }
 
+section('Registrations tab');
+{
+  const regTeams = [{ club: 'ADH', teamName: 'ADH1', ageGroup: 'U14 Boys',
+    headCoachName: 'Coach A', headCoachMobile: '0500000001', managerName: 'Mgr A', managerMobile: '0500000002',
+    players: JSON.stringify([{ firstName: 'Sam', lastName: 'Jones', dob: '2013-01-01' }]) }];
+  const regPlayers = [
+    { playerName: 'Sam Jones', dob: '2013-01-01', club: 'ADH', ageGroup: 'U14 Boys', parentName: 'P Jones', parentMobile: '0500000003', emergencyContact: 'E Contact', emergencyMobile: '0500000004', medicalNotes: '', consent: 'Yes' },
+    { playerName: 'Unmatched Kid', dob: '2013-02-02', club: 'ADH', ageGroup: 'U14 Boys', parentName: 'P Kid', parentMobile: '0500000005', emergencyContact: 'E Kid', emergencyMobile: '0500000006', medicalNotes: 'Asthma', consent: 'Yes' },
+  ];
+  const c = buildManager({ getMyRegistrations: async () => ({ teams: regTeams, players: regPlayers, scope: 'U14 Boys' }) });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  const vals = c.renderVals();
+  check('the team\'s coach is listed with a phone number', /Coach A/.test(vals.regTeamRows[0].sub) && /0500000001/.test(vals.regTeamRows[0].sub));
+  check('the team\'s manager is listed too', /Mgr A/.test(vals.regTeamRows[0].sub));
+  check('a player row carries the date of birth', vals.regPlayerRows[0].dob === '2013-01-01');
+  check('a player row carries the emergency contact', /E Contact/.test(vals.regPlayerRows[0].emergency));
+  check('medical notes are shown where they exist', vals.regPlayerRows[1].medical === 'Asthma' && vals.regPlayerRows[1].hasMedical === true);
+  // FAULT-PROOF: matching is by name AND date of birth. A match on name alone
+  // would clear the unmatched flag for a different child with the same name.
+  check('a player who is on a roster is not flagged', vals.regPlayerRows[0].unmatched === false);
+  check('a player who is on no roster IS flagged', vals.regPlayerRows[1].unmatched === true);
+  check('…and the count is shown at the top', vals.regUnmatchedCount === 1 && vals.hasRegUnmatched === true);
+  check('the counts match the rows', vals.regTeamCount === 1 && vals.regPlayerCount === 2);
+}
+{
+  const regTeams = [{ club: 'ADH', teamName: 'ADH1', ageGroup: 'U14 Boys', headCoachName: 'Coach A', headCoachMobile: '1', managerName: 'M', managerMobile: '2',
+    players: JSON.stringify([{ firstName: 'Sam', lastName: 'Jones', dob: '2013-01-01' }]) }];
+  const regPlayers = [{ playerName: 'Sam Jones', dob: '2014-09-09', club: 'ADH', ageGroup: 'U14 Boys', parentName: 'P', parentMobile: '3', emergencyContact: 'E', emergencyMobile: '4', medicalNotes: '', consent: 'Yes' }];
+  const c = buildManager({ getMyRegistrations: async () => ({ teams: regTeams, players: regPlayers, scope: '' }) });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  // FAULT-PROOF: same name, different date of birth — this must still be
+  // flagged, or a mis-keyed DOB silently passes as a match.
+  check('a same-name player with a different date of birth is still flagged', c.renderVals().regPlayerRows[0].unmatched === true);
+}
+{
+  const regTeams = [{ club: 'ADH', teamName: 'ADH1', ageGroup: 'U14 Boys', headCoachName: 'C', headCoachMobile: '1', managerName: 'M', managerMobile: '2', players: 'not-json-at-all' }];
+  const c = buildManager({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: '' }) });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  check('an unparseable roster does not take the whole tab down', c.renderVals().regTeamCount === 1);
+}
+{
+  const regPlayers = [
+    { playerName: 'Ethan Smith', dob: '2013-01-01', club: 'ADH', ageGroup: 'U14 Boys', parentName: 'P Smith', parentMobile: '3', emergencyContact: 'E', emergencyMobile: '4', medicalNotes: '', consent: 'Yes' },
+    { playerName: 'Olivia Brown', dob: '2013-03-03', club: 'ADH', ageGroup: 'U14 Boys', parentName: 'P Brown', parentMobile: '5', emergencyContact: 'E', emergencyMobile: '6', medicalNotes: '', consent: 'Yes' },
+  ];
+  const c = buildManager({ getMyRegistrations: async () => ({ teams: [], players: regPlayers, scope: '' }) });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  c.onRegSearch({ target: { value: 'E' } });
+  check('the first keystroke is kept', c.state.regSearch === 'E');
+  c.onRegSearch({ target: { value: 'Et' } });
+  c.onRegSearch({ target: { value: 'Eth' } });
+  c.onRegSearch({ target: { value: 'Ethan' } });
+  check('typing accumulates rather than resetting', c.state.regSearch === 'Ethan');
+  const names = c.renderVals().regPlayerRows.map((r) => r.name);
+  check('the list filters to the full typed string', names.includes('Ethan Smith') && !names.includes('Olivia Brown'));
+  c.onRegSearch({ target: { value: '' } });
+  // FAULT-PROOF: the filter is recomputed from state.regs each time, so it is
+  // not a one-way narrowing that can never be undone.
+  const namesBack = c.renderVals().regPlayerRows.map((r) => r.name);
+  check('clearing the box brings everyone back', namesBack.includes('Ethan Smith') && namesBack.includes('Olivia Brown'));
+}
+{
+  const c = buildManager({ getMyRegistrations: async () => ({ teams: [], players: [], scope: '' }) });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  const vals = c.renderVals();
+  check('an empty registration list says so for teams', vals.regTeamsEmpty === true);
+  check('…and for players', vals.regPlayersEmpty === true);
+}
+{
+  // An organiser sees every group's rows, so they have to be narrowed to the
+  // group currently on screen — by NAME, since state.ageId is an id.
+  const rows = {
+    teams: [
+      { club: 'ADH', teamName: 'ADH1', ageGroup: 'U14 Boys', headCoachName: 'C', headCoachMobile: '1', managerName: 'M', managerMobile: '2', players: '[]' },
+      { club: 'XX', teamName: 'XX1', ageGroup: 'U16 Boys', headCoachName: 'C', headCoachMobile: '1', managerName: 'M', managerMobile: '2', players: '[]' },
+    ],
+    players: [], scope: 'all',
+  };
+  const c = buildManager({
+    currentSession: () => ({ isOrganizer: true, ageGroupId: '*', token: 't' }),
+    isOrganiserSession: (s) => !!(s && s.isOrganizer),
+    getMyRegistrations: async () => rows,
+  });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  // FAULT-PROOF: without the narrowing, an organiser sees all 15 groups'
+  // registrations stacked under whichever group they happen to be viewing.
+  check('an organiser sees only the age group on screen', c.renderVals().regTeamCount === 1);
+}
+{
+  let calls = 0;
+  const c = buildManager({ getMyRegistrations: async () => { calls++; return { teams: [], players: [], scope: '' }; } });
+  await c.boot();
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  check('opening the tab fetches once', calls === 1);
+  c.go('today');
+  c.go('registrations');
+  await new Promise((r) => setImmediate(r));
+  check('returning to it does not refetch', calls === 1);
+}
+
+section('Spirit of Rugby Award tally on the Fixtures tab');
+{
+  const c = buildManager({
+    supportsSpiritAward: () => true,
+    getSpiritAward: async () => ({ supported: true, totalMatches: 2, playedMatches: 1, complete: false,
+      tally: [{ name: 'Sam Jones', count: 1, team: 'ADH1' }], winners: [] }),
+  });
+  await c.boot();
+  c.go('fixtures');
+  const vals = c.renderVals();
+  check('the tally card shows for a supporting age group', vals.hasSpirit === true);
+  check('…with how far through the scoring it is', /1 of 2 matches scored/i.test(vals.spiritProgress));
+  check('…and the nominations so far', vals.spiritTally.length === 1 && vals.spiritTally[0].name === 'Sam Jones');
+  check('…and no winner while it is incomplete', vals.spiritComplete === false && vals.spiritWinnersLine === '');
+}
+{
+  const c = buildManager({
+    supportsSpiritAward: () => true,
+    getSpiritAward: async () => ({ supported: true, totalMatches: 2, playedMatches: 2, complete: true,
+      tally: [{ name: 'Sam Jones', count: 3, team: 'ADH1' }, { name: 'Ava Khan', count: 3, team: 'DE1' }],
+      winners: [{ name: 'Sam Jones', team: 'ADH1' }, { name: 'Ava Khan', team: 'DE1' }] }),
+  });
+  await c.boot();
+  c.go('fixtures');
+  const vals = c.renderVals();
+  check('a finished tally names the winner', vals.spiritComplete === true && /Sam Jones/.test(vals.spiritWinnersLine));
+  // FAULT-PROOF: a tie produces more than one winner, and printing only the
+  // first would hand one child an award two of them share.
+  check('…and every winner of a tie, not just the first', /Ava Khan/.test(vals.spiritWinnersLine));
+}
+{
+  const c = buildManager({ supportsSpiritAward: () => false });
+  await c.boot();
+  c.go('fixtures');
+  // FAULT-PROOF: an age group that does not run the award must not see an
+  // empty card implying it does.
+  check('no tally card for an age group that does not run the award', c.renderVals().hasSpirit === false);
+}
+{
+  let fetched = 0;
+  const c = buildManager({ supportsSpiritAward: () => false, getSpiritAward: async () => { fetched++; return { supported: false }; } });
+  await c.boot();
+  check('the tally is not even fetched for an unsupported age group', fetched === 0);
+}
+{
+  const c = buildManager({
+    supportsSpiritAward: () => true,
+    getSpiritAward: async () => ({ supported: true, totalMatches: 2, playedMatches: 0, complete: false, tally: [], winners: [] }),
+  });
+  await c.boot();
+  c.go('fixtures');
+  check('with no nominations yet the card says so', c.renderVals().spiritEmpty === true);
+}
+
 section('Organizer design system is what this page uses');
 {
   const html = readRepo('Manager.dc.html');

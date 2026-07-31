@@ -143,6 +143,22 @@
         <div style="margin-top:24px">
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Fixtures &amp; scoring</div>
 
+          <sc-if value="{{ hasSpirit }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;color:#3bd070;margin-bottom:6px">Spirit of Rugby Award</div>
+              <div style="color:#7f8794;font-size:12px;margin-bottom:8px">{{ spiritProgress }}</div>
+              <sc-if value="{{ spiritComplete }}" hint-placeholder-val="{{ false }}">
+                <div style="font-weight:800;margin-bottom:8px">🏆 {{ spiritWinnersLine }}</div>
+              </sc-if>
+              <sc-if value="{{ spiritEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="color:#7f8794;font-size:12px">No nominations yet.</div>
+              </sc-if>
+              <sc-for list="{{ spiritTally }}" as="sp" hint-placeholder-count="4">
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:8px 14px;font-size:13px;font-weight:700;margin:3px">{{ sp.name }} <span style="color:#7f8794">{{ sp.team }}</span> {{ sp.count }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+
           <sc-if value="{{ fixturesLoading }}" hint-placeholder-val="{{ false }}">
             <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
           </sc-if>
@@ -474,8 +490,52 @@
         </div>
       </sc-if>
       <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px">
-          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Registrations</div>
+        <div style="margin-top:24px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Registrations</div>
+
+          <sc-if value="{{ regLoading }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
+          </sc-if>
+
+          <input value="{{ regSearch }}" onInput="{{ onRegSearch }}" placeholder="Search player, club, coach or parent…" style="width:100%;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+
+          <sc-if value="{{ hasRegUnmatched }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#f5c518;font-size:13px;font-weight:600">{{ regUnmatchedNote }}</div>
+          </sc-if>
+
+          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Teams ({{ regTeamCount }})</div>
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+            <sc-if value="{{ regTeamsEmpty }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:28px 22px;text-align:center;color:#7f8794;font-size:14px">No team registrations yet.</div>
+            </sc-if>
+            <sc-for list="{{ regTeamRows }}" as="t" hint-placeholder-count="3">
+              <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08)">
+                <b style="font-weight:700;font-size:14.5px">{{ t.title }}</b>
+                <div style="color:#7f8794;font-size:12.5px;margin-top:2px">{{ t.sub }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Players ({{ regPlayerCount }})</div>
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden">
+            <sc-if value="{{ regPlayersEmpty }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:28px 22px;text-align:center;color:#7f8794;font-size:14px">No player registrations yet.</div>
+            </sc-if>
+            <sc-for list="{{ regPlayerRows }}" as="p" hint-placeholder-count="6">
+              <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08);{{ p.rowStyle }}">
+                <div><b style="font-weight:700;font-size:14.5px">{{ p.name }}</b> <span style="color:#7f8794">{{ p.dob }}</span>
+                  <sc-if value="{{ p.unmatched }}" hint-placeholder-val="{{ false }}">
+                    <span style="color:#f5c518;font-weight:700">⚠ not on a roster</span>
+                  </sc-if>
+                </div>
+                <div style="color:#7f8794;font-size:12.5px;margin-top:2px">{{ p.club }} · {{ p.parent }} · {{ p.emergency }}</div>
+                <sc-if value="{{ p.hasMedical }}" hint-placeholder-val="{{ false }}">
+                  <div style="color:#f5c518;font-size:12.5px;font-weight:700;margin-top:2px">Medical: {{ p.medical }}</div>
+                </sc-if>
+                <div style="color:#7f8794;font-size:12.5px;margin-top:2px">{{ p.consent }}</div>
+              </div>
+            </sc-for>
+          </div>
         </div>
       </sc-if>
     </div>
@@ -693,6 +753,7 @@ class Component extends DCLogic {
     this.setState({ tab });
     if (leavingDraw) this.clearDrawTransientState();
     if (tab === 'draw' && s.drawLoadedFor !== s.ageId && !s.drawDirty) this.loadDraw(s.ageId);
+    if (tab === 'registrations' && s.regs === undefined) this.loadRegistrations();
   }
 
   async load(agId) {
@@ -703,7 +764,7 @@ class Component extends DCLogic {
        manager about, so a dirty draft is carried through. There is no
        age-group switcher on this page for that to race against. */
     this.setState((s) => ({
-      ageId: agId, fixtures: null, standings: null, spiritAward: null,
+      ageId: agId, fixtures: null, standings: null, spiritAward: null, regs: undefined,
       draw: keepDraw ? s.draw : undefined,
       drawLoadedFor: keepDraw ? s.drawLoadedFor : null,
     }));
@@ -712,6 +773,13 @@ class Component extends DCLogic {
     if (this.state.ageId !== agId) return; // a stale response for a group we left
     this.setState({ fixtures: fx, standings: st });
     if (this.state.tab === 'draw' && !this.state.drawDirty) await this.loadDraw(agId);
+    if (this.state.tab === 'registrations') await this.loadRegistrations();
+    /* Only fetched where the award actually runs — an unconditional fetch
+       would put a request (and an empty card) on every other age group. */
+    if (api.supportsSpiritAward(agId)) {
+      const award = await api.getSpiritAward(agId);
+      if (this.state.ageId === agId) this.setState({ spiritAward: award });
+    }
   }
 
   async loadDraw(agId) {
@@ -1114,6 +1182,69 @@ class Component extends DCLogic {
     const data = await api.getMyRegistrations(session);
     this.setState({ regs: data });
   }
+
+  /* The server already scopes an ordinary manager's rows to their own age
+     group. Only an organiser/'*' session gets every group's rows, so those
+     are narrowed to whichever group is on screen — by NAME, because state.ageId
+     is an id ('u14b') and row.ageGroup is a name ('U14 Boys'). */
+  regNarrow(rows) {
+    const s = this.state;
+    if (s.session && s.session.ageGroupId === '*') {
+      const meta = (s.ageGroups || []).find((a) => a.id === s.ageId);
+      const nm = ((meta && meta.name) || '').trim().toLowerCase();
+      return (rows || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
+    }
+    return rows || [];
+  }
+
+  /* Name AND date of birth. Matching on name alone would clear the warning
+     for a different child who happens to share a name. */
+  regKeyOf(name, dob) {
+    return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ') + '|' + String(dob || '').trim();
+  }
+
+  regParseRoster(team) {
+    let arr = [];
+    try { arr = JSON.parse(team.players || '[]'); } catch (e) { arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    return arr.map((p) => ({ name: [p.firstName, p.lastName].filter(Boolean).join(' ').trim(), dob: p.dob || '' }));
+  }
+
+  regRows() {
+    const s = this.state;
+    const teams = this.regNarrow(s.regs && s.regs.teams);
+    const players = this.regNarrow(s.regs && s.regs.players);
+    const rosterKeys = new Set();
+    teams.forEach((t) => this.regParseRoster(t).forEach((p) => rosterKeys.add(this.regKeyOf(p.name, p.dob))));
+    const unmatched = players.filter((p) => !rosterKeys.has(this.regKeyOf(p.playerName, p.dob)));
+    const q = (s.regSearch || '').trim().toLowerCase();
+    const hit = (hay) => !q || hay.toLowerCase().includes(q);
+    const teamRows = teams
+      .filter((t) => hit([t.club, t.teamName, t.headCoachName, t.managerName].join(' ')))
+      .map((t) => ({
+        key: `${t.club}|${t.teamName}`,
+        title: `${t.club} · ${t.teamName}`,
+        sub: `Coach: ${t.headCoachName || '—'} ${t.headCoachMobile || ''} · Manager: ${t.managerName || '—'} ${t.managerMobile || ''}`,
+      }));
+    const playerRows = players
+      .filter((p) => hit([p.playerName, p.club, p.parentName, p.dob].join(' ')))
+      .map((p) => ({
+        key: `${p.playerName}|${p.dob}`,
+        name: p.playerName,
+        dob: p.dob,
+        club: p.club,
+        parent: `Parent: ${p.parentName || '—'} ${p.parentMobile || ''}`,
+        emergency: `Emergency: ${p.emergencyContact || '—'} ${p.emergencyMobile || ''}`,
+        medical: p.medicalNotes || '',
+        hasMedical: !!p.medicalNotes,
+        consent: `Consent: ${p.consent || '—'}`,
+        unmatched: unmatched.indexOf(p) >= 0,
+        rowStyle: unmatched.indexOf(p) >= 0 ? 'box-shadow:inset 3px 0 0 #f5c518' : '',
+      }));
+    return { teams, players, unmatched, teamRows, playerRows };
+  }
+
+  onRegSearch(e) { this.setState({ regSearch: e.target.value }); }
 
   importHasResults() {
     const f = this.state.fixtures;
@@ -1640,6 +1771,9 @@ class Component extends DCLogic {
     const canPublish = !!(s.api && s.api.canPublishNow(s.session, pubState));
     const cl = s.clash;
     const clashOk = !!(cl && !cl.error);
+    const reg = (s.regs === undefined || s.regs === null) ? null : this.regRows();
+    const sa = s.spiritAward;
+    const spiritOn = !!(sa && sa.supported);
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
@@ -1777,6 +1911,30 @@ class Component extends DCLogic {
       clashOffAllocationLines: (clashOk && cl.offAllocation)
         ? cl.offAllocation.map((bk) => `${bk.agName} ${bk.label} is on ${bk.pitch}, which is not one of its pitches in the venue layout.`)
         : [],
+
+      regLoading: s.regs === undefined || s.regs === null,
+      regSearch: s.regSearch,
+      onRegSearch: (e) => this.onRegSearch(e),
+      regTeamCount: reg ? reg.teams.length : 0,
+      regPlayerCount: reg ? reg.players.length : 0,
+      regTeamRows: reg ? reg.teamRows : [],
+      regPlayerRows: reg ? reg.playerRows : [],
+      regTeamsEmpty: !!(reg && reg.teamRows.length === 0),
+      regPlayersEmpty: !!(reg && reg.playerRows.length === 0),
+      regUnmatchedCount: reg ? reg.unmatched.length : 0,
+      hasRegUnmatched: !!(reg && reg.unmatched.length),
+      regUnmatchedNote: reg && reg.unmatched.length
+        ? `${reg.unmatched.length} player registration(s) don't match any team roster by name + date of birth — flagged below.`
+        : '',
+
+      hasSpirit: spiritOn,
+      spiritProgress: spiritOn ? `${sa.playedMatches} of ${sa.totalMatches} matches scored` : '',
+      spiritComplete: !!(spiritOn && sa.complete && (sa.winners || []).length),
+      spiritWinnersLine: (spiritOn && sa.complete && (sa.winners || []).length)
+        ? sa.winners.map((w) => (w.team ? `${w.name} (${w.team})` : w.name)).join(' & ')
+        : '',
+      spiritTally: spiritOn ? (sa.tally || []) : [],
+      spiritEmpty: !!(spiritOn && (sa.tally || []).length === 0),
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

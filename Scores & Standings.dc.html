@@ -660,7 +660,7 @@
 
           <sc-if value="{{ isFixturesSubTab }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ editorLoaded }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Drag a team from a pool's roster onto another pool to move it, or onto a match slot's Home/Away box to assign it there. Edit kickoff time directly — the list re-sorts by time automatically.</p>
+              <p style="color:#7f8794;font-size:13px;margin-bottom:18px;line-height:1.6">Tap a team to pick it up, then tap another pool or a match slot's Home/Away box to place it there. Tap the same team again to put it down. Edit kickoff time directly — the list re-sorts by time automatically.</p>
               <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px">
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
                   <div>
@@ -759,9 +759,9 @@
                       </sc-if>
                     </div>
 
-                    <div onDragOver="{{ pool.onDragOverZone }}" onDrop="{{ pool.onDropZone }}" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:10px;margin-bottom:10px;min-height:44px">
+                    <div onClick="{{ pool.onZoneClick }}" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:10px;margin-bottom:10px;min-height:44px">
                       <sc-for list="{{ pool.teamChips }}" as="chip" hint-placeholder-count="5">
-                        <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="display:flex;align-items:center;gap:6px;background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 6px 6px 14px;font-size:13px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">
+                        <div onClick="{{ chip.onPick }}" style="display:flex;align-items:center;gap:6px;background:{{ chip.chipBg }};border:1px solid {{ chip.chipBorder }};border-radius:100px;padding:6px 6px 6px 14px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;white-space:nowrap">
                           <span style="white-space:nowrap">{{ chip.name }}</span>
                           <button onClick="{{ chip.onRename }}" aria-label="Rename team" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px 4px">&#9998;</button>
                           <button onClick="{{ chip.onRemove }}" aria-label="Remove team" style="background:transparent;border:none;color:#ff8a8a;cursor:pointer;font-size:14px;padding:2px 5px">&times;</button>
@@ -785,9 +785,9 @@
                     <sc-for list="{{ pool.slotRows }}" as="row" hint-placeholder-count="4">
                       <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:nowrap">
                         <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
-                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                        <div onClick="{{ row.onHomeClick }}" style="flex:1;min-width:0;text-align:center;background:{{ row.homeBg }};border:{{ row.homeBorder }};border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word;cursor:pointer">{{ row.home }}</div>
                         <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
-                        <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                        <div onClick="{{ row.onAwayClick }}" style="flex:1;min-width:0;text-align:center;background:{{ row.awayBg }};border:{{ row.awayBorder }};border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word;cursor:pointer">{{ row.away }}</div>
                         <select value="{{ row.pitchVal }}" onChange="{{ row.onPitchChange }}" style="width:76px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;color-scheme:dark"><sc-for list="{{ row.pitchOptions }}" as="po"><option value="{{ po }}">{{ po }}</option></sc-for></select>
                         <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
                       </div>
@@ -803,19 +803,7 @@
 
               <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;margin-top:24px">
                 <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:6px">Knockout stage</div>
-                <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.6">Drag a team below onto a Home/Away box to assign it. Times auto-seed once pool play ends, but you can edit them (and the matchup) directly here.</p>
-                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-                  <sc-for list="{{ knockoutRosterGroups }}" as="grp" hint-placeholder-count="2">
-                    <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;flex:1;min-width:220px">
-                      <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase;margin-bottom:8px">{{ grp.name }}</div>
-                      <div style="display:flex;flex-wrap:wrap;gap:8px">
-                        <sc-for list="{{ grp.chips }}" as="chip" hint-placeholder-count="5">
-                          <div draggable="true" onDragStart="{{ chip.onDragStart }}" style="background:#1f1f22;border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:700;cursor:grab;user-select:none;white-space:nowrap">{{ chip.name }}</div>
-                        </sc-for>
-                      </div>
-                    </div>
-                  </sc-for>
-                </div>
+                <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.6">Tap a team in its pool card above to pick it up, then tap a Home/Away box below to place it — or tap a filled box to pick that team back up. Times auto-seed once pool play ends, but you can edit them (and the matchup) directly here.</p>
                 <sc-if value="{{ knockoutRows.length }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:nowrap">
                     <div style="width:160px;flex:none;font-size:10px;font-weight:800;letter-spacing:1px;color:#5a616d;text-transform:uppercase">Match</div>
@@ -834,9 +822,9 @@
                       <button onClick="{{ row.onRename }}" aria-label="Rename match" style="background:transparent;border:none;color:#7f8794;cursor:pointer;font-size:12px;padding:2px;flex:none">&#9998;</button>
                     </div>
                     <input type="time" value="{{ row.timeVal }}" onInput="{{ row.onTimeChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 4px;color:#fff;font-size:12px;width:96px;flex:none;color-scheme:dark">
-                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropHome }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word">{{ row.home }}</div>
+                    <div onClick="{{ row.onHomeClick }}" style="flex:1;min-width:0;text-align:center;background:{{ row.homeBg }};border:{{ row.homeBorder }};border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.homeColor }};line-height:1.25;overflow-wrap:break-word;cursor:pointer">{{ row.home }}</div>
                     <span style="color:#5a616d;font-size:11px;font-weight:700;flex:none;width:8px;text-align:center">v</span>
-                    <div onDragOver="{{ row.onDragOver }}" onDrop="{{ row.onDropAway }}" style="flex:1;min-width:0;text-align:center;background:#0C0C0E;border:1.5px dashed rgba(255,255,255,0.18);border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word">{{ row.away }}</div>
+                    <div onClick="{{ row.onAwayClick }}" style="flex:1;min-width:0;text-align:center;background:{{ row.awayBg }};border:{{ row.awayBorder }};border-radius:7px;padding:6px 4px;font-size:11.5px;font-weight:700;color:{{ row.awayColor }};line-height:1.25;overflow-wrap:break-word;cursor:pointer">{{ row.away }}</div>
                     <select value="{{ row.pitchVal }}" onChange="{{ row.onPitchChange }}" style="width:76px;flex:none;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:7px 2px;color:#fff;font-size:11px;color-scheme:dark"><sc-for list="{{ row.pitchOptions }}" as="po"><option value="{{ po }}">{{ po }}</option></sc-for></select>
                     <button onClick="{{ row.onRemove }}" aria-label="Remove match" style="width:16px;flex:none;background:transparent;border:none;color:#ff8a8a;font-size:16px;cursor:pointer;padding:0">&times;</button>
                   </div>
@@ -1106,6 +1094,12 @@ class Component extends DCLogic {
     regTeams: [], regPlayers: [], regScope: '', regBusy: false, regLoaded: false,
     regSearch: '', regPSort: 'playerName', regPDir: 'asc', regTSort: 'club', regTDir: 'asc', regExpanded: {},
     editorDraw: null, editorAgeId: null, editorBusy: false, editorMsg: '',
+    // { team, from: {kind:'pool',poolId} | {kind:'slot',slotId,side} | {kind:'knockout',slotId,side} } | null
+    // Ported from Manager.html's S.picked — same shape, same rules. Manager is
+    // phone-primary and HTML5 drag-and-drop is unreliable on touch, which is why
+    // it uses tap-to-select-then-tap-to-place instead of this file's drag-and-drop.
+    // This task starts porting that pattern here too, for a uniform editor.
+    editorPicked: null,
     newTeamInputs: {},
     importOpen: false, importMode: 'add', importRows: [], importNote: '',
     modal: null, modalValue: '',
@@ -1333,6 +1327,10 @@ class Component extends DCLogic {
       editorAgeId: agId,
       editorMsg: '',
       publishState: (draw && draw._publish) || null,
+      // Safety net: a fresh load (age-group switch, or the reload that follows
+      // every save/discard) means any in-hand pick refers to draw state that
+      // may no longer exist. Same rule as Manager.html's loadDraw().
+      editorPicked: null,
     });
     // Same reasoning as the public picker's onSelect above: a manager landing
     // on their own age group at login, or an organiser switching the admin
@@ -1343,26 +1341,81 @@ class Component extends DCLogic {
     if (ageChanged && typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);
   }
 
-  onTeamDragStart(team, e) {
-    this._dragTeam = team;
-    if (e && e.dataTransfer) { try { e.dataTransfer.setData('text/plain', team); } catch (err) {} }
+  // ---------------- Tap-to-select / tap-to-place ----------------
+  // Ported from Manager.html's S.picked / pickTeam / placeTeam / removeFromSource
+  // (same shape, same rules) so the draw editor is uniform across /manager and
+  // /scores. Manager mutates a global `S.draw` object in place and calls a
+  // manual render() afterward; this file re-renders via setState, so
+  // removeTeamFromDraw returns a NEW draw object rather than mutating one.
+  pickTeam(team, from) {
+    const p = this.state.editorPicked;
+    if (p && p.team === team && this.samePickSource(p.from, from)) {
+      this.setState({ editorPicked: null });
+    } else {
+      this.setState({ editorPicked: { team, from } });
+    }
   }
-  onPoolDropTeam(poolId) {
-    const team = this._dragTeam; if (!team) return;
+  samePickSource(a, b) {
+    if (!a || !b || a.kind !== b.kind) return false;
+    if (a.kind === 'pool') return a.poolId === b.poolId;
+    return a.slotId === b.slotId && a.side === b.side;
+  }
+  // Pure helper: returns a NEW draw with `team` cleared from the match-slot
+  // or knockout-box side named by `from` (its ORIGIN side, not a pool roster
+  // — pool membership is handled separately by placeTeam below, because
+  // pools[].teams is roster membership, not an "unassigned teams" bucket:
+  // computeStandings() in scores-data.js reads it directly to build the
+  // public standings table). Only meaningful for from.kind 'slot'/'knockout';
+  // callers must not use this for a 'pool' origin.
+  removeTeamFromDraw(draw, from, team) {
+    if (from.kind === 'slot') {
+      return { ...draw, slots: draw.slots.map((sl) => (sl.id === from.slotId ? { ...sl, [from.side]: '' } : sl)) };
+    }
+    if (from.kind === 'knockout') {
+      return { ...draw, knockout: draw.knockout.map((sl) => (sl.id === from.slotId ? { ...sl, [from.side]: '' } : sl)) };
+    }
+    return draw;
+  }
+  // Destination-aware removal, matching the two moves Manager.html/the old
+  // onPoolDropTeam/onSlotSideDrop/onKnockoutSideDrop treated differently:
+  //
+  //  - dest is a match SLOT or KNOCKOUT box: clear the ORIGIN only if the
+  //    origin is ITSELF a slot/knockout side (the dedup fix — a team must
+  //    never sit in two match slots/knockout boxes at once). If the origin
+  //    is a POOL, its roster is left untouched: a team placed into a match
+  //    slot stays a member of its pool, because pools[].teams IS pool
+  //    membership, not an unassigned-teams bucket, and computeStandings()
+  //    reads it directly to build the public standings table. Removing it
+  //    here would silently vanish the team (and its results) from standings.
+  //
+  //  - dest is a POOL: this is the old onPoolDropTeam behaviour — a team is
+  //    only ever a member of one pool's roster at a time, so remove it from
+  //    WHICHEVER pool currently lists it (not just a same-named origin pool)
+  //    and add it to the destination pool. If the origin was a slot/knockout
+  //    side, also clear that side so the team isn't left duplicated in a
+  //    match slot after being moved back to a pool.
+  placeTeam(dest) {
+    const picked = this.state.editorPicked;
+    if (!picked || !this.state.editorDraw) return;
+    const { team, from } = picked;
     this.setState((s) => {
-      if (!s.editorDraw) return {};
-      const pools = s.editorDraw.pools.map((p) => ({ ...p, teams: p.teams.filter((t) => t !== team) }));
-      const target = pools.find((p) => p.id === poolId);
-      if (target && !target.teams.includes(team)) target.teams.push(team);
-      return { editorDraw: { ...s.editorDraw, pools } };
+      let draw = s.editorDraw;
+      if (dest.kind === 'pool') {
+        draw = { ...draw, pools: draw.pools.map((p) => ({ ...p, teams: p.teams.filter((t) => t !== team) })) };
+        if (from.kind === 'slot' || from.kind === 'knockout') draw = this.removeTeamFromDraw(draw, from, team);
+        draw = { ...draw, pools: draw.pools.map((p) => (p.id === dest.poolId ? { ...p, teams: [...p.teams, team] } : p)) };
+      } else {
+        if (from.kind === 'slot' || from.kind === 'knockout') draw = this.removeTeamFromDraw(draw, from, team);
+        if (dest.kind === 'slot') {
+          draw = { ...draw, slots: draw.slots.map((sl) => (sl.id === dest.slotId ? { ...sl, [dest.side]: team } : sl)) };
+        } else if (dest.kind === 'knockout') {
+          draw = { ...draw, knockout: draw.knockout.map((sl) => (sl.id === dest.slotId ? { ...sl, [dest.side]: team } : sl)) };
+        }
+      }
+      return { editorDraw: draw, editorPicked: null };
     });
-    this._dragTeam = null;
   }
-  onSlotSideDrop(slotId, side) {
-    const team = this._dragTeam; if (!team) return;
-    this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
-    this._dragTeam = null;
-  }
+
   onSlotTimeChange(slotId, hhmm) {
     const mins = this.state.api.timeToMinutes(hhmm);
     this.setState((s) => ({ editorDraw: { ...s.editorDraw, slots: s.editorDraw.slots.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
@@ -1561,16 +1614,23 @@ class Component extends DCLogic {
       this.setState((s) => {
         const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.map((t) => (t === oldName ? trimmed : t)) } : p));
         const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === oldName ? trimmed : sl.home, away: sl.away === oldName ? trimmed : sl.away }));
-        return { editorDraw: { ...s.editorDraw, pools, slots } };
+        // Safety net (mirrors Manager.html's MAJOR 3 fix): editorPicked may
+        // still hold the OLD name. Left uncleared, placing it afterwards would
+        // resurrect the pre-rename name alongside the renamed team.
+        const editorPicked = (s.editorPicked && s.editorPicked.team === oldName) ? null : s.editorPicked;
+        return { editorDraw: { ...s.editorDraw, pools, slots }, editorPicked };
       });
     });
   }
   onRemoveTeam(poolId, team) {
-    this.confirmModal(`Remove ${team} from this pool? Any match slots featuring them will show "Drop team here" until reassigned.`, () => {
+    this.confirmModal(`Remove ${team} from this pool? Any match slots featuring them will show "Tap to place" until reassigned.`, () => {
       this.setState((s) => {
         const pools = s.editorDraw.pools.map((p) => (p.id === poolId ? { ...p, teams: p.teams.filter((t) => t !== team) } : p));
         const slots = s.editorDraw.slots.map((sl) => ({ ...sl, home: sl.home === team ? '' : sl.home, away: sl.away === team ? '' : sl.away }));
-        return { editorDraw: { ...s.editorDraw, pools, slots } };
+        // Safety net: the removed team must not still be "in hand" to place
+        // straight back in somewhere else.
+        const editorPicked = (s.editorPicked && s.editorPicked.team === team) ? null : s.editorPicked;
+        return { editorDraw: { ...s.editorDraw, pools, slots }, editorPicked };
       });
     });
   }
@@ -1602,13 +1662,30 @@ class Component extends DCLogic {
   }
   onRemovePool(poolId) {
     this.confirmModal('Delete this pool? This removes all its teams and match slots.', () => {
-      this.setState((s) => ({
-        editorDraw: {
-          ...s.editorDraw,
-          pools: s.editorDraw.pools.filter((p) => p.id !== poolId),
-          slots: s.editorDraw.slots.filter((sl) => sl.poolId !== poolId),
-        },
-      }));
+      this.setState((s) => {
+        // Safety net (mirrors Manager.html's MAJOR 3 fix): a team picked up
+        // from this pool (or one of its match slots) must not survive the
+        // pool's deletion — otherwise it can be silently placed into a
+        // different pool a moment later.
+        const removedPool = s.editorDraw.pools.find((p) => p.id === poolId);
+        const removedTeams = new Set((removedPool && removedPool.teams) || []);
+        // A pick can also be "in hand" from a match slot that belongs to this
+        // pool (editorPicked.from = {kind:'slot', slotId, side}) rather than
+        // from the pool's roster — look that slot up (in the pre-deletion
+        // draw) and check its poolId too, or the pick survives pointing at a
+        // slot whose pool no longer exists.
+        const pickedFromDeletedSlot = !!(s.editorPicked && s.editorPicked.from && s.editorPicked.from.kind === 'slot'
+          && (s.editorDraw.slots.find((sl) => sl.id === s.editorPicked.from.slotId) || {}).poolId === poolId);
+        const editorPicked = (s.editorPicked && (removedTeams.has(s.editorPicked.team) || pickedFromDeletedSlot)) ? null : s.editorPicked;
+        return {
+          editorDraw: {
+            ...s.editorDraw,
+            pools: s.editorDraw.pools.filter((p) => p.id !== poolId),
+            slots: s.editorDraw.slots.filter((sl) => sl.poolId !== poolId),
+          },
+          editorPicked,
+        };
+      });
     });
   }
   onRegeneratePool(poolId) {
@@ -1631,11 +1708,6 @@ class Component extends DCLogic {
     });
   }
 
-  onKnockoutSideDrop(slotId, side) {
-    const team = this._dragTeam; if (!team) return;
-    this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, [side]: team } : sl)) } }));
-    this._dragTeam = null;
-  }
   onKnockoutTimeChange(slotId, hhmm) {
     const mins = this.state.api.timeToMinutes(hhmm);
     this.setState((s) => ({ editorDraw: { ...s.editorDraw, knockout: s.editorDraw.knockout.map((sl) => (sl.id === slotId ? { ...sl, startMins: mins } : sl)) } }));
@@ -3095,10 +3167,6 @@ class Component extends DCLogic {
     }));
 
     // ---- fixture editor ----
-    const knockoutRosterGroups = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => ({
-      id: pool.id, name: pool.name,
-      chips: pool.teams.map((t) => ({ name: t, onDragStart: (e) => this.onTeamDragStart(t, e) })),
-    }));
     const poolCards = (s.editorDraw ? s.editorDraw.pools : []).map((pool) => {
       const slots = (s.editorDraw.slots || []).filter((sl) => sl.poolId === pool.id).sort((a, b) => a.startMins - b.startMins);
 
@@ -3132,14 +3200,23 @@ class Component extends DCLogic {
           ? `Clashes with ${clash.pool.name} on ${pPitch} (${s.api.minutesToDisplay(clash.startMins)} – ${s.api.minutesToDisplay(clash.endMins)})`
           : (unplaced ? 'This pool has no pitch yet — parents will see “TBD”.' : ''),
         poolWarnShow: !!(clash || unplaced),
-        onDragOverZone: (e) => e.preventDefault(),
-        onDropZone: (e) => { e.preventDefault(); this.onPoolDropTeam(pool.id); },
-        teamChips: pool.teams.map((t) => ({
-          name: t,
-          onDragStart: (e) => this.onTeamDragStart(t, e),
-          onRename: () => this.onRenameTeam(pool.id, t),
-          onRemove: () => this.onRemoveTeam(pool.id, t),
-        })),
+        // Tap the zone's own background (not a child chip) to place a picked team
+        // here — e.currentTarget is the element the handler is bound to, e.target is
+        // whatever was actually clicked, so they only match on the bare background.
+        onZoneClick: (e) => { if (e.target === e.currentTarget) this.placeTeam({ kind: 'pool', poolId: pool.id }); },
+        teamChips: pool.teams.map((t) => {
+          const isPicked = !!(s.editorPicked && s.editorPicked.team === t && s.editorPicked.from.kind === 'pool' && s.editorPicked.from.poolId === pool.id);
+          return {
+            name: t,
+            picked: isPicked,
+            chipBg: isPicked ? '#17A34A' : '#1f1f22',
+            chipBorder: isPicked ? '#0F7A36' : 'rgba(255,255,255,0.15)',
+            onPick: () => this.pickTeam(t, { kind: 'pool', poolId: pool.id }),
+            // stopPropagation so tapping Rename/Remove doesn't also register as a pick.
+            onRename: (e) => { e.stopPropagation(); this.onRenameTeam(pool.id, t); },
+            onRemove: (e) => { e.stopPropagation(); this.onRemoveTeam(pool.id, t); },
+          };
+        }),
         newTeamValue: s.newTeamInputs[pool.id] || '',
         onNewTeamInput: (e) => this.onNewTeamInputChange(pool.id, e.target.value),
         onNewTeamKey: (e) => { if (e.key === 'Enter') this.onAddTeam(pool.id); },
@@ -3152,13 +3229,24 @@ class Component extends DCLogic {
           id: sl.id,
           timeVal: s.api.minutesToTimeInput(sl.startMins),
           pitchVal: sl.pitch || '', pitchOptions: pitchOptsFor(sl.pitch),
-          home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
-          homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+          home: sl.home || 'Tap to place', away: sl.away || 'Tap to place',
+          homeColor: '#fff', awayColor: sl.away ? '#fff' : '#5a616d',
+          homeBg: this.state.editorPicked && this.state.editorPicked.from.kind === 'slot' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'home' ? '#17A34A' : '#0C0C0E',
+          homeBorder: this.state.editorPicked && this.state.editorPicked.from.kind === 'slot' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'home' ? '1.5px solid #0F7A36' : '1.5px dashed rgba(255,255,255,0.18)',
+          awayBg: this.state.editorPicked && this.state.editorPicked.from.kind === 'slot' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'away' ? '#17A34A' : '#0C0C0E',
+          awayBorder: this.state.editorPicked && this.state.editorPicked.from.kind === 'slot' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'away' ? '1.5px solid #0F7A36' : '1.5px dashed rgba(255,255,255,0.18)',
           onTimeChange: (e) => this.onSlotTimeChange(sl.id, e.target.value),
           onPitchChange: (e) => this.onSlotPitchChange(sl.id, e.target.value),
-          onDragOver: (e) => e.preventDefault(),
-          onDropHome: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'home'); },
-          onDropAway: (e) => { e.preventDefault(); this.onSlotSideDrop(sl.id, 'away'); },
+          homePickedNow: !!(s.editorPicked && s.editorPicked.from.kind === 'slot' && s.editorPicked.from.slotId === sl.id && s.editorPicked.from.side === 'home'),
+          awayPickedNow: !!(s.editorPicked && s.editorPicked.from.kind === 'slot' && s.editorPicked.from.slotId === sl.id && s.editorPicked.from.side === 'away'),
+          onHomeClick: () => {
+            if (sl.home && !s.editorPicked) { this.pickTeam(sl.home, { kind: 'slot', slotId: sl.id, side: 'home' }); return; }
+            if (s.editorPicked) this.placeTeam({ kind: 'slot', slotId: sl.id, side: 'home' });
+          },
+          onAwayClick: () => {
+            if (sl.away && !s.editorPicked) { this.pickTeam(sl.away, { kind: 'slot', slotId: sl.id, side: 'away' }); return; }
+            if (s.editorPicked) this.placeTeam({ kind: 'slot', slotId: sl.id, side: 'away' });
+          },
           onRemove: () => this.onRemoveSlot(sl.id),
         })),
       };
@@ -3455,7 +3543,7 @@ class Component extends DCLogic {
         : '',
       bulkBusy: s.bulkBusy,
       bulkMsg: s.bulkMsg,
-      poolCards, knockoutRosterGroups,
+      poolCards,
 
       importOpen: !!s.importOpen,
       importBusy: !!s.regBusy,
@@ -3476,7 +3564,6 @@ class Component extends DCLogic {
       onImportModeAdd: () => this.onImportMode('add'),
       onConfirmImport: () => this.onConfirmImport(),
       onCancelImport: () => this.onCancelImport(),
-      knockoutRosterDragOver: (e) => e.preventDefault(),
       onSaveDraw: () => this.onSaveDraw(),
       onResetDraw: () => this.onResetDraw(),
       onAddPool: () => this.onAddPool(),
@@ -3485,13 +3572,22 @@ class Component extends DCLogic {
         id: sl.id, round: sl.round,
         timeVal: s.api.minutesToTimeInput(sl.startMins),
         pitchVal: sl.pitch || '', pitchOptions: pitchOptsFor(sl.pitch),
-        home: sl.home || 'Drop team here', away: sl.away || 'Drop team here',
-        homeColor: sl.home ? '#fff' : '#5a616d', awayColor: sl.away ? '#fff' : '#5a616d',
+        home: sl.home || 'Tap to place', away: sl.away || 'Tap to place',
+        homeColor: '#fff', awayColor: '#fff',
+        homeBg: this.state.editorPicked && this.state.editorPicked.from.kind === 'knockout' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'home' ? '#17A34A' : '#0C0C0E',
+        homeBorder: this.state.editorPicked && this.state.editorPicked.from.kind === 'knockout' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'home' ? '1.5px solid #0F7A36' : '1.5px dashed rgba(255,255,255,0.18)',
+        awayBg: this.state.editorPicked && this.state.editorPicked.from.kind === 'knockout' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'away' ? '#17A34A' : '#0C0C0E',
+        awayBorder: this.state.editorPicked && this.state.editorPicked.from.kind === 'knockout' && this.state.editorPicked.from.slotId === sl.id && this.state.editorPicked.from.side === 'away' ? '1.5px solid #0F7A36' : '1.5px dashed rgba(255,255,255,0.18)',
         onTimeChange: (e) => this.onKnockoutTimeChange(sl.id, e.target.value),
         onPitchChange: (e) => this.onKnockoutPitchChange(sl.id, e.target.value),
-        onDragOver: (e) => e.preventDefault(),
-        onDropHome: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'home'); },
-        onDropAway: (e) => { e.preventDefault(); this.onKnockoutSideDrop(sl.id, 'away'); },
+        onHomeClick: () => {
+          if (sl.home && !this.state.editorPicked) { this.pickTeam(sl.home, { kind: 'knockout', slotId: sl.id, side: 'home' }); return; }
+          if (this.state.editorPicked) this.placeTeam({ kind: 'knockout', slotId: sl.id, side: 'home' });
+        },
+        onAwayClick: () => {
+          if (sl.away && !this.state.editorPicked) { this.pickTeam(sl.away, { kind: 'knockout', slotId: sl.id, side: 'away' }); return; }
+          if (this.state.editorPicked) this.placeTeam({ kind: 'knockout', slotId: sl.id, side: 'away' });
+        },
         onRename: () => this.onRenameKnockoutRound(sl.id, sl.round),
         onRemove: () => this.onRemoveKnockoutSlot(sl.id),
       })),

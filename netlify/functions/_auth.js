@@ -69,11 +69,13 @@ function verifyPassword(password, hash) {
 
 /* 30 Jul: a token used to be valid forever — nothing ever checked `iat`
    against the current time, so the only way to end a lost/stolen session was
-   rotating SESSION_SECRET for every signed-in person at once. Fourteen days
-   comfortably outlasts a tournament weekend (the longest anyone genuinely
-   needs to stay signed in without re-entering a password) while capping how
-   long a token found on a lost or resold phone keeps working. */
-const SESSION_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+   rotating SESSION_SECRET for every signed-in person at once. Originally set
+   to 14 days; Jay asked (same day, after the first deploy of this check
+   signed everyone already logged in out once) for six months instead —
+   organizers and managers keep their season-long sign-in without
+   re-entering a password, while a token found on a lost or resold phone
+   still stops working eventually rather than lasting forever. */
+const SESSION_MAX_AGE_MS = 182 * 24 * 60 * 60 * 1000; // ~6 months
 
 function sign(payload) {
   const secret = process.env.SESSION_SECRET;

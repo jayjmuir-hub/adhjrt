@@ -23,13 +23,17 @@ $tests = @(
   'test-registration-panel.js',
   'test-venue-map.js',
   'test-venue-splits.js',
+  'test-session-permissions.js',
   'test-agegroups.js',
   'test-intake.js',
   'test-functions-load.js',
   'test-accounts.js',
   'test-organizer-grouping.js',
   'test-email.js',
-  'test-google-auth.js'
+  'test-google-auth.js',
+  'test-manager-dashboard.js',
+  'test-fixtures-results-sync.js',
+  'test-simulate-tournament.js'
 )
 
 Write-Host ''

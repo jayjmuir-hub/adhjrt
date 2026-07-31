@@ -1717,6 +1717,18 @@ export async function signup({ name, username, password, inviteCode }) {
 // from Organizer.dc.html. Organizers get full (ageGroupId:'*') access,
 // same as the master admin manager account, re-verified server-side from
 // the token's own role either way.
+// Shared session-permission checks. Used by app.html and Manager.html so
+// "can this signed-in person score this age group" has exactly one
+// definition, not two copies that can quietly drift apart. An organiser or
+// the '*' admin-manager account can act on any age group; a normal manager
+// only their own.
+export function isOrganiserSession(s) {
+  return !!(s && (s.isOrganizer || s._role === 'organizer' || s.role === 'organizer'));
+}
+export function canScoreAgeGroup(s, agId) {
+  return !s ? false : (isOrganiserSession(s) || s.ageGroupId === '*' || s.ageGroupId === agId);
+}
+
 export function currentSession() {
   try {
     const mgr = JSON.parse(localStorage.getItem(SESSION_KEY));

@@ -440,7 +440,7 @@ function toast(msg){
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('on'), 2600);
 }
 
-const isOrganiser = (s) => !!(s && (s.isOrganizer || s._role === 'organizer' || s.role === 'organizer'));
+const isOrganiser = api.isOrganiserSession;
 
 /* Someone can hold BOTH a manager and an organiser account. currentSession()
    returns the manager one first, which would quietly demote an organiser to a
@@ -456,8 +456,7 @@ function resolveSession(){
   return s;
 }
 
-const canScore = (s, agId) =>
-  !s ? false : (isOrganiser(s) || s.ageGroupId === '*' || s.ageGroupId === agId);
+const canScore = api.canScoreAgeGroup;
 const ageName = (id) => (S.ageGroups.find(a => a.id === id) || {}).name || id;
 /* Teams are stored as codes (ADH1). Rows and tables show the code because
    space is tight; anywhere with room shows the readable name. */

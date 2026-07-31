@@ -287,6 +287,44 @@
         <div style="margin-top:24px">
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Draw</div>
 
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px;text-transform:uppercase">Registered teams</div>
+                <div style="font-size:13px;margin-top:4px">{{ importCount }} registered for {{ ageLabel }}</div>
+              </div>
+              <button onClick="{{ onOpenImport }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Review &amp; import</button>
+            </div>
+            <sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.1);padding-top:14px">
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <button onClick="{{ onImportModeAdd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer">Add the missing ones</button>
+                  <button onClick="{{ onImportModeReplace }}" disabled="{{ importReplaceBlocked }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer">Replace the pools</button>
+                </div>
+                <sc-if value="{{ importReplaceBlocked }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600;margin-bottom:10px">Replace is unavailable: this age group already has results.</div>
+                </sc-if>
+                <sc-if value="{{ importNote }}" hint-placeholder-val="">
+                  <div style="background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#f5c518;font-size:13px;font-weight:600;margin-bottom:10px">{{ importNote }}</div>
+                </sc-if>
+                <sc-for list="{{ importRowsView }}" as="ir" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08)">
+                    <div style="flex:1"><b style="font-size:14px">{{ ir.title }}</b><div style="color:#7f8794;font-size:12px">{{ ir.sub }}</div></div>
+                    <select value="{{ ir.poolId }}" onChange="{{ ir.onPoolChange }}" disabled="{{ ir.disabled }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 10px;color:#fff;font-size:13px">
+                      <sc-for list="{{ ir.poolOptions }}" as="po" hint-placeholder-count="2">
+                        <option value="{{ po.id }}">{{ po.name }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                </sc-for>
+                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                  <button onClick="{{ onConfirmImport }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:13px;padding:12px 18px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ importConfirmLabel }}</button>
+                  <button onClick="{{ onCancelImport }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:800;font-size:13px;padding:11px 16px;border-radius:10px;cursor:pointer;text-transform:uppercase">Cancel</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
           <sc-if value="{{ drawLoading }}" hint-placeholder-val="{{ false }}">
             <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#7f8794;font-size:14px">Loading…</div>
           </sc-if>
@@ -1022,6 +1060,158 @@ class Component extends DCLogic {
     }, { okLabel: 'Regenerate' });
   }
 
+  /* Also used by the Registrations tab. Cached on state.regs: `undefined`
+     before the first fetch, `null` while one is in flight. */
+  async loadRegistrations() {
+    const { api, session } = this.state;
+    this.setState({ regs: null });
+    const data = await api.getMyRegistrations(session);
+    this.setState({ regs: data });
+  }
+
+  importHasResults() {
+    const f = this.state.fixtures;
+    if (!f) return false;
+    return [...(f.pool || []), ...(f.knockout || [])].some((m) => m.result && m.result.homeScore != null);
+  }
+
+  /* Registrations carry the age group's NAME ("U14 Boys"); state.ageId is an
+     id ("u14b"). The lookup is what scopes an import to one age group. */
+  importSourceTeams() {
+    const s = this.state;
+    const meta = (s.ageGroups || []).find((a) => a.id === s.ageId);
+    const nm = ((meta && meta.name) || '').trim().toLowerCase();
+    if (!nm) return [];
+    return ((s.regs && s.regs.teams) || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
+  }
+
+  /* A friendly display name per team code. saveDraw()'s allow-list carries
+     teamNames, and a code with no name renders raw on the public standings. */
+  teamNamesFromRegistrations() {
+    const src = this.importSourceTeams();
+    const perClub = {};
+    src.forEach((r) => { const c = String(r.club || '').trim(); perClub[c] = (perClub[c] || 0) + 1; });
+    const out = {};
+    src.forEach((r) => {
+      const code = String(r.teamName || '').trim();
+      const rawClub = String(r.club || '').trim();
+      const club = rawClub.replace(/\b(RFC|Rugby Football Club|Rugby Club)\b/gi, '').replace(/\s+/g, ' ').trim();
+      if (!code || !club) return;
+      const n = (code.match(/(\d+)$/) || [])[1];
+      out[code] = (perClub[rawClub] > 1 && n) ? (club + ' ' + n) : club;
+    });
+    return out;
+  }
+
+  async openImport() {
+    if (this.state.regs === undefined) await this.loadRegistrations();
+    this.buildImportRows(this.state.importMode || 'add');
+    this.setState({ importOpen: true });
+  }
+
+  buildImportRows(mode) {
+    const { ageId, api } = this.state;
+    const draw = this.state.draw;
+    if (!draw) return;
+    const pools = draw.pools || [];
+    const poolIds = pools.map((p) => p.id);
+    if (!poolIds.length) {
+      this.setState({ importRows: [], importMode: mode, importNote: 'Add a pool first, then import.' });
+      return;
+    }
+    const existing = new Set();
+    pools.forEach((p) => (p.teams || []).forEach((t) => existing.add(t)));
+    const src = this.importSourceTeams();
+    const load = {};
+    poolIds.forEach((id) => { load[id] = 0; });
+    if (mode === 'add') pools.forEach((p) => { load[p.id] = (p.teams || []).length; });
+    const prefOf = (r) => {
+      const m = String(r.preferredPool || '').match(/[A-Z]/i);
+      const id = m ? m[0].toUpperCase() : '';
+      return poolIds.indexOf(id) >= 0 ? id : '';
+    };
+    const smallest = () => poolIds.slice().sort((a, b) => load[a] - load[b] || poolIds.indexOf(a) - poolIds.indexOf(b))[0];
+    const rows = [];
+    src.forEach((r) => {
+      const code = String(r.teamName || '').trim();
+      if (!code) return;
+      const inDraw = existing.has(code);
+      if (mode === 'add' && inDraw) { rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId: '', skip: true }); return; }
+      const want = prefOf(r);
+      const asked = String(r.preferredPool || '').match(/[A-Z]/i);
+      const unavailable = !!(asked && !want);
+      let poolId = want || smallest();
+      let moved = false;
+      /* A preference is honoured unless doing so would leave the pools two
+         teams apart — a lopsided pool is a worse outcome than a preference
+         nobody promised. */
+      if (want && load[want] - load[smallest()] >= 2) { poolId = smallest(); moved = true; }
+      load[poolId] += 1;
+      rows.push({ code, club: String(r.club || ''), pref: r.preferredPool || '', poolId, flag: inDraw ? 'in' : 'new', moved, unavailable, skip: false });
+    });
+    const nameByCode = this.teamNamesFromRegistrations();
+    rows.forEach((row) => { row.name = nameByCode[row.code] || ''; });
+    const movedCount = rows.filter((r) => r.moved).length;
+    const unavailCount = rows.filter((r) => r.unavailable).length;
+    const notes = [];
+    if (movedCount) notes.push(movedCount + ' team' + (movedCount === 1 ? ' was' : 's were') + ' moved off their preferred pool to keep the pools even.');
+    if (unavailCount) notes.push(unavailCount + ' team' + (unavailCount === 1 ? '' : 's') + ' asked for a pool this draw does not have, placed in the smallest pool.');
+    this.setState({ importRows: rows, importMode: mode, importNote: notes.join(' ') });
+  }
+
+  setImportMode(mode) {
+    if (mode === 'replace' && this.importHasResults()) return;
+    this.buildImportRows(mode);
+  }
+
+  setImportRowPool(code, poolId) {
+    this.setState((s) => ({
+      importRows: (s.importRows || []).map((r) => (r.code === code ? { ...r, poolId, moved: false } : r)),
+    }));
+  }
+
+  confirmImport() {
+    const { api, ageId } = this.state;
+    const draw = this.state.draw;
+    if (!draw) return;
+    let mode = this.state.importMode || 'add';
+    let replaceBlocked = false;
+    /* Re-checked here rather than trusted from importMode: stale or tampered
+       state must not be able to wipe a roster that now has real results. */
+    if (mode === 'replace' && this.importHasResults()) { mode = 'add'; replaceBlocked = true; }
+    const rows = (this.state.importRows || []).filter((r) => !r.skip && r.poolId);
+    const claimed = new Set();
+    if (mode !== 'replace') (draw.pools || []).forEach((p) => (p.teams || []).forEach((t) => claimed.add(t)));
+    const dupCodes = [];
+    const usableRows = [];
+    rows.forEach((r) => {
+      if (claimed.has(r.code)) { dupCodes.push(r.code); return; }
+      claimed.add(r.code);
+      usableRows.push(r);
+    });
+    const names = { ...(draw.teamNames || {}) };
+    usableRows.forEach((r) => { if (r.name) names[r.code] = r.name; });
+    const pools = (draw.pools || []).map((p) => {
+      const teams = mode === 'replace' ? [] : [...(p.teams || [])];
+      usableRows.forEach((r) => { if (r.poolId === p.id && teams.indexOf(r.code) < 0) teams.push(r.code); });
+      return { ...p, teams };
+    });
+    let slots = draw.slots || [];
+    if (mode === 'replace') slots = pools.reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [])), []);
+    this.setState({
+      draw: { ...draw, pools, teamNames: names, slots },
+      importOpen: false,
+      drawDirty: true,
+      drawMsg: (replaceBlocked ? 'Replace was blocked because this age group now has results, so the roster was NOT wiped. Imported as "add the missing ones" instead. ' : '')
+        + 'Imported ' + usableRows.length + ' team' + (usableRows.length === 1 ? '' : 's') + ' into the editor.'
+        + (mode === 'replace' ? ' Pool matches rebuilt to match the new rosters.' : ' Press "Regenerate from pool" on any pool you changed to rebuild its matches.')
+        + (dupCodes.length ? ' SKIPPED ' + dupCodes.length + ' duplicate team code(s) (' + dupCodes.join(', ') + ').' : '')
+        + ' Nothing is saved until you press Save changes.',
+    });
+  }
+
+  cancelImport() { this.setState({ importOpen: false }); }
+
   findMatch(id) {
     const fx = this.state.fixtures;
     if (!fx) return null;
@@ -1317,6 +1507,16 @@ class Component extends DCLogic {
       onAddSlot: () => this.addSlot(p.id),
       onRegeneratePool: () => this.regeneratePool(p.id),
     })) : [];
+    const importPoolOptions = d ? (d.pools || []).map((p) => ({ id: p.id, name: p.name })) : [];
+    const importRowsView = (s.importRows || []).map((r) => ({
+      code: r.code,
+      title: r.name || r.code,
+      sub: r.code + (r.skip ? ' · already in draw' : ''),
+      poolId: r.poolId,
+      poolOptions: importPoolOptions,
+      disabled: !!r.skip,
+      onPoolChange: (e) => this.setImportRowPool(r.code, e.target.value),
+    }));
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
@@ -1404,6 +1604,17 @@ class Component extends DCLogic {
       onSaveDraw: () => this.saveDraw(),
       onDiscardDraw: () => this.discardDraw(),
       onResetDraw: () => this.resetDraw(),
+      importCount: this.importSourceTeams().length,
+      importOpen: s.importOpen,
+      importRowsView,
+      importNote: s.importNote,
+      importReplaceBlocked: this.importHasResults(),
+      importConfirmLabel: `Import ${(s.importRows || []).filter((r) => !r.skip).length} team(s)`,
+      onOpenImport: () => this.openImport(),
+      onImportModeAdd: () => this.setImportMode('add'),
+      onImportModeReplace: () => this.setImportMode('replace'),
+      onConfirmImport: () => this.confirmImport(),
+      onCancelImport: () => this.cancelImport(),
 
       sheetOpen: !!sheetMatch,
       sheetTitle: sheetMatch ? 'Enter score' : '',

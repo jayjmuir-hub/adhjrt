@@ -740,6 +740,145 @@ section('Save, discard and regenerate');
   check('…and it says what it did', /regenerated/i.test(c.state.drawMsg));
 }
 
+section('Import registered teams');
+{
+  const regTeams = [
+    { club: 'Abu Dhabi Harlequins', teamName: 'ADH2', ageGroup: 'U14 Boys', preferredPool: 'B' },
+    { club: 'Dubai Exiles', teamName: 'DE2', ageGroup: 'U14 Boys', preferredPool: '' },
+    { club: 'Someone Else', teamName: 'XX1', ageGroup: 'U16 Boys', preferredPool: '' },
+  ];
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: 'all' }) });
+  await c.openImport();
+  const src = c.importSourceTeams();
+  // FAULT-PROOF: a team registered for a DIFFERENT age group must never be
+  // importable into this one.
+  check('the import source is scoped to this age group by NAME', src.length === 2 && src.every((r) => r.ageGroup === 'U14 Boys'));
+  check('the panel is open', c.renderVals().importOpen === true);
+  check('a row is built for each importable team', c.state.importRows.length === 2);
+  check('the preferred pool is honoured where it exists', c.state.importRows.find((r) => r.code === 'ADH2').poolId === 'B');
+
+  c.confirmImport();
+  const allTeams = c.state.draw.pools.flatMap((p) => p.teams);
+  check('ADH2 was imported', allTeams.includes('ADH2'));
+  check('DE2 was imported', allTeams.includes('DE2'));
+  check('the wrong-age-group team was never imported', !allTeams.includes('XX1'));
+  check('the panel closes afterwards', c.state.importOpen === false);
+  check('…and the draw is flagged unsaved', c.state.drawDirty === true);
+  check('…and it says nothing is saved yet', /Nothing is saved until you press Save changes/i.test(c.state.drawMsg));
+  // FAULT-PROOF: saveDraw()'s allow-list carries teamNames, and a code with no
+  // friendly name renders as a raw code on the public standings.
+  check('a friendly club name is recorded for the imported code', c.state.draw.teamNames.ADH2 === 'Abu Dhabi Harlequins');
+}
+{
+  const regTeams = [
+    { club: 'A Club', teamName: 'AC1', ageGroup: 'U14 Boys', preferredPool: 'Z' },
+  ];
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: 'all' }) });
+  await c.openImport();
+  check('a team asking for a pool this draw does not have is still placed', c.state.importRows[0].poolId === 'A' || c.state.importRows[0].poolId === 'B');
+  check('…and the panel says so rather than silently moving it', /does not have/i.test(c.state.importNote));
+}
+{
+  const regTeams = [
+    { club: 'C1', teamName: 'C1', ageGroup: 'U14 Boys', preferredPool: 'A' },
+    { club: 'C2', teamName: 'C2', ageGroup: 'U14 Boys', preferredPool: 'A' },
+    { club: 'C3', teamName: 'C3', ageGroup: 'U14 Boys', preferredPool: 'A' },
+    { club: 'C4', teamName: 'C4', ageGroup: 'U14 Boys', preferredPool: 'A' },
+  ];
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: 'all' }) });
+  await c.openImport();
+  // FAULT-PROOF: four teams all asking for Pool A must not all land in Pool A
+  // — the balancer moves the overflow, and says that it did.
+  check('the pools are kept level rather than honouring every preference',
+    c.state.importRows.some((r) => r.poolId === 'B'));
+  check('…and the panel says how many were moved', /moved off their preferred pool/i.test(c.state.importNote));
+}
+{
+  const regTeams = [{ club: 'ADH', teamName: 'ADH1', ageGroup: 'U14 Boys', preferredPool: 'A' }];
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: 'all' }) });
+  await c.openImport();
+  check('a team already in the draw is marked skip in "add the missing ones" mode', c.state.importRows[0].skip === true);
+  c.confirmImport();
+  check('…and is not added twice', c.state.draw.pools.find((p) => p.id === 'A').teams.filter((t) => t === 'ADH1').length === 1);
+}
+{
+  // Two DIFFERENT registration rows resolving to the same team code, neither
+  // already in the draw — this is what actually exercises the `claimed` set,
+  // since the "already in draw" case above is filtered out by `skip` before
+  // dedup logic ever runs.
+  const regTeams = [
+    { club: 'Club One', teamName: 'DUP1', ageGroup: 'U14 Boys', preferredPool: 'A' },
+    { club: 'Club Two', teamName: 'DUP1', ageGroup: 'U14 Boys', preferredPool: 'B' },
+  ];
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: regTeams, players: [], scope: 'all' }) });
+  await c.openImport();
+  c.confirmImport();
+  const everywhere = c.state.draw.pools.flatMap((p) => p.teams).filter((t) => t === 'DUP1');
+  check('a duplicate code within one import batch lands in exactly one pool, not both', everywhere.length === 1);
+}
+{
+  const c = buildDraw({
+    getMyRegistrations: async () => ({ teams: [{ club: 'C', teamName: 'C1', ageGroup: 'U14 Boys', preferredPool: '' }], players: [], scope: 'all' }),
+  });
+  c.setState({ fixtures: { awaitingPublication: false, pool: [
+    { id: 'u14b:A:1', home: 'ADH1', away: 'DE1', result: { homeScore: 10, awayScore: 5 } },
+  ], knockout: [] } });
+  await c.openImport();
+  check('replace is unavailable once results exist', c.importHasResults() === true && c.renderVals().importReplaceBlocked === true);
+  c.setImportMode('replace');
+  check('…and asking for it anyway does not switch mode', c.state.importMode === 'add');
+
+  // FAULT-PROOF: confirmImport() must re-check for itself rather than trusting
+  // importMode, or stale/tampered state wipes a roster that has real results.
+  c.setState({ importMode: 'replace' });
+  c.confirmImport();
+  const poolA = c.state.draw.pools.find((p) => p.id === 'A');
+  check('confirming a stale replace does NOT wipe the roster',
+    poolA.teams.includes('ADH1') && poolA.teams.includes('DS1'));
+  check('…and says the replace was blocked', /Replace was blocked/i.test(c.state.drawMsg));
+}
+{
+  const c = buildDraw({
+    getMyRegistrations: async () => ({ teams: [{ club: 'C', teamName: 'C1', ageGroup: 'U14 Boys', preferredPool: 'A' }], players: [], scope: 'all' }),
+  });
+  await c.openImport();
+  c.setImportMode('replace');
+  check('with no results, replace mode is allowed', c.state.importMode === 'replace');
+  c.confirmImport();
+  const poolA = c.state.draw.pools.find((p) => p.id === 'A');
+  check('replace clears the old roster', !poolA.teams.includes('ADH1'));
+  check('…and puts the imported team in', poolA.teams.includes('C1'));
+  check('…and rebuilds the pool matches to match', c.state.draw.slots.every((sl) => String(sl.id).includes('regen')));
+}
+{
+  const c = buildDraw({
+    getMyRegistrations: async () => ({ teams: [{ club: 'C', teamName: 'C1', ageGroup: 'U14 Boys', preferredPool: 'A' }], players: [], scope: 'all' }),
+  });
+  await c.openImport();
+  c.setImportRowPool('C1', 'B');
+  check('the pool can be overridden per row', c.state.importRows[0].poolId === 'B');
+  c.confirmImport();
+  check('…and the override is what is applied', c.state.draw.pools.find((p) => p.id === 'B').teams.includes('C1'));
+}
+{
+  const c = buildDraw({
+    getMyRegistrations: async () => ({ teams: [{ club: 'C', teamName: 'C1', ageGroup: 'U14 Boys', preferredPool: 'A' }], players: [], scope: 'all' }),
+  });
+  await c.openImport();
+  c.cancelImport();
+  check('cancelling closes the panel', c.state.importOpen === false);
+  check('…and imports nothing', !c.state.draw.pools.flatMap((p) => p.teams).includes('C1'));
+}
+{
+  const c = buildDraw({ getMyRegistrations: async () => ({ teams: [], players: [], scope: 'all' }) });
+  c.setState({ draw: { ...c.state.draw, pools: [] } });
+  await c.openImport();
+  // FAULT-PROOF: with no pools there is nowhere to put anyone, and the panel
+  // has to say that instead of silently importing nothing.
+  check('with no pools the panel says to add one first', /Add a pool first/i.test(c.state.importNote));
+  check('…and offers no rows', c.state.importRows.length === 0);
+}
+
 summary('tests/test-manager-dc-draw.js');
 }
 

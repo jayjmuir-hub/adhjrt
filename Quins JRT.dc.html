@@ -107,6 +107,19 @@
   @keyframes holoShift{0%{background-position:0% 0%}50%{background-position:100% 100%}100%{background-position:0% 0%}}
   .fmt-grp-age{font-family:'Anton';font-size:19px;color:#fff;line-height:1;position:relative;z-index:1}
   .fmt-grp-band{font-size:7.5px;font-weight:800;letter-spacing:.06em;color:#9aa0ab;text-transform:uppercase;margin-top:3px;text-align:center;padding:0 4px;position:relative;z-index:1}
+
+  /* Register Team / Register Player buttons: same card look and hover
+     glow/tilt/holo sweep as the age-group trading cards above (.fmt-grp),
+     just shaped as a wide button instead of a square card. The top
+     red->green gradient bar is kept as-is -- only the button BODY becomes
+     the dark card; --glow (set per-button below) drives the hover
+     border/shadow color, same mechanism as the cards' --glow:tint. */
+  .reg-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;background:#151517;border:1px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;padding:16px 34px;color:#fff;font-family:'Barlow Semi Condensed';font-weight:800;font-size:18px;letter-spacing:.5px;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s;transform-style:preserve-3d}
+  .reg-btn-bar{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A);z-index:2}
+  .reg-btn .holo{position:absolute;inset:0;background:linear-gradient(115deg,transparent 25%,rgba(225,27,34,.4) 38%,rgba(255,255,255,.55) 48%,rgba(23,163,74,.4) 58%,transparent 72%);background-size:250% 250%;mix-blend-mode:screen;opacity:0;transition:opacity .3s ease;pointer-events:none}
+  .reg-btn:hover{transform:perspective(400px) translateY(-8px) scale(1.08) rotateX(8deg);border-color:var(--glow);box-shadow:0 0 26px 4px var(--glow),0 20px 34px -8px rgba(0,0,0,.6);z-index:5}
+  .reg-btn:hover .holo{opacity:.7;animation:holoShift 2.2s ease-in-out infinite}
+  .reg-btn-label{position:relative;z-index:1}
   .fmt-numbg{position:absolute;right:-4px;top:-24px;font-family:'Anton';color:rgba(255,255,255,.05);pointer-events:none;display:flex;align-items:baseline;gap:10px;line-height:1}
   .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
   .fmt-numbg .n{font-size:150px}
@@ -300,11 +313,11 @@
       </p>
       <div style="display:flex;gap:16px;margin-top:38px;align-items:center;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
         <div style="position:relative;display:inline-block">
-          <a href="#register" style="display:inline-block;position:relative;z-index:1;background:#fff;background-image:linear-gradient(90deg,#E11B22,#17A34A);background-repeat:no-repeat;background-size:100% 3px;background-position:top;color:{{ accent }};font-family:'Barlow Semi Condensed';font-weight:800;font-size:18px;letter-spacing:.5px;padding:16px 34px;border-radius:12px;text-transform:uppercase;box-shadow:0 10px 34px rgba(225,27,34,.55);transition:transform .18s ease,box-shadow .18s ease" style-hover="transform:translateY(-3px);box-shadow:0 16px 46px rgba(225,27,34,.78) !important">Register team</a>
+          <a href="#register" class="reg-btn" style="--glow:#E11B22"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register team</span></a>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
         <div style="position:relative;display:inline-block">
-          <a href="#register" style="display:inline-block;border:2px solid rgba(255,255,255,0.35);color:#fff;background-image:linear-gradient(90deg,#E11B22,#17A34A);background-repeat:no-repeat;background-size:100% 3px;background-position:top;font-family:'Barlow Semi Condensed';font-weight:700;font-size:18px;padding:14px 30px;border-radius:10px;text-transform:uppercase;transition:background .2s ease,border-color .2s ease,box-shadow .2s ease" style-hover="background-color:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.6);box-shadow:0 8px 26px rgba(225,27,34,.55) !important">Register player</a>
+          <a href="#register" class="reg-btn" style="--glow:#17A34A"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register player</span></a>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
       </div>
@@ -680,11 +693,11 @@
       </sc-if>
       <div style="display:flex;gap:34px;justify-content:center;margin-top:48px;flex-wrap:wrap">
         <div style="position:relative;display:inline-block">
-          <button onClick="{{ onClickRegisterTeam }}" style="display:inline-block;position:relative;z-index:1;background:#fff;color:{{ accent }};font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;letter-spacing:.5px;padding:22px 46px;border:none;border-radius:16px;text-transform:uppercase;box-shadow:0 16px 30px rgba(0,0,0,.28);transition:transform .18s ease,box-shadow .18s ease;cursor:pointer" style-hover="transform:translateY(-3px);box-shadow:0 14px 40px rgba(225,27,34,.65),0 22px 44px rgba(0,0,0,.30) !important">Register team</button>
+          <button onClick="{{ onClickRegisterTeam }}" class="reg-btn" style="--glow:#E11B22;font-size:22px;padding:22px 46px"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register team</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:16px;width:140px;height:24px;background:{{ accent }};border-radius:100px;z-index:2"></span><span style="position:absolute;top:-12px;right:22px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:11px;letter-spacing:1.2px;padding:6px 15px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 16px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
         <div style="position:relative;display:inline-block">
-          <button onClick="{{ onClickRegisterPlayer }}" style="display:inline-block;position:relative;z-index:1;background:transparent;color:#fff;border:2px solid rgba(255,255,255,0.92);font-family:'Barlow Semi Condensed';font-weight:800;font-size:22px;letter-spacing:.5px;padding:20px 44px;border-radius:16px;text-transform:uppercase;transition:transform .18s ease,background .18s ease,box-shadow .18s ease;cursor:pointer" style-hover="transform:translateY(-3px);background:rgba(255,255,255,0.12) !important;box-shadow:0 14px 40px rgba(225,27,34,.6) !important">Register player</button>
+          <button onClick="{{ onClickRegisterPlayer }}" class="reg-btn" style="--glow:#17A34A;font-size:22px;padding:20px 44px"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register player</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:16px;width:140px;height:24px;background:{{ accent }};border-radius:100px;z-index:2"></span><span style="position:absolute;top:-12px;right:22px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:11px;letter-spacing:1.2px;padding:6px 15px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 16px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
       </div>

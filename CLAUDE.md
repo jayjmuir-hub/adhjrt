@@ -22,6 +22,7 @@ first, every session.)
 | `/` | `Quins JRT.dc.html` |
 | `/scores` | `Scores & Standings.dc.html` |
 | `/organizer` | `Organizer.dc.html` |
+| `/manager` | `Manager.dc.html` — the age-group manager dashboard (score entry, draw editor, registrations) |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
 | `/legal` | `legal.html` — Legal & Privacy page (disclaimer, privacy, photography). Plain static file like `app.html`, not a DC component. Linked from the homepage footer. |
 
@@ -47,6 +48,11 @@ sw.js                      service worker — network-first, never caches
 Quins JRT.dc.html          public marketing site  →  /
 Scores & Standings.dc.html live scores + manager area  →  /scores
 Organizer.dc.html          organiser back office  →  /organizer
+Manager.dc.html            age-group manager dashboard  →  /manager. Rebuilt
+                           from the old plain-HTML Manager.html onto the same
+                           DC component engine as the pages above, so all four
+                           .dc.html pages now work the same way underneath.
+                           Reads scores-data.js only — no backend of its own.
 scores-data.js             data layer for the scores page (fixtures, standings,
                            tie-breaks, brackets, auth calls)
 organizer-data.js          data layer for the organiser page

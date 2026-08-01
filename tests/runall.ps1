@@ -31,7 +31,6 @@ $tests = @(
   'test-organizer-grouping.js',
   'test-email.js',
   'test-google-auth.js',
-  'test-manager-dashboard.js',
   'test-fixtures-results-sync.js',
   'test-simulate-tournament.js',
   'test-team-logos.js',

@@ -263,7 +263,12 @@ function registrationCopy(settings, now) {
   const st = registrationState(settings, now);
   const opens = fmtWindowDate(st.opensAt);
   const closes = fmtWindowDate(st.closesAt);
-  const lead = 'Every player takes home a medal and every family is welcome. ';
+  /* This sentence opens the register blurb in ALL FOUR phases, so whatever it
+     claims is claimed everywhere. It used to promise "Every player takes home a
+     medal" — not true (Jay, 1 Aug 2026). Its replacement has to hold for every
+     side that enters: pool stage plus a Cup/Bowl/Plate/Shield bracket means
+     every team plays right through its day, whatever else happens. */
+  const lead = 'Every side gets a full day of rugby and every family is welcome. ';
 
   if (st.open) {
     return {

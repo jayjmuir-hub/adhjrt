@@ -500,6 +500,37 @@ try {
         .some((b) => /your club/.test(String(b))));
   }
 
+  /* --- the site does not promise a medal. Jay, 1 Aug 2026. ---
+     "Every player takes home a medal" was on the page in three places and in
+     the shared block's lead, so it opened the register blurb in every phase.
+     It is not true. Nothing asserted it, which is why it sat there — so the
+     replacement is asserted BOTH ways: the false claim is gone, AND the
+     sentence that replaced it is present. An absence check on its own would
+     pass just as happily if somebody deleted the whole paragraph. */
+  {
+    const src = readRepo(HOME);
+    const prose = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+    check('the homepage makes no medal promise anywhere',
+      !/medal/i.test(prose),
+      (prose.match(/[^\n]{0,70}medal[^\n]{0,30}/gi) || []).join(' | '));
+    check('…and the about section says what IS true of every side instead',
+      /Every side gets a full day of rugby and every family is welcome/.test(src));
+
+    /* The blurb lead, driven through the real function in every phase — the
+       claim lived there too, and that copy is not in the page at all. */
+    const allPhases = [
+      homeVals(win, MID_MS).regBlurb,
+      homeVals(win, OPEN_MS - 86400000).regBlurb,
+      homeVals(win, CLOSE_MS + 1).regBlurb,
+      homeVals(null, MID_MS).regBlurb,
+    ].map((b) => String(b));
+    check('no phase of the register blurb mentions a medal',
+      !allPhases.some((b) => /medal/i.test(b)), allPhases.join(' | '));
+    check('…and every phase still opens with the replacement sentence',
+      allPhases.every((b) => /^Every side gets a full day of rugby and every family is welcome\. /.test(b)),
+      allPhases.join(' | '));
+  }
+
   /* --- the hardcoded date is gone, and so is the second lever --- */
   {
     const src = readRepo(HOME);

@@ -155,7 +155,7 @@
 
   <!-- ===================== DASHBOARD ===================== -->
   <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
-    <div style="max-width:1300px;margin:0 auto;padding:28px 24px 80px">
+    <div style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
         <div style="display:flex;align-items:center;gap:14px">
           <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#fff">
@@ -2607,6 +2607,11 @@ class Component extends DCLogic {
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
+      // Jay, 1 Aug: on Teams/Players, stretch to use a big window instead of
+      // staying capped at 1300px like every other tab -- min(96vw, 2400px)
+      // actually grows as the window grows (a fixed wider number wouldn't),
+      // capped so it doesn't run edge-to-edge on an ultrawide monitor.
+      dashboardMaxWidth: (s.tab === 'teams' || s.tab === 'players') ? 'min(96vw,2400px)' : '1300px',
       dataError: s.dataError, onRetryLoad: () => this.onRetryLoad(),
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),

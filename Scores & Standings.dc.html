@@ -1892,12 +1892,92 @@ class Component extends DCLogic {
       },
     );
   }
+  /* Every match in a spirit-eligible age group nominates each team's own
+     roster[0] player — simple and traceable, but by construction it ties
+     whenever two teams have played the exact same number of games, which a
+     symmetric bracket (every tier's eventual champion plays the same
+     pool+semi+final count as every other tier's champion) reliably does.
+     breakSpiritTies() below resolves that once an age group's matches are
+     all in: while more than one player shares the top nomination count, it
+     takes one of the OTHER tied players and re-submits one of THAT team's
+     own matches with a teammate nominated instead — moving exactly one
+     vote off a rival, never touching the eventual leader's own tally. */
+  async breakSpiritTies(agId, agName, spiritLog, api, session, rosterFor) {
+    let corrections = 0;
+    for (let guard = 0; guard < 20; guard++) { // always terminates in a handful of passes — this just bounds a runaway
+      const tally = {}; // nominee name -> { count, matches: [{matchId, side, team}] }
+      Object.entries(spiritLog).forEach(([matchId, entry]) => {
+        [['home', entry.data.spiritNomineeHome, entry.home], ['away', entry.data.spiritNomineeAway, entry.away]]
+          .forEach(([side, name, team]) => {
+            if (!name) return;
+            if (!tally[name]) tally[name] = { count: 0, matches: [] };
+            tally[name].count++;
+            tally[name].matches.push({ matchId, side, team });
+          });
+      });
+      const ranked = Object.entries(tally).map(([name, v]) => ({ name, ...v }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      if (ranked.length < 2 || ranked[0].count > ranked[1].count) break; // already a clear single winner
+
+      // Demote whichever OTHER player is currently tied with the leader, by
+      // moving one of THEIR nominations to a teammate.
+      const rival = ranked[1];
+      const m = rival.matches[rival.matches.length - 1]; // any of the rival's matches works
+      const entry = spiritLog[m.matchId];
+      const roster = rosterFor(agName, m.team);
+      const altIdx = roster.findIndex((n) => n !== rival.name);
+      const alt = altIdx >= 0 ? roster[altIdx] : `${m.team} Player 2`;
+      const newData = { ...entry.data };
+      if (m.side === 'home') newData.spiritNomineeHome = alt; else newData.spiritNomineeAway = alt;
+      const r = await api.submitResult(m.matchId, newData, session);
+      if (r && r.ok) { spiritLog[m.matchId] = { ...entry, data: newData }; corrections++; }
+      else break; // the correction itself failed to write — stop rather than loop forever
+    }
+    return corrections;
+  }
   async runSimulateTournament() {
     const { api, session, ageGroups } = this.state;
     if (!api || !session) return;
     this.setState({ simBusy: true, simMsg: '', simProgress: 'Starting…' });
     const isFinal = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
-    let pools = 0, knockoutGames = 0, published = 0, failed = 0;
+    let pools = 0, knockoutGames = 0, published = 0, failed = 0, spiritCorrections = 0;
+
+    // Spirit of Rugby nominations — only U14+ groups support the field at
+    // all (api.supportsSpiritAward). Fetch every registered roster ONCE up
+    // front (an organiser session sees every group) rather than per match.
+    const anySpirit = (ageGroups || []).some((ag) => api.supportsSpiritAward && api.supportsSpiritAward(ag.id));
+    let regs = { teams: [] };
+    if (anySpirit && typeof api.getMyRegistrations === 'function') {
+      regs = (await api.getMyRegistrations(session)) || { teams: [] };
+    }
+    // A team code (e.g. "ADH1") is only unique WITHIN an age group — Quins'
+    // U8 team and Quins' U9 team can both be "ADH1" — so the lookup has to
+    // key on age-group name AND code together, not code alone.
+    const rosterFor = (agName, code) => {
+      const team = (regs.teams || []).find((t) => t.teamName === code
+        && String(t.ageGroup || '').trim().toLowerCase() === String(agName || '').trim().toLowerCase());
+      if (!team) return [];
+      try {
+        const arr = JSON.parse(team.players || '[]');
+        return Array.isArray(arr)
+          ? arr.map((p) => [p.firstName, p.lastName].filter(Boolean).join(' ').trim()).filter(Boolean)
+          : [];
+      } catch (e) { return []; }
+    };
+    // Falls back to a synthetic-but-still-distinct-per-team name if the
+    // roster isn't found (registration not imported yet, or a local-preview
+    // session) — the tool keeps working rather than crashing, matching the
+    // rest of this feature's "testing only" tolerance for incomplete data.
+    const nomineeFor = (agName, code) => {
+      const roster = rosterFor(agName, code);
+      return roster.length ? roster[0] : `${code} Player`;
+    };
+    const spiritData = (agId, agName, home, away) => (
+      (api.supportsSpiritAward && api.supportsSpiritAward(agId))
+        ? { spiritNomineeHome: nomineeFor(agName, home), spiritNomineeAway: nomineeFor(agName, away) }
+        : {}
+    );
+
     for (const ag of (ageGroups || [])) {
       this.setState({ simProgress: `${ag.name}…` });
 
@@ -1913,11 +1993,18 @@ class Component extends DCLogic {
       const draw = await api.getDraw(ag.id, session);
       if (!draw) { failed++; continue; }
 
+      // Every result actually submitted for THIS age group, keyed by match
+      // id — what breakSpiritTies() below corrects against. Cheaper and more
+      // reliable than re-deriving it from getSpiritAward's tally, since this
+      // loop already knows exactly what it sent.
+      const spiritLog = {};
+
       this.setState({ simProgress: `${ag.name} — pool matches…` });
       for (const slot of (draw.slots || [])) {
         if (!slot.home || !slot.away) continue;
-        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
-        if (r && r.ok) pools++; else failed++;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { pools++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
       }
 
       // Pass 1: seed the knockout stage from the now-final standings, save it,
@@ -1929,8 +2016,9 @@ class Component extends DCLogic {
       if (!saved || !saved.ok) failed++;
       for (const slot of knockout) {
         if (isFinal(slot.id) || !slot.home || !slot.away) continue;
-        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
-        if (r && r.ok) knockoutGames++; else failed++;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
       }
 
       // Pass 2: regenerate now the semis have winners — this is what fills in
@@ -1941,8 +2029,14 @@ class Component extends DCLogic {
       if (!saved || !saved.ok) failed++;
       for (const slot of knockout) {
         if (!isFinal(slot.id) || !slot.home || !slot.away) continue;
-        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);
-        if (r && r.ok) knockoutGames++; else failed++;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
+      }
+
+      if (api.supportsSpiritAward && api.supportsSpiritAward(ag.id)) {
+        this.setState({ simProgress: `${ag.name} — Spirit of Rugby…` });
+        spiritCorrections += await this.breakSpiritTies(ag.id, ag.name, spiritLog, api, session, rosterFor);
       }
 
       this.setState({ simProgress: `${ag.name} — publishing…` });
@@ -1950,7 +2044,9 @@ class Component extends DCLogic {
       if (pubRes && pubRes.ok) published++; else failed++;
     }
     const msg = `Simulated ${pools} pool result${pools === 1 ? '' : 's'} and ${knockoutGames} knockout result${knockoutGames === 1 ? '' : 's'}, `
-      + `published ${published} age group${published === 1 ? '' : 's'}.`
+      + `published ${published} age group${published === 1 ? '' : 's'}`
+      + (spiritCorrections ? `, resolved ${spiritCorrections} Spirit of Rugby tie${spiritCorrections === 1 ? '' : 's'}` : '')
+      + '.'
       + (failed ? ` ${failed} step${failed === 1 ? '' : 's'} failed — press again to retry.` : '');
     this.setState({ simBusy: false, simProgress: '', simMsg: msg });
     if (this.state.editorAgeId) this.loadAdmin(this.state.editorAgeId);

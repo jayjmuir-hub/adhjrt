@@ -39,7 +39,9 @@ $tests = @(
   'test-organizer-manager-link.js',
   'test-manager-dc.js',
   'test-manager-dc-score-sheet.js',
-  'test-manager-dc-draw.js'
+  'test-manager-dc-draw.js',
+  'test-knockout-brackets.js',
+  'test-simulate-spirit-award.js'
 )
 
 Write-Host ''

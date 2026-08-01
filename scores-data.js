@@ -1365,6 +1365,36 @@ function buildBracket(ag, draw, tables, store) {
     return rounds;
   }
 
+  // Four pools: each tier (Cup/Bowl/Plate/Shield) is the four teams that
+  // finished at that rank in their own pool — Cup gets all four pool
+  // winners, Bowl all four runners-up, and so on. Unlike the two-pool case
+  // (a single cross-pool match settles a tier outright, since there are
+  // only two candidates), four candidates need a semi round first. Pairing
+  // is Pool A v Pool D and Pool B v Pool C — arbitrary, since all four
+  // teams in a tier are equally-ranked finishers from DIFFERENT pools, so
+  // none of them have met before and no pairing is more "fair" than another.
+  if (pools.length === 4) {
+    const [A, B, C, D] = pools.map((p) => tables[p.id] || []);
+    const tiers = [
+      { name: 'Cup', code: 'CUP', rank: 0 },
+      { name: 'Bowl', code: 'BOWL', rank: 1 },
+      { name: 'Plate', code: 'PLATE', rank: 2 },
+      { name: 'Shield', code: 'SHIELD', rank: 3 },
+    ];
+    const rounds = [];
+    tiers.forEach((t) => {
+      const at = (list) => (poolsComplete && list[t.rank]) ? list[t.rank].team : null;
+      if (!poolsComplete && ![A, B, C, D].some((list) => list[t.rank])) return; // tier doesn't exist (pool too small)
+      const sf1 = wrap(`${ag.id}:${t.code}:SF1`, at(A), at(D));
+      const sf2 = wrap(`${ag.id}:${t.code}:SF2`, at(B), at(C));
+      const fin = wrap(`${ag.id}:${t.code}`, sf1.winner, sf2.winner);
+      rounds.push({ round: `${t.name} — Semi-Final 1`, games: [sf1] });
+      rounds.push({ round: `${t.name} — Semi-Final 2`, games: [sf2] });
+      rounds.push({ round: `${t.name} Final`, games: [fin] });
+    });
+    return rounds;
+  }
+
   // fallback for a single-pool age group: straight semis + final
   const t = tables[pools[0] ? pools[0].id : null] || [];
   const seeds = [];
@@ -1899,3 +1929,11 @@ export async function submitResult(matchId, data, session) {
   if (r.real) return r.json;
   return (await local()).submitResult(session.token, matchId, data);
 }
+
+/* Test-only. buildBracket()/computeAutoKnockout() are pure functions (no
+   fetch, no document) — exporting them lets a Node test call the REAL
+   bracket-building code directly instead of re-describing its behaviour in
+   a hand-rolled mock. Nothing in the browser app imports these names; they
+   exist purely so a test isn't limited to asserting through the network-
+   backed async wrappers. */
+export { buildBracket, computeAutoKnockout };

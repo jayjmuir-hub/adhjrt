@@ -1984,8 +1984,8 @@ const FAULTS = [
     name: 'runSimulateTournament’s pass-1 isFinal filter is inverted, so pass 1 no longer walks over the double-bracket semis',
     suite: 'test-simulate-tournament.js',
     apply: () => patch('Scores & Standings.dc.html',
-      "      for (const slot of knockout) {\n        if (isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n        if (r && r.ok) knockoutGames++; else failed++;\n      }\n\n      // Pass 2:",
-      "      for (const slot of knockout) {\n        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n        if (r && r.ok) knockoutGames++; else failed++;\n      }\n\n      // Pass 2:"),
+      "      for (const slot of knockout) {\n        if (isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };\n        const r = await api.submitResult(slot.id, data, session);\n        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;\n      }\n\n      // Pass 2:",
+      "      for (const slot of knockout) {\n        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };\n        const r = await api.submitResult(slot.id, data, session);\n        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;\n      }\n\n      // Pass 2:"),
     expect: ['pass 1 walked over the semis'],
   },
   {
@@ -2000,8 +2000,9 @@ const FAULTS = [
       + "      if (!saved || !saved.ok) failed++;\n"
       + "      for (const slot of knockout) {\n"
       + "        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n"
-      + "        const r = await api.submitResult(slot.id, { walkover: 'home' }, session);\n"
-      + "        if (r && r.ok) knockoutGames++; else failed++;\n"
+      + "        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };\n"
+      + "        const r = await api.submitResult(slot.id, data, session);\n"
+      + "        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;\n"
       + "      }\n\n",
       ''),
     expect: ['CUP was seeded straight from pool winners and walked over', '…and only THEN did pass 2 walk over the finals, fed from the semi winners/losers'],

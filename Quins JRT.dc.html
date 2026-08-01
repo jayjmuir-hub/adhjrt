@@ -700,7 +700,7 @@
           Test mode &mdash; registration has been opened early for testing. This is not the live opening.
         </div>
       </sc-if>
-      <h2 style="font-family:'Anton';font-size:clamp(38px,6.4vw,80px);line-height:0.92;text-transform:uppercase">Bring your club</h2>
+      <h2 style="font-family:'Anton';font-size:clamp(38px,6.4vw,80px);line-height:0.92;text-transform:uppercase">Sign up now</h2>
       <p style="font-size:20px;margin-top:20px;color:rgba(255,255,255,0.9);max-width:560px;margin-left:auto;margin-right:auto">{{ regBlurb }}</p>
       <sc-if value="{{ regHasCountdown }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:14px;font-weight:800;letter-spacing:1px;font-size:14px;color:rgba(255,255,255,0.75);text-transform:uppercase">Opens {{ regOpensIn }}</div>
@@ -1338,10 +1338,32 @@ class SubmitError extends Error {
 
 
 
-// Pools a coach can ask for. "No preference" is deliberately included so a
-// mandatory field does not force a meaningless answer from clubs that don't
-// mind — the requests that do come in are then real ones worth honouring.
-const POOL_OPTIONS = ['A', 'B', 'C', 'D', 'No preference'];
+/* Pools a coach can ask for. Jay, 1 Aug 2026: D and "No preference" removed.
+
+   This REVERSES an earlier decision, so the reasoning is worth keeping rather
+   than deleting. "No preference" was originally included so a mandatory field
+   would not force a meaningless answer out of a club that did not mind. The
+   consequence of dropping it is that every club must now name a pool — there
+   is no way to say "don't care", and the field is still required.
+
+   Removing "No preference" also fixes a small existing bug for free: the
+   import matcher (prefOf() in Manager.dc.html / Scores & Standings.dc.html)
+   reads the first letter of this value as the requested pool, so a team that
+   picked "No preference" was read as asking for a pool "N" and shown as
+   requesting something that does not exist.
+
+   ⚠️ A DRAW CAN STILL HAVE A POOL D. This list is only what a club may ASK
+   for on the registration form; an organiser can still create and fill pool D
+   in the draw editor, and the 4-pool Cup/Bowl/Plate/Shield bracket depends on
+   being able to. Do not narrow the draw editor or prefOf()'s /[A-Z]/i to
+   match this list.
+
+   ⚠️ SECOND COPY: netlify/functions/_intake.js has the same list, because
+   there is no build step (same reason AGE_GROUP_INFO and DEFAULT_VENUE are
+   duplicated). test-intake.js compares the two and fails if either drifts.
+   Until 1 Aug 2026 the server never checked this value at all — the dropdown
+   was the only thing restricting it, which meant it restricted nothing. */
+const POOL_OPTIONS = ['A', 'B', 'C'];
 const emptyTeamForm = () => ({
   club: '', clubOther: '', preferredPool: '', ageGroup: '',
   headCoachName: '', headCoachEmail: '', headCoachPhone: '',

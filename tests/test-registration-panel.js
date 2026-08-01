@@ -477,6 +477,29 @@ try {
       /\{\{ ctaToast \}\}/.test(lower));
   }
 
+  /* --- the section says what it actually does. Jay, 1 Aug 2026. ---
+     "Bring your club" described whole-club registration, which this section
+     is not — it is where a coach clicks Register a team or Register player.
+     With club-level registration coming as a separate feature, the two would
+     have been actively confusing. Heading and body copy both reworded. */
+  {
+    const src = readRepo(HOME);
+    check('the section no longer calls itself "Bring your club"',
+      !/Bring your club/.test(src));
+    check('…it says "Sign up now"', /<h2[^>]*>Sign up now<\/h2>/.test(src));
+
+    /* The body copy comes from registrationCopy() in the shared block, not
+       from the page — so it is checked by driving the real function through
+       every phase rather than by reading markup. */
+    const openBlurb = homeVals(win, MID_MS).regBlurb;
+    const beforeBlurb = homeVals(win, OPEN_MS - 86400000).regBlurb;
+    check('the open blurb asks for a team, not a club', /your team or player/.test(openBlurb), openBlurb);
+    check('the not-yet-open blurb asks for a team, not a club', /enter your team/.test(beforeBlurb), beforeBlurb);
+    check('no phase still says "your club"',
+      ![openBlurb, beforeBlurb, homeVals(win, CLOSE_MS + 1).regBlurb, homeVals(null, MID_MS).regBlurb]
+        .some((b) => /your club/.test(String(b))));
+  }
+
   /* --- the hardcoded date is gone, and so is the second lever --- */
   {
     const src = readRepo(HOME);

@@ -269,8 +269,8 @@ function registrationCopy(settings, now) {
     return {
       pill: closes ? `REGISTRATION CLOSES ${closes.toUpperCase()}` : 'REGISTRATION NOW OPEN',
       blurb: lead + (closes
-        ? `Registration closes at the end of ${closes} — sign up your club or player below.`
-        : 'Registration is open — sign up your club or player below.'),
+        ? `Registration closes at the end of ${closes} — sign up your team or player below.`
+        : 'Registration is open — sign up your team or player below.'),
       buttons: 'Both registration buttons work',
       testMode: st.forced,
       opensInMs: null,
@@ -294,7 +294,7 @@ function registrationCopy(settings, now) {
     const t = now instanceof Date ? now.getTime() : Number(now);
     return {
       pill: `REGISTRATION OPENS ${opens.toUpperCase()}`,
-      blurb: lead + `Registration opens on ${opens} — check back then to enter your club.`,
+      blurb: lead + `Registration opens on ${opens} — check back then to enter your team.`,
       buttons: 'Both buttons show "Coming soon"',
       testMode: false,
       opensInMs: (o !== null && Number.isFinite(t)) ? o - t : null,

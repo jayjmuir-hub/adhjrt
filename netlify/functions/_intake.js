@@ -114,6 +114,27 @@ const PLAYER_RANGE = `A:${colLetter(PLAYER_COLUMNS.length)}`;  // A:P
    either field list. */
 const HONEYPOT = 'bot-field';
 
+/* The pools a coach may ASK for. Jay, 1 Aug 2026: D and "No preference"
+   removed, leaving A/B/C.
+
+   ⚠️ THIS IS THE FIRST TIME THIS FIELD HAS BEEN CHECKED AT ALL. Until now
+   `preferred-pool` was only checked for being non-empty (REQUIRED, below);
+   its VALUE was never validated, so the browser's dropdown was the only
+   thing restricting it — which means it restricted nothing, and anyone
+   editing the page could store any string in column N. Exactly the shape of
+   the squad-cap bug recorded in CLAUDE.md. Narrowing the dropdown without
+   adding this check would have been cosmetic.
+
+   ⚠️ A DRAW CAN STILL HAVE A POOL D. This is only what a club may request on
+   the registration form. An organiser can still create and fill pool D in the
+   draw editor, and the 4-pool Cup/Bowl/Plate/Shield bracket depends on being
+   able to. Do not narrow the draw editor, or prefOf()'s /[A-Z]/i, to match.
+
+   ⚠️ SECOND COPY: `Quins JRT.dc.html` has the same list, because there is no
+   build step — the same reason AGE_GROUP_INFO and DEFAULT_VENUE are
+   duplicated. `test-intake.js` compares the two and fails if either drifts. */
+const POOL_OPTIONS = ['A', 'B', 'C'];
+
 const FORMS = {
   'team-registration': {
     columns: TEAM_COLUMNS,
@@ -280,6 +301,23 @@ function validateSubmission(form, clean) {
   const groupName = text(d['age-group']).trim();
   if (groupName && !AGE_GROUP_BY_NAME[groupName]) {
     return bad(`"${groupName}" is not one of the tournament's age groups.`, 'age-group');
+  }
+
+  /* 4b. THE PREFERRED POOL. Matched exactly against POOL_OPTIONS, the same
+         way the age group above is matched against the fifteen, and for the
+         same reason: a value we do not recognise is one the draw cannot act
+         on. Numbered 4b rather than renumbering everything below it, because
+         _prove-registration.js patches several of these blocks by their
+         literal text.
+
+         Unreachable from the real form — the dropdown only offers A, B and C
+         — so anything else is an edited page rather than a coach mistake.
+         The value is echoed back exactly as the age-group rule echoes an
+         unrecognised group name; the length cap is step 8, deliberately last,
+         so both rules share that same property. */
+  const pool = text(d['preferred-pool']).trim();
+  if (form === 'team-registration' && pool && POOL_OPTIONS.indexOf(pool) < 0) {
+    return bad(`"${pool}" is not a pool you can ask for. Please choose A, B or C.`, 'preferred-pool');
   }
 
   /* 5. THE SQUAD LIST arrives as a JSON string. Something that is not a JSON
@@ -575,7 +613,7 @@ async function handleSubmission(body, deps) {
 module.exports = {
   TEAM_COLUMNS, TEAM_OUT, PLAYER_COLUMNS,
   TEAM_RANGE, PLAYER_RANGE,
-  FORMS, HONEYPOT, cleanSubmission,
+  FORMS, HONEYPOT, POOL_OPTIONS, cleanSubmission,
   validateSubmission, MAX_FIELD_CHARS, MAX_NOTES_CHARS, MAX_PLAYERS_CHARS,
   handleSubmission, NOT_SAVED,
   teamRow, playerRow,

@@ -466,9 +466,12 @@ const AG = require(path.join(repoRoot(), 'netlify', 'functions', '_agegroups.js'
 const A_GROUPS = AG.AGE_GROUPS;
 const AG_BY_NAME = AG.AGE_GROUP_BY_NAME;
 
-/* A submission with everything filled in. Every value is invented. */
+/* A submission with everything filled in. Every value is invented.
+   `preferred-pool` must be one of POOL_OPTIONS (A/B/C) since 1 Aug 2026 — it
+   used to say 'No preference', which is no longer a pool a coach can ask for
+   and is now refused, which would fail every check downstream of this. */
 const goodTeam = () => ({
-  club: 'Test Club', 'age-group': 'U16B Contact', 'preferred-pool': 'No preference',
+  club: 'Test Club', 'age-group': 'U16B Contact', 'preferred-pool': 'A',
   'head-coach-name': 'A Coach', 'head-coach-email': 'coach@example.com',
   'head-coach-phone': '+971500000000', 'num-players': '2',
   players: JSON.stringify([
@@ -492,6 +495,111 @@ check('a complete player registration is accepted', V('player-registration', goo
   V('player-registration', goodPlayer()).error);
 check('neither is silently dropped', !V('team-registration', goodTeam()).drop
   && !V('player-registration', goodPlayer()).drop);
+
+/* ---- the preferred pool ----------------------------------------------
+   Jay, 1 Aug 2026: D and "No preference" removed, leaving A/B/C.
+
+   ⚠️ THE POINT OF THESE CHECKS is that until this change the server never
+   looked at this field's VALUE at all — only that it was non-empty. The
+   browser's dropdown was the only thing restricting it, which means it
+   restricted nothing. Narrowing the dropdown alone would have been
+   cosmetic, and nothing in this suite would have noticed. */
+{
+  I.POOL_OPTIONS.forEach((p) => {
+    const r = V('team-registration', { ...goodTeam(), 'preferred-pool': p });
+    check(`pool ${p} is accepted`, r.ok === true, JSON.stringify(r));
+  });
+
+  ['D', 'No preference'].forEach((p) => {
+    const r = V('team-registration', { ...goodTeam(), 'preferred-pool': p });
+    check(`"${p}" is refused server-side, not just hidden from the dropdown`,
+      r.ok === false, JSON.stringify(r));
+    eq(`…and the field is named so the form can highlight it`, r.field, 'preferred-pool');
+  });
+
+  /* Matched EXACTLY, the same way the age group is. A near miss is a client
+     we did not write, not a coach mistake. (A stray space is the exception —
+     see the trim check below.) */
+  ['a', 'Pool A', 'AB', 'B/C', ''].forEach((p) => {
+    const r = V('team-registration', { ...goodTeam(), 'preferred-pool': p });
+    check(`"${p}" is not quietly accepted as pool A`, r.ok === false, JSON.stringify(r));
+  });
+
+  /* Trimmed before matching — a stray space either side is the page's fault,
+     not the coach's, and refusing it would be unhelpful noise. */
+  check('a padded " B " is trimmed and accepted',
+    V('team-registration', { ...goodTeam(), 'preferred-pool': ' B ' }).ok === true);
+
+  /* The player form has no pool field at all. The rule must not leak onto it. */
+  check('the player form is unaffected by the pool rule',
+    V('player-registration', { ...goodPlayer(), 'preferred-pool': 'D' }).ok === true);
+
+  /* THE TWO COPIES. No build step, so the list is duplicated in the page and
+     in _intake.js — same as AGE_GROUP_INFO and DEFAULT_VENUE. This is the
+     check that stops them drifting. */
+  const POOL_OPTIONS_SERVER = I.POOL_OPTIONS;
+  const home = readRepo('Quins JRT.dc.html');
+  const m = home.match(/const POOL_OPTIONS = (\[[^\]]*\]);/);
+  check('the page declares POOL_OPTIONS', !!m, String(m));
+  const clientPools = m ? JSON.parse(m[1].replace(/'/g, '"')) : null;
+  eq('the page and the server offer exactly the same pools',
+    JSON.stringify(clientPools), JSON.stringify(POOL_OPTIONS_SERVER));
+  /* Hardcoded on purpose: the check above derives BOTH sides from the code,
+     so a change made in both places at once would sail through it. This one
+     does not derive its expectation from the thing under test. */
+  eq('…and that list is exactly A, B, C',
+    JSON.stringify(POOL_OPTIONS_SERVER), JSON.stringify(['A', 'B', 'C']));
+
+  /* Removed from the page, not merely absent from the constant. Comments are
+     stripped first — the constant's own comment explains why the option went,
+     and naming it there must not fail this. Same treatment the "October 2026"
+     check in test-registration-panel.js already uses. */
+  const homeCode = home.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/^\s*\/\/.*$/gm, '');
+  check('the page no longer offers "No preference" anywhere',
+    !/No preference/.test(homeCode),
+    (homeCode.match(/[^\n]{0,60}No preference[^\n]{0,20}/g) || []).join(' | '));
+
+  /* ⚠️ A DRAW CAN STILL HAVE A POOL D, AND THE IMPORT MATCHERS MUST NOT BE
+     NARROWED TO MATCH THIS LIST. POOL_OPTIONS is only what a club may ASK for
+     on the registration form. A draw can have four pools — the 4-pool
+     Cup/Bowl/Plate/Shield bracket depends on it — and a stored preference from
+     before this change may still name D. Narrowing either matcher to A-C would
+     silently change how those are read.
+
+     ⚠⚠ THE TWO EDITORS DO NOT AGREE, and that is a pre-existing finding, not
+     something this change introduced. `Manager.dc.html` was widened to
+     /[A-Z]/i during the Manager Dashboard rebuild; `Scores & Standings.dc.html`
+     still has the original /[A-D]/i. The "uniform draw editor" project was
+     meant to make these two match and did not reach this line. Asserted AS IT
+     ACTUALLY IS below rather than quietly fixed, because changing the Scores
+     matcher changes how real stored preferences are read and is Jay's call.
+     See claude/parked-requests.md.
+
+     ⚠⚠⚠ READ DEFENSIVELY. Neither editor file is in the temp copy
+     _prove-registration.js builds — it copies only what the registration path
+     needs. A bare readRepo() here throws ENOENT under the prover, which kills
+     this whole file and cascades into every fault downstream, making 60-odd
+     unrelated faults report as "failed, but not on the named check". That is
+     precisely the "a test that throws is not a test that caught something"
+     trap in state-of-play.md, and it is why these read through a guard.
+     Present in the real suite (always) — absent under the prover (always). */
+  const editorSrc = (f) => {
+    try { return readRepo(f); } catch (e) { return null; }
+  };
+  const mgr = editorSrc('Manager.dc.html');
+  const sco = editorSrc('Scores & Standings.dc.html');
+
+  if (mgr !== null && sco !== null) {
+    check('Manager.dc.html reads a preference with /[A-Z]/i',
+      /preferredPool \|\| ''\)\.match\(\/\[A-Z\]\/i\)/.test(mgr));
+    check('Scores & Standings.dc.html reads a preference with /[A-D]/i (NOT the same — known gap)',
+      /preferredPool \|\| ''\)\.match\(\/\[A-D\]\/i\)/.test(sco));
+    check('Manager.dc.html has NOT been narrowed to A-C to match the form\'s new list',
+      !/preferredPool \|\| ''\)\.match\(\/\[A-C\]\/i\)/.test(mgr));
+    check('Scores & Standings.dc.html has NOT been narrowed to A-C either',
+      !/preferredPool \|\| ''\)\.match\(\/\[A-C\]\/i\)/.test(sco));
+  }
+}
 
 /* ---- required fields, one at a time ---------------------------------- */
 

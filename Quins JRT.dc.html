@@ -706,6 +706,12 @@
         <div style="margin-top:14px;font-weight:800;letter-spacing:1px;font-size:14px;color:rgba(255,255,255,0.75);text-transform:uppercase">Opens {{ regOpensIn }}</div>
       </sc-if>
       <div style="display:flex;gap:34px;justify-content:center;margin-top:48px;flex-wrap:wrap">
+        <!-- Club first: it is step one, and the one that gives the organisers
+             their planning numbers. The other two are unchanged. -->
+        <div style="position:relative;display:inline-block">
+          <button onClick="{{ onClickRegisterClub }}" class="reg-btn" style="--glow:#E11B22;font-size:22px;padding:22px 46px"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register your club</span></button>
+          <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:16px;width:140px;height:24px;background:{{ accent }};border-radius:100px;z-index:2"></span><span style="position:absolute;top:-12px;right:22px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:11px;letter-spacing:1.2px;padding:6px 15px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 16px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
+        </div>
         <div style="position:relative;display:inline-block">
           <button onClick="{{ onClickRegisterTeam }}" class="reg-btn" style="--glow:#17A34A;font-size:22px;padding:22px 46px"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register a team</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-5px;right:16px;width:140px;height:24px;background:{{ accent }};border-radius:100px;z-index:2"></span><span style="position:absolute;top:-12px;right:22px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:11px;letter-spacing:1.2px;padding:6px 15px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 16px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
@@ -826,6 +832,109 @@
     </div>
   </footer>
 
+  <!-- ============ REGISTER A CLUB MODAL ============
+       A DECLARATION, not an entry. It records how many teams a club is
+       bringing in each age group so the pools and pitches can be sized weeks
+       before the squads are known. It mints no team code and blocks nothing —
+       each of those teams still registers separately, which the success screen
+       and the confirmation email both say in as many words, because a club
+       secretary who stops here has entered nobody. -->
+  <sc-if value="{{ clubModalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropClub }}">
+      <div style="background:#111113;border:1px solid rgba(255,255,255,0.09);border-radius:20px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:40px 44px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5);color:#fff" onClick="{{ stopProp }}">
+        <button onClick="{{ closeClubModal }}" aria-label="Close" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#fff;font-size:18px;cursor:pointer">&times;</button>
+
+        <sc-if value="{{ clubSubmitted }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:30px 0">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(23,163,74,0.16);border:1px solid rgba(23,163,74,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3bd070" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>
+            </div>
+            <div style="font-family:'Anton';font-size:clamp(22px,2.8vw,33px);text-transform:uppercase">Thanks &mdash; we&rsquo;ve got your club down</div>
+            <p style="color:#aeb4bf;margin-top:12px">A confirmation is on its way to the email address you gave. Knowing your numbers now is what lets us size the pools and allocate pitches early.</p>
+            <div style="margin-top:20px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.45);border-radius:12px;padding:16px 18px;text-align:left">
+              <div style="font-weight:800;letter-spacing:.5px;font-size:14px;color:#fff">This is not a team entry.</div>
+              <p style="color:#aeb4bf;margin-top:6px;font-size:14px;line-height:1.6">Each of those teams still needs registering separately, with its squad, using <strong style="color:#fff">Register a team</strong>. Nothing is confirmed for a team until that is done.</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ clubShowForm }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="font-weight:800;letter-spacing:2px;color:#17A34A;font-size:13px;text-transform:uppercase;margin-bottom:10px">Club registration</div>
+            <h3 style="font-family:'Anton';font-size:clamp(24px,3.1vw,38px);text-transform:uppercase;line-height:1">Tell us you&rsquo;re coming</h3>
+            <p style="color:#aeb4bf;margin-top:10px;font-size:15px">Say how many teams you expect to bring in each age group. It doesn&rsquo;t have to be final &mdash; it lets us size the pools and plan pitches. Each team registers separately afterwards. {{ regFormNote }}</p>
+
+            <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
+              <div>
+                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
+                <select value="{{ clubFormClub }}" onChange="{{ onClubClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <option value="">Select a club&hellip;</option>
+                  <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
+                    <option value="{{ c }}">{{ c }}</option>
+                  </sc-for>
+                  <option value="__other__">Other &mdash; my club isn&rsquo;t listed</option>
+                </select>
+                <sc-if value="{{ clubClubIsOther }}" hint-placeholder-val="{{ false }}">
+                  <input value="{{ clubClubOtherVal }}" onInput="{{ onClubClubOther }}" placeholder="Your club's name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                </sc-if>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div>
+                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CONTACT NAME</label>
+                  <input value="{{ clubContactName }}" onInput="{{ onClubContactName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CONTACT EMAIL</label>
+                  <input type="email" value="{{ clubContactEmail }}" onInput="{{ onClubContactEmail }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CONTACT MOBILE <span style="color:#565c68;font-weight:600">(optional)</span></label>
+                <div style="display:flex;align-items:stretch;margin-top:6px">
+                  <span style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-right:none;border-radius:9px 0 0 9px;padding:12px 12px;color:#7f8794;font-size:15px">+971</span>
+                  <input value="{{ clubContactPhone }}" onInput="{{ onClubContactPhone }}" placeholder="50 123 4567" style="flex:1;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HOW MANY TEAMS IN EACH AGE GROUP</label>
+                <p style="color:#7f8794;font-size:12px;margin-top:4px;line-height:1.5">Leave a box blank for an age group you&rsquo;re not entering.</p>
+                <div style="margin-top:10px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;overflow:hidden">
+                  <sc-for list="{{ clubAgeRows }}" as="g" hint-placeholder-count="15">
+                    <div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px;font-weight:700;color:#fff">{{ g.name }}</div>
+                        <div style="font-size:11px;color:#7f8794;margin-top:1px">{{ g.format }}</div>
+                      </div>
+                      <input value="{{ g.value }}" onInput="{{ g.onChange }}" inputmode="numeric" placeholder="0" style="width:64px;flex:none;text-align:center;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:9px 8px;color:#fff;font-size:15px">
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:rgba(23,163,74,0.10)">
+                    <span style="font-size:13px;font-weight:800;letter-spacing:.5px;color:#3bd070;text-transform:uppercase">Total teams</span>
+                    <span style="font-family:'Anton';font-size:20px;color:#3bd070">{{ clubTotal }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">ANYTHING WE SHOULD KNOW <span style="color:#565c68;font-weight:600">(optional)</span></label>
+                <textarea value="{{ clubNotes }}" onInput="{{ onClubNotes }}" rows="3" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;resize:vertical"></textarea>
+              </div>
+
+              <sc-if value="{{ clubError }}" hint-placeholder-val="">
+                <div style="background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.5);border-radius:10px;padding:12px 16px;color:#ff9ea2;font-size:14px;font-weight:600">{{ clubError }}</div>
+              </sc-if>
+
+              <button onClick="{{ submitClub }}" disabled="{{ clubSubmitting }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:17px;letter-spacing:.5px;padding:15px;border:none;border-radius:11px;cursor:pointer;text-transform:uppercase">{{ clubSubmitLabel }}</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ============ REGISTER A TEAM MODAL ============ -->
   <sc-if value="{{ teamModalOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropTeam }}">
@@ -851,7 +960,9 @@
         <sc-if value="{{ teamShowForm }}" hint-placeholder-val="{{ true }}">
           <div>
             <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:13px;text-transform:uppercase;margin-bottom:10px">Team registration</div>
-            <h3 style="font-family:'Anton';font-size:clamp(24px,3.1vw,38px);text-transform:uppercase;line-height:1">Register your club</h3>
+            <!-- "Register a team", not "Register your club" — there is a real
+                 club-registration form now and this is not it. -->
+            <h3 style="font-family:'Anton';font-size:clamp(24px,3.1vw,38px);text-transform:uppercase;line-height:1">Register a team</h3>
             <!-- This modal can only be open when registration is, so there is
                  no closed variant here. It used to carry one that promised
                  "submit now and we'll confirm your spot as soon as it's live",
@@ -1364,6 +1475,18 @@ class SubmitError extends Error {
    Until 1 Aug 2026 the server never checked this value at all — the dropdown
    was the only thing restricting it, which meant it restricted nothing. */
 const POOL_OPTIONS = ['A', 'B', 'C'];
+
+/* A club declaration: which age groups, and how many teams in each. Counts are
+   held as STRINGS keyed by age-group id, because that is what a text input
+   gives back and converting on every keystroke would fight the user — '' and
+   '0' both mean "not coming" and the server treats them the same.
+   See claude/specs/spec-club-registration.md. */
+const emptyClubForm = () => ({
+  club: '', clubOther: '', contactName: '', contactEmail: '', contactPhone: '',
+  counts: Object.fromEntries(AGE_GROUP_INFO.map((g) => [g.id, ''])),
+  notes: '',
+});
+
 const emptyTeamForm = () => ({
   club: '', clubOther: '', preferredPool: '', ageGroup: '',
   headCoachName: '', headCoachEmail: '', headCoachPhone: '',
@@ -1428,6 +1551,8 @@ class Component extends DCLogic {
        the day without a reload. */
     reg: null, regNow: 0,
     ctaToast: '',
+    clubForm: emptyClubForm(),
+    clubModalOpen: false, clubSubmitted: false, clubError: '', clubSubmitting: false,
     /* Mobile nav. The links wrap onto three lines on a phone, and the header is
        position:sticky, so leaving them visible parks a quarter of the screen
        permanently over the content. Collapsed behind a button instead; CSS owns
@@ -1576,6 +1701,17 @@ class Component extends DCLogic {
     this._toastTimer = setTimeout(() => this.setState({ ctaToast: '' }), 2600);
   }
 
+  openClubModal() { this.setState({ clubModalOpen: true, clubSubmitted: false, clubError: '' }); document.body.style.overflow = 'hidden'; }
+  closeClubModal() { this.setState({ clubModalOpen: false }); document.body.style.overflow = ''; }
+  setClubField(field, val) { this.setState((s) => ({ clubForm: { ...s.clubForm, [field]: val } })); }
+  /* Digits only, and capped at two characters. The server refuses anything
+     over MAX_TEAMS_PER_GROUP anyway — this just stops the box accepting
+     something it will only be told off for later. */
+  setClubCount(id, val) {
+    const clean = String(val).replace(/[^0-9]/g, '').slice(0, 2);
+    this.setState((s) => ({ clubForm: { ...s.clubForm, counts: { ...s.clubForm.counts, [id]: clean } } }));
+  }
+
   openTeamModal() { this.setState({ teamModalOpen: true, teamSubmitted: false, teamError: '', teamCode: '' }); document.body.style.overflow = 'hidden'; }
   closeTeamModal() { this.setState({ teamModalOpen: false }); document.body.style.overflow = ''; }
   openPlayerModal() { this.setState({ playerModalOpen: true, playerSubmitted: false, playerError: '', playerSendFailed: false }); document.body.style.overflow = 'hidden'; }
@@ -1594,6 +1730,10 @@ class Component extends DCLogic {
     return `Registration isn't open yet — check back soon to register your ${what}.`;
   }
 
+  onClickRegisterClub() {
+    if (this.regState().open) this.openClubModal();
+    else this.flashToast(this.closedToast('club'));
+  }
   onClickRegisterTeam() {
     if (this.regState().open) this.openTeamModal();
     else this.flashToast(this.closedToast('team'));
@@ -1892,6 +2032,52 @@ class Component extends DCLogic {
     });
   }
 
+  /* A club declaration. Deliberately short: it takes no roster, mints no team
+     code, and blocks nothing — it exists so the pools and pitches can be sized
+     weeks before the squads are known. */
+  async submitClub() {
+    const f = this.state.clubForm;
+    if (!effClub(f) || !f.contactName.trim() || !f.contactEmail.trim()) {
+      this.setState({ clubError: 'Please fill in your club, a contact name and a contact email.' });
+      return;
+    }
+    /* The same rule the server applies, said the same way. A declaration that
+       declares nothing is a mis-click, not a submission — and catching it here
+       saves a round trip. */
+    const total = AGE_GROUP_INFO.reduce((n, g) => n + (parseInt(f.counts[g.id], 10) || 0), 0);
+    if (total < 1) {
+      this.setState({ clubError: 'Please say how many teams you are bringing in at least one age group.' });
+      return;
+    }
+    this.setState({ clubSubmitting: true, clubError: '' });
+
+    /* Only groups with a real count are sent. A blank box is not a zero to be
+       recorded, it is a group the club said nothing about. */
+    const counts = {};
+    AGE_GROUP_INFO.forEach((g) => {
+      const n = parseInt(f.counts[g.id], 10);
+      if (Number.isFinite(n) && n > 0) counts[`teams-${g.id}`] = String(n);
+    });
+
+    try {
+      await this.postRegistration('club-registration', {
+        club: effClub(f),
+        'contact-name': f.contactName,
+        'contact-email': f.contactEmail,
+        'contact-phone': f.contactPhone ? `+971${f.contactPhone}` : '',
+        ...counts,
+        notes: f.notes,
+      });
+    } catch (e) {
+      /* Keep clubForm intact so Submit is all it takes to retry, and show the
+         server's own sentence rather than a generic one — same rule as the
+         team and player forms. */
+      this.setState({ clubSubmitting: false, clubError: e.message || NETWORK_MESSAGE });
+      return;
+    }
+    this.setState({ clubSubmitting: false, clubSubmitted: true, clubForm: emptyClubForm() });
+  }
+
   async submitPlayer() {
     const f = this.state.playerForm;
     const err = this._playerFormError(f);
@@ -2184,6 +2370,40 @@ class Component extends DCLogic {
         name: (this.state.fxApi && this.state.fxApi.teamLabel ? this.state.fxApi.teamLabel(c) : c) + ' (' + c + ')',
       })),
       ctaToast: this.state.ctaToast,
+      onClickRegisterClub: () => this.onClickRegisterClub(),
+      clubModalOpen: this.state.clubModalOpen,
+      clubSubmitted: this.state.clubSubmitted,
+      clubShowForm: !this.state.clubSubmitted,
+      clubError: this.state.clubError,
+      clubSubmitting: this.state.clubSubmitting,
+      clubSubmitLabel: this.state.clubSubmitting ? 'Sending…' : 'Tell us we’re coming',
+      closeClubModal: () => this.closeClubModal(),
+      onBackdropClub: () => this.closeClubModal(),
+      clubFormClub: this.state.clubForm.club,
+      onClubClub: (e) => this.setClubField('club', e.target.value),
+      clubClubIsOther: this.state.clubForm.club === '__other__',
+      clubClubOtherVal: this.state.clubForm.clubOther,
+      onClubClubOther: (e) => this.setClubField('clubOther', e.target.value),
+      clubContactName: this.state.clubForm.contactName,
+      onClubContactName: (e) => this.setClubField('contactName', e.target.value),
+      clubContactEmail: this.state.clubForm.contactEmail,
+      onClubContactEmail: (e) => this.setClubField('contactEmail', e.target.value),
+      clubContactPhone: this.state.clubForm.contactPhone,
+      onClubContactPhone: (e) => this.setClubField('contactPhone', e.target.value.replace(/[^0-9]/g, '')),
+      clubNotes: this.state.clubForm.notes,
+      onClubNotes: (e) => this.setClubField('notes', e.target.value),
+      /* One row per age group, in real age order, each with its own count box.
+         Built from AGE_GROUP_INFO so the form cannot list a group the rest of
+         the site does not have. */
+      clubAgeRows: AGE_GROUP_INFO.map((g) => ({
+        id: g.id,
+        name: g.name,
+        format: `${g.format} · squad ${g.squad}`,
+        value: this.state.clubForm.counts[g.id] || '',
+        onChange: (e) => this.setClubCount(g.id, e.target.value),
+      })),
+      clubTotal: String(AGE_GROUP_INFO.reduce((n, g) => n + (parseInt(this.state.clubForm.counts[g.id], 10) || 0), 0)),
+      submitClub: () => this.submitClub(),
       onClickRegisterTeam: () => this.onClickRegisterTeam(),
       onClickRegisterPlayer: () => this.onClickRegisterPlayer(),
 

@@ -31,7 +31,7 @@
 // — is the check that catches that, and it could not be written at all while
 // the two halves lived in different files.
 
-const { squadCap, AGE_GROUP_BY_NAME, ageGroupCheck } = require('./_agegroups');
+const { squadCap, AGE_GROUPS, AGE_GROUP_BY_NAME, ageGroupCheck } = require('./_agegroups');
 const { checkRate } = require('./_ratelimit');
 /* Also dependency-free, so it is required directly rather than injected — one
    less thing the adapter can hand over wrongly. googleapis and the mailer are
@@ -77,12 +77,74 @@ const PLAYER_COLUMNS = [
   'medical-notes', 'consent', 'play-up-consent',
 ];
 
+/* ============================================================
+   CLUB DECLARATIONS — the third sheet, added 1 Aug 2026.
+   ------------------------------------------------------------
+   A club says ONCE which age groups it is sending teams to and how many in
+   each. Planning information only: it mints no team codes and blocks nothing.
+   See claude/specs/spec-club-registration.md for the three decisions that
+   shaped it.
+
+   ONE ROW PER CLUB, not one per club-per-age-group. "How many U12 teams are
+   coming" is then a single column to sum, and rowFrom() — which builds exactly
+   one row per submission — works unchanged.
+
+   ⚠️ THE FIFTEEN COUNT COLUMNS ARE WRITTEN OUT, NOT DERIVED FROM AGE_GROUPS.
+   Deriving them would guarantee they never drift from the age-group table, but
+   it would also mean that REORDERING AGE_GROUPS silently reshuffles the columns
+   of a sheet that already has rows in it — the exact disaster the comment above
+   TEAM_COLUMNS warns about. Written out here, the sheet order is permanent;
+   test-intake.js compares this list against AGE_GROUPS both ways, so adding a
+   sixteenth age group fails loudly and a human decides what to do about the
+   sheet rather than finding out from shifted data.
+
+   They are in REAL AGE ORDER, matching AGE_GROUPS — not alphabetical, which
+   would put u12g after u18b.
+
+   NO `total-teams` COLUMN. It is derivable, and a derived fact stored twice is
+   a fact that eventually disagrees with itself. The dashboard computes it; a
+   human can SUM() it. */
+const CLUB_COLUMNS = [
+  'submittedAt', 'club', 'contact-name', 'contact-email', 'contact-phone',
+  'teams-u6', 'teams-u7', 'teams-u8', 'teams-u9', 'teams-u10', 'teams-u11',
+  'teams-u12', 'teams-u12g', 'teams-u13', 'teams-u14b', 'teams-u14g',
+  'teams-u16b', 'teams-u16g', 'teams-u18b', 'teams-u18g',
+  'notes',
+];
+
+/* The same twenty-one, in the same order, under the names /organizer displays.
+   Parallel to CLUB_COLUMNS so mapClubRow() is a zip, not positional guesses —
+   the same trick TEAM_OUT plays. */
+const CLUB_OUT = [
+  'submittedAt', 'club', 'contactName', 'contactEmail', 'contactPhone',
+  'u6', 'u7', 'u8', 'u9', 'u10', 'u11',
+  'u12', 'u12g', 'u13', 'u14b', 'u14g',
+  'u16b', 'u16g', 'u18b', 'u18g',
+  'notes',
+];
+
+/* The prefix is in one place so the form, the columns and the reader cannot
+   disagree about what a count field is called. */
+const CLUB_COUNT_PREFIX = 'teams-';
+const clubCountKey = (ageGroupId) => CLUB_COUNT_PREFIX + ageGroupId;
+
+/* A ceiling on a public endpoint, not a prediction. The biggest single age
+   group in 2025 was nowhere near ten; the point is that an unbounded integer
+   in a public request body is not a number, it is an invitation. */
+const MAX_TEAMS_PER_GROUP = 10;
+
 /* A1 ranges, derived from the column counts rather than typed, so adding a
    column and forgetting the range cannot happen. A range narrower than the row
-   makes Sheets drop the overflow without an error. */
+   makes Sheets drop the overflow without an error.
+
+   ⚠️ colLetter() ONLY GOES UP TO Z. At 27 columns it produces '[' and Sheets
+   drops the overflow silently. The clubs sheet at 21 is the closest any of
+   these has come; test-intake.js asserts every range stays inside A-Z so the
+   next person to add a column finds out immediately instead of losing data. */
 const colLetter = (n) => String.fromCharCode('A'.charCodeAt(0) + n - 1);
 const TEAM_RANGE = `A:${colLetter(TEAM_COLUMNS.length)}`;      // A:N
 const PLAYER_RANGE = `A:${colLetter(PLAYER_COLUMNS.length)}`;  // A:P
+const CLUB_RANGE = `A:${colLetter(CLUB_COLUMNS.length)}`;      // A:U
 
 /* ============================================================
    THE ALLOW-LIST — what a submission may contain at all.
@@ -157,6 +219,18 @@ const FORMS = {
       'emergency-first-name', 'emergency-last-name', 'emergency-phone',
       'medical-notes', 'consent', 'play-up-consent',
     ],
+  },
+  'club-registration': {
+    columns: CLUB_COLUMNS,
+    range: CLUB_RANGE,
+    sheetEnv: 'GOOGLE_SHEET_ID_CLUBS',
+    /* Derived from CLUB_COLUMNS rather than written out a second time: the
+       allow-list and the columns must agree, and the only two entries that
+       differ are the generated ones. `submittedAt` is generated server-side
+       and spread AFTER the data in clubRow(), so a body supplying its own
+       cannot override it — but leaving it out of the allow-list means it is
+       dropped and REPORTED rather than silently ignored. */
+    fields: CLUB_COLUMNS.filter((c) => c !== 'submittedAt'),
   },
 };
 
@@ -242,6 +316,13 @@ const REQUIRED = {
     ],
     message: 'Please fill in the player name, date of birth, club, parent name, parent email and an emergency contact (name and mobile).',
   },
+  /* Phone is optional, matching the team form's manager fields. The counts are
+     NOT listed here — "at least one of fifteen" is not a required-field rule
+     and gets its own check, with its own sentence, at step 4c. */
+  'club-registration': {
+    fields: ['club', 'contact-name', 'contact-email'],
+    message: 'Please fill in your club, a contact name and a contact email.',
+  },
 };
 
 /* Plain-English names for the "too long" message. A coach reading
@@ -259,6 +340,8 @@ const LABELS = {
   'parent-phone': 'parent phone', 'emergency-first-name': 'emergency contact first name',
   'emergency-last-name': 'emergency contact last name',
   'emergency-phone': 'emergency contact phone', 'medical-notes': 'medical notes',
+  'contact-name': 'contact name', 'contact-email': 'contact email',
+  'contact-phone': 'contact phone',
   consent: 'consent', 'play-up-consent': 'play-up consent',
 };
 const label = (key) => LABELS[key] || key;
@@ -318,6 +401,38 @@ function validateSubmission(form, clean) {
   const pool = text(d['preferred-pool']).trim();
   if (form === 'team-registration' && pool && POOL_OPTIONS.indexOf(pool) < 0) {
     return bad(`"${pool}" is not a pool you can ask for. Please choose A, B or C.`, 'preferred-pool');
+  }
+
+  /* 4c. THE DECLARED TEAM COUNTS — club declarations only.
+
+         Two rules, and they are different in kind, so they say different
+         things. A count that is not a whole number in range is a broken or
+         edited client. A declaration with no teams in it at all is a
+         mis-click by a real person — nothing is wrong with any one field, the
+         submission just does not say anything, and storing it would put a row
+         in the sheet that means nothing.
+
+         Blank and 0 are the SAME THING here (not coming), which is why a
+         blank is skipped rather than refused. Every one of the fifteen is
+         optional on its own; what is required is that at least one is set. */
+  if (form === 'club-registration') {
+    let declared = 0;
+    for (const g of AGE_GROUPS) {
+      const key = clubCountKey(g.id);
+      const raw = text(d[key]).trim();
+      if (raw === '') continue;
+      if (!/^\d+$/.test(raw)) {
+        return bad(`The number of ${g.name} teams must be a whole number.`, key);
+      }
+      const n = parseInt(raw, 10);
+      if (n > MAX_TEAMS_PER_GROUP) {
+        return bad(`${MAX_TEAMS_PER_GROUP} teams is the most you can enter for one age group. If you really are bringing more ${g.name} teams, email admin@adhjrt.com.`, key);
+      }
+      declared += n;
+    }
+    if (declared < 1) {
+      return bad('Please say how many teams you are bringing in at least one age group.', clubCountKey(AGE_GROUPS[0].id));
+    }
   }
 
   /* 5. THE SQUAD LIST arrives as a JSON string. Something that is not a JSON
@@ -431,6 +546,12 @@ function playerRow(data, submittedAt) {
   return rowFrom(PLAYER_COLUMNS, { ...(data || {}), submittedAt });
 }
 
+/* Same shape as the two above, and `submittedAt` is spread AFTER the data for
+   the same reason: a submission cannot stamp its own time. */
+function clubRow(data, submittedAt) {
+  return rowFrom(CLUB_COLUMNS, { ...(data || {}), submittedAt });
+}
+
 /* ============================================================
    READING.
    ------------------------------------------------------------
@@ -452,6 +573,14 @@ function joinName(row, columns, firstKey, lastKey) {
 function mapTeamRow(row) {
   const obj = {};
   TEAM_OUT.forEach((name, i) => { obj[name] = at(row, i); });
+  return obj;
+}
+
+/* A zip, like mapTeamRow — CLUB_OUT is CLUB_COLUMNS under display names, in
+   the same order, so position i means the same thing in both. */
+function mapClubRow(row) {
+  const obj = {};
+  CLUB_OUT.forEach((name, i) => { obj[name] = at(row, i); });
   return obj;
 }
 
@@ -564,7 +693,13 @@ async function handleSubmission(body, deps) {
   let teamCode;
   let row;
 
-  if (form === 'team-registration') {
+  if (form === 'club-registration') {
+    /* No team code: a declaration deliberately mints nothing. Decision 2 in
+       claude/specs/spec-club-registration.md — teams get their codes when they
+       actually register, so a club that declares three and sends two never
+       leaves a phantom team in the draw. */
+    row = clubRow(data, submittedAt);
+  } else if (form === 'team-registration') {
     let existing = [];
     try {
       existing = await d.readTeamsSheet();
@@ -612,10 +747,11 @@ async function handleSubmission(body, deps) {
 
 module.exports = {
   TEAM_COLUMNS, TEAM_OUT, PLAYER_COLUMNS,
-  TEAM_RANGE, PLAYER_RANGE,
+  CLUB_COLUMNS, CLUB_OUT, CLUB_COUNT_PREFIX, clubCountKey, MAX_TEAMS_PER_GROUP,
+  TEAM_RANGE, PLAYER_RANGE, CLUB_RANGE,
   FORMS, HONEYPOT, POOL_OPTIONS, cleanSubmission,
   validateSubmission, MAX_FIELD_CHARS, MAX_NOTES_CHARS, MAX_PLAYERS_CHARS,
   handleSubmission, NOT_SAVED,
-  teamRow, playerRow,
-  mapTeamRow, mapPlayerRow,
+  teamRow, playerRow, clubRow,
+  mapTeamRow, mapPlayerRow, mapClubRow,
 };

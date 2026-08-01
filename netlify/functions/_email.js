@@ -30,6 +30,12 @@
 // else breaks, so the failure is quiet — see the console.error below, and
 // keep a calendar reminder ahead of the expiry date.
 
+/* The age-group table, for the club declaration email — which lists the groups
+   a club declared, in real age order rather than whatever order the keys of
+   the submission happen to be in. Dependency-free, like _password.js, so
+   requiring it here costs a test nothing. */
+const { AGE_GROUPS } = require('./_agegroups');
+
 const TENANT = process.env.MS_TENANT_ID;
 const CLIENT_ID = process.env.MS_CLIENT_ID;
 const CLIENT_SECRET = process.env.MS_CLIENT_SECRET;
@@ -268,9 +274,54 @@ function teamEmail(d) {
   };
 }
 
+/* A club DECLARATION, not an entry. Added 1 Aug 2026.
+
+   ⚠️ THE CLOSING PARAGRAPH IS THE POINT OF THIS EMAIL, not a footnote. A
+   declaration registers nobody — each team still has to be entered separately
+   with its own squad (decision 1 in claude/specs/spec-club-registration.md).
+   The single most likely way this feature fails in practice is a club
+   secretary declaring five teams, receiving a friendly confirmation, and
+   believing the job is done. Do not soften or shorten that sentence. */
+function clubEmail(d) {
+  const declared = AGE_GROUPS
+    .map((g) => ({ g, n: parseInt(String(d[`teams-${g.id}`] || '').trim(), 10) }))
+    .filter((x) => Number.isFinite(x.n) && x.n > 0);
+
+  const total = declared.reduce((sum, x) => sum + x.n, 0);
+
+  const rows = [
+    row('Club', d.club),
+    row('Contact', d['contact-name']),
+    row('Contact email', d['contact-email']),
+    row('Contact number', d['contact-phone']),
+    ...declared.map((x) => row(x.g.name, `${x.n} team${x.n === 1 ? '' : 's'}`)),
+    row('Total teams', String(total)),
+    row('Notes', d.notes),
+  ].join('');
+
+  return {
+    subject: `Club registration received — ${d.club || ''} | ADH JRT 2026`.replace(/\s+\|/, ' |'),
+    html: wrap(
+      'Thanks, we have your club down',
+      `Thank you for telling us ${d.club ? `<strong>${esc(d.club)}</strong>` : 'your club'} is coming to the Abu Dhabi Harlequins Junior Rugby Tournament. This is what you told us:`,
+      rows,
+      '<strong>This is not a team entry.</strong> It tells us how many teams to plan for, which is what lets us size the pools and allocate pitches early — thank you. Each of those teams still needs to be registered separately, with its squad, using the Register a team form at adhjrt.com. Nothing is confirmed for a team until that is done. If your numbers change, just send this form again with the new figures and we will use the latest one.'
+    ),
+  };
+}
+
 /* ---------------- entry point ---------------- */
 
 async function sendConfirmation(formName, data) {
+  if (formName === 'club-registration') {
+    const { subject, html } = clubEmail(data);
+    return sendMail({
+      to: data['contact-email'],
+      subject,
+      html,
+    });
+  }
+
   if (formName === 'player-registration') {
     const { subject, html } = playerEmail(data);
     return sendMail({

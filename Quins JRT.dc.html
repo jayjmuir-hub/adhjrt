@@ -315,14 +315,22 @@
       </p>
       <div style="display:flex;gap:16px;margin-top:38px;align-items:center;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
         <div style="position:relative;display:inline-block">
-          <a href="#register" class="reg-btn" style="--glow:#E11B22"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register a team</span></a>
+          <button onClick="{{ onClickRegisterTeam }}" class="reg-btn" style="--glow:#E11B22"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register a team</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
         <div style="position:relative;display:inline-block">
-          <a href="#register" class="reg-btn" style="--glow:#17A34A"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register player</span></a>
+          <button onClick="{{ onClickRegisterPlayer }}" class="reg-btn" style="--glow:#17A34A"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register player</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
         </div>
       </div>
+      <!-- The same toast the #register section shows. These two buttons now open
+           the form themselves rather than jumping down the page, so a click made
+           while registration is shut has to answer HERE — the other copy of this
+           toast is most of a screen away and would never be seen. Same state, same
+           sentence, same closedToast(); nothing decides anything twice. -->
+      <sc-if value="{{ ctaToast }}" hint-placeholder-val="">
+        <div style="margin-top:20px;display:inline-block;background:rgba(23,163,74,0.14);border:1px solid rgba(23,163,74,0.4);padding:10px 20px;border-radius:100px;font-weight:700;font-size:14px;color:#fff">{{ ctaToast }}</div>
+      </sc-if>
 
       <!-- countdown -->
       <sc-if value="{{ showCountdown }}" hint-placeholder-val="{{ true }}">

@@ -440,6 +440,43 @@ try {
     check('an open page opens the player modal', live2.state.playerModalOpen === true);
   }
 
+  /* --- BOTH pairs of buttons register. Jay, 1 Aug 2026. ---
+     The two buttons at the top of the page were <a href="#register">: they
+     scrolled you down to a SECOND pair that did the real work. They now call
+     the same two handlers, which is the whole point — the gating, the wording
+     and the modal all stay in one place. The lower pair was explicitly asked
+     to stay, so that is asserted too rather than left to chance. */
+  {
+    const src = readRepo(HOME);
+    const split = src.indexOf('<section id="register"');
+    check('the #register section exists (everything below splits the page on it)', split > 0);
+    const hero = src.slice(0, split);
+    const lower = src.slice(split);
+
+    check('the hero Register a team button calls the handler',
+      /onClick="\{\{ onClickRegisterTeam \}\}"/.test(hero));
+    check('the hero Register player button calls the handler',
+      /onClick="\{\{ onClickRegisterPlayer \}\}"/.test(hero));
+    check('no Register button is a jump link to #register any more',
+      !/<a href="#register" class="reg-btn"/.test(src),
+      (src.match(/<a href="#register"[^>]{0,60}/g) || []).join(' | '));
+
+    check('the #register section still has its own Register a team button',
+      /onClick="\{\{ onClickRegisterTeam \}\}"/.test(lower));
+    check('the #register section still has its own Register player button',
+      /onClick="\{\{ onClickRegisterPlayer \}\}"/.test(lower));
+
+    /* A shut click has to answer where it was MADE. ctaToast is one shared
+       value, but a page rendering it only inside #register would say nothing
+       at all to someone clicking at the top of the page — which is worse than
+       the jump link it replaced, because at least that landed you on the
+       explanation. */
+    check('the hero renders the toast, so a shut click is answered where it was made',
+      /\{\{ ctaToast \}\}/.test(hero));
+    check('the #register section still renders the toast too',
+      /\{\{ ctaToast \}\}/.test(lower));
+  }
+
   /* --- the hardcoded date is gone, and so is the second lever --- */
   {
     const src = readRepo(HOME);

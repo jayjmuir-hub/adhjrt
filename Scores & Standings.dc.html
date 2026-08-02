@@ -904,59 +904,6 @@
                 </div>
               </div>
 
-              <!-- ===== CLEARING THE REHEARSAL DATA (organisers only) ===== -->
-              <sc-if value="{{ isOrganiserView }}" hint-placeholder-val="{{ false }}">
-                <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:#151517">
-                  <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Clear the rehearsal data</div>
-                  <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:6px">The tournament was rehearsed on the real site &mdash; invented teams, invented players and invented scores &mdash; which is how most of the bugs were found. This takes the scores back out. Each one is removed individually and confirmed, the same way a real score is saved.</div>
-                  <div style="font-size:12px;line-height:1.6;color:#5a616d;margin-bottom:14px">Two things this does <strong>not</strong> do. It does not touch the registration sheets &mdash; those hold children&rsquo;s names, dates of birth and medical notes, and deleting from them is yours to do by hand. And it does not unpublish &mdash; <strong style="color:#8b93a3">Unpublish all</strong> above already does that, and it is reversible.</div>
-
-                  <sc-if value="{{ cleanIsMatchDay }}" hint-placeholder-val="{{ false }}">
-                    <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#f5c518;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 7 or 8 November.</div>
-                  </sc-if>
-
-                  <sc-if value="{{ cleanNotMatchDay }}" hint-placeholder-val="{{ true }}">
-                    <button onClick="{{ onLoadCleanup }}" disabled="{{ cleanBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:800;font-size:13px;padding:11px 20px;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">{{ cleanLoadLabel }}</button>
-
-                    <sc-if value="{{ cleanProgress }}" hint-placeholder-val="">
-                      <div style="margin-top:12px;font-size:13px;color:#aeb4bf;font-weight:600">{{ cleanProgress }}</div>
-                    </sc-if>
-                    <sc-if value="{{ cleanMsg }}" hint-placeholder-val="">
-                      <div style="margin-top:12px;font-size:13px;color:#3bd070;font-weight:700;line-height:1.5">{{ cleanMsg }}</div>
-                    </sc-if>
-
-                    <sc-if value="{{ cleanLoaded }}" hint-placeholder-val="{{ false }}">
-                      <div style="margin-top:14px">
-                        <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:10px">{{ cleanTotal }} results stored across the tournament</div>
-                        <sc-if value="{{ cleanEmpty }}" hint-placeholder-val="{{ false }}">
-                          <div style="font-size:13px;color:#3bd070;font-weight:600">Nothing stored &mdash; the results are already clear.</div>
-                        </sc-if>
-                        <sc-for list="{{ cleanRows }}" as="cl" hint-placeholder-count="3">
-                          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-top:1px solid rgba(255,255,255,0.07)">
-                            <div style="width:150px;flex:none">
-                              <div style="font-size:13px;font-weight:700;color:#fff">{{ cl.name }}</div>
-                              <div style="font-size:11px;color:#5a616d;font-weight:600;letter-spacing:.4px">{{ cl.agId }}</div>
-                            </div>
-                            <div style="width:96px;flex:none;font-size:13px;font-weight:700;color:#aeb4bf">{{ cl.total }} results</div>
-                            <div style="flex:1;min-width:130px;font-size:12px;font-weight:600;color:{{ cl.orphanColor }}">{{ cl.orphanText }}</div>
-                            <sc-if value="{{ cl.hasOrphans }}" hint-placeholder-val="{{ false }}">
-                              <button onClick="{{ cl.onClearOrphans }}" disabled="{{ cleanBusy }}" style="background:transparent;border:1px solid rgba(245,197,24,0.45);color:#f5c518;font-weight:700;font-size:11.5px;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">Remove orphans</button>
-                            </sc-if>
-                            <button onClick="{{ cl.onClearAll }}" disabled="{{ cleanBusy }}" style="background:transparent;border:1px solid rgba(225,27,34,0.45);color:#ff8a8a;font-weight:700;font-size:11.5px;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">Remove all</button>
-                          </div>
-                        </sc-for>
-
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.1)">
-                          <button onClick="{{ onClearEverything }}" disabled="{{ cleanBusy }}" style="background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.5);color:#ff8a8a;font-weight:800;font-size:12px;padding:10px 16px;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Remove every result</button>
-                          <button onClick="{{ onResetAllDraws }}" disabled="{{ cleanBusy }}" style="background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.5);color:#ff8a8a;font-weight:800;font-size:12px;padding:10px 16px;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Delete every saved draw</button>
-                        </div>
-                        <div style="margin-top:8px;font-size:12px;color:#5a616d;line-height:1.6">Both ask you to type <strong style="color:#8b93a3">ALL</strong> first. Deleting a saved draw sends that age group back to the auto-generated draw &mdash; worth doing once the invented registrations are out of the sheets, because until then every saved draw names teams that no longer exist.</div>
-                      </div>
-                    </sc-if>
-                  </sc-if>
-                </div>
-              </sc-if>
-
               <!-- ===== WHOLE-WEEKEND CLASH CHECK ===== -->
               <div style="margin-top:22px;padding:18px 20px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:#151517">
                 <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Check the whole weekend</div>
@@ -1116,7 +1063,6 @@ class Component extends DCLogic {
     publishState: null, publishBusy: false,
     bulkBusy: false, bulkMsg: '',
     clashBusy: false, clashResult: null,
-    cleanBusy: false, cleanLoaded: false, cleanInv: null, cleanMsg: '', cleanProgress: '',
     simBusy: false, simMsg: '', simProgress: '',
     scoringDraft: null, scoringBusy: false, scoringMsg: '',
     subTab: 'scores', adminSelectedAgeId: null,
@@ -2086,8 +2032,8 @@ class Component extends DCLogic {
      team assignments are a real editing decision an organiser may have made
      by hand and are left alone; only the results a simulate/real score entry
      produces and the knockout bracket a simulation generates come back out.
-     (For clearing REGISTERED-team draws entirely, see "Clear the rehearsal
-     data" above — a bigger, separate operation on purpose.) */
+     (The old "Clear the rehearsal data" panel that once sat above was
+     deleted in Aug 2026 — the rehearsal cleanup it existed for is done.) */
   onResetSimulation() {
     if (this.isTournamentDayNow()) return;
     this.promptModal(
@@ -2159,36 +2105,6 @@ class Component extends DCLogic {
       this.setState({ editorBusy: false, editorMsg: res.error || 'Could not save.' });
     }
   }
-  /* ---------------- CLEARING THE REHEARSAL DATA ----------------
-     The tournament was rehearsed on real infrastructure - 255 invented teams,
-     3,825 invented players, 415 invented results, all 15 groups published - which
-     is what surfaced most of the bugs since fixed. The site is therefore showing
-     fiction, and it has to come back out.
-
-     THREE RULES THIS PANEL FOLLOWS.
-
-     1. Nothing is deleted in one shot. Results are removed one match at a time
-        through the same write-and-verify path a real score uses, so each removal
-        is written, read back and confirmed. A bulk "empty the blob" endpoint would
-        be faster and far easier to get catastrophically wrong.
-     2. It refuses to run on 7-8 November. The dates come from the venue layout, so
-        the guard follows the tournament if the dates move. It is a UI guard on the
-        browser's clock, not a security boundary - but the thing it protects against
-        is a mis-click on match morning, and for that it is exactly right.
-     3. The destructive actions need the age group id, or the word ALL, typed out.
-        A confirm dialog is muscle memory by the fifth press; typing is not.
-
-     Two things this panel deliberately does NOT do. It does not touch the Google
-     Sheets: those hold children's names, dates of birth and medical notes, the
-     deletion is irreversible, and it is Jay's hand on that one. And it does not
-     unpublish: "Unpublish all" already exists above and is reversible, so
-     duplicating it here would only add a second way to get it wrong.
-
-     The rehearsal rows this panel was written alongside were cleared on 26 July
-     2026 and both sheets are empty, so the old "filter any phone column on
-     971500000000" recipe has been dropped from the card - it described one
-     clean-up that is done, and reading it in November would only confuse. */
-
   /* Is today one of the tournament days? Read off the venue layout rather than
      hardcoded, and compared in local terms because that is how a person standing
      at Zayed Sports City experiences the date. */
@@ -2199,173 +2115,6 @@ class Component extends DCLogic {
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     return today === (v.day1 || {}).date || today === (v.day2 || {}).date;
-  }
-
-  /* What is actually stored, per age group: how many results, and how many of them
-     are ORPHANS - ids no current fixture refers to, left behind when a pool was
-     regenerated and its matches re-minted. Counting from the current draw alone
-     would miss those, which is how they accumulated unnoticed. */
-  async loadCleanupInventory() {
-    const { api, session, ageGroups } = this.state;
-    if (!api || !session) return;
-    this.setState({ cleanBusy: true, cleanMsg: '', cleanProgress: 'Reading every stored result…' });
-    try {
-      const stored = await api.allResults();
-      const ids = Object.keys(stored || {});
-      const byAge = new Map();
-      ids.forEach((id) => {
-        const ag = api.ageGroupOfMatch(id);
-        if (!byAge.has(ag)) byAge.set(ag, []);
-        byAge.get(ag).push(id);
-      });
-
-      /* Which ids a current fixture still refers to. Read per age group so an
-         orphan count is real rather than assumed. */
-      const rows = [];
-      for (const [agId, agIds] of byAge.entries()) {
-        this.setState({ cleanProgress: `Checking ${agId.toUpperCase()}…` });
-        let live = new Set();
-        try {
-          const draw = await api.getDraw(agId, session);
-          if (draw) {
-            (draw.slots || []).forEach((sl) => live.add(sl.id));
-            (draw.knockout || []).forEach((sl) => live.add(sl.id));
-          }
-        } catch (err) {
-          // Unknown rather than zero: claiming everything is an orphan because one
-          // read failed would invite exactly the wrong button press.
-          live = null;
-        }
-        const name = ((ageGroups || []).find((a) => a.id === agId) || {}).name || agId.toUpperCase();
-        rows.push({
-          agId, name, ids: agIds, total: agIds.length,
-          orphans: live ? agIds.filter((id) => !live.has(id)) : null,
-        });
-      }
-      rows.sort((x, y) => x.agId.localeCompare(y.agId));
-      this.setState({ cleanBusy: false, cleanLoaded: true, cleanInv: { rows, total: ids.length }, cleanProgress: '' });
-    } catch (err) {
-      this.setState({ cleanBusy: false, cleanProgress: '', cleanMsg: 'Could not read the stored results. Try again.' });
-    }
-  }
-
-  /* Removes a specific list of match ids, one at a time, reporting as it goes so a
-     two-minute job does not look like a hung page. */
-  async runClear(ids, what) {
-    if (!ids.length) { this.setState({ cleanMsg: 'Nothing to remove.' }); return; }
-    this.setState({ cleanBusy: true, cleanMsg: '', cleanProgress: `Removing 0 of ${ids.length}…` });
-    const { api, session } = this.state;
-    let done = 0, failed = 0;
-    for (const id of ids) {
-      try {
-        const r = await api.clearResult(id, session);
-        if (r && r.ok === false) failed++; else done++;
-      } catch (err) { failed++; }
-      if (done % 10 === 0 || done + failed === ids.length) {
-        this.setState({ cleanProgress: `Removing ${done + failed} of ${ids.length}…` });
-      }
-    }
-    const msg = failed
-      ? `Removed ${done} of ${ids.length} ${what}. ${failed} could not be removed — press again to retry those.`
-      : `Removed all ${done} ${what}.`;
-
-    /* Refresh FIRST, then report. The refresh blanks cleanMsg on the way in, so
-       setting the outcome before it silently erased the only thing telling you
-       whether the removal worked — including the "3 could not be removed" that
-       matters most. Caught by test-cleanup.js. */
-    await this.loadCleanupInventory();
-    this.setState({ cleanBusy: false, cleanProgress: '', cleanMsg: msg });
-    if (this.state.selectedAgeId) this.loadPublic();
-  }
-
-  onClearOrphans(row) {
-    const ids = (row && row.orphans) || [];
-    if (!ids.length) return;
-    /* No typed confirmation: an orphan is a result no fixture refers to, so nothing
-       a person can see changes. This one is meant to be easy. */
-    this.confirmModal(
-      `Remove ${ids.length} orphaned result${ids.length === 1 ? '' : 's'} from ${row.name}?\n\n`
-      + 'These are scores left behind when pools were regenerated — no current fixture '
-      + 'refers to them, so nothing anyone can see changes.',
-      () => this.runClear(ids, `orphaned results from ${row.name}`),
-      { okLabel: 'Remove orphans' },
-    );
-  }
-
-  onClearAgeGroup(row) {
-    if (this.isTournamentDayNow()) return;
-    const ids = (row && row.ids) || [];
-    if (!ids.length) return;
-    this.promptModal(
-      `Remove ALL ${ids.length} results for ${row.name}, including any real scores? `
-      + `Type ${row.agId} to confirm.`,
-      '',
-      (typed) => {
-        if (typed.trim().toLowerCase() !== row.agId.toLowerCase()) {
-          this.setState({ cleanMsg: `Not removed — you typed "${typed.trim()}" rather than ${row.agId}.` });
-          return;
-        }
-        this.runClear(ids, `results from ${row.name}`);
-      },
-    );
-  }
-
-  onClearEverything() {
-    if (this.isTournamentDayNow()) return;
-    const inv = this.state.cleanInv;
-    const ids = ((inv && inv.rows) || []).flatMap((r) => r.ids);
-    if (!ids.length) { this.setState({ cleanMsg: 'There are no stored results to remove.' }); return; }
-    this.promptModal(
-      `Remove ALL ${ids.length} results across every age group? `
-      + 'Type ALL to confirm.',
-      '',
-      (typed) => {
-        if (typed.trim().toUpperCase() !== 'ALL') {
-          this.setState({ cleanMsg: `Not removed — you typed "${typed.trim()}" rather than ALL.` });
-          return;
-        }
-        this.runClear(ids, 'results across every age group');
-      },
-    );
-  }
-
-  /* Removes each age group's SAVED DRAW. After the invented registrations are gone
-     from the sheets, every saved draw still names teams that no longer exist, so
-     leaving them is worse than clearing them. Reversible in the sense that matters:
-     it deletes the override, and the group falls back to the auto-generated draw
-     exactly as an untouched age group always did. Published copies are separate and
-     are not touched - use Unpublish all for those. */
-  onResetAllDraws() {
-    if (this.isTournamentDayNow()) return;
-    const { ageGroups } = this.state;
-    this.promptModal(
-      `Delete the saved draw for all ${(ageGroups || []).length} age groups? `
-      + 'Each one falls back to the auto-generated draw. Type ALL to confirm.',
-      '',
-      async (typed) => {
-        if (typed.trim().toUpperCase() !== 'ALL') {
-          this.setState({ cleanMsg: `Nothing deleted — you typed "${typed.trim()}" rather than ALL.` });
-          return;
-        }
-        const { api, session } = this.state;
-        this.setState({ cleanBusy: true, cleanMsg: '', cleanProgress: 'Deleting saved draws…' });
-        let done = 0, failed = [];
-        for (const a of (ageGroups || [])) {
-          this.setState({ cleanProgress: `Deleting ${a.id.toUpperCase()}…` });
-          try {
-            const r = await api.resetDraw(a.id, session);
-            if (r && r.ok === false) failed.push(a.id); else done++;
-          } catch (err) { failed.push(a.id); }
-        }
-        this.setState({
-          cleanBusy: false, cleanProgress: '',
-          cleanMsg: failed.length
-            ? `Deleted ${done} saved draws. Could not delete: ${failed.join(', ').toUpperCase()}.`
-            : `Deleted all ${done} saved draws.`,
-        });
-        if (this.state.editorAgeId) await this.loadEditor(this.state.editorAgeId);
-      },
-    );
   }
 
   /* ---------------- THE WHOLE-WEEKEND CLASH CHECK ----------------
@@ -3585,35 +3334,13 @@ class Component extends DCLogic {
       simMsg: s.simMsg,
       simProgress: s.simProgress,
 
-      // ---- clearing the rehearsal data (organisers only) ----
-      onLoadCleanup: () => this.loadCleanupInventory(),
-      cleanBusy: s.cleanBusy,
-      cleanLoaded: s.cleanLoaded,
-      cleanMsg: s.cleanMsg,
-      cleanProgress: s.cleanProgress,
-      cleanLoadLabel: s.cleanBusy ? 'Working…' : (s.cleanLoaded ? 'Refresh' : 'Show me what is stored'),
-      /* The whole card goes read-only on 7-8 November. The date comes from the
-         venue layout, so the guard follows the tournament if the dates move. */
+      /* The simulate card goes read-only on 7-8 November. The date comes from
+         the venue layout, so the guard follows the tournament if the dates
+         move. (These two used to also gate the rehearsal-cleanup panel, which
+         was deleted in Aug 2026 once the cleanup was verified done — live
+         check: 0 stored results, 0 published groups.) */
       cleanIsMatchDay: this.isTournamentDayNow(),
       cleanNotMatchDay: !this.isTournamentDayNow(),
-      cleanTotal: (s.cleanInv && s.cleanInv.total) || 0,
-      cleanEmpty: !!(s.cleanLoaded && s.cleanInv && s.cleanInv.total === 0),
-      cleanRows: ((s.cleanInv && s.cleanInv.rows) || []).map((row) => ({
-        name: row.name,
-        agId: row.agId.toUpperCase(),
-        total: row.total,
-        /* null orphans means one draw failed to read. Saying "unknown" is the
-           honest answer; printing 0 would invite the wrong button press. */
-        orphanText: row.orphans == null
-          ? 'orphans unknown — could not read this draw'
-          : (row.orphans.length ? row.orphans.length + ' orphaned' : 'none orphaned'),
-        orphanColor: row.orphans == null ? '#ffb26b' : (row.orphans.length ? '#f5c518' : '#5a616d'),
-        hasOrphans: !!(row.orphans && row.orphans.length),
-        onClearOrphans: () => this.onClearOrphans(row),
-        onClearAll: () => this.onClearAgeGroup(row),
-      })),
-      onClearEverything: () => this.onClearEverything(),
-      onResetAllDraws: () => this.onResetAllDraws(),
 
       // ---- whole-weekend clash check ----
       onCheckWeekend: () => this.onCheckWeekend(),

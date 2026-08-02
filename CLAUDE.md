@@ -23,6 +23,7 @@ first, every session.)
 | `/scores` | `Scores & Standings.dc.html` — purely public since Aug 2026; the Manager area moved to `/manager` and `/organizer` |
 | `/organizer` | `Organizer.dc.html` |
 | `/manager` | `Manager.dc.html` — the age-group manager dashboard (score entry, draw editor, registrations) |
+| `/signin` | `Signin.dc.html` — THE sign-in page, both roles (added Aug 2026). Routes by role after sign-in; carries both signup flows and the Google button. |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
 | `/legal` | `legal.html` — Legal & Privacy page (disclaimer, privacy, photography). Plain static file like `app.html`, not a DC component. Linked from the homepage footer. |
 
@@ -48,6 +49,7 @@ sw.js                      service worker — network-first, never caches
 Quins JRT.dc.html          public marketing site  →  /
 Scores & Standings.dc.html public live scores (no manager area since Aug 2026)  →  /scores
 Organizer.dc.html          organiser back office  →  /organizer
+Signin.dc.html             THE sign-in page, both roles  →  /signin (Aug 2026)
 Manager.dc.html            age-group manager dashboard  →  /manager. Rebuilt
                            from the old plain-HTML Manager.html onto the same
                            DC component engine as the pages above, so all four
@@ -104,10 +106,11 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | File | Purpose |
 |---|---|
 | `_auth.js` | shared helpers — Blobs store, bcrypt hashing, HMAC session tokens, `hasAgeGroupAccess` |
+| `login.js` | **THE sign-in endpoint (Aug 2026)** — both roles, account looked up by username alone, session/token minted from the account's own stored role. Same rate bucket as the two per-role endpoints below. |
 | `manager-signup.js` | per-age-group invite code decides the age group; account starts pending |
-| `manager-login.js` | returns a signed session token |
+| `manager-login.js` | pre-Aug-2026 per-role login. **Kept byte-identical but no page calls it** — pinned against drift by test-unified-login.js's parity checks, pending retirement in its own commit (which must update test-accounts.js/test-google-auth.js in the same change). |
 | `organizer-signup.js` | shared invite code; first organiser account auto-approved |
-| `organizer-login.js` | as above |
+| `organizer-login.js` | as manager-login.js — kept, uncalled, pending retirement |
 | `accounts-admin.js` | organiser-only: list / approve / reject / revoke; create a manager **or organiser** login directly (`action:'create'`); reset someone's password (`action:'password'`) or change your own (`action:'changeMine'`) |
 | `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`. Dependency-free on purpose — see Accounts below |
 | `get-results.js` | public read of all match results (merges every age group's blob) |
@@ -368,11 +371,12 @@ JRT palette, Anton + Barlow.
   `S.followFx`) and `S.browseId` (the pill you tapped, feeds Fixtures / Results /
   Tables via `S.fixtures`). A match opened from either derives its own age group
   from the match id via `ageOfMatch()`, the same way the backend does.
-- Sign-in tries `manager-login` then `organizer-login` — different endpoints,
-  different localStorage keys; an organiser session is marked `isOrganizer`
-  rather than carrying a `role` field. Check all three shapes when testing a
-  role (`isOrganizerSession` in scores-data.js — missing one silently hid the
-  Publish button once).
+- Sign-in is ONE call to the unified `login.js` endpoint (Aug 2026), one
+  localStorage key (`adhjrt_session_v2`) for either role. An organiser
+  session still reaches manager-side callers marked `isOrganizer` rather
+  than carrying a `role` field — there are still three historical session
+  shapes, so keep using `isOrganizerSession` in scores-data.js when testing
+  a role (missing one shape silently hid the Publish button once).
 - Managers get score entry on their own age group; organisers on all.
 - Fixture editor and publishing controls are deliberately NOT in the app — the
   More tab's "Full manager tools" row links to `/manager` for that
@@ -408,6 +412,40 @@ would hand an approved organiser account — and children's medical notes — to
 whoever signed up first if the accounts blob were ever lost.
 
 Jay's call whether to delete it. Until he does, the old route still works.
+
+### One sign-in for everything (Aug 2026)
+
+**Sign-in lives at `/signin`, and only there.** `Signin.dc.html` carries
+password sign-in, the Google button and BOTH signup flows (a role picker
+decides which invite-code gate a new account goes through). After sign-in it
+routes by the account's role — organizer → `/organizer`, manager →
+`/manager`; `?next=` is honoured only from the allow-list of exactly those
+two paths and only when the role permits it. `/organizer` and `/manager`
+redirect signed-out visitors to `/signin` and carry no sign-in UI of their
+own; `/scores` is purely public. `/app` keeps its own inline sheet (it is
+the match-day PWA) but calls the same unified endpoint.
+
+**One endpoint** — `netlify/functions/login.js`, the password twin of
+`google-auth.js`: account looked up by username alone (no role filter),
+session/token minted from the account's stored role, same `${ip}:login`
+rate bucket as the old per-role endpoints so the attempt budget stays one
+pool. The old `organizer-login.js`/`manager-login.js` are kept byte-identical
+and uncalled — see the Functions table.
+
+**One session key** — `adhjrt_session_v2`, both data layers. The one-time
+migration (`migrateSession()` in scores-data.js, imported by
+organizer-data.js — one copy) moves the two pre-Aug-2026 keys across on
+first read, organizer key winning for anyone who held both, and cleans the
+old keys up; malformed JSON reads as absent, never a throw. Tokens were
+untouched, so nobody was signed out. `logout()` clears all three keys.
+
+⚠️ **The old fallback hacks are gone and must not return.** organizer-data's
+login used to retry manager-login and hand-write the token into the scores
+page's localStorage key before redirecting; scores-data's login used to
+retry organizer-login into a second key. Both chains existed only because
+each endpoint had a role filter. The unified endpoint has none — one call,
+the account's own role decides where you land. test-signin-page.js,
+test-session-migration.js and test-unified-login.js hold all of this.
 
 ### Passwords
 

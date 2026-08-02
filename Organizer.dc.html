@@ -84,12 +84,12 @@
               <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
             </div>
             <div style="line-height:1">
-              <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · ORGANIZER</div>
-              <div style="font-size:11px;letter-spacing:2px;color:#0E6B33;font-weight:700;margin-top:3px">REGISTRATIONS</div>
+              <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · ORGANISER</div>
+              <div style="font-size:11px;letter-spacing:2px;color:#0E6B33;font-weight:700;margin-top:3px">BACK OFFICE</div>
             </div>
           </a>
           <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">← Main site</a>
-          <a href="/manager" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View Manager Area</a>
+          <a href="/manager" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View manager area</a>
         </div>
         <div style="display:flex;align-items:center;gap:14px;position:relative">
           <div style="text-align:right;line-height:1.3">
@@ -124,7 +124,7 @@
       </div>
 
       <!-- tabs -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content">
+      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%">
         <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
@@ -159,7 +159,7 @@
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Registration window</div>
-                <p style="color:#5A626E;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#454D58">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#454D58">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
+                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#454D58">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#454D58">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
@@ -192,7 +192,7 @@
           <!-- the two dates -->
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">The dates</div>
-            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#454D58">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#454D58">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
               <div>
@@ -211,7 +211,7 @@
           <!-- auto / force open / force closed -->
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Which one is in charge</div>
-            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#454D58">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#454D58">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
               <sc-for list="{{ rModes }}" as="rm" hint-placeholder-count="3">
@@ -229,7 +229,7 @@
               <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">What the public page says</div>
               <sc-if value="{{ rPreviewUnsaved }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#8F6400;text-transform:uppercase">Preview of your unsaved changes</div></sc-if>
             </div>
-            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
 
             <div style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;text-align:center">
               <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:#1A1C1F">
@@ -344,11 +344,11 @@
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
-                <div style="font-family:'Anton';font-size:21px;text-transform:uppercase;margin-bottom:6px">Venue &amp; days</div>
-                <p style="color:#5A626E;font-size:16px;margin:0;line-height:1.65">The pitches running on each day, and which day each age group plays. <b style="color:#454D58">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
+                <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:6px">Venue &amp; days</div>
+                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">The pitches running on each day, and which day each age group plays. <b style="color:#454D58">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:14px;padding:12px 16px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:11px 15px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
                 <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
               </div>
             </div>
@@ -360,7 +360,7 @@
               <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:12px 14px">
                 <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#A62626;text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
                 <sc-for list="{{ vProblems }}" as="pr" hint-placeholder-count="2">
-                  <div style="color:#A62626;font-size:14px;line-height:1.65">&bull; {{ pr }}</div>
+                  <div style="color:#A62626;font-size:13px;line-height:1.6">&bull; {{ pr }}</div>
                 </sc-for>
               </div>
             </sc-if>
@@ -369,7 +369,7 @@
               <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:12px 14px">
                 <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#8F6400;text-transform:uppercase;margin-bottom:7px">Worth a look — you can still save</div>
                 <sc-for list="{{ vWarnings }}" as="wn" hint-placeholder-count="2">
-                  <div style="color:#8F6400;font-size:14px;line-height:1.65">&bull; {{ wn }}</div>
+                  <div style="color:#8F6400;font-size:13px;line-height:1.6">&bull; {{ wn }}</div>
                 </sc-for>
               </div>
             </sc-if>
@@ -400,7 +400,7 @@
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
               <div style="flex:1;min-width:220px">
-                <div style="font-family:'Anton';font-size:19px;text-transform:uppercase">Where each group plays &mdash; {{ vDayViewLabel }}</div>
+                <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Where each group plays &mdash; {{ vDayViewLabel }}</div>
               </div>
               <div style="display:flex;gap:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:4px">
                 <button onClick="{{ onViewSchematic }}" style="{{ vViewSchematicStyle }}">Schematic</button>
@@ -409,14 +409,14 @@
             </div>
 
             <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
-              <p style="color:#5A626E;font-size:15px;margin:0 0 18px;line-height:1.65">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#454D58">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#454D58">time-share</b>, not a clash.</p>
+              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 16px;line-height:1.6">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#454D58">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#454D58">time-share</b>, not a clash.</p>
             </sc-if>
 
             <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#5A626E;font-size:15px;margin:0 0 14px;line-height:1.65">The real Zayed Sports City map. <b style="color:#454D58">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#454D58">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
+              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 14px;line-height:1.6">The real Zayed Sports City map. <b style="color:#454D58">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#454D58">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
                 <button onClick="{{ onToggleMapLock }}" style="{{ vLockStyle }}">{{ vLockLabel }}</button>
-                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#5A626E;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
+                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#5A626E;font-weight:700;font-size:13px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
                 <sc-if value="{{ vUnlocked }}" hint-placeholder-val="{{ false }}">
                   <span style="font-size:14px;color:#8F6400;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
                 </sc-if>
@@ -505,10 +505,10 @@
             <sc-if value="{{ d.isCurrentDay }}">
               <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
                 <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-                  <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;color:{{ d.tint }}">Pitches &mdash; {{ d.label }}</div>
+                  <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:{{ d.tint }}">Pitches &mdash; {{ d.label }}</div>
                   <div style="font-size:14px;color:#5A626E;font-weight:600">{{ d.summary }}</div>
                 </div>
-                <p style="color:#5A626E;font-size:15px;margin:0 0 12px;line-height:1.65">{{ d.hint }}</p>
+                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 12px;line-height:1.6">{{ d.hint }}</p>
 
                 <!-- Every main pitch, whether or not it is used today. A pitch
                      you are not using is a decision, and one you cannot see is
@@ -538,8 +538,8 @@
                and edit its pitches. Only groups on the selected day (or with
                no day set at all, which needs fixing either way) show here. -->
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
-            <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:4px">Age groups &mdash; {{ vDayViewLabel }}</div>
-            <p style="color:#5A626E;font-size:15px;margin:0 0 16px;line-height:1.65">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#454D58">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Age groups &mdash; {{ vDayViewLabel }}</div>
+            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 16px;line-height:1.6">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#454D58">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
 
             <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="15">
               <sc-if value="{{ g.isCurrentDay }}">
@@ -593,13 +593,13 @@
 
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create a login</div>
-            <p style="color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#454D58">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#454D58">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
 
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
               <button onClick="{{ onCmRoleManager }}" style="{{ cmRoleManagerStyle }}">Manager</button>
               <button onClick="{{ onCmRoleOrganizer }}" style="{{ cmRoleOrganizerStyle }}">Organiser</button>
             </div>
-            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <div>
@@ -661,11 +661,11 @@
             <table style="width:100%;min-width:700px">
               <thead>
                 <tr style="background:#FFFFFF">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Username</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
-                  <th style="text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase"></th>
+                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</th>
+                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Username</th>
+                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</th>
+                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
+                  <th style="background:#F3F2EF;text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase"></th>
                 </tr>
               </thead>
               <tbody>
@@ -698,7 +698,7 @@
             <thead>
               <tr style="background:#FFFFFF">
                 <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="position:sticky;top:0;background:#FFFFFF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
@@ -757,7 +757,7 @@
             <thead>
               <tr style="background:#FFFFFF">
                 <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="position:sticky;top:0;background:#FFFFFF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
@@ -1385,8 +1385,8 @@ class Component extends DCLogic {
       vSaveDisabled: s.vBusy || !dirty || problems.length > 0,
       vSaveLabel: s.vBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       vSaveStyle: (s.vBusy || !dirty || problems.length > 0)
-        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
-        : 'background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onVenueSave: () => this.doSaveVenue(),
       onVenueReset: () => this.doResetVenue(),
     };
@@ -2744,7 +2744,11 @@ class Component extends DCLogic {
     const tabOff = tabBase + 'background:transparent;color:#454D58;';
 
     const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
-    const allAges = Array.from(new Set([...s.teams.map((t) => t.ageGroup), ...s.players.map((p) => p.ageGroup)])).sort();
+    /* Real age order (AGE_GROUP_ORDER), not alphabetical — a plain .sort()
+       dumped U6/U7/U8/U9 Tag after U18, the exact wrongness the table sort
+       already fixed. Unknown names go last (design audit, Aug 2026). */
+    const allAges = Array.from(new Set([...s.teams.map((t) => t.ageGroup), ...s.players.map((p) => p.ageGroup)]))
+      .sort((a, b) => (AGE_GROUP_ORDER[a] ?? 999) - (AGE_GROUP_ORDER[b] ?? 999) || String(a).localeCompare(String(b)));
 
     const teamRows = this._filteredTeams().map((r) => {
       const roster = Component.parseRoster(r.players);

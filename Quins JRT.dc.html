@@ -40,11 +40,11 @@
 <meta property="og:title" content="Abu Dhabi Harlequins Junior Rugby Tournament 2026">
 <meta property="og:description" content="Two days of youth rugby, 7-8 November 2026 at Zayed Sports City, Abu Dhabi. U6 to U18, boys and girls.">
 <meta property="og:url" content="https://adhjrt.com/">
-<meta property="og:image" content="https://adhjrt.com/assets/crest.png">
+<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Abu Dhabi Harlequins Junior Rugby Tournament 2026">
 <meta name="twitter:description" content="Two days of youth rugby, 7-8 November 2026 at Zayed Sports City, Abu Dhabi.">
-<meta name="twitter:image" content="https://adhjrt.com/assets/crest.png">
+<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SportsEvent","name":"Abu Dhabi Harlequins Junior Rugby Tournament 2026","url":"https://adhjrt.com/","sport":"Rugby","startDate":"2026-11-07","endDate":"2026-11-08","eventStatus":"https://schema.org/EventScheduled","eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode","location":{"@type":"Place","name":"Zayed Sports City","address":{"@type":"PostalAddress","addressLocality":"Abu Dhabi","addressCountry":"AE"}},"organizer":{"@type":"Organization","name":"Abu Dhabi Harlequins Rugby Club","url":"https://abudhabiquins.com/"},"description":"A two-day festival of youth rugby for age groups U6 to U18, boys and girls, at Zayed Sports City, Abu Dhabi."}</script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -85,7 +85,14 @@
   .crest-anim .breal{opacity:0;animation:batmorph 13s linear .5s infinite;animation-play-state:paused}
   .crest-anim.play .breal{animation-play-state:running}
   @keyframes batmorph{0%{opacity:0}7%{opacity:0}11%{opacity:1}41%{opacity:1}44%{opacity:0}56%{opacity:0}60%{opacity:1}90%{opacity:1}93%{opacity:0}100%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}}
+  @media (prefers-reduced-motion:reduce){
+    .crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}
+    /* The hero shards and hover sweeps stop too — the crest already honoured
+       this preference; the rest of the page now extends the same courtesy
+       (design audit, Aug 2026). Scroll reveals land instantly. */
+    *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+    html{scroll-behavior:auto}
+  }
   /* FORMAT age-group cards */
   .fmt-head{max-width:680px;margin-bottom:46px}
   .fmt-eyebrow{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.22em;font-size:13px;color:#ff5b60;display:flex;align-items:center}
@@ -116,7 +123,7 @@
   .fmt-grp:hover .holo{opacity:.7;animation:holoShift 2.2s ease-in-out infinite}
   @keyframes holoShift{0%{background-position:0% 0%}50%{background-position:100% 100%}100%{background-position:0% 0%}}
   .fmt-grp-age{font-family:'Anton';font-size:19px;color:#fff;line-height:1;position:relative;z-index:1}
-  .fmt-grp-band{font-size:7.5px;font-weight:800;letter-spacing:.06em;color:#9aa0ab;text-transform:uppercase;margin-top:3px;text-align:center;padding:0 4px;position:relative;z-index:1}
+  .fmt-grp-band{font-size:10px;font-weight:800;letter-spacing:.06em;color:#9aa0ab;text-transform:uppercase;margin-top:3px;text-align:center;padding:0 4px;position:relative;z-index:1}
 
   /* Register Team / Register Player buttons: same card look and hover
      glow/tilt/holo sweep as the age-group trading cards above (.fmt-grp),
@@ -195,6 +202,11 @@
        four headline stats still read as a set rather than a long list. */
     .m-stack{grid-template-columns:1fr!important;gap:34px!important;padding-left:20px!important;padding-right:20px!important}
     .m-stack-2{grid-template-columns:1fr 1fr!important;padding-left:20px!important;padding-right:20px!important}
+    /* In the 2x2 stack the desktop dividers go wrong: the row-end cell kept a
+       stray outer border and the two rows had no divider. Interior lines only. */
+    .m-stack-2>div{border-right:none!important}
+    .m-stack-2>div:nth-child(odd){border-right:1px solid rgba(255,255,255,0.25)!important}
+    .m-stack-2>div:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,0.25)!important}
     /* A 520px floor cannot fit a 390px screen - it alone would keep the page
        scrolling sideways after the wrapper was fixed. */
     .m-nofloor{min-width:0!important}
@@ -268,7 +280,7 @@
           </div>
           <div style="display:flex;flex-direction:column;line-height:1">
             <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px">AD HARLEQUINS</span>
-            <span style="font-size:10px;letter-spacing:2px;color:#2fbf5f;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
+            <span style="font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
           </div>
         </a>
         <!-- Deliberately NOT a link. The header is sticky, so a tap target that
@@ -356,7 +368,7 @@
         </div>
       </div>
       <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(23,163,74,0.14);border:1px solid rgba(23,163,74,0.4);padding:8px 16px;border-radius:100px;margin-bottom:28px;animation:fadeUp .6s cubic-bezier(.2,.7,.2,1) both">
-        <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px #22c55e"></span>
+        <span style="width:8px;height:8px;border-radius:50%;background:#3bd070;box-shadow:0 0 10px #3bd070"></span>
         <span style="font-weight:700;font-size:13px;letter-spacing:1.5px;color:#3bd070">SAT 7 &amp; SUN 8 NOVEMBER 2026 · ZAYED SPORTS CITY, ABU DHABI</span>
       </div>
       <h1 style="font-family:'Anton';font-size:clamp(54px,10.5vw,146px);line-height:0.92;letter-spacing:.01em;text-transform:uppercase;max-width:14ch;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .08s both">
@@ -391,7 +403,7 @@
           <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1">{{ days }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">DAYS</div></div>
           <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1">{{ hours }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">HRS</div></div>
           <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1">{{ mins }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">MIN</div></div>
-          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1;color:#22c55e">{{ secs }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">SEC</div></div>
+          <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1;color:#3bd070">{{ secs }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">SEC</div></div>
         </sc-if>
     </div>
   </div>
@@ -454,12 +466,12 @@
       <div style="display:flex;gap:36px;margin-top:36px">
         <div>
           <div style="font-family:'Anton';font-size:clamp(24px,3.3vw,40px);color:#0C0C0E">Tag &amp; contact</div>
-          <div style="color:#7a808c;font-weight:600">mini to youth</div>
+          <div style="color:#7c786f;font-weight:600">mini to youth</div>
         </div>
         <div style="width:1px;background:#d8d4cc"></div>
         <div>
           <div style="font-family:'Anton';font-size:clamp(24px,3.3vw,40px);color:#0C0C0E">UAERF rules</div>
-          <div style="color:#7a808c;font-weight:600">age-grade format</div>
+          <div style="color:#7c786f;font-weight:600">age-grade format</div>
         </div>
       </div>
     </div>
@@ -539,7 +551,7 @@
     <div style="text-align:center;margin-bottom:18px" data-reveal>
       <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:14px">The fixtures</div>
       <h2 style="font-family:'Anton';font-size:clamp(36px,5.9vw,72px);line-height:0.95;text-transform:uppercase;color:#0C0C0E">Pools, semis &amp; finals</h2>
-      <p style="max-width:600px;margin:18px auto 0;color:#5a616d;font-size:17px">Every team plays every team in its pool. Matches are 20-minute slots (two 7-minute halves, 3-minute half-time, 3 minutes to the next kick-off). Pools kick off 8:00am — pitches TBD.</p>
+      <p style="max-width:600px;margin:18px auto 0;color:#5d5a54;font-size:17px">Every team plays every team in its pool. Matches are 20-minute slots (two 7-minute halves, 3-minute half-time, 3 minutes to the next kick-off). Pools kick off 8:00am — pitches TBD.</p>
     </div>
     <div data-reveal style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px 0 30px">
       <sc-for list="{{ fixtureAgeTabs }}" as="fa" hint-placeholder-count="6">
@@ -554,12 +566,12 @@
         <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
         <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.15)">Coming soon</span>
         <div style="font-family:'Anton';font-size:clamp(26px,3.7vw,44px);color:#0C0C0E;margin-top:20px;text-transform:uppercase;line-height:1.02">Fixtures not released yet</div>
-        <p style="margin:16px auto 0;max-width:520px;color:#5a616d;font-size:17px;line-height:1.6">The draw for {{ comingSoonAgeName }} hasn&rsquo;t been published. Pools, kick-off times and pitch allocations will appear here as soon as the organisers release them.</p>
+        <p style="margin:16px auto 0;max-width:520px;color:#5d5a54;font-size:17px;line-height:1.6">The draw for {{ comingSoonAgeName }} hasn&rsquo;t been published. Pools, kick-off times and pitch allocations will appear here as soon as the organisers release them.</p>
       </div>
     </sc-if>
     <sc-if value="{{ showFixtureFilter }}" hint-placeholder-val="{{ false }}">
       <div data-reveal style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:30px">
-        <label style="font-size:13px;font-weight:700;color:#5a616d;letter-spacing:.4px;text-transform:uppercase">Filter by team</label>
+        <label style="font-size:13px;font-weight:700;color:#5d5a54;letter-spacing:.4px;text-transform:uppercase">Filter by team</label>
         <select value="{{ fixtureTeamFilter }}" onChange="{{ onFixtureTeamChange }}" style="font-weight:700;font-size:14px;padding:9px 16px;border-radius:9px;border:1.5px solid #e2ded4;background:#fff;color:#14151A;cursor:pointer">
           <option value="">All teams</option>
           <sc-for list="{{ fixtureTeamSelectOptions }}" as="t" hint-placeholder-count="9">
@@ -573,7 +585,7 @@
         <div>
           <div style="font-family:'Anton';font-size:clamp(18px,2.2vw,26px);text-transform:uppercase;color:#0C0C0E;margin-bottom:10px">{{ pool.name }}</div>
           <div style="border:1px solid #e2ded4;border-radius:14px;overflow:hidden;background:#fff">
-            <div style="display:grid;grid-template-columns:84px 70px minmax(0,260px);gap:8px;padding:11px 16px;background:#EDEBE6;font-size:11px;font-weight:800;letter-spacing:.8px;color:#7a808c">
+            <div style="display:grid;grid-template-columns:84px 70px minmax(0,260px);gap:8px;padding:11px 16px;background:#EDEBE6;font-size:11px;font-weight:800;letter-spacing:.8px;color:#7c786f">
               <div>TIME</div><div>PITCH</div><div>MATCH</div>
             </div>
             <sc-for list="{{ pool.games }}" as="g" hint-placeholder-count="4">
@@ -592,10 +604,10 @@
          phone; this is where the codes are spelled out. -->
     <sc-if value="{{ showFixtureFilter }}" hint-placeholder-val="{{ false }}">
       <div data-reveal style="margin-top:26px;background:#fff;border:1px solid #e2ded4;border-radius:14px;padding:16px 20px">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7a808c;margin-bottom:10px">Team key</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7c786f;margin-bottom:10px">Team key</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px 22px">
           <sc-for list="{{ teamKeyList }}" as="k" hint-placeholder-count="9">
-            <div style="font-size:13.5px;color:#5a616d;display:flex;align-items:center;gap:6px"><sc-if value="{{ k.hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ k.logoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if><strong style="color:#0C0C0E">{{ k.code }}</strong> {{ k.name }}</div>
+            <div style="font-size:13.5px;color:#5d5a54;display:flex;align-items:center;gap:6px"><sc-if value="{{ k.hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ k.logoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if><strong style="color:#0C0C0E">{{ k.code }}</strong> {{ k.name }}</div>
           </sc-for>
         </div>
       </div>
@@ -609,12 +621,12 @@
           <div style="display:flex;flex-wrap:wrap;gap:48px;justify-content:center">
             <sc-for list="{{ bracketList }}" as="br" hint-placeholder-count="2">
               <div class="m-nofloor" style="flex:1;min-width:520px;max-width:600px">
-                <div style="font-weight:800;letter-spacing:1.5px;color:#7a808c;font-size:12px;text-transform:uppercase;margin-bottom:16px;text-align:center">{{ br.title }}</div>
+                <div style="font-weight:800;letter-spacing:1.5px;color:#7c786f;font-size:12px;text-transform:uppercase;margin-bottom:16px;text-align:center">{{ br.title }}</div>
                 <div style="display:flex;align-items:stretch;justify-content:center">
                   <div style="display:flex;flex-direction:column;justify-content:space-between;height:176px;width:220px;flex:none">
                     <sc-for list="{{ br.semis }}" as="sm" hint-placeholder-count="2">
                       <div style="height:76px;display:flex;flex-direction:column;justify-content:center;opacity:{{ sm.opacity }}">
-                        <div style="font-size:11px;color:#7a808c;font-weight:700;margin-bottom:4px">{{ sm.time }} · {{ sm.pitch }}</div>
+                        <div style="font-size:11px;color:#7c786f;font-weight:700;margin-bottom:4px">{{ sm.time }} · {{ sm.pitch }}</div>
                         <div style="width:220px;height:58px;border:1.5px solid #e2ded4;border-radius:10px;background:#fff;overflow:hidden;display:flex;flex-direction:column">
                           <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ sm.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ sm.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ sm.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.homeScore }}</span></div>
                           <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:700;font-size:13px;color:#14151A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ sm.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ sm.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ sm.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ sm.awayScore }}</span></div>
@@ -639,8 +651,8 @@
                 <div style="margin-top:22px;padding-top:16px;border-top:1px dashed #e2ded4;display:flex;flex-direction:column;align-items:center;opacity:{{ br.consolation.opacity }}">
                   <div style="font-size:10px;color:#a8adb6;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">{{ br.consolationLabel }} (consolation) · {{ br.consolation.time }}</div>
                   <div style="width:220px;height:58px;border:1.5px solid #EDEBE6;border-radius:10px;background:#FAF9F6;overflow:hidden;display:flex;flex-direction:column">
-                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ br.consolation.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.homeScore }}</span></div>
-                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ br.consolation.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.awayScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5d5a54;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #EDEBE6"><sc-if value="{{ br.consolation.hasHomeLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.homeLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.home }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.homeScore }}</span></div>
+                    <div style="flex:1;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:13px;color:#5d5a54;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ br.consolation.hasAwayLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ br.consolation.awayLogoSrc }}" alt="" style="flex:none;width:16px;height:16px;object-fit:contain;background:#fff;border-radius:4px"></sc-if>{{ br.consolation.away }}<span style="margin-left:auto;flex:none;font-weight:800;padding-left:8px;color:#E11B22">{{ br.consolation.awayScore }}</span></div>
                   </div>
                 </div>
               </div>
@@ -655,7 +667,7 @@
                 <div style="display:flex;flex-direction:column;justify-content:space-between;height:140px;width:190px;flex:none">
                   <sc-for list="{{ br.sources }}" as="src" hint-placeholder-count="2">
                     <div style="width:190px;height:58px;border:1.5px dashed #d8d3c8;border-radius:10px;background:#FAF9F6;display:flex;flex-direction:column;justify-content:center;padding:0 12px">
-                      <div style="font-weight:700;font-size:13px;color:#5a616d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ src.name }}</div>
+                      <div style="font-weight:700;font-size:13px;color:#5d5a54;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ src.name }}</div>
                       <div style="font-size:11px;color:#a8adb6;font-weight:700;margin-top:2px">{{ src.sub }}</div>
                     </div>
                   </sc-for>
@@ -746,15 +758,15 @@
         <div style="margin-top:30px;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:14px;height:14px;background:#E11B22;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);margin-top:5px;flex:none"></div>
-            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Enter via Gate 16</div><div style="color:#6a707c">Zayed Sports City, Abu Dhabi &mdash; parking across the complex</div></div>
+            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Enter via Gate 16</div><div style="color:#6f6b63">Zayed Sports City, Abu Dhabi &mdash; parking across the complex</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:14px;height:14px;background:#17A34A;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);margin-top:5px;flex:none"></div>
-            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Pitches A, B, C &amp; D</div><div style="color:#6a707c">Follow the Quins signage from the Tennis Centre</div></div>
+            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Pitches A, B, C &amp; D</div><div style="color:#6f6b63">Follow the Quins signage from the Tennis Centre</div></div>
           </div>
           <div style="display:flex;gap:16px;align-items:flex-start">
             <div style="width:14px;height:14px;background:#0C0C0E;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);margin-top:5px;flex:none"></div>
-            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Food, shade &amp; the Quins Kit Shop</div><div style="color:#6a707c">Refreshments and merch on-site across the weekend</div></div>
+            <div><div style="font-weight:800;color:#0C0C0E;font-size:17px">Food, shade &amp; the Quins Kit Shop</div><div style="color:#6f6b63">Refreshments and merch on-site across the weekend</div></div>
           </div>
         </div>
         <a href="https://www.google.com/maps/search/?api=1&amp;query=Zayed+Sports+City+Abu+Dhabi" target="_blank" rel="noopener" style="display:inline-block;margin-top:34px;background:#0C0C0E;color:#fff;font-family:'Barlow Semi Condensed';font-weight:700;font-size:16px;padding:13px 26px;border-radius:9px;text-transform:uppercase;transition:transform .18s ease,filter .18s ease" style-hover="transform:translateY(-2px);filter:brightness(1.35)">Open in maps</a>
@@ -2103,7 +2115,7 @@ class Component extends DCLogic {
       name: a.name,
       onSelect: () => this.setState({ fxSelectedId: a.id, fxSchedule: null, fxTeamFilter: '' }, () => this.loadSchedule(a.id)),
       style: 'font-weight:700;font-size:13px;padding:8px 16px;border-radius:100px;cursor:pointer;border:1.5px solid ' +
-        (a.id === this.state.fxSelectedId ? '#E11B22;background:#E11B22;color:#fff' : '#e2ded4;background:#fff;color:#5a616d'),
+        (a.id === this.state.fxSelectedId ? '#E11B22;background:#E11B22;color:#fff' : '#e2ded4;background:#fff;color:#5d5a54'),
     }));
     const fxSchedule = this.state.fxSchedule;
     const isU16BFixtures = ['u16b', 'u16g'].includes(this.state.fxSelectedId);

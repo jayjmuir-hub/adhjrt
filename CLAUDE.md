@@ -202,11 +202,18 @@ London Harlequins magenta/blue. Fonts: Anton (display), Barlow (body).
 
 **Two crest files exist — use the right one.** `assets/crest.png` is the current
 transparent-background logo: the homepage nav/about/organiser crests and the
-homepage `og:image`/`twitter:image`. `assets/crest.jpeg` is the older
+favicons. `assets/crest.jpeg` is the older
 white-background version. As of 25 Jul 2026 nothing references it: the homepage,
 `/scores` and `/app` all use `crest.png`. It is kept only as the original.
 Check what a page actually uses before changing a reference — a broken crest reference once killed every social
 share preview.
+
+**Social share images are `assets/share-card.png`** (added Aug 2026, design
+audit) — a rendered 1200×630 dark-brand card (crest + wordmark + dates), used
+by the `og:image`/`twitter:image` tags on the homepage, `/scores` and `/legal`.
+The bare square crest used to sit in those tags and rendered as a tiny logo on
+an arbitrary background in every WhatsApp/Twitter preview. If the tournament
+dates ever change, this image carries them and must be re-rendered.
 
 ---
 

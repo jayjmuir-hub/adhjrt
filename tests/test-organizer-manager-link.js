@@ -21,11 +21,13 @@ section('Organizer dashboard header links to the Manager area');
 {
   check('the dashboard header contains a link whose href is /manager',
     /href="\/manager"/.test(header));
-  check('the link is labelled "View Manager Area"',
-    />View Manager Area</.test(header));
+  /* Aug 2026 (design audit): label moved to sentence case with the rest of
+     the site's copy. */
+  check('the link is labelled "View manager area"',
+    />View manager area</.test(header));
   check('it sits after the existing "← Main site" link, not before it',
     header.indexOf('← Main site') > -1
-    && header.indexOf('View Manager Area') > header.indexOf('← Main site'));
+    && header.indexOf('View manager area') > header.indexOf('← Main site'));
   check('it uses the same muted header-link colour as "← Main site"',
     /href="\/manager"[^>]*color:#454D58/.test(header));
   check('it uses the same left-rule separator as "← Main site"',

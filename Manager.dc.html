@@ -431,10 +431,10 @@
               <button onClick="{{ onClearKnockout }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer">Clear knockout</button>
             </div>
             <sc-if value="{{ showPoolScoresHint }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#5A626E;font-size:12px;margin-top:8px">Enter every pool score first — then you can generate the knockout from the final standings.</p>
+              <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">Enter every pool score first — then you can generate the knockout from the final standings.</p>
             </sc-if>
             <sc-if value="{{ showPlaySemisHint }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#5A626E;font-size:12px;margin-top:6px">Play the knockout matches first — then this fills the finals from the winners.</p>
+              <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:6px">Play the knockout matches first — then this fills the finals from the winners.</p>
             </sc-if>
           </div>
 
@@ -472,8 +472,8 @@
 
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-top:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:6px">Check the whole weekend</div>
-            <p style="color:#5A626E;font-size:12.5px;margin-bottom:4px">Every age group is edited on its own, so nothing normally notices when two of them are handed the same pitch at the same time. This reads all 15 and lists every overlap.</p>
-            <p style="color:#5A626E;font-size:12px;margin-bottom:10px">{{ clashScopeNote }}</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12.5px;margin-bottom:4px">Every age group is edited on its own, so nothing normally notices when two of them are handed the same pitch at the same time. This reads all 15 and lists every overlap.</p>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-bottom:10px">{{ clashScopeNote }}</p>
             <button onClick="{{ onCheckWeekend }}" disabled="{{ clashBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:800;font-size:13px;padding:12px 18px;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ clashButtonLabel }}</button>
 
             <sc-if value="{{ clashError }}" hint-placeholder-val="">
@@ -615,7 +615,7 @@
             <button onClick="{{ onWoHome }}" style="{{ woHomeStyle }}">{{ sheetHomeName }} awarded</button>
             <button onClick="{{ onWoAway }}" style="{{ woAwayStyle }}">{{ sheetAwayName }} awarded</button>
           </div>
-          <p style="color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>
+          <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>
         </div>
 
         <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
@@ -631,7 +631,7 @@
         <button onClick="{{ onSheetSave }}" disabled="{{ sheetBusy }}" style="width:100%;margin-top:18px;background:#17A34A;color:#fff;font-weight:800;font-size:15px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ sheetSaveLabel }}</button>
         <sc-if value="{{ sheetHasResult }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ onSheetClear }}" disabled="{{ sheetBusy }}" style="width:100%;margin-top:10px;background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:800;font-size:14px;padding:12px;border-radius:10px;cursor:pointer;text-transform:uppercase">Clear result</button>
-          <p style="color:#5A626E;font-size:12px;margin-top:8px;line-height:1.5">Clearing puts the match back to unplayed. It is not the same as saving 0–0, which is a draw worth two league points each.</p>
+          <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px;line-height:1.5">Clearing puts the match back to unplayed. It is not the same as saving 0–0, which is a draw worth two league points each.</p>
         </sc-if>
       </div>
     </div>

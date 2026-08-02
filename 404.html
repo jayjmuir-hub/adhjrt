@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Branded 404 for adhjrt.com. Netlify serves /404.html automatically for any
+  URL that matches no rewrite in netlify.toml — no config needed. A mistyped
+  URL used to land on Netlify's default grey page (design audit, Aug 2026).
+-->
+<title>Page not found | ADH JRT</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0C0C0E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased;
+       min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:520px;text-align:center}
+  .code{font-family:'Anton',sans-serif;font-size:clamp(72px,18vw,120px);line-height:1;
+        background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1{font-family:'Anton',sans-serif;font-size:clamp(24px,5vw,34px);text-transform:uppercase;margin-top:14px}
+  p{color:#aeb4bf;font-size:16px;line-height:1.6;margin-top:12px}
+  .links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  a.btn{display:inline-block;background:#E11B22;color:#fff;font-weight:700;font-size:14px;letter-spacing:.5px;
+        text-transform:uppercase;text-decoration:none;padding:13px 24px;border-radius:10px;
+        transition:filter .15s ease,transform .08s ease}
+  a.ghost{background:transparent;border:1px solid rgba(255,255,255,0.25)}
+  a.btn:hover{filter:brightness(1.15)}
+  a.btn:active{transform:scale(.98)}
+  a.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="code">404</div>
+    <h1>That pitch doesn't exist</h1>
+    <p>The page you're after isn't here — the link may be old or the address mistyped.</p>
+    <div class="links">
+      <a class="btn" href="/">Back to the site</a>
+      <a class="btn ghost" href="/scores">Live scores</a>
+    </div>
+  </main>
+</body>
+</html>

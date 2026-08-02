@@ -45,6 +45,20 @@ const NEEDED = [
   'Manager.dc.html',
   /* test-signin-page.js reads the unified sign-in page. */
   'Signin.dc.html',
+  /* test-design-polish.js (Aug 2026) reads every page including these two,
+     plus the share-card asset — the PNG rides through the text-normalising
+     copy as garbage bytes, which is fine because only its EXISTENCE is ever
+     asserted, never its content. */
+  'legal.html',
+  '404.html',
+  path.join('assets', 'share-card.png'),
+  path.join('assets', 'apple-touch-icon.png'),
+  /* test-sponsors.js gates its asset-on-disk checks on assets/ EXISTING —
+     which it now does in the temp copy (the two entries above created it), so
+     the HSBC lockups must ride along too or the baseline fails. Existence
+     only, same caveat as above. */
+  path.join('assets', 'sponsor-hsbc-white.webp'),
+  path.join('assets', 'sponsor-hsbc.webp'),
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -94,6 +108,7 @@ const NEEDED = [
 function seed() {
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(path.join(TMP, 'netlify', 'functions'), { recursive: true });
+  fs.mkdirSync(path.join(TMP, 'assets'), { recursive: true });
   NEEDED.forEach((rel) => {
     const from = path.join(SRC, rel);
     if (!fs.existsSync(from)) return;
@@ -2792,6 +2807,173 @@ const FAULTS = [
     apply: () => patch(HOME, 'letter-spacing:.3px;white-space:nowrap;transition:background .18s ease', 'letter-spacing:.3px;transition:background .18s ease'),
     expect: ['not break before its arrow'],
   },
+
+  /* ---- the design-audit fixes (test-design-polish.js, Aug 2026) ---------- */
+  {
+    /* The exact bug that shipped: six of seven pages pointed at a folder that
+       never existed, so add-to-home-screen fell back to a page screenshot. */
+    name: 'a page\'s apple-touch-icon points back at the /assets/icons/ folder that does not exist',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html',
+      '<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">',
+      '<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">'),
+    expect: ['Manager.dc.html: apple-touch-icon is /assets/apple-touch-icon.png'],
+  },
+  {
+    name: 'a light-page date input goes back to color-scheme:dark (invisible picker icon)',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Organizer.dc.html',
+      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light"',
+      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark"'),
+    expect: ['Organizer.dc.html: no date/time input still carries color-scheme:dark'],
+  },
+  {
+    name: 'the Organizer confirm button goes back to near-black ink on brand red',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Organizer.dc.html',
+      'onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;',
+      'onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#1A1C1F;'),
+    expect: ['white-on-red like every other red button'],
+  },
+  {
+    name: 'the /scores pool table goes back to overflow:hidden, amputating the points columns on phones',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      'overflow-x:auto;overflow-y:hidden;border:1px solid rgba(255,255,255,0.1);border-radius:14px',
+      'overflow:hidden;border:1px solid rgba(255,255,255,0.1);border-radius:14px'),
+    expect: ['scrolls sideways instead of amputating'],
+  },
+  {
+    name: 'the awards grid goes back to four rigid columns',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      'grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px',
+      'grid-template-columns:repeat(4,1fr);gap:18px'),
+    expect: ['awards grid wraps on narrow screens'],
+  },
+  {
+    name: 'tapping a pill stops clearing the stale table (previous group renders under the new pill)',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      'onSelect: () => this.setState({ selectedAgeId: a.id, standings: null }, () => {',
+      'onSelect: () => this.setState({ selectedAgeId: a.id }, () => {'),
+    expect: ['clears the previous group\'s table in the same setState'],
+  },
+  {
+    name: 'the app sheet loses its dvh cap (iOS toolbar hides the Close button again)',
+    suite: 'test-design-polish.js',
+    apply: () => patch('app.html', 'max-height:92vh;max-height:92dvh;', 'max-height:92vh;'),
+    expect: ['dvh cap so iOS Safari cannot hide'],
+  },
+  {
+    name: 'a native confirm() dialog sneaks back into the app',
+    suite: 'test-design-polish.js',
+    apply: () => patch('app.html',
+      "askInSheet('Clear this result? The match goes back to unplayed and the pool table is recalculated.', 'Clear result', 'btn-p', doClear)",
+      "(confirm('Clear this result?') && doClear())"),
+    expect: ['no native confirm() dialogs remain'],
+  },
+  {
+    /* The pre-audit behaviour: a rejected fetch left the tab on "Loading…"
+       forever — the check must notice the flag being dropped, because on
+       screen the difference only shows when the stadium wifi drops. */
+    name: 'the app stops flagging a failed fetch, freezing on "Loading…" again',
+    suite: 'test-design-polish.js',
+    apply: () => patch('app.html',
+      '  } catch (e) {\n    if (S.browseId !== agId) return;\n    S.loadError = true;\n  }',
+      '  } catch (e) {\n    if (S.browseId !== agId) return;\n  }'),
+    expect: ['sets loadError instead of leaving "Loading…" forever'],
+  },
+  {
+    name: '/signin stops announcing the password field to password managers',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html', 'name="password" autocomplete="current-password" ', ''),
+    expect: ['password field is announced'],
+  },
+  {
+    name: 'the double Google error comes back (same sentence twice on the login view)',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html',
+      "this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.' });",
+      "this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.', loginError: res.error || 'Could not sign in with Google.' });"),
+    expect: ['ONE error, not the same sentence twice'],
+  },
+  {
+    name: 'a page loses its :focus-visible ring',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html',
+      '  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}\n',
+      ''),
+    expect: ['Signin.dc.html: keyboard focus is visible'],
+  },
+  {
+    name: 'a page\'s disabled buttons go back to looking exactly like live ones',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '  button:disabled{opacity:.45;cursor:not-allowed}\n', ''),
+    expect: ['Manager.dc.html: disabled buttons look disabled'],
+  },
+  {
+    name: '/scores loses tabular figures and the score columns go ragged again',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Scores & Standings.dc.html', ';font-variant-numeric:tabular-nums}', '}'),
+    expect: ['lines its score columns up'],
+  },
+  {
+    name: '"Open in maps" goes back to the bare Google Maps homepage',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME,
+      'href="https://www.google.com/maps/search/?api=1&amp;query=Zayed+Sports+City+Abu+Dhabi" target="_blank" rel="noopener"',
+      'href="https://maps.google.com"'),
+    expect: ['goes to Zayed Sports City'],
+  },
+  {
+    name: 'anchor jumps hide section headings under the sticky header again',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, '  section[id]{scroll-margin-top:80px}\n', ''),
+    expect: ['anchor jumps clear the sticky header'],
+  },
+  {
+    name: 'a fourth ad-hoc green sneaks back in',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, 'color:#3bd070">SAT 7', 'color:#22c55e">SAT 7'),
+    expect: ['one light green tint'],
+  },
+  {
+    name: 'the age-card band labels shrink back to 7.5px',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, '.fmt-grp-band{font-size:10px', '.fmt-grp-band{font-size:7.5px'),
+    expect: ['band labels are readable'],
+  },
+  {
+    name: 'the homepage og:image goes back to the bare square crest',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME,
+      '<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">',
+      '<meta property="og:image" content="https://adhjrt.com/assets/crest.png">'),
+    expect: ['og:image is the rendered share card'],
+  },
+  {
+    name: 'the 404 page goes light, off-brand',
+    suite: 'test-design-polish.js',
+    apply: () => patch('404.html', 'background:#0C0C0E', 'background:#ffffff'),
+    expect: ['404 page is branded dark'],
+  },
+  {
+    name: 'the age-group filter goes back to alphabetical order (U6-U9 dumped after U18)',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Organizer.dc.html',
+      ".sort((a, b) => (AGE_GROUP_ORDER[a] ?? 999) - (AGE_GROUP_ORDER[b] ?? 999) || String(a).localeCompare(String(b)));",
+      '.sort();'),
+    expect: ['real age order, not alphabetical'],
+  },
+  {
+    name: 'the Organizer tab bar loses flex-wrap, dragging narrow windows into horizontal scroll',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Organizer.dc.html',
+      'border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%',
+      'border-radius:12px;padding:5px;width:fit-content'),
+    expect: ['tab bar wraps'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -2807,7 +2989,7 @@ seed();
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
  'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
  'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js',
- 'test-signin-page.js', 'test-light-mode.js'].forEach((f) => {
+ 'test-signin-page.js', 'test-light-mode.js', 'test-design-polish.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

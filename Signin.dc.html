@@ -351,7 +351,9 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state;
     const roleBase = 'flex:1;font-weight:700;font-size:13px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1px solid ';
-    const roleOn = roleBase + '#E11B22;background:#E11B22;color:#fff';
+    /* Green = selected, matching the role picker on /organizer's "Create a
+       login" — one accent for the same control in both places (design audit). */
+    const roleOn = roleBase + '#17A34A;background:#17A34A;color:#fff';
     const roleOff = roleBase + 'rgba(0,0,0,0.18);background:transparent;color:#343A42';
     return {
       isLoginMode: s.authMode === 'login',

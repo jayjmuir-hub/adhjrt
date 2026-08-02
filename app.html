@@ -73,6 +73,23 @@ header.top{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
 .sitelink svg{width:14px;height:14px;flex:none}
 .sitelink:active{background:rgba(255,255,255,.1)}
 @media(max-width:400px){ .sitelink span{display:none} .sitelink{padding:7px} }
+/* HSBC, principal partner, in the app header. Deliberately NOT a link: this bar
+   is fixed and on screen on every tab, so a tap target that leaves the app
+   would follow someone around all weekend - and on a phone it sits a thumb's
+   width from the crest that goes Home. The reverse (white-wordmark) asset,
+   straight on the dark bar, same as the website header.
+   MEASURED, NOT GUESSED. Rendered in headless Chromium with the real Anton and
+   Barlow faces: this bar holds ONE line at every width down to 300px without
+   the mark, and down to about 342px with it. Below that the mark tips it onto
+   a second line, which on a fixed header costs screen on the device with the
+   least of it. 359 is that limit with room to spare, and it keeps the mark on
+   every mainstream phone (360, 375, 390, 412, 430 all fit comfortably).
+   The More tab carries a full partner block, so a 320px handset loses nothing
+   but the header mark. Re-measure if anything else joins this bar. */
+.hdr-partner{display:flex;align-items:center;gap:10px;flex:none}
+.hdr-partner .rule{width:1px;height:24px;background:rgba(255,255,255,.18);flex:none}
+.hdr-partner img{height:15px;width:auto;display:block}
+@media(max-width:359px){ .hdr-partner{display:none} }
 
 /* desktop nav */
 .nav-desktop{display:none;gap:4px;padding:0 12px 10px}
@@ -357,6 +374,13 @@ tr.me td{background:#fffdf4;font-weight:800}
           <span class="top-s">MATCH DAY</span>
         </span>
       </button>
+      <!-- Principal partner. Sits beside the crest and clearly subordinate to
+           it; .who below still carries margin-left:auto so the badge and Site
+           link stay hard right. -->
+      <span class="hdr-partner">
+        <span class="rule"></span>
+        <img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">
+      </span>
       <div class="who">
         <span class="badge badge-pub" id="roleBadge">Viewing</span>
         <a class="sitelink" href="/" aria-label="Tournament website" title="Tournament website">
@@ -936,6 +960,13 @@ function viewMore(){
     <div class="sec-t">More</div><div class="card">
       <a class="row" href="/"><div><b>Tournament website</b><small>About, registration, sponsors</small></div>${ICON.chev}</a>
       <a class="row" href="/scores"><div><b>Full scores page</b><small>Brackets and the complete standings view</small></div>${ICON.chev}</a>
+    </div>
+    <div class="sec-t">Principal partner</div>
+    <div class="card" style="padding:26px 18px;display:flex;flex-direction:column;align-items:center;gap:14px">
+      <img src="/assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:40px;width:auto;max-width:100%;display:block">
+      <p class="muted" style="margin:0;text-align:center;font-size:12.5px;line-height:1.6;max-width:320px">
+        HSBC are the principal partner of the 2026 tournament, and a large part of the
+        reason thousands of young players get two full days of rugby.</p>
     </div>
     <p class="muted" style="padding:18px 4px;font-size:12.5px;line-height:1.6">
       Abu Dhabi Harlequins Rugby Football Club &middot; founded 1970<br>Affiliated with Harlequin F.C. London</p>`;

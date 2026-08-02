@@ -31,6 +31,8 @@ const NEEDED = [
   /* test-back-office-links.js asserts the /organizer rewrite still exists, so
      the fault that removes it needs this file in the temp copy. */
   'netlify.toml',
+  /* test-sponsors.js checks the HSBC placements on the match-day app too. */
+  'app.html',
   'scores-data.js',
   'organizer-data.js',
   'Quins JRT.dc.html',
@@ -2214,6 +2216,70 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, 'junior rugby? <a href="mailto:admin@adhjrt.com"', 'junior rugby? <a href="#"'),
     expect: ['get-in-touch invitation is kept'],
+  },
+
+  /* ---- HSBC on /app and /scores (test-sponsors.js) ---------------------- */
+
+  {
+    name: 'the app header mark is switched to the black-wordmark logo',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '<img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">',
+      '<img src="/assets/sponsor-hsbc.webp" alt="HSBC">'),
+    expect: ['app HSBC image', 'uses the white lockup'],
+  },
+  {
+    name: 'the app More-tab partner block is deleted',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '    <div class="sec-t">Principal partner</div>\n', ''),
+    expect: ['Principal partner heading', 'HSBC logo follows it'],
+  },
+  {
+    name: 'the app header mark becomes a link off the app',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '        <img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">',
+      '        <a href="https://www.hsbc.ae"><img src="/assets/sponsor-hsbc-white.webp" alt="HSBC"></a>'),
+    expect: ['app header mark is not a link'],
+  },
+  {
+    name: 'the app header hide rule is deleted, wrapping a fixed header on a small phone',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '@media(max-width:359px){ .hdr-partner{display:none} }', ''),
+    expect: ['own hide rule', 'hides below 360px'],
+  },
+  {
+    /* THE ONE THAT MATTERS. Remove the gate and the homepage shows the logo
+       twice — once under the hero, once inside the embedded scores widget. */
+    name: 'the scores band loses its embedded gate, doubling the logo on the homepage',
+    suite: 'test-sponsors.js',
+    apply: () => patch('Scores & Standings.dc.html', '      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">\n', '      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">\n'),
+    expect: ['wrapped in a showPartner gate'],
+  },
+  {
+    name: 'showPartner stops reading the embedded prop, so the gate can never close',
+    suite: 'test-sponsors.js',
+    apply: () => patch('Scores & Standings.dc.html', '      showPartner: !this.props.embedded,', '      showPartner: true,'),
+    expect: ['derived from the embedded prop'],
+  },
+  {
+    name: 'the homepage stops declaring its scores widget embedded',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<dc-import name="Scores & Standings" embedded="1"', '<dc-import name="Scores & Standings"'),
+    expect: ['dc-import declares itself embedded'],
+  },
+  {
+    /* dc props are strings. embedded="" is falsy, so the gate opens and the
+       logo doubles — while the attribute is still visibly there in the markup,
+       which is what makes this one worth catching separately. */
+    name: 'the embedded attribute is emptied, which reads as present but is not',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<dc-import name="Scores & Standings" embedded="1"', '<dc-import name="Scores & Standings" embedded=""'),
+    expect: ['embedded value is non-empty'],
+  },
+  {
+    name: 'the app copy drifts back to "hundreds of" players',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', 'reason thousands of young players get two full days', 'reason hundreds of young players get two full days'),
+    expect: ['app does not claim "hundreds of"'],
   },
 
   /* ---- back-office links (test-back-office-links.js) -------------------- */

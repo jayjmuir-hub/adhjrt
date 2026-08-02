@@ -280,6 +280,85 @@ check('the invitation still says more are to come', /More partners will be annou
    6. The page does not undersell itself
    ========================================================================= */
 
+/* =========================================================================
+   5b. The other two surfaces — /app and /scores
+   ========================================================================= */
+
+section('The match-day app carries the partner too');
+
+/* The homepage is not where people spend the weekend. /app is the phone screen
+   at the side of a pitch, open for two days. HSBC appearing only on the
+   marketing page would have been the placement nobody looked at. */
+const APP = readRepo('app.html').replace(/\r\n/g, '\n');
+
+const appImgs = APP.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
+eq('two HSBC images in the app — header and More tab', appImgs.length, 2);
+appImgs.forEach((tag, i) => {
+  check(`app HSBC image ${i + 1} uses the white lockup`, tag.includes('/' + WHITE), tag);
+  check(`app HSBC image ${i + 1} has an alt attribute`, /alt="HSBC"/.test(tag));
+});
+
+/* NOT A LINK, same reasoning as the website header only more so: this bar is
+   FIXED, on screen on every tab, and sits a thumb's width from the crest that
+   goes Home. A mis-tap that leaves the app mid-tournament is a real cost. */
+const appHdrStart = APP.indexOf('<span class="hdr-partner">');
+check('the app header carries the mark', appHdrStart >= 0);
+const appHdr = appHdrStart >= 0 ? APP.slice(appHdrStart, APP.indexOf('</span>\n      <div class="who">', appHdrStart)) : '';
+check('the app header mark is not a link', !/<a[\s>]/.test(appHdr));
+check('the app header mark has a divider rule', /class="rule"/.test(appHdr));
+
+/* ⚠️ MEASURED. The bar holds one line at every width down to 300px without the
+   mark and only to about 342px with it — below that it wraps, and a wrapped
+   FIXED header costs screen on the device with the least of it. 359 keeps the
+   mark on every mainstream phone (360, 375, 390, 412, 430) and drops it on the
+   handful narrower than that, which still get the More tab block. */
+const appHide = APP.match(/@media\(max-width:(\d+)px\)\{\s*\.hdr-partner\{([^}]*)\}\s*\}/);
+check('the app mark has its own hide rule', !!appHide);
+eq('it hides below 360px', appHide && appHide[1], '359');
+check('the rule hides it', !!appHide && /display:\s*none/.test(appHide[2]));
+
+/* ⚠️ ASSERTED AS A BLOCK, NOT AS A STRING, and that is not fussiness — the
+   first version of this check just looked for the words "Principal partner"
+   anywhere in the file, and a fault that deleted the section HEADING sailed
+   past it: the image count was still 2 (the logo lives in the card below the
+   heading, not in it) and the phrase survived in lowercase inside the
+   paragraph. A heading with no logo, or a logo with no heading, is broken;
+   this requires the pair, in order, close together. */
+const moreAt = APP.indexOf('<div class="sec-t">Principal partner</div>');
+check('the More tab has a Principal partner heading', moreAt >= 0);
+check('an HSBC logo follows it, in the same block',
+  moreAt >= 0 && APP.slice(moreAt, moreAt + 400).includes('sponsor-hsbc-white.webp'));
+/* The app's copy has to agree with the website's — the same claim in two
+   places under two different numbers is the "hundreds vs thousands" mistake
+   again, one surface across. */
+check('the app does not claim "hundreds of" players', !/hundreds of (young players|players|kids)/i.test(APP));
+
+section('The full scores page carries a band, and only when standalone');
+
+const SCORES = readRepo('Scores & Standings.dc.html').replace(/\r\n/g, '\n');
+
+const scImgs = SCORES.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
+eq('one HSBC image on the scores page', scImgs.length, 1);
+check('it uses the white lockup', (scImgs[0] || '').includes(WHITE));
+check('it has an alt attribute', /alt="HSBC"/.test(scImgs[0] || ''));
+
+/* ⚠️⚠️ THE THING THAT MAKES THIS NON-TRIVIAL. This component is ALSO embedded
+   in the homepage's Results section via <dc-import name="Scores & Standings">.
+   Ungated, the logo would render TWICE on the homepage — once under the hero
+   and again a few sections down inside the widget — which reads as a bug, not
+   as sponsorship. Both halves are asserted here because either one alone is
+   useless: the gate with no attribute never fires, and the attribute with no
+   gate does nothing. */
+check('the band is wrapped in a showPartner gate', /<sc-if value="\{\{ showPartner \}\}"/.test(SCORES));
+check('showPartner is derived from the embedded prop',
+  /showPartner:\s*!this\.props\.embedded/.test(SCORES));
+check('the homepage dc-import declares itself embedded',
+  /<dc-import name="Scores & Standings" embedded="[^"]+"/.test(PAGE));
+/* Presence test, not truthiness — dc props arrive as strings, so
+   embedded="false" would still be embedded. The value must be non-empty. */
+check('the embedded value is non-empty, so the presence test can fire',
+  !/embedded=""/.test(PAGE));
+
 section('How many players the page claims');
 
 /* THE PAGE CONTRADICTED ITS OWN HEADLINE NUMBER. The stat strip has said

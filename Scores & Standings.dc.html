@@ -90,6 +90,20 @@
   <!-- ===================== PUBLIC ===================== -->
   <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
     <div style="margin-top:26px">
+      <!-- HSBC, principal partner. Shown ONLY on the standalone /scores page.
+           ⚠️ THIS COMPONENT IS ALSO EMBEDDED IN THE HOMEPAGE, inside the
+           Results section, via <dc-import name="Scores & Standings">. The
+           homepage already carries its own partner band under the hero, so
+           without this gate the logo would appear TWICE on one page - once
+           near the top and once again a few sections down, inside the widget.
+           `showPartner` is false whenever the `embedded` prop is set, and the
+           homepage's dc-import sets it. -->
+      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:4px 0 26px">
+          <span style="font-size:10.5px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:38px;width:auto;max-width:100%;display:block">
+        </div>
+      </sc-if>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
         <sc-for list="{{ ageTabs }}" as="a" hint-placeholder-count="4">
           <button onClick="{{ a.onSelect }}" style="{{ a.style }}">{{ a.name }}</button>
@@ -3361,6 +3375,16 @@ class Component extends DCLogic {
       onModalCancel: () => this.closeModal(),
       onModalConfirm: () => this.submitModal(),
       onModalKeyDown: (e) => { if (e.key === 'Enter') this.submitModal(); if (e.key === 'Escape') this.closeModal(); },
+
+      /* The HSBC band is for the STANDALONE /scores page only. When this
+         component is embedded in the homepage's Results section the homepage
+         has already shown the same logo under its hero, and a second one
+         inside the widget reads as a bug. The homepage's dc-import sets
+         `embedded`; nothing else does, so /scores gets the band.
+         Note dc props arrive as strings, so this is a presence test, not a
+         truthiness test on a boolean - `embedded="false"` would still be
+         embedded, which is why the homepage sets it to "1". */
+      showPartner: !this.props.embedded,
 
       isPublic: s.view === 'public', isAdmin: s.view === 'admin',
       showPublic: () => this.setState({ view: 'public' }),

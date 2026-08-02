@@ -58,17 +58,21 @@ Manager.dc.html            age-group manager dashboard  →  /manager. Rebuilt
 scores-data.js             data layer for the scores page (fixtures, standings,
                            tie-breaks, brackets, auth calls)
 organizer-data.js          data layer for the organiser page
-netlify-forms.html         decoy file — Netlify's crawler scans it at deploy time
-                           to register the two forms. Never linked, never visited.
-                           Field names must mirror the real forms exactly.
+404.html                   branded not-found page (Aug 2026). Netlify serves it
+                           automatically for any URL matching no rewrite — no
+                           netlify.toml rule needed.
 support.js, deck-stage.js, doc-page.js, image-slot.js, local-backend.js
                            framework/runtime support — do not edit
 netlify/functions/         all backend (see below)
 assets/                    crest.jpeg, crest.png (+crest-bat/-shield), action
                            shots, venue map, sponsor-hsbc-white.webp (used) +
                            sponsor-hsbc.webp (master), organisers.jpg
-                           (the "Run by volunteers" group photo)
+                           (the "Run by volunteers" group photo),
+                           share-card.png (the og:image card — see Brand),
+                           apple-touch-icon.png + icon-*.png (home-screen icons)
 ```
+(`netlify-forms.html` used to sit here as the Forms decoy — deleted 28 Jul
+2026 with the move off Netlify Forms; see that section below.)
 
 `scores-data.js` computes standings, tie-breaks and brackets **in the browser**
 from raw results. Results are the single source of truth; every device derives
@@ -720,7 +724,7 @@ form is registered any more, so it does nothing. Turning it off is a separate,
 reversible decision.
 
 ⚠️ **If you ever need to go back**, both files are in git history at `577b7fe`.
-But read `claude/plan-submission-gateway.md` first — going back means giving up
+But read `claude/plans/plan-submission-gateway.md` first — going back means giving up
 the age checks, the squad cap, the registration window and the rate limit, all
 of which only exist because our code is the front door.
 
@@ -952,7 +956,7 @@ behind; the fault had to do both before it meant anything.
 **Why it exists: the squad cap has never been enforced.** `_squadCap()` runs in
 the browser only, so anyone editing the page could register a squad of any size
 and nothing downstream noticed. The submission gateway (sub-project 1,
-`claude/plan-submission-gateway.md`) is the first thing that will check it
+`claude/plans/plan-submission-gateway.md`) is the first thing that will check it
 server-side.
 
 - `squadCap(name)` matches the group name **exactly** and falls back to
@@ -972,7 +976,7 @@ server-side.
 the age group they were entered into.** All the age logic lived on the
 *player* form only (`_playerAgeCheck()`); a coach entering a whole squad at
 once had no check at all. Design decisions:
-`claude/spec-age-validation.md`; the plan: `claude/plan-age-validation.md`.
+`claude/specs/spec-age-validation.md`; the plan: `claude/plans/plan-age-validation.md`.
 
 **No new rule — the existing one, reused.** `_agegroups.js` now carries a
 server copy of the same rule `_playerAgeCheck()` already runs on the player
@@ -1209,7 +1213,10 @@ Read off `Pitch maps_Final.pdf` (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
 - Sub-pitch letters (`B1A`–`B1D`, `D3A`/`D3B`, …) are **ours**. The map draws the
   boxes inside one outline without naming them, so these have to match whatever
   goes on the printed pitch flags.
-- The homepage claims **"16 PITCHES"**. The real counts are 18 and 10.
+- The homepage's PITCHES stat is **derived from the layout** (day one's
+  count — 18 on this layout, with a written-down fallback of 18; see "The
+  homepage PITCHES stat comes from the layout" below). Saturday runs 18
+  surfaces, Sunday 10.
 
 ### Main pitches and splits (added 27 Jul 2026)
 
@@ -1668,8 +1675,9 @@ switch is how you end up with the two disagreeing and nobody sure which wins.
 **Null dates mean CLOSED.** With no opening date `auto` resolves to closed, and
 so does a closing date on its own. Every ambiguous input in this area fails
 closed on purpose: a form that is shut when it should be open is a phone call;
-open when it should be shut is a registration nobody expected, arriving with no
-age check behind it (the gateway is sub-project 1 and does not exist yet).
+open when it should be shut is a registration nobody expected. (When this
+was written the gateway did not exist yet; it does now — see "The submission
+flow" above, where the window check is step 4 and fails CLOSED.)
 
 **Times are ABU DHABI time.** Every stamp carries an explicit `+04:00`, and
 every date is formatted from the string's own characters rather than through a
@@ -1752,11 +1760,12 @@ mistaken for the real thing. This replaced a `?register=test` URL override:
 no secret to leak, no query string to remember, and it exercises the same
 switch the real opening will use.
 
-**It is display only.** Submissions still go straight to Netlify Forms, so
-nothing yet *refuses* a late one — that is the gateway in
-`claude/spec-registration-window.md`, sub-project 1. Adding it is three lines
-inside that function once it exists. Until then the only thing keeping the
-public out is the site-wide Netlify password.
+**It is no longer display only** (updated 2 Aug 2026 — the paragraph above
+described the pre-gateway world). The submission gateway now ENFORCES the
+window server-side: `handleSubmission()` step 4 refuses a submission outside
+the window and fails CLOSED if the setting cannot be read. The homepage
+display and the server refusal read the same `registrationState()` from the
+shared block, so they cannot disagree.
 
 ---
 
@@ -1780,7 +1789,7 @@ public out is the site-wide Netlify password.
   name on another club's fixture. Where two loaded draws disagree about a code,
   `teamLabel` declines to name it rather than guessing.
 - Full design, edge cases and decisions: the project doc
-  `claude/spec-import-registered-teams.md`.
+  `claude/specs/spec-import-registered-teams.md`.
 
 ---
 
@@ -1816,8 +1825,9 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
 
 ## Shipped, don't rebuild
 
-- Stat strip (20+ clubs / 3000+ players / 15 age groups / 16 pitches) is
-  correct, static, with a scroll count-up animation — not a bug.
+- Stat strip (20+ clubs / 3000+ players / 15 age groups / pitches from the
+  venue layout — 18 today) is correct, with a scroll count-up animation —
+  not a bug.
 - Footer email is `admin@adhjrt.com` (previously mangled Cloudflare
   obfuscation markup rendered as "[email protected]" — fixed).
 - Sponsors: **HSBC is the principal partner and is live in three places** — see
@@ -1877,37 +1887,31 @@ also behind a site-wide Netlify password, so previews prompt for it too.
   files. It keeps the page light and the `.dc.html` fast to load.
 ---
 
-## Outstanding
+## Outstanding (pruned 2 Aug 2026 — three of the old six are done)
 
-1. **The real draw.** All 15 groups still start from nine placeholder clubs
-   (Harlequins, Exiles, Sharks, Hurricanes, Barrelhouse, Amblers, Dragons,
-   Tigers, Small Blacks) auto-split Pool A/B, kickoffs from 08:00, pitches
-   default "TBD" until an organiser sets them via the pitch picker. Everything
-   else waits on this.
-2. **Results nav link.** Line ~152 of `Quins JRT.dc.html` is still
-   `href="#results"`. Change to `/scores` and swap the coming-soon standings
-   preview for "View live scores" — only once the draw is real, or placeholder
-   pools go public.
-3. **Nobody has actually been scheduled yet.** The layout is editable, pools can be
-   put on a pitch at a time, and the whole weekend can be checked for clashes (see
-   Venue above) — but **every slot is still "TBD" at 08:00** until someone works
-   through the editor age group by age group. That is now data entry, not code.
-   Step 5 (one set of pitch names) is the only code left.
-4. **The rehearsal data is still live.** All 15 groups published showing invented
-   clubs, 415 invented results, 4,080 invented sheet rows. The tooling to clear the
-   results and the saved draws exists (see Clearing the rehearsal data above);
-   unpublishing and the sheet rows are Jay's to press. Until this is done a coach
-   visiting adhjrt.com sees fiction.
-5. **The rest of the sponsor line-up.** HSBC is confirmed and live (see below).
+1. **The real draw.** All 15 groups' saved draws still hold the nine
+   placeholder clubs (Harlequins, Exiles, Sharks, Hurricanes, Barrelhouse,
+   Amblers, Dragons, Tigers, Small Blacks). Real pitches and kick-off times
+   were assigned across every group on 1 Aug 2026 (zero "TBD" anywhere,
+   pools and knockout), and the rehearsal RESULTS and publishing were fully
+   cleared on 2 Aug — but the pools themselves stay placeholder until real
+   clubs register and an organiser builds the real draw. Everything else
+   waits on this.
+2. **Results nav link.** The homepage top nav's Results link is still
+   `href="#results"` (an in-page jump). Change to `/scores` and swap the
+   coming-soon standings preview for "View live scores" — only once the
+   draw is real, or placeholder pools go public.
+3. **The rest of the sponsor line-up.** HSBC is confirmed and live (see below).
    Nobody else is. When another signs, add a card to the second block in the
    sponsors section — do not demote HSBC into a row of equals without asking.
-6. **Deploy cost** — every production deploy costs 15 Netlify credits
+4. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
    working-agreement rules live in the project instructions.)
 
-(The `/app` header crest white-tile cleanup that used to be item 5 is done —
-`background:#fff;padding:3px` is gone from `.crest` in `app.html`.)
+(Done and removed from this list: pitch scheduling — data entry completed
+1 Aug; the rehearsal-data cleanup — done and verified 2 Aug, see the tombstone
+section above; the `/app` crest white-tile cleanup.)
 
 ---
 
@@ -2053,18 +2057,20 @@ credits ever look higher than expected, that is the first place to look —
 4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
-### 5. The tests — half in the repo, half still on one disk
+### 5. The tests — the repo suite is the suite now (counts updated 2 Aug 2026)
 
-**`tests/` in this repo is the destination.** Plain Node, no dependencies, no
+**`tests/` in this repo is the suite.** Plain Node, no dependencies, no
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
-It currently holds the registration window, the Venue & days views, the main
-pitch / split model, the age-group table, the sheet columns and the account
-rules — **1,684 checks** across eight files — plus `_prove-registration.js`,
-the fault-injection script (**171 faults**, all of
-which must be caught by the check that claims to guard them, and none of which
-may be "caught" by the suite throwing).
+It covers the registration path, venue and pitches, the draw editor and
+score sheet (component-driven), auth and the unified login, the public
+pages, sponsors, light mode and the design-audit fixes — **31 files,
+~3,000 checks** — plus `_prove-registration.js`, the fault-injection script
+(**333 faults**, all of which must be caught by the check that claims to
+guard them, and none of which may be "caught" by the suite throwing). The
+counts drift upward with every feature; trust `runall.ps1`'s own output
+over this sentence.
 
 **A test file must not fall over on a fault.** Reaching blind into a lookup that
 a fault makes `undefined` throws, kills the process, and every check after that
@@ -2073,9 +2079,13 @@ the check that was supposed to catch it. Hence the `|| {}` fallbacks dotted
 through `test-venue-splits.js` and `test-venue-map.js`: the *guarding* check
 reports, and the file carries on.
 
-**The other thirteen files — 577 checks, plus `validate-bindings.js` — are still
-in `C:\Users\jayjm\adhjrt-sim` on jay-pc and are in no version control at
-all.** Until they move, **run both suites** before trusting a change.
+**The old `C:\Users\jayjm\adhjrt-sim` folder on jay-pc (13 files, plus
+`validate-bindings.js`) is now mostly historical** — triaged on 2 Aug 2026:
+seven of its files are stale or test deliberately-deleted subjects (their
+live coverage moved into the repo suite), and the rest overlap it. It is in
+no version control. Worth pruning to the files that still mean something;
+until then, treat the REPO suite as the authority and the sim folder as
+optional extra signal only.
 
 Moving them in needs a session bridged to jay-pc, and **step one is a data
 check**: this repo is public, the registration sheets hold children's names,

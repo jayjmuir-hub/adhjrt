@@ -369,8 +369,8 @@ check('the logo is inside it too, not a third child of the header row',
 
 /* Not a link, for the same reason as the site header: this bar is the page's
    own navigation and a tap target leaving the site does not belong in it. */
-const scPartnerAt = SCORES.indexOf('<sc-if value="{{ showPartner }}"');
-const scPartner = scPartnerAt >= 0 ? SCORES.slice(scPartnerAt, SCORES.indexOf('</sc-if>', scPartnerAt)) : '';
+const scMarkAt = SCORES.indexOf('sponsor-hsbc-white.webp');
+const scPartner = scMarkAt >= 0 ? SCORES.slice(SCORES.lastIndexOf('<span style="display:flex;align-items:center;gap:14px;flex:none">', scMarkAt), scMarkAt + 200) : '';
 check('the scores header mark is not a link', scPartner.length > 0 && !/<a[\s>]/.test(scPartner));
 check('it has a divider rule before it', /rgba\(255,255,255,0\.18\)/.test(scPartner));
 
@@ -378,23 +378,23 @@ check('it has a divider rule before it', /rgba\(255,255,255,0\.18\)/.test(scPart
 check('the band above the age-group pills is gone',
   !/In partnership with/i.test(SCORES));
 
-/* ⚠️⚠️ THE THING THAT MAKES THIS NON-TRIVIAL. This component is ALSO embedded
-   in the homepage's Results section via <dc-import name="Scores & Standings">,
-   and the header renders in that embed too — it is outside the isPublic gate.
-   Ungated, the logo would render TWICE on the homepage — once in the site
-   header and again a few sections down inside the widget — which reads as a
-   bug, not as sponsorship. Both halves are asserted here because either one
-   alone is useless: the gate with no attribute never fires, and the attribute
-   with no gate does nothing. */
-check('the mark is wrapped in a showPartner gate', /<sc-if value="\{\{ showPartner \}\}"/.test(SCORES));
-check('showPartner is derived from the embedded prop',
-  /showPartner:\s*!this\.props\.embedded/.test(SCORES));
-check('the homepage dc-import declares itself embedded',
-  /<dc-import name="Scores & Standings" embedded="[^"]+"/.test(PAGE));
-/* Presence test, not truthiness — dc props arrive as strings, so
-   embedded="false" would still be embedded. The value must be non-empty. */
-check('the embedded value is non-empty, so the presence test can fire',
-  !/embedded=""/.test(PAGE));
+/* ⚠️⚠️ IT SHOWS IN BOTH PLACES, AND THAT IS THE CORRECTION, NOT AN OVERSIGHT.
+   This component renders twice: on the standalone /scores page, and inside the
+   homepage's Results & Standings section, which imports the whole thing. The
+   first version gated the mark off in the embedded case, reasoning that the
+   homepage already showed the logo. That reasoning was wrong twice over — the
+   site header is most of a page above Results, so nothing is duplicated on
+   screen at one moment, and the homepage's Results section is the exact place
+   Jay had asked for it. The gate removed it from the one place it was wanted.
+
+   So: no `showPartner`, no `embedded` attribute, and both asserted ABSENT. A
+   check that only asserted the mark exists would pass with the gate quietly
+   reinstated, because the markup would still be there — it just would not
+   render on the homepage, which is not something a text check can see. */
+check('the mark is NOT behind a showPartner gate', !/showPartner/.test(SCORES));
+check('the scores component takes no `embedded` prop', !/this\.props\.embedded/.test(SCORES));
+check('the homepage dc-import does not suppress it',
+  !/<dc-import name="Scores & Standings"[^>]*\sembedded=/.test(PAGE));
 
 section('How many players the page claims');
 

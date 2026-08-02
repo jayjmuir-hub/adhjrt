@@ -81,15 +81,23 @@
            child would be spread into the middle of the bar, where it reads as
            a control rather than as a partner. Same reason the homepage wraps
            its crest link and mark together.
-           Not a link, for the same reason as everywhere else - and gated on
-           showPartner, because this header renders inside the homepage's
-           Results widget too. -->
-      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">
-        <span style="display:flex;align-items:center;gap:14px;flex:none">
-          <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>
-          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">
-        </span>
-      </sc-if>
+           Not a link - this bar is the page's own navigation.
+
+           ⚠️ DELIBERATELY NOT GATED, and it was gated once, wrongly.
+           This header renders in TWO places: the standalone /scores page, and
+           inside the homepage's Results & Standings section, which imports
+           this whole component. The first version hid the mark in the embedded
+           case to avoid "duplicating" it on the homepage - which removed it
+           from the one place Jay had actually asked for it. The homepage's own
+           header mark is at the very top of a long page; by the time a reader
+           reaches Results they have scrolled well past it, so this is not a
+           second copy of anything on screen at the same moment.
+           If a future embed genuinely should not show it, gate THAT embed -
+           do not reintroduce a rule that turns this off by default. -->
+      <span style="display:flex;align-items:center;gap:14px;flex:none">
+        <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>
+        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">
+      </span>
     </div>
     <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px">
       <button onClick="{{ showPublic }}" style="{{ tabPublicStyle }}">Standings</button>
@@ -3382,16 +3390,6 @@ class Component extends DCLogic {
       onModalCancel: () => this.closeModal(),
       onModalConfirm: () => this.submitModal(),
       onModalKeyDown: (e) => { if (e.key === 'Enter') this.submitModal(); if (e.key === 'Escape') this.closeModal(); },
-
-      /* The HSBC band is for the STANDALONE /scores page only. When this
-         component is embedded in the homepage's Results section the homepage
-         has already shown the same logo under its hero, and a second one
-         inside the widget reads as a bug. The homepage's dc-import sets
-         `embedded`; nothing else does, so /scores gets the band.
-         Note dc props arrive as strings, so this is a presence test, not a
-         truthiness test on a boolean - `embedded="false"` would still be
-         embedded, which is why the homepage sets it to "1". */
-      showPartner: !this.props.embedded,
 
       isPublic: s.view === 'public', isAdmin: s.view === 'admin',
       showPublic: () => this.setState({ view: 'public' }),

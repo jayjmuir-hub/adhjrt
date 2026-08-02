@@ -157,12 +157,10 @@ const HOME = 'Quins JRT.dc.html';
    carries the block exactly - if the markup is edited the injection refuses
    rather than quietly doing nothing. */
 const SC_MARK = [
-  '      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">',
-  '        <span style="display:flex;align-items:center;gap:14px;flex:none">',
-  '          <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>',
-  '          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">',
-  '        </span>',
-  '      </sc-if>',
+  '      <span style="display:flex;align-items:center;gap:14px;flex:none">',
+  '        <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>',
+  '        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">',
+  '      </span>',
   '',
 ].join('\n');
 const HDR_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">';
@@ -2261,10 +2259,24 @@ const FAULTS = [
   {
     /* THE ONE THAT MATTERS. Remove the gate and the homepage shows the logo
        twice — once under the hero, once inside the embedded scores widget. */
-    name: 'the scores header mark loses its embedded gate, doubling the logo on the homepage',
+    name: 'the showPartner gate is reinstated, hiding the mark on the homepage again',
     suite: 'test-sponsors.js',
-    apply: () => patch('Scores & Standings.dc.html', '      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">\n', '      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">\n'),
-    expect: ['wrapped in a showPartner gate'],
+    apply: () => patch('Scores & Standings.dc.html', SC_MARK,
+      '      <sc-if value="{{ showPartner }}">\n' + SC_MARK + '      </sc-if>\n'),
+    expect: ['NOT behind a showPartner gate'],
+  },
+  {
+    name: 'the component starts reading an embedded prop again',
+    suite: 'test-sponsors.js',
+    apply: () => patch('Scores & Standings.dc.html', '      isPublic: s.view === \'public\', isAdmin:',
+      '      showPartner: !this.props.embedded,\n      isPublic: s.view === \'public\', isAdmin:'),
+    expect: ['takes no `embedded` prop', 'NOT behind a showPartner gate'],
+  },
+  {
+    name: 'the homepage suppresses the widget mark with an embedded attribute',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<dc-import name="Scores & Standings" age=', '<dc-import name="Scores & Standings" embedded="1" age='),
+    expect: ['does not suppress it'],
   },
   {
     /* The space-between trap: moved out of the brand group it becomes a third
@@ -2291,27 +2303,6 @@ const FAULTS = [
     apply: () => patch('Scores & Standings.dc.html', '      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">',
       '      <div><span>In partnership with</span><img src="assets/sponsor-hsbc-white.webp" alt="HSBC"></div>\n      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">'),
     expect: ['band above the age-group pills is gone', 'one HSBC image on the scores page'],
-  },
-  {
-    name: 'showPartner stops reading the embedded prop, so the gate can never close',
-    suite: 'test-sponsors.js',
-    apply: () => patch('Scores & Standings.dc.html', '      showPartner: !this.props.embedded,', '      showPartner: true,'),
-    expect: ['derived from the embedded prop'],
-  },
-  {
-    name: 'the homepage stops declaring its scores widget embedded',
-    suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '<dc-import name="Scores & Standings" embedded="1"', '<dc-import name="Scores & Standings"'),
-    expect: ['dc-import declares itself embedded'],
-  },
-  {
-    /* dc props are strings. embedded="" is falsy, so the gate opens and the
-       logo doubles — while the attribute is still visibly there in the markup,
-       which is what makes this one worth catching separately. */
-    name: 'the embedded attribute is emptied, which reads as present but is not',
-    suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '<dc-import name="Scores & Standings" embedded="1"', '<dc-import name="Scores & Standings" embedded=""'),
-    expect: ['embedded value is non-empty'],
   },
   {
     name: 'the app copy drifts back to "hundreds of" players',

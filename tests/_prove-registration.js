@@ -28,6 +28,9 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'adhjrt-prove-'));
    node_modules and assets for no gain. */
 const NEEDED = [
   'CLAUDE.md',
+  /* test-back-office-links.js asserts the /organizer rewrite still exists, so
+     the fault that removes it needs this file in the temp copy. */
+  'netlify.toml',
   'scores-data.js',
   'organizer-data.js',
   'Quins JRT.dc.html',
@@ -1892,14 +1895,12 @@ const FAULTS = [
     expect: ["clicking an already-open team's toggle collapses it again (toggle, not one-way)"],
   },
 
-  {
-    name: 'the top-nav Organizer link is removed, leaving only the footer one',
-    suite: 'test-registration-panel.js',
-    apply: () => patch('Quins JRT.dc.html',
-      '        <a href="Organizer.dc.html" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n',
-      ''),
-    expect: ['the top nav links to Organizer.dc.html'],
-  },
+  /* RETIRED 2 Aug 2026. A fault here removed the top-nav Organizer link to
+     prove the 28 Jul check that required it. Jay has since asked for the
+     sign-ins to live at the bottom only, so the link is gone on purpose and
+     the check it proved has gone with it. The replacement faults are at the
+     end of this list, under test-back-office-links.js — including the same
+     link CREEPING BACK, which is now the mistake worth catching. */
 
   /* Google sign-in (added 29 Jul 2026). */
   {
@@ -2153,7 +2154,7 @@ const FAULTS = [
   {
     name: 'the narrow-screen hide is deleted entirely',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '  @media(max-width:1000px){ .hdr-partner{display:none!important} }', ''),
+    apply: () => patch(HOME, '  @media(max-width:800px){ .hdr-partner{display:none!important} }', ''),
     expect: ['own hide rule'],
   },
   {
@@ -2163,10 +2164,10 @@ const FAULTS = [
     name: 'the hide is "tidied" into the 760px nav breakpoint',
     suite: 'test-sponsors.js',
     apply: () => {
-      patch(HOME, '  @media(max-width:1000px){ .hdr-partner{display:none!important} }\n\n', '');
+      patch(HOME, '  @media(max-width:800px){ .hdr-partner{display:none!important} }\n\n', '');
       patch(HOME, '    .hdr-nav{display:none!important}', '    .hdr-nav{display:none!important}\n    .hdr-partner{display:none!important}');
     },
-    expect: ['hides at 1000px', 'does not repeat the hide'],
+    expect: ['hides at 800px', 'does not repeat the hide'],
   },
   {
     name: 'the partner band is moved BELOW the stat strip',
@@ -2214,6 +2215,82 @@ const FAULTS = [
     apply: () => patch(HOME, 'junior rugby? <a href="mailto:admin@adhjrt.com"', 'junior rugby? <a href="#"'),
     expect: ['get-in-touch invitation is kept'],
   },
+
+  /* ---- back-office links (test-back-office-links.js) -------------------- */
+
+  {
+    name: 'the Organizer link creeps back into the top nav',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n',
+      '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n        <a href="/organizer" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n'),
+    expect: ['no /organizer link in the nav', 'exactly seven links'],
+  },
+  {
+    name: 'the Organizer link comes back as a RAW FILENAME, which /organizer checks would miss',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n',
+      '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n        <a href="Organizer.dc.html" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n'),
+    expect: ['no raw Organizer.dc.html link in the nav', 'exactly seven links'],
+  },
+  {
+    /* The over-deletion the absence checks alone would not notice. */
+    name: 'a public nav link is deleted along with the back-office ones',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '        <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>\n', ''),
+    expect: ['still has Venue', 'exactly seven links'],
+  },
+  {
+    name: 'a back-office link is put half way up the page instead of the footer',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '  <!-- ============ SPONSORS ============ -->',
+      '  <div><a href="/manager">Manager</a></div>\n  <!-- ============ SPONSORS ============ -->'),
+    expect: ['above the footer'],
+  },
+  {
+    name: 'the "Manager dashboard" duplicate returns to the Explore column',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '          <a href="/app" style="color:#8a8f99">Match-day app</a>\n',
+      '          <a href="/app" style="color:#8a8f99">Match-day app</a>\n          <a href="/manager" style="color:#8a8f99">Manager dashboard</a>\n'),
+    expect: ['exactly one /manager link in the footer', 'Manager dashboard'],
+  },
+  {
+    name: 'the labels drift back towards the old "login" wording',
+    suite: 'test-back-office-links.js',
+    apply: () => {
+      patch(HOME, '>Quins Organizer &rarr;<'.replace('&rarr;', '→'), '>Organizer login →<');
+      patch(HOME, '>Quins Age Group Manager →<', '>Manager login →<');
+    },
+    expect: ['labelled "Quins Organizer"', 'old "Organizer login" wording is gone'],
+  },
+  {
+    name: 'the footer organiser link reverts to the raw filename',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '<a href="/organizer" style="color:#EDEDED;font-weight:700', '<a href="Organizer.dc.html" style="color:#EDEDED;font-weight:700'),
+    expect: ['exactly one /organizer link in the footer', 'raw Organizer.dc.html href survives'],
+  },
+  {
+    /* The rewrite is what makes the clean URL resolve at all. Delete it and
+       both footer links still look perfect in the markup. */
+    name: 'the /organizer rewrite is removed from netlify.toml, orphaning the clean URL',
+    suite: 'test-back-office-links.js',
+    apply: () => patch('netlify.toml', '  from = "/organizer"', '  from = "/organiser"'),
+    expect: ['netlify.toml still rewrites'],
+  },
+  {
+    /* Measured: without this the row overflows its own box by 136px at 390px
+       wide and half the second pill is off the screen, unreachable. */
+    name: 'the footer bar loses flex-wrap, clipping the manager pill off a phone screen',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, 'border-top:1px solid rgba(255,255,255,0.08);font-size:13px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between',
+      'border-top:1px solid rgba(255,255,255,0.08);font-size:13px;display:flex;justify-content:space-between'),
+    expect: ['bar wraps rather than clipping'],
+  },
+  {
+    name: 'the pills lose nowrap, stranding the arrow on its own line',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, 'letter-spacing:.3px;white-space:nowrap;transition:background .18s ease', 'letter-spacing:.3px;transition:background .18s ease'),
+    expect: ['not break before its arrow'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -2226,7 +2303,7 @@ seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
- 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js'].forEach((f) => {
+ 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

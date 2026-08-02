@@ -146,20 +146,22 @@
      !important throughout: these elements are styled inline and inline wins over
      a stylesheet rule without it (same trap as style-hover, see CLAUDE.md). */
 
-  /* The HSBC mark comes out of the header well ABOVE the mobile breakpoint, and
+  /* The HSBC mark comes out of the header ABOVE the mobile breakpoint, and
      THE NUMBER IS MEASURED, NOT PICKED. Rendered in headless Chromium with the
-     real Anton and Barlow faces (fallback fonts are wider and give a different,
-     wrong answer): the nav shows all nine links down to 760px, and the header
-     holds ONE line down to 850px as it is. Add the mark and that becomes 950px
-     - so between 850 and 950 it tips the bar onto a second line, which is
-     exactly the "sticky header eats a quarter of the screen" problem the block
-     below was written to stop. 1000 is 950 with a little room for a machine
-     that renders the fonts slightly wider.
-     Nothing is lost by hiding it: the partner band sits directly under the
-     hero, a few hundred pixels down, at three times the size.
+     real Anton and Barlow faces - fallback fonts are wider and give a
+     different, wrong answer, which is a mistake this project made once and
+     nearly shipped.
+     It was 1000 when the nav carried nine links. Dropping the Organizer and
+     Manager links out of the nav on 2 Aug freed about 150px, and the header
+     now holds ONE line with the mark down to 800px, so the rule came down with
+     it - the mark is on a tablet again rather than hidden from one.
+     Re-measure this if the nav gains or loses a link. It is not a round number
+     somebody liked; it is where the bar stops fitting.
+     Nothing is lost by hiding it below that: the partner band sits directly
+     under the hero, a few hundred pixels down, at three times the size.
      !important for the same reason as everything else here - the span is styled
      inline with display:flex and an ordinary rule would silently lose. */
-  @media(max-width:1000px){ .hdr-partner{display:none!important} }
+  @media(max-width:800px){ .hdr-partner{display:none!important} }
 
   @media(max-width:760px){
     /* Header stays ONE line. Wrapping the links made everything reachable but
@@ -285,8 +287,13 @@
         <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
         <a href="/app" style="color:#3bd070;font-weight:700;font-size:15px">App</a>
         <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
-        <a href="Organizer.dc.html" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>
-        <a href="/manager" style="color:#8a8f99;font-weight:600;font-size:14px">Manager</a>
+        <!-- The Organizer and Manager sign-ins are NOT here. They live in the
+             footer, once each. They are for a handful of volunteers, and every
+             other link in this bar is for the thousands of parents and coaches
+             the page is actually written for - so putting them up here spent
+             the most valuable space on the site on the smallest audience, and
+             on a phone they pushed two rows of genuinely public links further
+             down the collapsed menu. -->
       </nav>
     </div>
   </header>
@@ -860,7 +867,10 @@
           <a href="#schedule" style="color:#8a8f99">Fixtures</a>
           <a href="#venue" style="color:#8a8f99">Venue</a>
           <a href="/app" style="color:#8a8f99">Match-day app</a>
-          <a href="/manager" style="color:#8a8f99">Manager dashboard</a>
+          <!-- "Manager dashboard" was here too. Explore is the public list, and
+               the sign-ins now sit once each in the bar below - three links to
+               two places, under three different names, is how one of them ends
+               up pointing somewhere the others do not. -->
         </div>
       </div>
       <div>
@@ -872,12 +882,25 @@
         </div>
       </div>
     </div>
-    <div style="max-width:1200px;margin:40px auto 0;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);font-size:13px;display:flex;justify-content:space-between;align-items:center">
+    <!-- flex-wrap, and it is not decoration. This row is space-between with no
+         wrap, so on a phone the last child simply ran off the edge and was
+         clipped - measured at 136px of overflow at 390px wide, which put half
+         of "Quins Age Group Manager" past the screen with nothing to scroll to
+         reach it. The old shorter labels happened to fit and hid the fault.
+         Wrapping means the pills drop onto their own line instead. -->
+    <div style="max-width:1200px;margin:40px auto 0;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);font-size:13px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center">
       <span>&copy; 2026 Abu Dhabi Harlequins Rugby Football Club. &nbsp;&middot;&nbsp; <a href="/legal" style="color:#8a8f99">Legal &amp; Privacy</a></span>
-      <span style="display:flex;gap:18px;align-items:center">
+      <span style="display:flex;flex-wrap:wrap;gap:18px;align-items:center">
         <span>Affiliated with Harlequin F.C. London · Est. 1970</span>
-        <a href="Organizer.dc.html" style="color:#EDEDED;font-weight:700;background:rgba(255,255,255,0.08);padding:6px 14px;border-radius:100px;font-size:12px;letter-spacing:.3px;transition:background .18s ease" style-hover="background:rgba(255,255,255,0.16)">Organizer login →</a>
-        <a href="/manager" style="color:#EDEDED;font-weight:700;background:rgba(255,255,255,0.08);padding:6px 14px;border-radius:100px;font-size:12px;letter-spacing:.3px;transition:background .18s ease" style-hover="background:rgba(255,255,255,0.16)">Manager login →</a>
+        <!-- THE ONLY TWO SIGN-IN LINKS ON THE PAGE. They were also in the top
+             nav and, for the manager one, a third time in the Explore column
+             above under a different name again. One place, one name each.
+             href="/organizer", not "Organizer.dc.html": the netlify.toml
+             rewrite serves the same file either way, but /manager next to it
+             is the clean form and two links to the back office should not be
+             written two different ways. -->
+        <a href="/organizer" style="color:#EDEDED;font-weight:700;background:rgba(255,255,255,0.08);padding:6px 14px;border-radius:100px;font-size:12px;letter-spacing:.3px;white-space:nowrap;transition:background .18s ease" style-hover="background:rgba(255,255,255,0.16)">Quins Organizer →</a>
+        <a href="/manager" style="color:#EDEDED;font-weight:700;background:rgba(255,255,255,0.08);padding:6px 14px;border-radius:100px;font-size:12px;letter-spacing:.3px;white-space:nowrap;transition:background .18s ease" style-hover="background:rgba(255,255,255,0.16)">Quins Age Group Manager →</a>
       </span>
     </div>
     <div style="max-width:1200px;margin:24px auto 0;display:flex;justify-content:center">

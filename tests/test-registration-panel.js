@@ -958,20 +958,19 @@ const rosterDobAtCutoffAge = (age) => `${2026 - age}-01-01`;
 
 }
 
-section('The top nav has an Organizer link, not just the footer (added 28 Jul 2026)');
-{
-  /* Jay found the only way into /organizer was the footer link — added 28 Jul
-     2026 after he asked for one at the top too. Plain markup, not a {{ token
-     }}, so a text check is the right tool here (contrast with the binding
-     contract above, which is for the parts renderVals() actually drives). */
-  const page = readRepo('Quins JRT.dc.html');
-  const navStart = page.indexOf('<nav class="hdr-nav"');
-  const navEnd = page.indexOf('</nav>', navStart);
-  check('the header nav block was found', navStart >= 0 && navEnd > navStart);
-  const nav = page.slice(navStart, navEnd);
-  check('the top nav links to Organizer.dc.html', /href="Organizer\.dc\.html"/.test(nav));
-  check('the footer link still exists too — this is additive, not a replacement',
-    /href="Organizer\.dc\.html"/.test(page.slice(navEnd)));
-}
+/* REMOVED 2 Aug 2026 — and this is a REVERSAL, not a tidy-up.
+   ---------------------------------------------------------------------------
+   A section here used to assert the OPPOSITE of what is now true: that the top
+   nav links to Organizer.dc.html, added 28 Jul 2026 because Jay asked for a
+   way into /organizer from the top of the page. On 2 Aug he asked for the
+   sign-ins to sit at the bottom only, named "Quins Organizer" and "Quins Age
+   Group Manager". Both requests were right at the time; the second supersedes
+   the first.
+
+   It is recorded here rather than deleted silently because a test asserting
+   the reverse of a live requirement is the single most confusing thing to
+   find in a suite. The replacement is `tests/test-back-office-links.js`,
+   which covers both destinations, both names, the fact that there is exactly
+   one of each, and that nothing above the footer links to either. */
 
 main().then(() => summary('test-registration-panel.js'));

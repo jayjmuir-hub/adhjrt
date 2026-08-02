@@ -197,15 +197,18 @@ section('The header mark is hidden on a narrow screen');
 
 /* THE BREAKPOINT IS 1000, NOT 760, AND THAT IS THE WHOLE POINT OF THIS CHECK.
    760 is where the nav collapses behind the menu button. The header runs out
-   of room for the partner mark long before that: measured in headless Chromium
-   with the real Anton and Barlow faces, the bar holds one line down to 850px
-   without the mark and only to 950px with it. Anyone "tidying" this rule into
-   the 760 block below would put a second line back into a STICKY header
-   between 850 and 950 — and would see nothing wrong on their own 1440px
-   screen. */
+   of room for the partner mark before that: measured in headless Chromium with
+   the real Anton and Barlow faces, the bar holds one line with the mark down
+   to 800px and wraps below it. Anyone "tidying" this rule into the 760 block
+   below would put a second line back into a STICKY header — and would see
+   nothing wrong on their own 1440px screen.
+
+   THE NUMBER MOVES WHEN THE NAV DOES. It was 1000 while the nav carried nine
+   links; taking the two back-office links out on 2 Aug freed about 150px and
+   it came down to 800. Re-measure, do not guess, if a nav link is added. */
 const hideRule = PAGE.match(/@media\(max-width:(\d+)px\)\{\s*\.hdr-partner\{([^}]*)\}\s*\}/);
 check('the partner mark has its own hide rule', !!hideRule);
-eq('it hides at 1000px, not at the 760px nav breakpoint', hideRule && hideRule[1], '1000');
+eq('it hides at 800px, not at the 760px nav breakpoint', hideRule && hideRule[1], '800');
 check('the rule hides it', !!hideRule && /display:\s*none/.test(hideRule[2]));
 /* !important is load-bearing: the span is styled inline (`display:flex`) and
    inline wins over a stylesheet rule without it. Same trap as style-hover,

@@ -1808,8 +1808,10 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
 A visual pass, now live. To preview a branch before merging, **open a PR** — that
 triggers a free, password-protected Netlify **deploy-preview** at
 `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` (only merging to
-`main` spends the 15 credits). NB: this site has no per-branch deploy URL, so
-`<branch>--…netlify.app` 404s — use the PR deploy-preview. The whole site is
+`main` spends the 15 credits). **There is also a permanent branch URL —
+`https://dev--serene-gingersnap-1d0eb6.netlify.app` — which always serves the
+latest `dev` build and never changes.** Use that in preference to a PR
+preview; see "Three kinds of preview URL" below. The whole site is
 also behind a site-wide Netlify password, so previews prompt for it too.
 
 - **Logo** is now transparent `assets/crest.png` (white background + the white
@@ -1985,8 +1987,32 @@ Working shape:
    to `main` takes `[skip ci]` so no deploy runs; on `dev` it is never needed.
 3. Branches are free. To preview one, **open a PR** — that gives a
    password-protected deploy-preview at
-   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app`. This site has no
-   per-branch deploy URL, so `<branch>--….netlify.app` 404s.
+   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` — but prefer the
+   permanent branch URL, `https://dev--serene-gingersnap-1d0eb6.netlify.app`.
+
+### Three kinds of preview URL, and only one of them is stable (2 Aug 2026)
+
+Jay: *"why do we get a different branch deploy preview link every time we do an
+edit, can't we just use one branch for all edits?"* — yes, and one already
+exists. Netlify hands out three different URLs and they are easy to confuse:
+
+| URL | Changes when | Use it for |
+|---|---|---|
+| `<deploy-id>--serene-gingersnap-1d0eb6.netlify.app` | **every single build** | nothing, day to day — it is an archive link to one frozen build |
+| `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` | every new PR | reviewing one specific PR |
+| **`dev--serene-gingersnap-1d0eb6.netlify.app`** | **never** | **everything. Bookmark it.** It always serves the latest `dev` build. |
+
+⚠️ **THIS FILE SAID THE OPPOSITE UNTIL 2 AUG 2026** — that the site had no
+per-branch URL and `<branch>--….netlify.app` 404s. It does not. Verified by
+fetching all three: an invented branch name returns **404**, while both
+`main--…` and `dev--…` return **401**, which is the site-wide password gate
+answering — and a password prompt only appears for a deploy that exists. That
+is the test to use: **401 means it is there, 404 means it is not.**
+
+Consequence worth knowing: branch deploys are **enabled**, so every push to
+`dev` triggers a build. That is what makes the stable URL work. If Netlify
+credits ever look higher than expected, that is the first place to look —
+`main` is not the only branch building.
 4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 

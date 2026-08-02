@@ -375,7 +375,9 @@ JRT palette, Anton + Barlow.
   Publish button once).
 - Managers get score entry on their own age group; organisers on all.
 - Fixture editor and publishing controls are deliberately NOT in the app — the
-  More tab links to `/scores` for that drag-and-drop work.
+  More tab's "Full manager tools" row links to `/manager` for that
+  drag-and-drop work (it pointed at `/scores` until Aug 2026, when that page's
+  Manager area was retired).
 - A follower's chosen age group is remembered in localStorage, per device.
 - PWA install works but isn't promoted (push notifications would justify it
   but there's no backend for that). Treat `/app` as a fast mobile web page.

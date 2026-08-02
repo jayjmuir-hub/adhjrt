@@ -1002,7 +1002,7 @@ function act(a){
   if (a === 'follow')  return openFollow();
   if (a === 'signin')  return signIn();
   if (a === 'signout') { api.logout(); try{orgApi.logout();}catch(e){} S.session=null; render(); toast('Signed out'); return; }
-  if (a === 'tools')   { location.href = '/scores'; return; }
+  if (a === 'tools')   { location.href = '/manager'; return; }
   if (a === 'venuemap') return openSheet('Venue map',
     `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
      <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">

@@ -75,9 +75,10 @@ export async function login(username, password) {
     return { ok: true, session };
   }
   // If these were actually manager credentials (they clicked the wrong login),
-  // sign them in as a manager and send them to the scores/manager area — the
-  // organizer dashboard is organizer-only, so there's nothing useful to show a
-  // manager here.
+  // sign them in as a manager and send them to /manager — the organizer
+  // dashboard is organizer-only, so there's nothing useful to show a manager
+  // here. (This whole fallback is scheduled to die with the unified login —
+  // see claude/specs/spec-unified-login.md.)
   const rm = await tryFetchJson('/.netlify/functions/manager-login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -87,7 +88,7 @@ export async function login(username, password) {
     const mgrSession = { ...mjson.session, token: mjson.token };
     // 'adhjrt_session_v1' is the scores page's manager session key (SESSION_KEY in scores-data.js).
     try { localStorage.setItem('adhjrt_session_v1', JSON.stringify(mgrSession)); } catch (e) {}
-    return { ok: true, redirect: '/scores' };
+    return { ok: true, redirect: '/manager' };
   }
   return { ok: false, error: json.error || 'Incorrect username or password.' };
 }

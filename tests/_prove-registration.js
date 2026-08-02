@@ -2238,6 +2238,25 @@ const FAULTS = [
     expect: ['u9\'s saved draw had its knockout cleared'],
   },
 
+  /* ---- signed-in routes point at /manager (test-organizer-manager-link.js) */
+
+  {
+    name: 'the app\'s More-tab tools link reverts to /scores',
+    suite: 'test-organizer-manager-link.js',
+    apply: () => patch('app.html',
+      "  if (a === 'tools')   { location.href = '/manager'; return; }",
+      "  if (a === 'tools')   { location.href = '/scores'; return; }"),
+    expect: ['tools row goes to /manager'],
+  },
+  {
+    name: 'the organizer login\'s manager fallback reverts to redirecting at /scores',
+    suite: 'test-organizer-manager-link.js',
+    apply: () => patch('organizer-data.js',
+      "    return { ok: true, redirect: '/manager' };",
+      "    return { ok: true, redirect: '/scores' };"),
+    expect: ['manager fallback redirects to /manager'],
+  },
+
   /* ---- HSBC / sponsors (test-sponsors.js) ------------------------------- */
 
   {
@@ -2542,7 +2561,7 @@ seed();
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
- 'test-organizer-tournament.js', 'test-manager-dc-draw.js'].forEach((f) => {
+ 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

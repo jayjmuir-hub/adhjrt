@@ -43,4 +43,25 @@ section('Nothing else in Organizer.dc.html changed');
     && /showVenue/.test(html) && /showRegistration/.test(html));
 }
 
+section('Every signed-in route to "the manager tools" points at /manager, not /scores');
+/* Aug 2026: /scores is becoming a purely public results page (see
+   claude/specs/spec-scores-manager-removal.md), so the two places that used
+   to send a signed-in manager THERE for tooling must point at /manager. The
+   app's PUBLIC "Full scores page" row is a different link and stays. */
+{
+  const app = readRepo('app.html');
+  check('the app\'s More-tab tools row goes to /manager',
+    /if \(a === 'tools'\)\s*\{ location\.href = '\/manager'; return; \}/.test(app));
+  check('…and no signed-in action in the app navigates to /scores any more',
+    !/location\.href = '\/scores'/.test(app));
+  check('the app\'s public "Full scores page" row survives untouched',
+    /href="\/scores"[^>]*><div><b>Full scores page<\/b>/.test(app));
+
+  const data = readRepo('organizer-data.js');
+  check('the organizer login\'s manager fallback redirects to /manager',
+    /return \{ ok: true, redirect: '\/manager' \};/.test(data));
+  check('…and organizer-data.js no longer redirects anyone to /scores',
+    !/redirect: '\/scores'/.test(data));
+}
+
 summary('test-organizer-manager-link.js');

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,7 +27,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADH JRT">
-<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>
   /* Registers the service worker that makes this installable as an app.
      Wrapped in a guard so an unsupported browser (or a file:// preview)
@@ -181,12 +182,12 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
               <div>
                 <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
-                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark">
+                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rOpensEchoColor }}">{{ rOpensEcho }}</div>
               </div>
               <div>
                 <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
-                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark">
+                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rClosesEchoColor }}">{{ rClosesEcho }}</div>
               </div>
             </div>
@@ -533,7 +534,7 @@
                       <div style="width:18px;color:#5A626E;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
                       <div style="font-size:18px;font-weight:700;color:#1A1C1F">{{ g.name }}</div>
                     </div>
-                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:dark">
+                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:light">
                       <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
                         <option value="{{ dop.value }}">{{ dop.label }}</option>
                       </sc-for>
@@ -789,7 +790,7 @@
         </sc-if>
         <div style="display:flex;justify-content:flex-end;gap:10px">
           <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#343A42;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
-          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#1A1C1F;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
+          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
         </div>
       </div>
     </div>

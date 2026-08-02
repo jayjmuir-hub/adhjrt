@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,7 +19,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ADH JRT">
-<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
@@ -374,7 +375,7 @@
               <div style="margin-top:16px">
                 <sc-for list="{{ p.slotRows }}" as="sl" hint-placeholder-count="3">
                   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-                    <input type="time" value="{{ sl.time }}" onChange="{{ sl.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:dark">
+                    <input type="time" value="{{ sl.time }}" onChange="{{ sl.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
                     <div onClick="{{ sl.onHomeClick }}" style="{{ sl.homeStyle }}">{{ sl.homeLabel }}</div>
                     <span style="flex:none;color:#5A626E">v</span>
                     <div onClick="{{ sl.onAwayClick }}" style="{{ sl.awayStyle }}">{{ sl.awayLabel }}</div>
@@ -403,7 +404,7 @@
                 <span style="flex:1 1 130px;font-size:11.5px;color:#454D58;overflow-wrap:break-word">{{ k.round }}
                   <button onClick="{{ k.onRenameRound }}" aria-label="Rename" style="background:transparent;border:none;color:#5A626E;font-size:12px;padding:2px 4px;cursor:pointer">✎</button>
                 </span>
-                <input type="time" value="{{ k.time }}" onChange="{{ k.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:dark">
+                <input type="time" value="{{ k.time }}" onChange="{{ k.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div onClick="{{ k.onHomeClick }}" style="{{ k.homeStyle }}">{{ k.homeLabel }}</div>
                 <span style="flex:none;color:#5A626E">v</span>
                 <div onClick="{{ k.onAwayClick }}" style="{{ k.awayStyle }}">{{ k.awayLabel }}</div>

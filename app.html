@@ -241,7 +241,7 @@ tr.me td:nth-child(1),tr.me td:nth-child(2){background:#fffdf4}
              pointer-events:none;transition:opacity .25s}
 .sheet-scrim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:#fff;
-       border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;transform:translateY(100%);
+       border-radius:22px 22px 0 0;max-height:92vh;max-height:92dvh;overflow-y:auto;transform:translateY(100%);
        transition:transform .28s cubic-bezier(.32,.72,0,1);
        padding-bottom:calc(env(safe-area-inset-bottom) + 18px);max-width:900px;margin:0 auto}
 .sheet.on{transform:translateY(0)}
@@ -468,6 +468,7 @@ const S = {
   fixtures:null, standings:null,// the BROWSED age group
   followFx:null,                // the FOLLOWED age group — what Today reports on
   onlyMine:true,                // Fixtures/Results filter when a team is followed
+  loadError:false,              // a browse fetch failed — show retry, not "Loading…"
 };
 
 /* ---------------- helpers ---------------- */
@@ -605,12 +606,20 @@ $('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
    They are held separately now. */
 async function load(agId){
   S.browseId = agId;
-  S.fixtures = null; S.standings = null;
+  S.fixtures = null; S.standings = null; S.loadError = false;
   render();
-  const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
-  if (S.browseId !== agId) return;          // a newer pill won the race
-  S.fixtures = fx; S.standings = st;
-  if (agId === S.ageId) S.followFx = fx;    // one fetch serves both tabs
+  /* Stadium wifi drops. Without the catch, one failed fetch left this promise
+     rejected and the tab saying "Loading…" forever — the retry card below is
+     what a manager actually needs at pitch-side. */
+  try {
+    const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
+    if (S.browseId !== agId) return;          // a newer pill won the race
+    S.fixtures = fx; S.standings = st;
+    if (agId === S.ageId) S.followFx = fx;    // one fetch serves both tabs
+  } catch (e) {
+    if (S.browseId !== agId) return;
+    S.loadError = true;
+  }
   render();
 }
 
@@ -618,9 +627,11 @@ async function load(agId){
 async function loadFollowData(){
   const id = S.ageId;
   if (!id) { S.followFx = null; return; }
-  const fx = await api.getFixtures(id);
-  if (S.ageId !== id) return;
-  S.followFx = fx;
+  try {
+    const fx = await api.getFixtures(id);
+    if (S.ageId !== id) return;
+    S.followFx = fx;
+  } catch (e) { /* Today simply keeps what it had; the next poll retries. */ }
   render();
 }
 
@@ -637,7 +648,9 @@ async function refresh(){
   if (aid && aid !== bid) jobs.push(api.getFixtures(aid).then((fx) => {
     if (S.ageId === aid) S.followFx = fx;
   }));
-  await Promise.all(jobs);
+  /* A failed background poll keeps whatever is on screen — never an error,
+     never a blank. The next poll tries again. */
+  try { await Promise.all(jobs); } catch (e) { return; }
   render();
 }
 
@@ -651,6 +664,14 @@ function pills(){
    (dayOf drives the countdown) but never showed it. The date text comes from the
    venue layout rather than being typed here, so moving a day in the back office
    moves it on this tag too. */
+/* Shown instead of "Loading…" once a fetch has actually failed. The button
+   carries data-age, so the existing pill wiring makes it retry load(). */
+function loadFail(){
+  return `<div class="card"><div class="empty"><b>Couldn't load</b>
+    <div>Check your signal, then try again.</div>
+    <button class="btn" data-age="${esc(S.browseId || '')}" style="margin-top:12px">Try again</button></div></div>`;
+}
+
 function dayTag(agId){
   if (!agId) return '';
   const sat = isSat(agId);
@@ -869,7 +890,7 @@ function teamSeg(){
 function viewResults(){
   const fx = S.fixtures;
   const head = `<div class="sec-t">Results</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
-  if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
+  if (!fx) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (fx.awaitingPublication) return head + comingSoon('Results', S.browseId);
   const { showFilter, seg } = teamSeg();
   return head + seg + resultsList(fx, showFilter);
@@ -878,7 +899,7 @@ function viewResults(){
 function viewFixtures(){
   const fx = S.fixtures;
   const head = `<div class="sec-t">Fixtures</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
-  if (!fx) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
+  if (!fx) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
 
   const { showFilter, seg } = teamSeg();
@@ -903,7 +924,7 @@ function viewFixtures(){
 function viewTables(){
   const st = S.standings;
   const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
-  if (!st) return head + `<div class="card"><div class="spin">Loading…</div></div>`;
+  if (!st) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
   if (!st.ageGroup.hasStandings) return head +
     `<div class="card"><div class="empty"><b>Festival age group</b>

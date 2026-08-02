@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,6 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="robots" content="noindex, nofollow">
 <title>Sign in — ADH JRT</title>
+<link rel="icon" type="image/png" href="/assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="theme-color" content="#F3F2EF">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -70,7 +72,7 @@
 
     <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
-      <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#0E6B34;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+      <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#0E6B33;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
       <div style="margin-top:18px;text-align:center;font-size:13px;color:#5A626E"><a onClick="{{ onShowLogin }}" style="color:#1A1C1F;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
     </sc-if>
 
@@ -312,7 +314,10 @@ class Component extends DCLogic {
       this.redirect(this.destFor(res.session));
       return;
     }
-    this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.', loginError: res.error || 'Could not sign in with Google.' });
+    /* Only googleError — mirroring it into loginError printed the same
+       sentence twice on the login view (once above the form, once under the
+       Google button). */
+    this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.' });
   }
 
   async doGoogleSignup() {

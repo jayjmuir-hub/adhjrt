@@ -70,6 +70,7 @@ const NEEDED = [
   path.join('netlify', 'functions', 'accounts-admin.js'),
   path.join('netlify', 'functions', 'organizer-signup.js'),
   path.join('netlify', 'functions', 'manager-signup.js'),
+  path.join('netlify', 'functions', 'login.js'),
   path.join('netlify', 'functions', 'organizer-login.js'),
   path.join('netlify', 'functions', 'manager-login.js'),
   path.join('netlify', 'functions', '_googleAuth.js'),
@@ -2222,6 +2223,57 @@ const FAULTS = [
     expect: ['u9\'s saved draw had its knockout cleared'],
   },
 
+  /* ---- the unified login endpoint (test-unified-login.js) --------------- */
+
+  {
+    name: 'login.js grows a role filter back, locking one role out of the single endpoint',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "const account = accounts.find((a) => a.username === uname);",
+      "const account = accounts.find((a) => a.username === uname && a.role === 'manager');"),
+    expect: ['an organizer signs in'],
+  },
+  {
+    name: 'login.js loses the Google-account (no passwordHash) guard',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
+      "if (!account || !(await verifyPassword(password || '', account.passwordHash))) {"),
+    expect: ['the Google-account (no passwordHash) guard is present'],
+  },
+  {
+    name: 'login.js grows a password-length check, locking out every pre-floor password',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "    const { username, password } = JSON.parse(event.body || '{}');",
+      "    const { username, password } = JSON.parse(event.body || '{}');\n    if ((password || '').length < 10) return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password.' }) };"),
+    expect: ['login.js does NOT check password length', 'an organizer signs in'],
+  },
+  {
+    name: 'login.js moves to its own rate bucket, buying attackers a second guess budget',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:login`,',
+      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:signin`,'),
+    expect: ['login.js counts into the shared :login bucket'],
+  },
+  {
+    name: 'login.js stops checking approval, signing pending accounts straight in',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "    if (!account.approved) {\n      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Your account is still pending approval from a tournament organizer.' }) };\n    }\n",
+      ""),
+    expect: ['a pending account is told so'],
+  },
+  {
+    name: 'the organizer session shape drifts (loses _role), breaking isOrganiserSession downstream',
+    suite: 'test-unified-login.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
+      "session: { username: account.username, name: account.name, role: account.title || 'Organizer' },"),
+    expect: ['with the organizer session shape', 'organizer session literal matches'],
+  },
+
   /* ---- /scores is purely public now (test-scores-public.js) ------------- */
 
   {
@@ -2595,7 +2647,7 @@ seed();
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
  'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
- 'test-scores-public.js'].forEach((f) => {
+ 'test-scores-public.js', 'test-unified-login.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

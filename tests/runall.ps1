@@ -37,6 +37,7 @@ $tests = @(
   'test-intake.js',
   'test-functions-load.js',
   'test-accounts.js',
+  'test-unified-login.js',
   'test-organizer-grouping.js',
   'test-organizer-tournament.js',
   'test-email.js',

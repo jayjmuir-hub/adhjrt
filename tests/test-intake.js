@@ -420,23 +420,14 @@ section('The allow-list and the columns cannot drift apart');
 
   check('the honeypot is not in either field list by accident',
     teamFields.indexOf('bot-field') < 0 && playerFields.indexOf('bot-field') < 0);
-  /* Three since 1 Aug 2026 — club declarations joined the two registrations.
-     Hardcoded, so ADDING a form is a deliberate act with a test to update and
-     not something that arrives unnoticed alongside an unrelated change. */
-  eq('these three forms are the only ones there are', Object.keys(I.FORMS).sort(),
-    ['club-registration', 'player-registration', 'team-registration']);
-
-  /* Every club column except the generated stamp must be fillable, the same
-     way the team and player columns are checked above — a column with no field
-     behind it is permanently empty and nobody notices. */
-  const clubFields = I.FORMS['club-registration'].fields;
-  I.CLUB_COLUMNS.filter((c) => GENERATED.indexOf(c) < 0).forEach((c) => {
-    check(`club column "${c}" is a field somebody can fill in`, clubFields.indexOf(c) >= 0);
-  });
-  check('the honeypot is not in the club field list by accident',
-    clubFields.indexOf('bot-field') < 0);
-  check('a club submission cannot stamp its own submittedAt',
-    clubFields.indexOf('submittedAt') < 0);
+  /* Two. The club declaration form was removed on 2 Aug 2026 at Jay's request —
+     the button, the modal, the columns, the row builder and the email template
+     all went with it. */
+  eq('the forms are exactly the two the site submits', Object.keys(I.FORMS).sort(),
+    ['player-registration', 'team-registration']);
+  check('club-registration is gone, not merely unused',
+    I.cleanSubmission('club-registration', { club: 'X' }) === null,
+    'an unknown form must be refused by the allow-list, not silently accepted');
 }
 
 /* The form names have to be the ones the page actually submits, or the gateway
@@ -616,111 +607,13 @@ check('neither is silently dropped', !V('team-registration', goodTeam()).drop
   }
 }
 
-/* ---- club declarations ------------------------------------------------
-   Added 1 Aug 2026. A declaration says how many teams a club is bringing in
-   each age group. It mints no team code and blocks nothing — see
-   claude/specs/spec-club-registration.md. */
+/* ---- the A1 ranges ----------------------------------------------------
+   Derived from the column counts, never typed. Lived inside the club section
+   until that was removed on 2 Aug 2026; kept, because the ceiling it guards
+   applies to every sheet. */
 {
-  const goodClub = () => ({
-    club: 'Dubai Exiles', 'contact-name': 'A Person', 'contact-email': 'a@b.com',
-    'teams-u8': '2', 'teams-u16b': '3',
-  });
-  const C = (d) => V('club-registration', d);
-
-  check('a complete declaration is accepted', C(goodClub()).ok === true, JSON.stringify(C(goodClub())));
-
-  /* Required fields, one at a time — a single "everything missing" case passes
-     even when only one field is really being checked. */
-  ['club', 'contact-name', 'contact-email'].forEach((f) => {
-    const d = goodClub(); delete d[f];
-    const r = C(d);
-    check(`a declaration with no ${f} is refused`, r.ok === false, JSON.stringify(r));
-    eq('…and told which one', r.field, f);
-  });
-  check('a contact phone is OPTIONAL, like the team form manager fields',
-    C({ ...goodClub(), 'contact-phone': '' }).ok === true);
-
-  /* THE RULE THAT MAKES A DECLARATION MEAN SOMETHING. Nothing is wrong with
-     any single field here — the submission just does not say anything, and a
-     row of fifteen blanks in the sheet is worse than no row at all. */
-  const nothing = { club: 'X', 'contact-name': 'Y', 'contact-email': 'z@b.com' };
-  check('a declaration that declares no teams at all is refused', C(nothing).ok === false);
-  check('…with a sentence a club can act on',
-    /at least one age group/.test(C(nothing).error || ''), C(nothing).error);
-  check('every count explicitly zero is the SAME as declaring nothing',
-    C({ ...nothing, 'teams-u8': '0', 'teams-u16b': '0' }).ok === false);
-  check('…while a single team in one group is enough',
-    C({ ...nothing, 'teams-u18g': '1' }).ok === true);
-
-  /* A count that is not a whole number is a broken or edited client, and says
-     so differently from a club mistake. */
-  ['two', '1.5', '-1', '1e2', 'N', '2 teams'].forEach((v) => {
-    const r = C({ ...goodClub(), 'teams-u8': v });
-    check(`"${v}" is not accepted as a team count`, r.ok === false, JSON.stringify(r));
-  });
-  check('a blank count is skipped, not refused — blank means "not coming"',
-    C({ ...goodClub(), 'teams-u9': '' }).ok === true);
-  /* Whitespace is blank, NOT a broken client. It trims to '' and means "not
-     coming", the same way filled() treats whitespace everywhere else in
-     _intake.js. Refusing a stray space would be the page's fault charged to
-     the club. (This check started life in the rejected list above and was
-     wrong: the code was right and the test was not.) */
-  check('a whitespace-only count is treated as blank, not refused',
-    C({ ...goodClub(), 'teams-u9': '   ' }).ok === true);
-  check('…and whitespace alone is still not a declaration',
-    C({ ...nothing, 'teams-u9': '   ' }).ok === false);
-
-  /* The ceiling, at its exact boundary in both directions. */
-  eq('the cap is ten', I.MAX_TEAMS_PER_GROUP, 10);
-  check('exactly the cap is allowed',
-    C({ ...goodClub(), 'teams-u8': String(I.MAX_TEAMS_PER_GROUP) }).ok === true);
-  check('one over the cap is refused',
-    C({ ...goodClub(), 'teams-u8': String(I.MAX_TEAMS_PER_GROUP + 1) }).ok === false);
-  check('…and the refusal names the age group, not just the number',
-    /U8 Tag/.test(C({ ...goodClub(), 'teams-u8': '11' }).error || ''),
-    C({ ...goodClub(), 'teams-u8': '11' }).error);
-
-  /* EVERY age group is checked, not just the first — the loop must not stop
-     early or skip the tail of the list. */
-  AG.AGE_GROUPS.forEach((g) => {
-    const key = I.clubCountKey(g.id);
-    check(`${g.id}: a real count is accepted`, C({ ...nothing, [key]: '2' }).ok === true);
-    check(`${g.id}: an over-cap count is refused`, C({ ...nothing, [key]: '99' }).ok === false);
-  });
-
-  /* The columns and the age-group table, compared BOTH ways. Written out in
-     _intake.js on purpose (reordering AGE_GROUPS must not silently reshuffle a
-     sheet that has rows in it) — so this is what stops the two drifting. */
-  const countCols = I.CLUB_COLUMNS.filter((c) => c.indexOf(I.CLUB_COUNT_PREFIX) === 0);
-  eq('there is exactly one count column per age group', countCols.length, AG.AGE_GROUPS.length);
-  eq('…in the same order, and it is REAL AGE order, not alphabetical',
-    JSON.stringify(countCols.map((c) => c.slice(I.CLUB_COUNT_PREFIX.length))),
-    JSON.stringify(AG.AGE_GROUPS.map((g) => g.id)));
-  check('…and u12g sits between u12 and u13, where a plain sort would not put it',
-    countCols.indexOf('teams-u12g') > countCols.indexOf('teams-u12')
-    && countCols.indexOf('teams-u12g') < countCols.indexOf('teams-u13'));
-
-  /* The round trip: write a declaration, read it back, get the same thing. */
-  const stamp = '2026-08-01T09:00:00.000Z';
-  const cleanedClub = I.cleanSubmission('club-registration', { ...goodClub(), 'teams-u99': '4', submittedAt: 'mine', evil: 1 });
-  check('an unknown age group is dropped, not stored', cleanedClub.dropped.indexOf('teams-u99') >= 0);
-  check('a submitted submittedAt is dropped and REPORTED', cleanedClub.dropped.indexOf('submittedAt') >= 0);
-  const clubRowOut = I.clubRow(cleanedClub.clean, stamp);
-  eq('one row, twenty-one cells', clubRowOut.length, I.CLUB_COLUMNS.length);
-  eq('the stamp is ours, not the submission’s', clubRowOut[0], stamp);
-  const backClub = I.mapClubRow(clubRowOut);
-  eq('club survives the round trip', backClub.club, 'Dubai Exiles');
-  eq('the contact survives', backClub.contactName, 'A Person');
-  eq('a declared count survives', backClub.u8, '2');
-  eq('…and so does one further down the row', backClub.u16b, '3');
-  eq('a group nobody declared reads as blank, never undefined', backClub.u12g, '');
-  const shortClub = I.mapClubRow(['s', 'c']);
-  eq('a short row from Sheets still has every field', typeof shortClub.notes, 'string');
-  eq('…and the missing ones are blank', shortClub.notes, '');
-
   /* The A1 range is derived, and colLetter() only reaches Z. */
-  eq('the club range is derived from the column count', I.CLUB_RANGE, 'A:U');
-  [I.TEAM_RANGE, I.PLAYER_RANGE, I.CLUB_RANGE].forEach((r) => {
+  [I.TEAM_RANGE, I.PLAYER_RANGE].forEach((r) => {
     check(`range ${r} stays inside A-Z (colLetter breaks past 26 columns)`, /^A:[A-Z]$/.test(r));
   });
 

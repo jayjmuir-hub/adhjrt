@@ -335,7 +335,7 @@ const FAULTS = [
   {
     name: 'a time-share is drawn in the warning colour',
     suite: 'test-venue-map.js',
-    apply: () => patch('Organizer.dc.html', "              border = '1px solid rgba(255,255,255,0.34)';", "              border = '1px solid #f5c518';"),
+    apply: () => patch('Organizer.dc.html', "              border = '1px solid rgba(0,0,0,0.34)';", "              border = '1px solid #8F6400';"),
     expect: ['NOT in a warning colour'],
   },
   {
@@ -1966,16 +1966,16 @@ const FAULTS = [
     name: 'the teams table template stops showing the count next to the club name in its header row',
     suite: 'test-organizer-grouping.js',
     apply: () => patch('Organizer.dc.html',
-      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
-      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }}</td>'),
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }}</td>'),
     expect: ['the teams table template actually renders a club header row per group'],
   },
   {
     name: 'the players table template stops showing the count next to the club name in its header row',
     suite: 'test-organizer-grouping.js',
     apply: () => patch('Organizer.dc.html',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }}</td>'),
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }}</td>'),
     expect: ['the players table template actually renders a club header row per group'],
   },
   {
@@ -2223,6 +2223,36 @@ const FAULTS = [
       + "          /* knockout clear intentionally skipped */\n"
       + "        }"),
     expect: ['u9\'s saved draw had its knockout cleared'],
+  },
+
+  /* ---- the light/dark split (test-light-mode.js) ------------------------- */
+
+  {
+    name: 'the organizer page body reverts to the dark surface',
+    suite: 'test-light-mode.js',
+    apply: () => patch('Organizer.dc.html',
+      'body{font-family:\'Barlow\',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;',
+      'body{font-family:\'Barlow\',system-ui,sans-serif;background:#0C0C0E;color:#1A1C1F;'),
+    expect: ['no dark page surface remains'],
+  },
+  {
+    name: 'a dark card creeps back into the signin page',
+    suite: 'test-light-mode.js',
+    apply: () => patch('Signin.dc.html',
+      '<div style="width:100%;max-width:400px;background:#FFFFFF;',
+      '<div style="width:100%;max-width:400px;background:#151517;'),
+    expect: ['no dark card surface remains'],
+  },
+  {
+    name: 'the public scores page quietly goes light',
+    suite: 'test-light-mode.js',
+    apply: () => {
+      const p = 'Scores & Standings.dc.html';
+      const rel = path.join(TMP, p);
+      const src = fs.readFileSync(rel, 'utf8');
+      fs.writeFileSync(rel, src.split('#0C0C0E').join('#F3F2EF'));
+    },
+    expect: ['still carries the dark page surface'],
   },
 
   /* ---- the /signin page (test-signin-page.js) ---------------------------- */
@@ -2777,7 +2807,7 @@ seed();
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
  'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
  'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js',
- 'test-signin-page.js'].forEach((f) => {
+ 'test-signin-page.js', 'test-light-mode.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

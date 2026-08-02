@@ -27,9 +27,9 @@ section('Organizer dashboard header links to the Manager area');
     header.indexOf('← Main site') > -1
     && header.indexOf('View Manager Area') > header.indexOf('← Main site'));
   check('it uses the same muted header-link colour as "← Main site"',
-    /href="\/manager"[^>]*color:#aeb4bf/.test(header));
+    /href="\/manager"[^>]*color:#454D58/.test(header));
   check('it uses the same left-rule separator as "← Main site"',
-    /href="\/manager"[^>]*border-left:1px solid rgba\(255,255,255,0\.15\)/.test(header));
+    /href="\/manager"[^>]*border-left:1px solid rgba\(0,0,0,0\.15\)/.test(header));
 }
 
 section('Nothing else in Organizer.dc.html changed');

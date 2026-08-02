@@ -7,9 +7,9 @@
 </head>
 <body>
 <x-dc>
-<template id="__bundler_thumbnail" data-bg-color="#0C0C0E">
+<template id="__bundler_thumbnail" data-bg-color="#F3F2EF">
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <rect width="200" height="200" fill="#0C0C0E"/>
+    <rect width="200" height="200" fill="#F3F2EF"/>
     <rect x="50" y="60" width="100" height="14" fill="#E11B22"/>
     <rect x="50" y="86" width="100" height="14" fill="#fff"/>
     <rect x="50" y="112" width="100" height="14" fill="#17A34A"/>
@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Organizer — ADH JRT</title>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0C0C0E">
+<meta name="theme-color" content="#F3F2EF">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,7 +42,7 @@
 
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased}
   input,select,button{font-family:inherit}
   table{border-collapse:collapse}
 </style>
@@ -57,10 +57,10 @@
        scripted navigation is blocked. -->
   <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-      <div style="width:100%;max-width:400px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:36px;text-align:center">
+      <div style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:18px;padding:36px;text-align:center">
         <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px;margin-bottom:10px">ADH JRT</div>
-        <p style="color:#aeb4bf;font-size:14px;line-height:1.6">Taking you to the sign-in page&hellip;</p>
-        <p style="margin-top:14px"><a href="/signin?next=/organizer" style="color:#fff;font-weight:700;text-decoration:underline;font-size:14px">Sign in</a></p>
+        <p style="color:#454D58;font-size:14px;line-height:1.6">Taking you to the sign-in page&hellip;</p>
+        <p style="margin-top:14px"><a href="/signin?next=/organizer" style="color:#1A1C1F;font-weight:700;text-decoration:underline;font-size:14px">Sign in</a></p>
       </div>
     </div>
   </sc-if>
@@ -68,46 +68,46 @@
   <!-- ===================== DASHBOARD ===================== -->
   <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
     <div style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:20px">
         <div style="display:flex;align-items:center;gap:14px">
-          <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#fff">
+          <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#1A1C1F">
             <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
               <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
             </div>
             <div style="line-height:1">
               <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · ORGANIZER</div>
-              <div style="font-size:11px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">REGISTRATIONS</div>
+              <div style="font-size:11px;letter-spacing:2px;color:#0E6B33;font-weight:700;margin-top:3px">REGISTRATIONS</div>
             </div>
           </a>
-          <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#aeb4bf;border-left:1px solid rgba(255,255,255,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#fff">← Main site</a>
-          <a href="/manager" style="font-size:13px;font-weight:700;color:#aeb4bf;border-left:1px solid rgba(255,255,255,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#fff">View Manager Area</a>
+          <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">← Main site</a>
+          <a href="/manager" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View Manager Area</a>
         </div>
         <div style="display:flex;align-items:center;gap:14px;position:relative">
           <div style="text-align:right;line-height:1.3">
             <div style="font-weight:700;font-size:14px">{{ sessionName }}</div>
-            <div style="font-size:12px;color:#7f8794">{{ sessionRole }}</div>
+            <div style="font-size:12px;color:#5A626E">{{ sessionRole }}</div>
           </div>
-          <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#aeb4bf;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Change password</button>
-          <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+          <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#454D58;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Change password</button>
+          <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
 
           <sc-if value="{{ showChangePwd }}" hint-placeholder-val="{{ false }}">
-            <div style="position:absolute;top:calc(100% + 10px);right:0;width:300px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:20">
+            <div style="position:absolute;top:calc(100% + 10px);right:0;width:300px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:12px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:20">
               <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:12px">Change password</div>
-              <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">CURRENT PASSWORD</label>
+              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CURRENT PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input type="{{ cpCurrentType }}" value="{{ cpCurrent }}" onInput="{{ onCpCurrent }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#fff;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleCpCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpCurrentToggleLabel }}</button>
+                <input type="{{ cpCurrentType }}" value="{{ cpCurrent }}" onInput="{{ onCpCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleCpCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpCurrentToggleLabel }}</button>
               </div>
-              <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NEW PASSWORD</label>
+              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NEW PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input type="{{ cpNewType }}" value="{{ cpNew }}" onInput="{{ onCpNew }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#fff;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleCpNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpNewToggleLabel }}</button>
+                <input type="{{ cpNewType }}" value="{{ cpNew }}" onInput="{{ onCpNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleCpNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpNewToggleLabel }}</button>
               </div>
-              <sc-if value="{{ cpError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpError }}</div></sc-if>
-              <sc-if value="{{ cpSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpSuccess }}</div></sc-if>
+              <sc-if value="{{ cpError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpError }}</div></sc-if>
+              <sc-if value="{{ cpSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpSuccess }}</div></sc-if>
               <div style="display:flex;gap:8px">
                 <button onClick="{{ onCpSubmit }}" disabled="{{ cpBusy }}" style="flex:1;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ cpLabel }}</button>
-                <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer">Cancel</button>
+                <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer">Cancel</button>
               </div>
             </div>
           </sc-if>
@@ -115,7 +115,7 @@
       </div>
 
       <!-- tabs -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px;width:fit-content">
+      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content">
         <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
@@ -129,7 +129,7 @@
            registered yet." This banner only shows when loadData() actually
            failed, and offers the one thing that usually fixes it (retry). -->
       <sc-if value="{{ dataError }}" hint-placeholder-val="">
-        <div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#ff8a8a;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#A62626;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px">
           <span>{{ dataError }}</span>
           <button onClick="{{ onRetryLoad }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Retry</button>
         </div>
@@ -139,63 +139,63 @@
       <sc-if value="{{ isRegistration }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Registration window</div>
-                <p style="color:#7f8794;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#aeb4bf">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#aeb4bf">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
+                <p style="color:#5A626E;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#454D58">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#454D58">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
+                <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
                 <button onClick="{{ onRegSave }}" disabled="{{ rSaveDisabled }}" style="{{ rSaveStyle }}">{{ rSaveLabel }}</button>
               </div>
             </div>
 
-            <sc-if value="{{ rError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#ff8a8a;font-size:13px;font-weight:600">{{ rError }}</div></sc-if>
-            <sc-if value="{{ rSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:13px;font-weight:600">{{ rSuccess }}</div></sc-if>
+            <sc-if value="{{ rError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#A62626;font-size:13px;font-weight:600">{{ rError }}</div></sc-if>
+            <sc-if value="{{ rSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#0E6B33;font-size:13px;font-weight:600">{{ rSuccess }}</div></sc-if>
 
             <sc-if value="{{ rHasProblems }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:11px 13px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#A62626;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
                 <sc-for list="{{ rProblems }}" as="rp" hint-placeholder-count="1">
-                  <div style="color:#ff8a8a;font-size:13px;line-height:1.6">&bull; {{ rp }}</div>
+                  <div style="color:#A62626;font-size:13px;line-height:1.6">&bull; {{ rp }}</div>
                 </sc-for>
               </div>
             </sc-if>
 
             <sc-if value="{{ rHasWarnings }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:6px">Worth a look &mdash; you can still save</div>
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#8F6400;text-transform:uppercase;margin-bottom:6px">Worth a look &mdash; you can still save</div>
                 <sc-for list="{{ rWarnings }}" as="rw" hint-placeholder-count="2">
-                  <div style="color:#f5c518;font-size:13px;line-height:1.6">&bull; {{ rw }}</div>
+                  <div style="color:#8F6400;font-size:13px;line-height:1.6">&bull; {{ rw }}</div>
                 </sc-for>
               </div>
             </sc-if>
           </div>
 
           <!-- the two dates -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">The dates</div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#aeb4bf">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
+            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#454D58">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
               <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
-                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;color-scheme:dark">
+                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
+                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rOpensEchoColor }}">{{ rOpensEcho }}</div>
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
-                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;color-scheme:dark">
+                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
+                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rClosesEchoColor }}">{{ rClosesEcho }}</div>
               </div>
             </div>
           </div>
 
           <!-- auto / force open / force closed -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Which one is in charge</div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#aeb4bf">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
+            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#454D58">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
               <sc-for list="{{ rModes }}" as="rm" hint-placeholder-count="3">
@@ -208,21 +208,21 @@
           </div>
 
           <!-- what a visitor sees, computed from the UNSAVED working copy -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
             <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
               <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">What the public page says</div>
-              <sc-if value="{{ rPreviewUnsaved }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#f5c518;text-transform:uppercase">Preview of your unsaved changes</div></sc-if>
+              <sc-if value="{{ rPreviewUnsaved }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#8F6400;text-transform:uppercase">Preview of your unsaved changes</div></sc-if>
             </div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
+            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
 
-            <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:20px;text-align:center">
-              <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:#fff">
+            <div style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;text-align:center">
+              <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:#1A1C1F">
                 <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>{{ rPreviewPill }}
               </div>
-              <div style="color:#aeb4bf;font-size:14px;line-height:1.6;max-width:520px;margin:0 auto">{{ rPreviewBlurb }}</div>
+              <div style="color:#454D58;font-size:14px;line-height:1.6;max-width:520px;margin:0 auto">{{ rPreviewBlurb }}</div>
               <div style="margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:{{ rPreviewTint }}">{{ rPreviewButtons }}</div>
               <sc-if value="{{ rPreviewTestMode }}" hint-placeholder-val="{{ false }}">
-                <div style="margin-top:14px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);border-radius:8px;padding:9px 13px;color:#f5c518;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Test mode strip is showing on the public page</div>
+                <div style="margin-top:14px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);border-radius:8px;padding:9px 13px;color:#8F6400;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Test mode strip is showing on the public page</div>
               </sc-if>
             </div>
           </div>
@@ -238,11 +238,11 @@
         <div style="margin-top:24px">
 
           <!-- ===== SCORING RULES (per age group) ===== -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.12);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Scoring for {{ tournAgeName }}</div>
-            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
+            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
 
-            <select value="{{ tournAgeId }}" onChange="{{ onTournAge }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;margin-bottom:16px">
+            <select value="{{ tournAgeId }}" onChange="{{ onTournAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;margin-bottom:16px">
               <sc-for list="{{ tournAgeOptions }}" as="ta" hint-placeholder-count="15">
                 <option value="{{ ta.id }}">{{ ta.name }}</option>
               </sc-for>
@@ -252,48 +252,48 @@
               <sc-for list="{{ scoreTypeToggles }}" as="t" hint-placeholder-count="4">
                 <label style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
                   <input type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
-                  {{ t.label }} <span style="color:#7f8794;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
+                  {{ t.label }} <span style="color:#5A626E;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
                 </label>
               </sc-for>
             </div>
 
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <button onClick="{{ onSaveScoring }}" disabled="{{ scoringBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;font-size:13px">Save scoring</button>
-              <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
+              <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:#0E6B33;font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
             </div>
           </div>
 
           <!-- ===== ALL AGE GROUPS — bulk publish ===== -->
-          <div style="background:#151517;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">All age groups</div>
-            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
+            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <button onClick="{{ onPublishAll }}" disabled="{{ bulkBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Publish all age groups</button>
-              <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
-              <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
+              <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#A62626;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
+              <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:#0E6B33;font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
             </div>
           </div>
 
           <!-- ===== SIMULATE A TOURNAMENT (testing) ===== -->
-          <div style="background:#151517;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Simulate a tournament</div>
-            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
-            <div style="font-size:12px;line-height:1.6;color:#5a616d;margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:#8b93a3">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
+            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
+            <div style="font-size:12px;line-height:1.6;color:#69727E;margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:#525B67">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
 
             <sc-if value="{{ simIsMatchDay }}" hint-placeholder-val="{{ false }}">
-              <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#f5c518;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 7 or 8 November.</div>
+              <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#8F6400;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 7 or 8 November.</div>
             </sc-if>
 
             <sc-if value="{{ simNotMatchDay }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
                 <button onClick="{{ onSimulateTournament }}" disabled="{{ simBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Simulate whole tournament</button>
-                <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
+                <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#A62626;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
               </div>
               <sc-if value="{{ simProgress }}" hint-placeholder-val="">
-                <div style="margin-top:12px;font-size:13px;color:#aeb4bf;font-weight:600">{{ simProgress }}</div>
+                <div style="margin-top:12px;font-size:13px;color:#454D58;font-weight:600">{{ simProgress }}</div>
               </sc-if>
               <sc-if value="{{ simMsg }}" hint-placeholder-val="">
-                <div style="margin-top:12px;font-size:13px;color:#3bd070;font-weight:700;line-height:1.5">{{ simMsg }}</div>
+                <div style="margin-top:12px;font-size:13px;color:#0E6B33;font-weight:700;line-height:1.5">{{ simMsg }}</div>
               </sc-if>
             </sc-if>
           </div>
@@ -304,14 +304,14 @@
       <!-- filters -->
       <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
-          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
-          <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
             <option value="">All clubs</option>
             <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
               <option value="{{ c }}">{{ c }}</option>
             </sc-for>
           </select>
-          <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+          <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
             <option value="">All age groups</option>
             <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
               <option value="{{ a }}">{{ a }}</option>
@@ -325,35 +325,35 @@
       <sc-if value="{{ isVenue }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:21px;text-transform:uppercase;margin-bottom:6px">Venue &amp; days</div>
-                <p style="color:#7f8794;font-size:16px;margin:0;line-height:1.65">The pitches running on each day, and which day each age group plays. <b style="color:#aeb4bf">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
+                <p style="color:#5A626E;font-size:16px;margin:0;line-height:1.65">The pitches running on each day, and which day each age group plays. <b style="color:#454D58">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:14px;padding:12px 16px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:14px;padding:12px 16px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
                 <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
               </div>
             </div>
 
-            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#ff8a8a;font-size:14px;font-weight:600">{{ vError }}</div></sc-if>
-            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#3bd070;font-size:14px;font-weight:600">{{ vSuccess }}</div></sc-if>
+            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#A62626;font-size:14px;font-weight:600">{{ vError }}</div></sc-if>
+            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#0E6B33;font-size:14px;font-weight:600">{{ vSuccess }}</div></sc-if>
 
             <sc-if value="{{ vHasProblems }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:12px 14px">
-                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#ff8a8a;text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
+                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#A62626;text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
                 <sc-for list="{{ vProblems }}" as="pr" hint-placeholder-count="2">
-                  <div style="color:#ff8a8a;font-size:14px;line-height:1.65">&bull; {{ pr }}</div>
+                  <div style="color:#A62626;font-size:14px;line-height:1.65">&bull; {{ pr }}</div>
                 </sc-for>
               </div>
             </sc-if>
 
             <sc-if value="{{ vHasWarnings }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:12px 14px">
-                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:7px">Worth a look — you can still save</div>
+                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#8F6400;text-transform:uppercase;margin-bottom:7px">Worth a look — you can still save</div>
                 <sc-for list="{{ vWarnings }}" as="wn" hint-placeholder-count="2">
-                  <div style="color:#f5c518;font-size:14px;line-height:1.65">&bull; {{ wn }}</div>
+                  <div style="color:#8F6400;font-size:14px;line-height:1.65">&bull; {{ wn }}</div>
                 </sc-for>
               </div>
             </sc-if>
@@ -366,7 +366,7 @@
                shared across both days (see the map-view copy below), so
                nothing about the map itself needed a day split — only the
                THREE cards further down that are genuinely per-day. -->
-          <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px;margin-bottom:16px;max-width:460px">
+          <div style="display:flex;gap:8px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:6px;margin-bottom:16px;max-width:460px">
             <button onClick="{{ onDayTab1 }}" style="{{ dayTab1Style }}">{{ dayTab1Label }}</button>
             <button onClick="{{ onDayTab2 }}" style="{{ dayTab2Style }}">{{ dayTab2Label }}</button>
           </div>
@@ -381,28 +381,28 @@
                draws one outline per block and never divides it — so the map
                chip names the block and the groups on it, and the schematic is
                where the individual pitches are read. -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
               <div style="flex:1;min-width:220px">
                 <div style="font-family:'Anton';font-size:19px;text-transform:uppercase">Where each group plays &mdash; {{ vDayViewLabel }}</div>
               </div>
-              <div style="display:flex;gap:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:4px">
+              <div style="display:flex;gap:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:4px">
                 <button onClick="{{ onViewSchematic }}" style="{{ vViewSchematicStyle }}">Schematic</button>
                 <button onClick="{{ onViewMap }}" style="{{ vViewMapStyle }}">Map</button>
               </div>
             </div>
 
             <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
-              <p style="color:#7f8794;font-size:15px;margin:0 0 18px;line-height:1.65">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#aeb4bf">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#aeb4bf">time-share</b>, not a clash.</p>
+              <p style="color:#5A626E;font-size:15px;margin:0 0 18px;line-height:1.65">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#454D58">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#454D58">time-share</b>, not a clash.</p>
             </sc-if>
 
             <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
-              <p style="color:#7f8794;font-size:15px;margin:0 0 14px;line-height:1.65">The real Zayed Sports City map. <b style="color:#aeb4bf">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#aeb4bf">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
+              <p style="color:#5A626E;font-size:15px;margin:0 0 14px;line-height:1.65">The real Zayed Sports City map. <b style="color:#454D58">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#454D58">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
                 <button onClick="{{ onToggleMapLock }}" style="{{ vLockStyle }}">{{ vLockLabel }}</button>
-                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#7f8794;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
+                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#5A626E;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
                 <sc-if value="{{ vUnlocked }}" hint-placeholder-val="{{ false }}">
-                  <span style="font-size:14px;color:#f5c518;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
+                  <span style="font-size:14px;color:#8F6400;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
                 </sc-if>
               </div>
             </sc-if>
@@ -411,11 +411,11 @@
               <sc-if value="{{ vm.isCurrentDay }}">
                 <div style="margin-bottom:22px">
                   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-                    <div style="font-size:14px;color:#7f8794;font-weight:600">{{ vm.summary }}</div>
+                    <div style="font-size:14px;color:#5A626E;font-weight:600">{{ vm.summary }}</div>
                   </div>
 
                   <sc-if value="{{ vm.isEmpty }}" hint-placeholder-val="{{ false }}">
-                    <div style="font-size:14px;color:#7f8794;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
+                    <div style="font-size:14px;color:#5A626E;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
                   </sc-if>
 
                   <!-- MAP VIEW. The image is pointer-events:none so it can
@@ -440,10 +440,10 @@
 
                     <sc-if value="{{ vm.hasStrays }}" hint-placeholder-val="{{ false }}">
                       <div style="margin-top:10px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px">
-                        <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#f5c518;text-transform:uppercase;margin-bottom:8px">Not on the map yet</div>
+                        <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#8F6400;text-transform:uppercase;margin-bottom:8px">Not on the map yet</div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                           <sc-for list="{{ vm.strays }}" as="st" hint-placeholder-count="1">
-                            <button onClick="{{ st.onPlace }}" style="background:#0C0C0E;border:1px dashed rgba(245,197,24,0.6);color:#f5c518;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
+                            <button onClick="{{ st.onPlace }}" style="background:#F3F2EF;border:1px dashed rgba(245,197,24,0.6);color:#8F6400;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
                           </sc-for>
                         </div>
                       </div>
@@ -454,7 +454,7 @@
                     <div style="{{ vm.gridStyle }}">
                       <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
                         <div style="{{ blk.style }}">
-                          <div style="font-size:13px;font-weight:800;letter-spacing:.6px;color:#7f8794;margin-bottom:8px">{{ blk.name }}</div>
+                          <div style="font-size:13px;font-weight:800;letter-spacing:.6px;color:#5A626E;margin-bottom:8px">{{ blk.name }}</div>
                           <div style="display:flex;flex-wrap:wrap;gap:7px">
                             <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
                               <div style="{{ pp.style }}" title="{{ pp.title }}">
@@ -487,12 +487,12 @@
                note lives on its own line instead. -->
           <sc-for list="{{ vDays }}" as="d" hint-placeholder-count="2">
             <sc-if value="{{ d.isCurrentDay }}">
-              <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
                 <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
                   <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;color:{{ d.tint }}">Pitches &mdash; {{ d.label }}</div>
-                  <div style="font-size:14px;color:#7f8794;font-weight:600">{{ d.summary }}</div>
+                  <div style="font-size:14px;color:#5A626E;font-weight:600">{{ d.summary }}</div>
                 </div>
-                <p style="color:#7f8794;font-size:15px;margin:0 0 12px;line-height:1.65">{{ d.hint }}</p>
+                <p style="color:#5A626E;font-size:15px;margin:0 0 12px;line-height:1.65">{{ d.hint }}</p>
 
                 <!-- Every main pitch, whether or not it is used today. A pitch
                      you are not using is a decision, and one you cannot see is
@@ -500,10 +500,10 @@
                      there is nothing to type and nothing to mistype. -->
                 <sc-for list="{{ d.mains }}" as="mp" hint-placeholder-count="15">
                   <div style="{{ mp.rowStyle }}">
-                    <div style="font-weight:800;font-size:17px;color:#fff">{{ mp.name }}</div>
+                    <div style="font-weight:800;font-size:17px;color:#1A1C1F">{{ mp.name }}</div>
                     <div>
                       <div style="font-size:14px;font-weight:600;color:{{ mp.surfaceColor }}">{{ mp.surfaceLabel }}</div>
-                      <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:700;color:#f5c518;margin-top:3px">{{ mp.usageLabel }}</div></sc-if>
+                      <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:700;color:#8F6400;margin-top:3px">{{ mp.usageLabel }}</div></sc-if>
                     </div>
                     <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
                       <sc-for list="{{ mp.choices }}" as="sc" hint-placeholder-count="4">
@@ -512,7 +512,7 @@
                     </div>
                   </div>
                 </sc-for>
-                <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#f5c518;font-weight:600;margin-top:10px">Nothing is in use on this day yet.</div></sc-if>
+                <sc-if value="{{ d.noPitches }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#8F6400;font-weight:600;margin-top:10px">Nothing is in use on this day yet.</div></sc-if>
               </div>
             </sc-if>
           </sc-for>
@@ -521,19 +521,19 @@
                name, day and how many pitches it has picked — click to expand
                and edit its pitches. Only groups on the selected day (or with
                no day set at all, which needs fixing either way) show here. -->
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
             <div style="font-family:'Anton';font-size:19px;text-transform:uppercase;margin-bottom:4px">Age groups &mdash; {{ vDayViewLabel }}</div>
-            <p style="color:#7f8794;font-size:15px;margin:0 0 16px;line-height:1.65">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#aeb4bf">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
+            <p style="color:#5A626E;font-size:15px;margin:0 0 16px;line-height:1.65">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#454D58">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
 
             <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="15">
               <sc-if value="{{ g.isCurrentDay }}">
-                <div style="border-top:1px solid rgba(255,255,255,0.07)">
+                <div style="border-top:1px solid rgba(0,0,0,0.07)">
                   <div style="display:flex;align-items:center;gap:16px;padding:17px 4px;flex-wrap:wrap">
                     <div onClick="{{ g.onToggleExpand }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:220px;cursor:pointer">
-                      <div style="width:18px;color:#7f8794;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
-                      <div style="font-size:18px;font-weight:700;color:#fff">{{ g.name }}</div>
+                      <div style="width:18px;color:#5A626E;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
+                      <div style="font-size:18px;font-weight:700;color:#1A1C1F">{{ g.name }}</div>
                     </div>
-                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px;color-scheme:dark">
+                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:dark">
                       <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
                         <option value="{{ dop.value }}">{{ dop.label }}</option>
                       </sc-for>
@@ -549,7 +549,7 @@
                            the whole pitch in one click. -->
                       <div style="display:flex;gap:14px;flex-wrap:wrap">
                         <sc-for list="{{ g.pitchGroups }}" as="pg" hint-placeholder-count="4">
-                          <div style="display:inline-flex;align-items:center;gap:9px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:7px 13px">
+                          <div style="display:inline-flex;align-items:center;gap:9px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:11px;padding:7px 13px">
                             <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
                             <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
                               <label style="display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:{{ pt.color }};cursor:pointer">
@@ -560,7 +560,7 @@
                           </div>
                         </sc-for>
                       </div>
-                      <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#f5c518;font-weight:600;margin-top:10px">No pitches chosen yet</div></sc-if>
+                      <sc-if value="{{ g.noneChosen }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:#8F6400;font-weight:600;margin-top:10px">No pitches chosen yet</div></sc-if>
                     </div>
                   </sc-if>
                 </div>
@@ -575,33 +575,33 @@
       <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create a login</div>
-            <p style="color:#7f8794;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#aeb4bf">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
+            <p style="color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#454D58">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
 
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
               <button onClick="{{ onCmRoleManager }}" style="{{ cmRoleManagerStyle }}">Manager</button>
               <button onClick="{{ onCmRoleOrganizer }}" style="{{ cmRoleOrganizerStyle }}">Organiser</button>
             </div>
-            <p style="color:#7f8794;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
+            <p style="color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">NAME</label>
-                <input value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NAME</label>
+                <input value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">USERNAME</label>
-                <input value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">USERNAME</label>
+                <input value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">PASSWORD</label>
-                <input value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">PASSWORD</label>
+                <input value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <sc-if value="{{ cmIsManager }}" hint-placeholder-val="{{ true }}">
                 <div>
-                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
-                  <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                  <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">AGE GROUP</label>
+                  <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
                     <option value="">Select&hellip;</option>
                     <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
                       <option value="{{ ag.id }}">{{ ag.name }}</option>
@@ -611,29 +611,29 @@
               </sc-if>
               <sc-if value="{{ cmIsOrganizer }}" hint-placeholder-val="{{ false }}">
                 <div>
-                  <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px">TITLE (OPTIONAL)</label>
-                  <input value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px">
+                  <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">TITLE (OPTIONAL)</label>
+                  <input value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
                 </div>
               </sc-if>
             </div>
-            <div style="font-size:12px;color:#5a616d;margin-top:10px">Passwords are at least {{ cmMinPassword }} characters.</div>
-            <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
-            <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:#3bd070;font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
+            <div style="font-size:12px;color:#69727E;margin-top:10px">Passwords are at least {{ cmMinPassword }} characters.</div>
+            <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
+            <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
             <button onClick="{{ onCreateManager }}" disabled="{{ cmBusy }}" style="margin-top:16px;background:#17A34A;color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ cmLabel }}</button>
           </div>
 
           <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
-            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#f5c518">Pending approval</div>
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#8F6400">Pending approval</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
               <sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="2">
-                <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
                   <div>
-                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#7f8794;font-weight:500">— {{ a.username }}</span></div>
-                    <div style="font-size:12px;color:#7f8794;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
+                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#5A626E;font-weight:500">— {{ a.username }}</span></div>
+                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
                   </div>
                   <div style="display:flex;gap:8px">
                     <button onClick="{{ a.onApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
-                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
+                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
                   </div>
                 </div>
               </sc-for>
@@ -641,30 +641,30 @@
           </sc-if>
 
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">All accounts</div>
-          <div style="overflow-x:auto;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+          <div style="overflow-x:auto;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
             <table style="width:100%;min-width:700px">
               <thead>
-                <tr style="background:#151517">
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Name</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Username</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Role</th>
-                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Status</th>
-                  <th style="text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase"></th>
+                <tr style="background:#FFFFFF">
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Username</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</th>
+                  <th style="text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
+                  <th style="text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase"></th>
                 </tr>
               </thead>
               <tbody>
                 <sc-for list="{{ approvedAccounts }}" as="a" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
                     <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ a.name }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf">{{ a.username }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ a.roleLabel }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#3bd070;font-weight:700">Active</td>
-                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ff8a8a;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
+                    <td style="padding:12px 14px;font-size:13px;color:#454D58">{{ a.username }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ a.roleLabel }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#0E6B33;font-weight:700">Active</td>
+                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
                   </tr>
                 </sc-for>
               </tbody>
             </table>
-            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No approved accounts yet.</div></sc-if>
+            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No approved accounts yet.</div></sc-if>
           </div>
         </div>
       </sc-if>
@@ -677,47 +677,47 @@
            BOTH axes inside a bounded box keeps the horizontal scrollbar (and
            the sticky header below) always within reach. -->
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
           <table style="width:100%;min-width:1100px">
             <thead>
-              <tr style="background:#151517">
+              <tr style="background:#FFFFFF">
                 <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#FFFFFF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
             <tbody>
               <sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">
                 <tr>
-                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
                 <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
+                    <td style="padding:12px 14px;font-size:13px;color:#454D58;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                     <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
                     <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
-                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:#3bd070;font-weight:700">{{ r.preferredPool }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:#0E6B33;font-weight:700">{{ r.preferredPool }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.headCoachEmail }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.headCoachMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ r.headCoachEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.headCoachMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.managerMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.managerMobile }}</td>
                     <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">
                       <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ true }}">
-                        <button onClick="{{ r.onToggleRoster }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap">{{ r.numPlayers }} {{ r.toggleLabel }}</button>
+                        <button onClick="{{ r.onToggleRoster }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap">{{ r.numPlayers }} {{ r.toggleLabel }}</button>
                       </sc-if>
                       <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ false }}">{{ r.numPlayers }}</sc-if>
                     </td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;max-width:220px">{{ r.notes }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67;max-width:220px">{{ r.notes }}</td>
                   </tr>
                   <sc-if value="{{ r.isExpanded }}" hint-placeholder-val="{{ false }}">
-                    <tr style="border-top:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03)">
+                    <tr style="border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.03)">
                       <td colspan="12" style="padding:10px 14px 14px 40px">
-                        <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;margin-bottom:8px">Squad ({{ r.rosterCount }})</div>
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;margin-bottom:8px">Squad ({{ r.rosterCount }})</div>
                         <div style="display:flex;flex-wrap:wrap;gap:8px 24px">
                           <sc-for list="{{ r.roster }}" as="p" hint-placeholder-count="2">
-                            <div style="font-size:13px;color:#cdd2da;white-space:nowrap"><span style="font-weight:600;color:#fff">{{ p.name }}</span> <span style="color:#7f8794">({{ p.dob }})</span></div>
+                            <div style="font-size:13px;color:#343A42;white-space:nowrap"><span style="font-weight:600;color:#1A1C1F">{{ p.name }}</span> <span style="color:#5A626E">({{ p.dob }})</span></div>
                           </sc-for>
                         </div>
                       </td>
@@ -727,7 +727,7 @@
               </sc-for>
             </tbody>
           </table>
-          <sc-if value="{{ teamsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No team registrations match your filters.</div></sc-if>
+          <sc-if value="{{ teamsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No team registrations match your filters.</div></sc-if>
         </div>
       </sc-if>
 
@@ -736,32 +736,32 @@
            overflow-x scrollbar was unreachable at the bottom of the whole
            list. Bounded height + both-axis scroll + sticky header. -->
       <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(255,255,255,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
           <table style="width:100%;min-width:1200px">
             <thead>
-              <tr style="background:#151517">
+              <tr style="background:#FFFFFF">
                 <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="position:sticky;top:0;background:#151517;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#7f8794;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:#FFFFFF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
             <tbody>
               <sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">
                 <tr>
-                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#ff8a8a;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
                 <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-                    <td style="padding:12px 14px;font-size:13px;color:#aeb4bf;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
+                    <td style="padding:12px 14px;font-size:13px;color:#454D58;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                     <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da;white-space:nowrap">{{ r.dob }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#343A42;white-space:nowrap">{{ r.dob }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.club }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#cdd2da">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ r.ageGroup }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.parentName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3">{{ r.parentEmail }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.parentMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ r.parentEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.parentMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.emergencyContact }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#8b93a3;white-space:nowrap">{{ r.emergencyMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.emergencyMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
                     <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
                   </tr>
@@ -769,7 +769,7 @@
               </sc-for>
             </tbody>
           </table>
-          <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#7f8794">No player registrations match your filters.</div></sc-if>
+          <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No player registrations match your filters.</div></sc-if>
         </div>
       </sc-if>
     </div>
@@ -782,14 +782,14 @@
        messages, which are what make a long warning readable. -->
   <sc-if value="{{ isModalOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
-      <div style="background:#151517;border:1px solid rgba(255,255,255,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
         <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4;white-space:pre-line">{{ modalTitle }}</div>
         <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
-          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.18);border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;margin-bottom:18px">
+          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:11px 13px;color:#1A1C1F;font-size:14px;margin-bottom:18px">
         </sc-if>
         <div style="display:flex;justify-content:flex-end;gap:10px">
-          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#cdd2da;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
-          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
+          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#343A42;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#1A1C1F;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
         </div>
       </div>
     </div>
@@ -922,7 +922,7 @@ const BLOCK_GRID = {
    carries the group id as text, because fifteen colours cannot all be told
    apart and one of them is always going to be someone's bad screen. */
 const AGE_TINT = {
-  u6: '#E11B22', u7: '#F2711C', u8: '#F5C518', u9: '#8DC63F', u10: '#17A34A',
+  u6: '#E11B22', u7: '#F2711C', u8: '#f5c518', u9: '#8DC63F', u10: '#17A34A',
   u11: '#00A79D', u12: '#2E9BD6', u12g: '#7B61FF', u13: '#B15BD6',
   u14b: '#E0559C', u14g: '#FF7A9C', u16b: '#C97B3A', u16g: '#9BA84A',
   u18b: '#5B8DEF', u18g: '#40C4B4',
@@ -933,7 +933,7 @@ const AGE_TINT = {
    ------------------------------------------------------------
    The map chips sit on top of somebody else's artwork — a bright, light
    drawing with its own white-on-green labels. White text on every tint does
-   not work: U8 is #F5C518 and U9 is #8DC63F, and white on those is around
+   not work: U8 is #f5c518 and U9 is #8DC63F, and white on those is around
    1.8:1, which is not "a bit hard to read", it is unreadable.
 
    So the ink is CHOSEN, not fixed. These are the real WCAG formulas rather
@@ -1193,7 +1193,7 @@ class Component extends DCLogic {
     const v = s.venue;
     const viewBase = 'font-weight:700;font-size:14px;padding:9px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const viewOn = viewBase + 'background:#E11B22;color:#fff;';
-    const viewOff = viewBase + 'background:transparent;color:#aeb4bf;';
+    const viewOff = viewBase + 'background:transparent;color:#454D58;';
     const problems = v ? this.venueProblems() : [];
     const warnings = v ? this.venueLocalWarnings() : [];
     const dirty = this.venueDirty();
@@ -1232,17 +1232,17 @@ class Component extends DCLogic {
           name: main,
           inUse: n > 0,
           surfaceLabel: n === 0 ? 'not used today' : surfaces.join(' · '),
-          surfaceColor: n === 0 ? '#5a616d' : '#aeb4bf',
+          surfaceColor: n === 0 ? '#69727E' : '#454D58',
           /* Saved fixtures already sitting on this pitch. Changing a split
              renames them out from under the draw, so the count is shown before
              the change rather than after it. */
           usageLabel: used ? `${used} saved match${used === 1 ? '' : 'es'}` : '',
-          rowStyle: 'display:grid;grid-template-columns:70px 1fr auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid rgba(255,255,255,0.07)',
+          rowStyle: 'display:grid;grid-template-columns:70px 1fr auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid rgba(0,0,0,0.07)',
           choices: SPLIT_CHOICES.map((c) => ({
             label: c.label,
             style: (n === c.value)
               ? 'font-weight:800;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:#17A34A;color:#fff;border:1px solid #17A34A;white-space:nowrap'
-              : 'font-weight:700;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:transparent;color:#7f8794;border:1px solid rgba(255,255,255,0.16);white-space:nowrap',
+              : 'font-weight:700;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:transparent;color:#5A626E;border:1px solid rgba(0,0,0,0.16);white-space:nowrap',
             onPick: () => this.setPitchSplit(id, main, c.value),
           })),
         };
@@ -1279,7 +1279,7 @@ class Component extends DCLogic {
         expandArrow: expanded ? '▾' : '▸',
         onToggleExpand: () => this.toggleGroupExpanded(g.id),
         pickedLabel: chosen.length ? `${chosen.length} pitch${chosen.length === 1 ? '' : 'es'} picked` : 'No pitches picked yet',
-        pickedStyle: chosen.length ? 'font-size:14px;color:#7f8794;font-weight:600;white-space:nowrap' : 'font-size:14px;color:#f5c518;font-weight:700;white-space:nowrap',
+        pickedStyle: chosen.length ? 'font-size:14px;color:#5A626E;font-weight:600;white-space:nowrap' : 'font-size:14px;color:#8F6400;font-weight:700;white-space:nowrap',
         // "Not set" only appears when a group really is on neither day, which
         // the problems list already flags as something to fix before saving.
         dayOptions: (dayId ? [] : [{ value: '', label: 'Not set' }]).concat([
@@ -1302,7 +1302,7 @@ class Component extends DCLogic {
               whole: surfaces.length === 1,
               allOn: onCount === surfaces.length && surfaces.length > 0,
               someOn: onCount > 0,
-              headStyle: `font-size:13px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#fff' : '#5a616d'}`,
+              headStyle: `font-size:13px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#1A1C1F' : '#69727E'}`,
               /* One click to take or drop a whole pitch. With quarters that is
                  four ticks saved every time, and taking all four is the common
                  case — U8 has all of B1. */
@@ -1311,7 +1311,7 @@ class Component extends DCLogic {
                 name,
                 short: name.length > main.length ? name.slice(main.length) : '•',
                 on: chosen.includes(name),
-                color: chosen.includes(name) ? '#fff' : '#7f8794',
+                color: chosen.includes(name) ? '#1A1C1F' : '#5A626E',
                 onToggle: () => this.toggleGroupPitch(g.id, dayId, name),
               })),
             };
@@ -1331,8 +1331,8 @@ class Component extends DCLogic {
       vDayViewLabel: activeDayLabel,
       dayTab1Label: dayLabel('day1'),
       dayTab2Label: dayLabel('day2'),
-      dayTab1Style: dayTabBase + (dayView === 'day1' ? 'background:#E11B22;color:#fff;' : 'background:transparent;color:#aeb4bf;'),
-      dayTab2Style: dayTabBase + (dayView === 'day2' ? 'background:#17A34A;color:#fff;' : 'background:transparent;color:#aeb4bf;'),
+      dayTab1Style: dayTabBase + (dayView === 'day1' ? 'background:#E11B22;color:#fff;' : 'background:transparent;color:#454D58;'),
+      dayTab2Style: dayTabBase + (dayView === 'day2' ? 'background:#17A34A;color:#fff;' : 'background:transparent;color:#454D58;'),
       onDayTab1: () => this.setVenueDayView('day1'),
       onDayTab2: () => this.setVenueDayView('day2'),
       vIsSchematic: s.vView !== 'map',
@@ -1345,8 +1345,8 @@ class Component extends DCLogic {
       vUnlocked: !s.vLocked,
       vLockLabel: s.vLocked ? 'Locked — tap to move blocks' : 'Unlocked — drag the blocks',
       vLockStyle: s.vLocked
-        ? 'background:transparent;border:1px solid rgba(255,255,255,0.2);color:#aeb4bf;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap'
-        : 'background:#f5c518;border:1px solid #f5c518;color:#0C0C0E;font-weight:800;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap',
+        ? 'background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap'
+        : 'background:#f5c518;border:1px solid #f5c518;color:#1A1C1F;font-weight:800;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap',
       onToggleMapLock: () => this.toggleMapLock(),
       onResetPositions: () => this.doResetPositions(),
       vBusy: s.vBusy,
@@ -1359,7 +1359,7 @@ class Component extends DCLogic {
       vSaveDisabled: s.vBusy || !dirty || problems.length > 0,
       vSaveLabel: s.vBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       vSaveStyle: (s.vBusy || !dirty || problems.length > 0)
-        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
         : 'background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:12px 18px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onVenueSave: () => this.doSaveVenue(),
       onVenueReset: () => this.doResetVenue(),
@@ -1418,7 +1418,7 @@ class Component extends DCLogic {
         byBlock[b].forEach((p) => (usersOf[p] || []).forEach((ag) => {
           if (!blockUsers.includes(ag)) blockUsers.push(ag);
         }));
-        const blockTints = blockUsers.map((ag) => AGE_TINT[ag] || '#7f8794');
+        const blockTints = blockUsers.map((ag) => AGE_TINT[ag] || '#5A626E');
         const at = pos[b];
         const placed = !!(at && Number.isFinite(Number(at.x)) && Number.isFinite(Number(at.y)));
 
@@ -1444,7 +1444,7 @@ class Component extends DCLogic {
         return {
           name: b,
           known: !!BLOCK_GRID[b],
-          style: `grid-area:${area};background:#0C0C0E;border:1px solid rgba(255,255,255,0.10);border-radius:12px;padding:12px 13px 13px`,
+          style: `grid-area:${area};background:#F3F2EF;border:1px solid rgba(0,0,0,0.10);border-radius:12px;padding:12px 13px 13px`,
 
           /* --- the map view --- */
           placed,
@@ -1479,11 +1479,11 @@ class Component extends DCLogic {
           mapWhoStyle: 'font-size:13px;font-weight:800;line-height:1.25;margin-top:2px;opacity:.92',
           pitches: byBlock[b].map((p) => {
             const users = usersOf[p] || [];
-            const tints = users.map((ag) => AGE_TINT[ag] || '#7f8794');
+            const tints = users.map((ag) => AGE_TINT[ag] || '#5A626E');
             let bg, border, who, whoColor, title;
             if (!users.length) {
-              bg = 'transparent'; border = '1px dashed rgba(255,255,255,0.22)';
-              who = 'free'; whoColor = '#5a616d';
+              bg = 'transparent'; border = '1px dashed rgba(0,0,0,0.22)';
+              who = 'free'; whoColor = '#69727E';
               title = `${p} — no age group is using this pitch`;
             } else if (users.length === 1) {
               bg = tints[0] + '30'; border = `1px solid ${tints[0]}`;
@@ -1498,14 +1498,14 @@ class Component extends DCLogic {
                  picture. The Fixture Editor is what keeps them apart by time. */
               const stops = tints.map((t, i) => `${t}30 ${(i * 100) / tints.length}%, ${t}30 ${((i + 1) * 100) / tints.length}%`).join(', ');
               bg = `linear-gradient(100deg, ${stops})`;
-              border = '1px solid rgba(255,255,255,0.34)';
+              border = '1px solid rgba(0,0,0,0.34)';
               who = users.map((a) => a.toUpperCase()).join(' · ');
               whoColor = '#e7eaef';
               title = `${p} — shared by ${users.map(nameOf).join(' and ')}. Two groups on one pitch at different times is a time-share, not a clash.`;
             }
             return {
               name: p, who, whoColor, title,
-              style: `min-width:70px;background:${bg};border:${border};border-radius:10px;padding:8px 10px;text-align:center;color:#fff`,
+              style: `min-width:70px;background:${bg};border:${border};border-radius:10px;padding:8px 10px;text-align:center;color:#1A1C1F`,
             };
           }),
 
@@ -1529,13 +1529,13 @@ class Component extends DCLogic {
       const notes = [];
       const chip = (color) => `display:inline-block;background:${color}18;border:1px solid ${color}55;color:${color};border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700`;
       if (homeless.length) {
-        notes.push({ style: chip('#f5c518'), text: `Not placed yet: ${homeless.map((a) => a.toUpperCase()).join(', ')}` });
+        notes.push({ style: chip('#8F6400'), text: `Not placed yet: ${homeless.map((a) => a.toUpperCase()).join(', ')}` });
       }
       if (unused.length) {
-        notes.push({ style: chip('#7f8794'), text: `No group on: ${unused.join(', ')}` });
+        notes.push({ style: chip('#5A626E'), text: `No group on: ${unused.join(', ')}` });
       }
       if (shared.length) {
-        notes.push({ style: chip('#aeb4bf'), text: `Time-shared: ${shared.join(', ')} — the Fixture Editor keeps these apart by time` });
+        notes.push({ style: chip('#454D58'), text: `Time-shared: ${shared.join(', ')} — the Fixture Editor keeps these apart by time` });
       }
 
       const groupCount = Object.keys(groups).length;
@@ -1559,7 +1559,7 @@ class Component extends DCLogic {
         /* Same aspect ratio as assets/venue-map.png (792x547), so the image
            fills the box exactly and a percentage means the same thing in both
            directions no matter how wide the window is. */
-        mapBoxStyle: 'position:relative;width:100%;aspect-ratio:792/547;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:#fff',
+        mapBoxStyle: 'position:relative;width:100%;aspect-ratio:792/547;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.12);background:#fff',
         strays,
         hasStrays: strays.length > 0,
       };
@@ -2365,20 +2365,20 @@ class Component extends DCLogic {
     const echo = (stamp, endOfDay) => {
       if (!ready || !stamp) {
         return endOfDay
-          ? { text: 'No closing date — once registration opens it stays open.', color: '#f5c518' }
-          : { text: 'No opening date — registration stays closed.', color: '#f5c518' };
+          ? { text: 'No closing date — once registration opens it stays open.', color: '#8F6400' }
+          : { text: 'No opening date — registration stays closed.', color: '#8F6400' };
       }
       const ymd = api.dateOfStamp(stamp);
       return {
         text: `${endOfDay ? 'Closes 23:59' : 'Opens 00:00'} on ${weekdayOf(ymd)} ${api.fmtWindowDate(stamp, true)}, Abu Dhabi time`,
-        color: '#aeb4bf',
+        color: '#454D58',
       };
     };
     const opensEcho = echo(r && r.opensAt, false);
     const closesEcho = echo(r && r.closesAt, true);
 
-    const modeOn = 'text-align:left;background:rgba(23,163,74,0.14);border:1px solid #17A34A;border-radius:11px;padding:13px 15px;color:#fff;cursor:pointer;width:100%';
-    const modeOff = 'text-align:left;background:#0C0C0E;border:1px solid rgba(255,255,255,0.14);border-radius:11px;padding:13px 15px;color:#aeb4bf;cursor:pointer;width:100%';
+    const modeOn = 'text-align:left;background:rgba(23,163,74,0.14);border:1px solid #17A34A;border-radius:11px;padding:13px 15px;color:#1A1C1F;cursor:pointer;width:100%';
+    const modeOff = 'text-align:left;background:#F3F2EF;border:1px solid rgba(0,0,0,0.14);border-radius:11px;padding:13px 15px;color:#454D58;cursor:pointer;width:100%';
     const MODES = [
       { value: 'auto', label: 'Follow the dates', desc: 'The two dates above decide. This is the normal setting and the one to leave it on.' },
       { value: 'open', label: 'Force open', desc: 'Open right now whatever the dates say — this is how you test the real forms early. The public page shows a TEST MODE strip the whole time.' },
@@ -2396,7 +2396,7 @@ class Component extends DCLogic {
       rSaveDisabled: s.rBusy || !dirty || problems.length > 0,
       rSaveLabel: s.rBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       rSaveStyle: (s.rBusy || !dirty || problems.length > 0)
-        ? 'background:#2a2a2e;color:#7f8794;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
         : 'background:#17A34A;color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onRegSave: () => this.doSaveRegistration(),
       onRegReset: () => this.doResetRegistration(),
@@ -2414,7 +2414,7 @@ class Component extends DCLogic {
         label: m.label,
         desc: m.desc,
         style: (r && r.mode === m.value) ? modeOn : modeOff,
-        descColor: (r && r.mode === m.value) ? '#cdd2da' : '#7f8794',
+        descColor: (r && r.mode === m.value) ? '#343A42' : '#5A626E',
         onPick: () => this.setRegMode(m.value),
       })),
 
@@ -2424,7 +2424,7 @@ class Component extends DCLogic {
       rPreviewButtons: copy ? copy.buttons : '',
       rPreviewTestMode: !!(copy && copy.testMode),
       rPreviewPillBg: (copy && copy.state.open) ? '#17A34A' : '#E11B22',
-      rPreviewTint: (copy && copy.state.open) ? '#3bd070' : '#7f8794',
+      rPreviewTint: (copy && copy.state.open) ? '#0E6B33' : '#5A626E',
     };
   }
 
@@ -2712,10 +2712,10 @@ class Component extends DCLogic {
     const s = this.state;
     const roleBase = 'font-weight:700;font-size:13px;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const roleOn = roleBase + 'background:#17A34A;color:#fff;border:1px solid #17A34A;';
-    const roleOff = roleBase + 'background:transparent;color:#aeb4bf;border:1px solid rgba(255,255,255,0.2);';
+    const roleOff = roleBase + 'background:transparent;color:#454D58;border:1px solid rgba(0,0,0,0.2);';
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const tabOn = tabBase + 'background:#E11B22;color:#fff;';
-    const tabOff = tabBase + 'background:transparent;color:#aeb4bf;';
+    const tabOff = tabBase + 'background:transparent;color:#454D58;';
 
     const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
     const allAges = Array.from(new Set([...s.teams.map((t) => t.ageGroup), ...s.players.map((p) => p.ageGroup)])).sort();
@@ -2738,9 +2738,9 @@ class Component extends DCLogic {
       ...r,
       submittedAtDisplay: this.fmtDate(r.submittedAt),
       medicalDisplay: r.medicalNotes || '—',
-      medicalColor: r.medicalNotes ? '#ffb74d' : '#5a616d',
+      medicalColor: r.medicalNotes ? '#9A5B00' : '#69727E',
       medicalWeight: r.medicalNotes ? '700' : '400',
-      consentColor: r.consent === 'Yes' ? '#3bd070' : '#ff6b6b',
+      consentColor: r.consent === 'Yes' ? '#0E6B33' : '#A62626',
     }));
 
     return {

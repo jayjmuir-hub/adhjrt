@@ -56,6 +56,7 @@ $tests = @(
   'test-simulate-spirit-award.js',
   'test-scores-public.js',
   'test-sponsors.js',
+  'test-light-mode.js',
   'test-back-office-links.js'
 )
 

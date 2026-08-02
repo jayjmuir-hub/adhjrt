@@ -210,7 +210,7 @@ try {
     const { vals } = panel({ opensAt: null, closesAt: null, mode: 'auto' }, null, MID_MS);
     eq('an unset opening date shows an empty box', vals.rOpensDate, '');
     check('…and says in words that registration is closed', /stays closed/i.test(vals.rOpensEcho), vals.rOpensEcho);
-    check('…in the warning colour, not the normal one', vals.rOpensEchoColor === '#f5c518');
+    check('…in the warning colour, not the normal one', vals.rOpensEchoColor === '#8F6400');
     check('an unset closing date says it stays open', /stays open/i.test(vals.rClosesEcho), vals.rClosesEcho);
     check('the panel warns that no dates are set', vals.rHasWarnings === true);
     check('…but does not block saving over it', vals.rHasProblems === false);

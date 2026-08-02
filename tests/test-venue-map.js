@@ -257,7 +257,7 @@ section('A time-share is drawn as a time-share, NOT as a problem');
   const d4a = cell(sat, 'D4a');
   eq('D4a names both groups', d4a.who, 'U6 · U7');
   check('…as a split of both colours', d4a.style.includes('linear-gradient'), d4a.style);
-  check('…and NOT in a warning colour', !/f5c518|E11B22|ff8a8a/i.test(d4a.style.replace(/linear-gradient\([^)]*\)/, '')), d4a.style);
+  check('…and NOT in a warning colour', !/f5c518|8F6400|E11B22|ff8a8a|A62626/i.test(d4a.style.replace(/linear-gradient\([^)]*\)/, '')), d4a.style);
   check('the tooltip says it is a time-share, not a clash', /time-share, not a clash/i.test(d4a.title), d4a.title);
   check('the tooltip names both groups in full', /U6 Tag/.test(d4a.title) && /U7 Tag/.test(d4a.title), d4a.title);
 
@@ -270,7 +270,7 @@ section('A time-share is drawn as a time-share, NOT as a problem');
   check('…naming all four pitches', note && ['D4a', 'D4b', 'D5a', 'D5b'].every((p) => note.text.includes(p)), note && note.text);
   check('…and explaining that the Fixture Editor keeps them apart by time',
     note && /Fixture Editor/.test(note.text), note && note.text);
-  check('…in a neutral colour, not amber or red', note && !/f5c518|E11B22/i.test(note.style), note && note.style);
+  check('…in a neutral colour, not amber or red', note && !/f5c518|8F6400|E11B22/i.test(note.style), note && note.style);
 
   check('Sunday has no time-share', !(sun.notes || []).some((n) => /Time-shared/i.test(n.text)));
 }
@@ -298,7 +298,9 @@ section('The two things a grid of tick-boxes cannot show');
         — so it is a note, never a block. */
   const homeless = (m.notes || []).find((n) => /Not placed yet/.test(n.text));
   check('a group with no pitches is called out', homeless && /U10/.test(homeless.text), homeless && homeless.text);
-  check('…in amber, because it IS something to fix', homeless && /f5c518/i.test(homeless.style), homeless && homeless.style);
+  /* Aug 2026 light mode: the amber is the darker #8F6400 now — raw #f5c518
+     text on a white page is ~1.6:1. Same meaning, readable ink. */
+  check('…in amber, because it IS something to fix', homeless && /8F6400/i.test(homeless.style), homeless && homeless.style);
 
   check('the default layout has nobody unplaced',
     !(sat.notes || []).some((n) => /Not placed yet/.test(n.text)) &&

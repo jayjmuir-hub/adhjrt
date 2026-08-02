@@ -244,7 +244,7 @@ section('Tab bar');
   check('the selected tab uses Organizer\'s red pill style',
     vals.tabs[0].style.includes('background:#E11B22;color:#fff;'));
   check('an unselected tab uses Organizer\'s transparent style',
-    vals.tabs[1].style.includes('background:transparent;color:#aeb4bf;'));
+    vals.tabs[1].style.includes('background:transparent;color:#454D58;'));
 
   vals.tabs[3].onPick();
   const vals2 = c.renderVals();
@@ -700,9 +700,11 @@ section('Spirit of Rugby Award tally on the Fixtures tab');
 section('Organizer design system is what this page uses');
 {
   const html = readRepo('Manager.dc.html');
-  check('page background is Organizer\'s #0C0C0E, not app.html\'s paper', /background:#0C0C0E/.test(html));
-  check('cards use Organizer\'s #151517 fill', /background:#151517/.test(html));
-  check('cards use Organizer\'s 1px hairline border', /border:1px solid rgba\(255,255,255,0\.1\)/.test(html));
+  /* Aug 2026: the back office went LIGHT (Jay's call) — the parity these
+     checks hold is Manager matching ORGANIZER, whatever the mode. */
+  check('page background is Organizer\'s light #F3F2EF, not app.html\'s paper', /background:#F3F2EF/.test(html));
+  check('cards use Organizer\'s white fill', /background:#FFFFFF/.test(html));
+  check('cards use Organizer\'s 1px hairline border', /border:1px solid rgba\(0,0,0,0\.1\)/.test(html));
   check('cards use Organizer\'s 14px radius', /border-radius:14px/.test(html));
   check('headings use Anton', /font-family:'Anton'/.test(html));
   check('body type is Barlow', /font-family:'Barlow',system-ui,sans-serif/.test(html));

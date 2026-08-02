@@ -1022,6 +1022,73 @@ section('Check the whole weekend');
     /working draft/i.test(c2.renderVals().clashScopeNote));
 }
 
+section('saveDraw() rebuilds teamNames from the registrations on every save');
+/* The withTeamNames() rule, ported from the old /scores editor (Aug 2026).
+   Until then this page only wrote names at import time, so a draw built or
+   edited by hand carried a stale or empty map and showed parents raw codes.
+   The fixtures give the same club two sides (numbered) and another club one
+   (unnumbered), and deliberately include a STALE WRONG name for a code the
+   registrations also know — merge order is the whole point. */
+const REG_TEAMS = [
+  { club: 'Dubai Sharks RFC', teamName: 'DS1', ageGroup: 'U14 Boys' },
+  { club: 'Dubai Sharks RFC', teamName: 'DS2', ageGroup: 'U14 Boys' },
+  { club: 'Barrelhouse', teamName: 'BAR1', ageGroup: 'U14 Boys' },
+  { club: 'Zebra RFC', teamName: 'Z1', ageGroup: 'U16 Boys' }, // other group — must not leak in
+];
+{
+  let saved = null;
+  const c = buildDraw({
+    saveDraw: async (agId, draw) => { saved = draw; return { ok: true }; },
+    getMyRegistrations: async () => ({ teams: REG_TEAMS, players: [], scope: 'u14b' }),
+  });
+  c.setState({ regs: { teams: REG_TEAMS, players: [] }, draw: { ...freshDraw(), teamNames: { DS1: 'Wrong Name', XX9: 'Kept Name' } } });
+  await c.saveDraw();
+  check('the saved draw carries the derived names', !!saved && !!saved.teamNames, saved && JSON.stringify(saved.teamNames));
+  const tn = (saved && saved.teamNames) || {};
+  eq('a multi-side club is numbered', tn.DS2, 'Dubai Sharks 2');
+  eq('a single-side club is not', tn.BAR1, 'Barrelhouse');
+  eq('derived names WIN over a stale stored name', tn.DS1, 'Dubai Sharks 1');
+  eq('a stored name the registrations do not know survives the merge', tn.XX9, 'Kept Name');
+  check('another age group\'s registrations do not leak in', !('Z1' in tn), JSON.stringify(tn));
+}
+{
+  /* Registrations never fetched — saveDraw must fetch them itself, or the
+     rule only fires for someone who happened to open the import first. */
+  let fetches = 0; let saved = null;
+  const c = buildDraw({
+    saveDraw: async (agId, draw) => { saved = draw; return { ok: true }; },
+    getMyRegistrations: async () => { fetches++; return { teams: REG_TEAMS, players: [], scope: 'u14b' }; },
+  });
+  c.setState({ regs: undefined, draw: { ...freshDraw(), teamNames: {} } });
+  await c.saveDraw();
+  eq('saveDraw fetches the registrations when they were never loaded', fetches, 1);
+  eq('…and the names land in the saved draw', (saved && saved.teamNames || {}).DS2, 'Dubai Sharks 2');
+}
+{
+  /* A failed or empty registrations read must be a NO-OP, never a blanking —
+     the map a draw already carries is better than nothing. */
+  let saved = null;
+  const c = buildDraw({ saveDraw: async (agId, draw) => { saved = draw; return { ok: true }; } });
+  c.setState({ regs: { teams: [], players: [] }, draw: { ...freshDraw(), teamNames: { DS1: 'Dubai Sharks 1' } } });
+  await c.saveDraw();
+  eq('an empty registrations read leaves the stored names exactly alone',
+    saved && saved.teamNames, { DS1: 'Dubai Sharks 1' });
+}
+{
+  /* resetDraw() saves too — the rule covers EVERY save site on the page,
+     which is exactly what the old /scores editor's withTeamNames guaranteed. */
+  let saved = null;
+  const c = buildDraw({
+    saveDraw: async (agId, draw) => { saved = draw; return { ok: true }; },
+    getMyRegistrations: async () => ({ teams: REG_TEAMS, players: [], scope: 'u14b' }),
+  });
+  c.setState({ regs: { teams: REG_TEAMS, players: [] } });
+  c.resetDraw();
+  check('resetDraw asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
+  await c.state.modal.onConfirm();
+  eq('a regenerated draw carries the derived names too', (saved && saved.teamNames || {}).DS1, 'Dubai Sharks 1');
+}
+
 summary('tests/test-manager-dc-draw.js');
 }
 

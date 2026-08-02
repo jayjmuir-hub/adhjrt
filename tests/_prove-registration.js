@@ -38,6 +38,11 @@ const NEEDED = [
   'Quins JRT.dc.html',
   'Organizer.dc.html',
   'Scores & Standings.dc.html',
+  /* test-manager-dc-draw.js drives the Manager Dashboard — added Aug 2026
+     with the withTeamNames faults. Absent from this list, any test reading it
+     dies on ENOENT and takes every later check with it (see the 1 Aug lesson
+     in state-of-play). */
+  'Manager.dc.html',
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1831,6 +1836,54 @@ const FAULTS = [
     expect: ['publishDraw is re-exported from scores-data.js'],
   },
 
+  /* ---- /manager: teamNames rebuilt on every save (test-manager-dc-draw.js)
+     The withTeamNames rule ported from the old /scores editor. The quiet
+     regressions: the wrap dropped from either save site, the merge order
+     flipped so a stale stored name beats the sheet, the map blanked instead
+     of merged, or the fetch-if-never-loaded skipped so the rule only fires
+     for someone who opened the import first. */
+
+  {
+    name: 'saveDraw() stops wrapping the draw in withTeamNames',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      'const res = await api.saveDraw(ageId, this.withTeamNames(this.state.draw), session);',
+      'const res = await api.saveDraw(ageId, this.state.draw, session);'),
+    expect: ['a multi-side club is numbered'],
+  },
+  {
+    name: 'the merge order is flipped so a stale stored name beats the registrations',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      'return { ...draw, teamNames: { ...(draw.teamNames || {}), ...derived } };',
+      'return { ...draw, teamNames: { ...derived, ...(draw.teamNames || {}) } };'),
+    expect: ['derived names WIN over a stale stored name'],
+  },
+  {
+    name: 'the merge becomes a replacement, blanking names the registrations do not know',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      'return { ...draw, teamNames: { ...(draw.teamNames || {}), ...derived } };',
+      'return { ...draw, teamNames: derived };'),
+    expect: ['a stored name the registrations do not know survives the merge'],
+  },
+  {
+    name: 'saveDraw() stops fetching registrations that were never loaded',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      '    await this.ensureRegsForNames();\n    const res = await api.saveDraw',
+      '    const res = await api.saveDraw'),
+    expect: ['saveDraw fetches the registrations when they were never loaded'],
+  },
+  {
+    name: 'resetDraw() loses the withTeamNames wrap, so a regenerate drops the rule',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      '      const next = this.withTeamNames({ ...draw, slots: freshSlots, knockout: freshKnockout });',
+      '      const next = { ...draw, slots: freshSlots, knockout: freshKnockout };'),
+    expect: ['a regenerated draw carries the derived names too'],
+  },
+
   {
     /* NOT `localeCompare()` with no options — Node's default locale already
        sorts case-insensitively at the primary level, so dropping just the
@@ -2451,7 +2504,7 @@ seed();
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
- 'test-organizer-tournament.js'].forEach((f) => {
+ 'test-organizer-tournament.js', 'test-manager-dc-draw.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

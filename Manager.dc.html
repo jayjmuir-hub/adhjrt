@@ -1178,9 +1178,10 @@ class Component extends DCLogic {
   }
 
   async saveDraw() {
-    const { api, ageId, session, draw } = this.state;
+    const { api, ageId, session } = this.state;
     this.setState({ drawBusy: true, drawMsg: '' });
-    const res = await api.saveDraw(ageId, draw, session);
+    await this.ensureRegsForNames();
+    const res = await api.saveDraw(ageId, this.withTeamNames(this.state.draw), session);
     this.setState({
       drawBusy: false,
       drawMsg: res.ok ? 'Saved as a draft. Use Publish to make it public.' : (res.error || 'Could not save.'),
@@ -1204,7 +1205,8 @@ class Component extends DCLogic {
       const draw = this.state.draw;
       const freshSlots = (draw.pools || []).reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [])), []);
       const freshKnockout = await api.autoKnockoutSlots(ageId, session);
-      const next = { ...draw, slots: freshSlots, knockout: freshKnockout };
+      await this.ensureRegsForNames();
+      const next = this.withTeamNames({ ...draw, slots: freshSlots, knockout: freshKnockout });
       this.setState({ draw: next, drawDirty: true });
       const res = await api.saveDraw(ageId, next, session);
       this.setState({
@@ -1319,6 +1321,30 @@ class Component extends DCLogic {
       out[code] = (perClub[rawClub] > 1 && n) ? (club + ' ' + n) : club;
     });
     return out;
+  }
+
+  /* Rebuild teamNames from the registrations on EVERY save — the same
+     withTeamNames() rule the old /scores editor carried (see CLAUDE.md,
+     "Publishing fixtures"). Until Aug 2026 this page only wrote names at
+     import time, so a draw built or edited by hand here carried whatever map
+     it happened to have and showed parents raw codes ("DS2") instead of
+     "Dubai Sharks 2". Derived entries win (nothing else authors the map —
+     renaming a team rewrites the CODE, not the display name), and an empty
+     derived map is a no-op so a failed registrations fetch can never blank
+     the names. Every api.saveDraw call on this page goes through here. */
+  withTeamNames(draw) {
+    if (!draw) return draw;
+    const derived = this.teamNamesFromRegistrations();
+    if (!Object.keys(derived).length) return draw;
+    return { ...draw, teamNames: { ...(draw.teamNames || {}), ...derived } };
+  }
+
+  /* The rebuild needs the registrations. `undefined` means never fetched —
+     fetch once, exactly like openImport() does. A fetch that fails leaves
+     the derived map empty and withTeamNames() a no-op, never an error:
+     saving a draw must not grow a new way to fail. */
+  async ensureRegsForNames() {
+    if (this.state.regs === undefined) await this.loadRegistrations();
   }
 
   async openImport() {

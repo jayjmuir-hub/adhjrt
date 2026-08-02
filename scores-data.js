@@ -24,8 +24,16 @@
    ============================================================ */
 
 const STORE_KEY = 'adhjrt_results_v1';   // matchId -> result
-const SESSION_KEY = 'adhjrt_session_v1'; // current manager token
-const ORG_SESSION_KEY = 'adhjrt_organizer_session'; // organizer-data.js's session key
+/* ONE session key for BOTH roles (Aug 2026 — claude/specs/spec-unified-login.md).
+   The stored object is exactly what the login endpoint returned plus the
+   token: organizer-shaped ({... _role:'organizer'}) or manager-shaped
+   ({... ageGroupId}). currentSession() below still hands organizer sessions
+   to manager-side callers in the wrapped { ageGroupId:'*', isOrganizer:true }
+   form, so nothing downstream changed. The two old keys are migrated once,
+   on first read, and nobody gets signed out by this change. */
+const SESSION_KEY = 'adhjrt_session_v2';
+const OLD_MANAGER_SESSION_KEY = 'adhjrt_session_v1';        // pre-Aug-2026: the scores/manager pages' key
+const OLD_ORG_SESSION_KEY = 'adhjrt_organizer_session';     // pre-Aug-2026: organizer-data.js's key
 
 /* -------- Tournament configuration (pools & teams) --------
    "Build it flexible": age groups, pools, teams and how many
@@ -1763,33 +1771,39 @@ export async function resetDraw(agId, session) {
   return (await local()).saveScheduleOverride(session.token, agId, null, true);
 }
 
-// Manager sign-in. Backed by netlify/functions/manager-login.js — an
-// account created via signup() below, stored server-side in Netlify Blobs.
+// Sign-in, either role — ONE call to the unified endpoint
+// (netlify/functions/login.js), which decides the role from the account
+// itself. The old two-step fallback (try manager-login, then
+// organizer-login, then write to the OTHER data layer's key) is gone; that
+// chain only existed because each endpoint had a role filter.
 export async function login(username, password) {
-  const r = await tryFetchJson('/.netlify/functions/manager-login', {
+  const r = await tryFetchJson('/.netlify/functions/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
-  const json = r.real ? r.json : (await local()).managerLogin({ username, password });
+  let json;
+  if (r.real) {
+    json = r.json;
+  } else {
+    // Local preview only — the stand-in backend still has per-role logins,
+    // so try both, manager first (the common case on these pages).
+    const lb = await local();
+    json = await lb.managerLogin({ username, password });
+    if (!json.ok) json = await lb.organizerLogin({ username, password });
+  }
   if (json.ok) {
     const session = { ...json.session, token: json.token };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return { ok: true, session };
+    // Hand organizer sessions back in the same wrapped shape callers have
+    // always received from this function.
+    return {
+      ok: true,
+      session: isOrganizerSession(session)
+        ? { token: session.token, username: session.username, name: session.name, ageGroupId: '*', isOrganizer: true }
+        : session,
+    };
   }
-  // If these were actually organizer credentials (they clicked the wrong
-  // login), sign them in as an organizer — the scores page fully supports an
-  // organizer session (all-age-group access), so there's nothing to redirect.
-  const ro = await tryFetchJson('/.netlify/functions/organizer-login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-  const ojson = ro.real ? ro.json : (await local()).organizerLogin({ username, password });
-  if (ojson.ok) {
-    const orgSession = { ...ojson.session, token: ojson.token };
-    localStorage.setItem(ORG_SESSION_KEY, JSON.stringify(orgSession));
-    return { ok: true, session: { token: ojson.token, username: orgSession.username, name: orgSession.name, ageGroupId: '*', isOrganizer: true } };
-  }
-  return { ok: false, error: json.error || 'Wrong username or password.' };
+  return { ok: false, error: json.error || 'Incorrect username or password.' };
 }
 
 // Manager self-signup. Which age group the account is tied to is decided
@@ -1827,18 +1841,47 @@ export function canScoreAgeGroup(s, agId) {
   return !s ? false : (isOrganiserSession(s) || s.ageGroupId === '*' || s.ageGroupId === agId);
 }
 
-export function currentSession() {
-  try {
-    const mgr = JSON.parse(localStorage.getItem(SESSION_KEY));
-    if (mgr && mgr.token) return mgr;
-  } catch (e) {}
-  try {
-    const org = JSON.parse(localStorage.getItem(ORG_SESSION_KEY));
-    if (org && org.token) return { token: org.token, username: org.username, name: org.name, ageGroupId: '*', isOrganizer: true };
-  } catch (e) {}
-  return null;
+/* One-time move from the two pre-Aug-2026 keys to the unified one, so
+   NOBODY is signed out by the change. The organizer key wins when someone
+   holds both — the broader role, the same preference app.html's old
+   resolveSession() encoded. Malformed JSON in an old key reads as absent
+   (never a throw) and is still cleaned up. Runs before every session read;
+   after the first call it is a single getItem. */
+export function migrateSession() {
+  try { if (localStorage.getItem(SESSION_KEY)) return; } catch (e) { return; }
+  const read = (key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      const v = raw ? JSON.parse(raw) : null;
+      return v && v.token ? v : null;
+    } catch (e) { return null; }
+  };
+  const winner = read(OLD_ORG_SESSION_KEY) || read(OLD_MANAGER_SESSION_KEY);
+  if (winner) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(winner)); } catch (e) {} }
+  try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem(OLD_MANAGER_SESSION_KEY); } catch (e) {}
 }
-export function logout() { localStorage.removeItem(SESSION_KEY); }
+
+export function currentSession() {
+  migrateSession();
+  let s = null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    s = raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+  if (!s || !s.token) return null;
+  // Organizer sessions are handed to manager-side callers in the wrapped
+  // all-age-groups form, exactly as before unification.
+  if (isOrganizerSession(s)) return { token: s.token, username: s.username, name: s.name, ageGroupId: '*', isOrganizer: true };
+  return s;
+}
+/* Clears the old keys too — a stale pre-migration copy must never resurrect
+   a signed-in state after an explicit sign-out. */
+export function logout() {
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem(OLD_MANAGER_SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}
+}
 
 // Google sign-in for managers (added 29 Jul 2026) — same google-auth.js
 // endpoint organizer-data.js's googleAuth() calls, just role: 'manager'

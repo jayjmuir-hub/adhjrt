@@ -18,7 +18,14 @@
    local test invite codes.
    ============================================================ */
 
-const SESSION_KEY = 'adhjrt_organizer_session';
+/* ONE session key for BOTH roles since Aug 2026 — the same
+   'adhjrt_session_v2' scores-data.js uses (see the comment there and
+   claude/specs/spec-unified-login.md). The one-time migration off the two
+   old keys lives in scores-data.js's migrateSession(), imported below, so
+   there is exactly one copy of that rule. */
+const SESSION_KEY = 'adhjrt_session_v2';
+
+import { migrateSession } from './scores-data.js';
 
 let localBackendPromise = null;
 function local() {
@@ -86,8 +93,9 @@ export async function login(username, password) {
   const mjson = rm.real ? rm.json : (await local()).managerLogin({ username, password });
   if (mjson.ok) {
     const mgrSession = { ...mjson.session, token: mjson.token };
-    // 'adhjrt_session_v1' is the scores page's manager session key (SESSION_KEY in scores-data.js).
-    try { localStorage.setItem('adhjrt_session_v1', JSON.stringify(mgrSession)); } catch (e) {}
+    // One key for both roles now, so this is no longer a write into another
+    // data layer's storage — /manager reads the same key.
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(mgrSession)); } catch (e) {}
     return { ok: true, redirect: '/manager' };
   }
   return { ok: false, error: json.error || 'Incorrect username or password.' };
@@ -154,14 +162,24 @@ export async function googleClientId() {
 }
 
 export function currentSession() {
+  migrateSession();
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const s = raw ? JSON.parse(raw) : null;
+    if (!s || !s.token) return null;
+    /* The one key can hold either role now, and this page is the ORGANIZER
+       dashboard: a manager session here reads as signed out rather than as
+       an organizer with no data (the backend would 403 every read). */
+    return (s._role === 'organizer' || s.role === 'organizer' || s.isOrganizer) ? s : null;
   } catch (e) { return null; }
 }
 
+/* Clears the two pre-Aug-2026 keys too — a stale pre-migration copy must
+   never resurrect a signed-in state after an explicit sign-out. */
 export function logout() {
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem('adhjrt_session_v1'); } catch (e) {}
+  try { localStorage.removeItem('adhjrt_organizer_session'); } catch (e) {}
 }
 
 export async function getRegistrations() {

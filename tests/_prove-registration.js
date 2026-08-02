@@ -2223,6 +2223,65 @@ const FAULTS = [
     expect: ['u9\'s saved draw had its knockout cleared'],
   },
 
+  /* ---- one session key + migration (test-session-migration.js) ---------- */
+
+  {
+    name: 'the migration preference flips, demoting an organizer who also holds a manager session',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      '  const winner = read(OLD_ORG_SESSION_KEY) || read(OLD_MANAGER_SESSION_KEY);',
+      '  const winner = read(OLD_MANAGER_SESSION_KEY) || read(OLD_ORG_SESSION_KEY);'),
+    expect: ['the organizer session is the one kept'],
+  },
+  {
+    name: 'the migration stops cleaning the old keys up',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      "  try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}\n  try { localStorage.removeItem(OLD_MANAGER_SESSION_KEY); } catch (e) {}\n}",
+      "}"),
+    expect: ['both old keys are gone'],
+  },
+  {
+    name: 'currentSession stops migrating, silently signing out everyone on an old key',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      'export function currentSession() {\n  migrateSession();',
+      'export function currentSession() {'),
+    expect: ['the session survives the key change'],
+  },
+  {
+    name: 'logout() stops clearing the old keys, so a stale copy can resurrect a session',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      "export function logout() {\n  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}\n  try { localStorage.removeItem(OLD_MANAGER_SESSION_KEY); } catch (e) {}\n  try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}\n}",
+      "export function logout() {\n  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}\n}"),
+    expect: ['nothing survives a sign-out'],
+  },
+  {
+    name: 'a garbage old key becomes a throw instead of an absent session',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      "  const read = (key) => {\n    try {\n      const raw = localStorage.getItem(key);\n      const v = raw ? JSON.parse(raw) : null;\n      return v && v.token ? v : null;\n    } catch (e) { return null; }\n  };",
+      "  const read = (key) => {\n    const raw = localStorage.getItem(key);\n    const v = raw ? JSON.parse(raw) : null;\n    return v && v.token ? v : null;\n  };"),
+    expect: ['no throw'],
+  },
+  {
+    name: 'scores-data login() regains a per-role endpoint, resurrecting the fallback chain',
+    suite: 'test-session-migration.js',
+    apply: () => patch('scores-data.js',
+      "  const r = await tryFetchJson('/.netlify/functions/login', {",
+      "  const r = await tryFetchJson('/.netlify/functions/manager-login', {"),
+    expect: ['posts to the unified endpoint'],
+  },
+  {
+    name: 'organizer-data drifts onto its own session key again',
+    suite: 'test-session-migration.js',
+    apply: () => patch('organizer-data.js',
+      "const SESSION_KEY = 'adhjrt_session_v2';",
+      "const SESSION_KEY = 'adhjrt_organizer_session_v2';"),
+    expect: ['organizer-data.js uses the SAME key'],
+  },
+
   /* ---- the unified login endpoint (test-unified-login.js) --------------- */
 
   {
@@ -2647,7 +2706,7 @@ seed();
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
  'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
- 'test-scores-public.js', 'test-unified-login.js'].forEach((f) => {
+ 'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

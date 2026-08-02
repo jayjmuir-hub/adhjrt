@@ -483,19 +483,11 @@ function toast(msg){
 
 const isOrganiser = api.isOrganiserSession;
 
-/* Someone can hold BOTH a manager and an organiser account. currentSession()
-   returns the manager one first, which would quietly demote an organiser to a
-   single age group. Prefer the broader role. */
-function resolveSession(){
-  const s = api.currentSession();
-  if (isOrganiser(s)) return s;
-  try {
-    const raw = localStorage.getItem('adhjrt_organizer_session');
-    const o = raw ? JSON.parse(raw) : null;
-    if (o && o.token) return { token:o.token, username:o.username, name:o.name, ageGroupId:'*', isOrganizer:true };
-  } catch(e){}
-  return s;
-}
+/* One session key for both roles since Aug 2026: currentSession() migrates
+   the two old keys itself (organizer wins for anyone who held both — the
+   same preference this function used to encode by hand) and already returns
+   an organizer session in the broad all-age-groups form. */
+function resolveSession(){ return api.currentSession(); }
 
 const canScore = api.canScoreAgeGroup;
 const ageName = (id) => (S.ageGroups.find(a => a.id === id) || {}).name || id;

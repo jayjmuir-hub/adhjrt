@@ -273,4 +273,30 @@ check('the "coming soon" placeholder badge is gone', !/Coming soon/i.test(sponso
 check('the get-in-touch invitation is kept', sponsorsInner.includes('mailto:admin@adhjrt.com'));
 check('the invitation still says more are to come', /More partners will be announced/i.test(sponsorsInner));
 
+/* =========================================================================
+   6. The page does not undersell itself
+   ========================================================================= */
+
+section('How many players the page claims');
+
+/* THE PAGE CONTRADICTED ITS OWN HEADLINE NUMBER. The stat strip has said
+   3000+ PLAYERS since it was written, while the hero lede, the organisers
+   paragraph and (as first drafted) the HSBC paragraph all said "hundreds".
+   Jay caught it on 2 Aug: it is thousands. Three separate sentences said the
+   same wrong thing, which is how a copy fact drifts — nobody edits all the
+   copies, because nobody knows how many copies there are.
+
+   This asserts the invariant rather than the three sentences: the page must
+   not describe its own turnout in hundreds while advertising 3000+. Anyone
+   adding a fourth sentence in the same shape fails here. */
+
+const HUNDREDS = /hundreds of (young players|players|kids|children)/i;
+check('no visible copy claims "hundreds of" players or kids', !HUNDREDS.test(PAGE),
+  (PAGE.match(HUNDREDS) || [''])[0]);
+
+/* And the number it is being measured against is still what it was. If the
+   stat strip is ever changed to a genuinely smaller figure, this check is the
+   thing that says the wording has to move with it. */
+check('the stat strip still advertises 3000+ players', /statPlayers:\s*Math\.round\(3000 \* sp\)/.test(PAGE));
+
 summary('test-sponsors.js');

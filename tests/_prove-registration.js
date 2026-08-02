@@ -2197,6 +2197,18 @@ const FAULTS = [
     expect: ['coming soon'],
   },
   {
+    name: 'the page goes back to claiming "hundreds of" players',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'thousands of young players, two unforgettable days', 'hundreds of young players, two unforgettable days'),
+    expect: ['hundreds of'],
+  },
+  {
+    name: 'the stat strip quietly drops to a figure the copy no longer matches',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "statPlayers: Math.round(3000 * sp) + '+',", "statPlayers: Math.round(300 * sp) + '+',"),
+    expect: ['still advertises 3000+'],
+  },
+  {
     name: 'the get-in-touch invitation stops being a mail link',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, 'junior rugby? <a href="mailto:admin@adhjrt.com"', 'junior rugby? <a href="#"'),

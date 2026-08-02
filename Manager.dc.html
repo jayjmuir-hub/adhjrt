@@ -30,9 +30,17 @@
 </script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
   input,select,button{font-family:inherit}
   table{border-collapse:collapse}
+  /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
+     no inline background or colour is ever overridden. */
+  button{transition:filter .15s ease,transform .08s ease}
+  button:hover:not(:disabled){filter:brightness(0.94)}
+  button:active:not(:disabled){transform:scale(.98)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  tbody tr:hover td{background:rgba(0,0,0,0.025)}
 </style>
 </helmet>
 
@@ -360,9 +368,9 @@
               <button onClick="{{ p.onRemovePool }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer">Delete</button>
             </div>
             <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px">
-              <div onClick="{{ p.onZoneClick }}" style="min-height:48px;padding:10px;background:#F3F2EF;border:1.5px dashed rgba(0,0,0,0.15);border-radius:10px;display:flex;flex-wrap:wrap;align-items:flex-start">
+              <div onClick="{{ p.onZoneClick }}" onKeyDown="{{ p.onZoneKey }}" role="button" tabindex="0" aria-label="Place the picked team in {{ p.name }}" style="min-height:48px;padding:10px;background:#F3F2EF;border:1.5px dashed rgba(0,0,0,0.15);border-radius:10px;display:flex;flex-wrap:wrap;align-items:flex-start">
                 <sc-for list="{{ p.teamChips }}" as="ch" hint-placeholder-count="4">
-                  <span onClick="{{ ch.onPick }}" style="{{ ch.chipStyle }}">{{ ch.label }}
+                  <span onClick="{{ ch.onPick }}" onKeyDown="{{ ch.onChipKey }}" role="button" tabindex="0" style="{{ ch.chipStyle }}">{{ ch.label }}
                     <button onClick="{{ ch.onRename }}" aria-label="Rename" style="background:transparent;border:none;color:inherit;font-size:13px;padding:2px 4px;cursor:pointer">✎</button>
                     <button onClick="{{ ch.onRemove }}" aria-label="Remove" style="background:transparent;border:none;color:inherit;font-size:13px;padding:2px 4px;cursor:pointer">×</button>
                   </span>
@@ -432,7 +440,7 @@
 
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-top:16px">
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button onClick="{{ onSaveDraw }}" disabled="{{ drawBusy }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Save changes</button>
+              <button onClick="{{ onSaveDraw }}" disabled="{{ drawBusy }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ drawSaveLabel }}</button>
               <button onClick="{{ onDiscardDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Discard changes</button>
               <button onClick="{{ onResetDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Regenerate times &amp; bracket</button>
             </div>
@@ -499,6 +507,10 @@
             <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#5A626E;font-size:14px">Loading…</div>
           </sc-if>
 
+          <!-- regReady wraps the search box and both sections: while the fetch
+               runs, the "Loading…" card above is the ONLY thing shown, not a
+               search box over empty "(0)" shells (design audit, Aug 2026). -->
+          <sc-if value="{{ regReady }}" hint-placeholder-val="{{ false }}">
           <input value="{{ regSearch }}" onInput="{{ onRegSearch }}" placeholder="Search player, club, coach or parent…" style="width:100%;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
 
           <sc-if value="{{ hasRegUnmatched }}" hint-placeholder-val="{{ false }}">
@@ -538,6 +550,7 @@
               </div>
             </sc-for>
           </div>
+          </sc-if>
         </div>
       </sc-if>
     </div>
@@ -683,9 +696,20 @@ class Component extends DCLogic {
        (which uses the live rules) silently disagrees with. */
     if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
     this.setState({ api }, () => { this.boot(); });
+    /* Escape closes the top overlay — confirm modal first, then the score
+       sheet — standard dialog manners (design audit, Aug 2026). */
+    this._escHandler = (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.state.modal) this.closeModal();
+      else if (this.state.sheetMatchId) this.closeSheet();
+    };
+    document.addEventListener('keydown', this._escHandler);
   }
 
-  componentWillUnmount() { if (this._toastT) clearTimeout(this._toastT); }
+  componentWillUnmount() {
+    if (this._toastT) clearTimeout(this._toastT);
+    if (this._escHandler) document.removeEventListener('keydown', this._escHandler);
+  }
 
   /* Returns true when boot() actually landed on the dashboard, false when it
      redirected to /signin (no session) or signed an unusable account out. */
@@ -883,6 +907,9 @@ class Component extends DCLogic {
 
   addPool() {
     this.setState((s) => {
+      /* No draw loaded (still fetching, or none exists) — s.draw.pools would
+         throw on null and the button should do nothing rather than crash. */
+      if (!s.draw) return null;
       const used = (s.draw.pools || []).map((p) => p.id);
       let nextChar = 'A';
       for (let i = 0; i < 26; i += 1) {
@@ -1779,12 +1806,21 @@ class Component extends DCLogic {
         label: this.tName(t),
         chipStyle: (s.picked && s.picked.team === t && s.picked.from.kind === 'pool' && s.picked.from.poolId === p.id) ? chipOn : chipOff,
         onPick: () => this.pickTeam(t, { kind: 'pool', poolId: p.id }),
+        /* Keyboard path for the tap-to-move chip — a span is unreachable by
+           Tab without the tabindex, and Enter/Space must mean what click means
+           (design audit, Aug 2026). */
+        onChipKey: (e) => {
+          if (e && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); this.pickTeam(t, { kind: 'pool', poolId: p.id }); }
+        },
         onRename: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.onRenameTeam(p.id, t); },
         onRemove: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.onRemoveTeam(p.id, t); },
       })),
       /* Only a click on the zone ITSELF places — a click that bubbled up from
          a chip inside it is that chip's business. */
       onZoneClick: (e) => { if (!e || e.target === e.currentTarget) this.placeTeam({ kind: 'pool', poolId: p.id }); },
+      onZoneKey: (e) => {
+        if (e && (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); this.placeTeam({ kind: 'pool', poolId: p.id }); }
+      },
       newTeamValue: (s.newTeamDrafts || {})[p.id] || '',
       onNewTeamInput: (e) => this.onNewTeamInput(p.id, e.target.value),
       onAddTeam: () => this.onAddTeam(p.id),
@@ -1908,6 +1944,8 @@ class Component extends DCLogic {
       onGenerateFinals: () => this.generateFinals(),
       onClearKnockout: () => this.clearKnockout(),
       onSaveDraw: () => this.saveDraw(),
+      /* Busy label — every other async button here has one. */
+      drawSaveLabel: s.drawBusy ? 'Saving…' : 'Save changes',
       onDiscardDraw: () => this.discardDraw(),
       onResetDraw: () => this.resetDraw(),
       importCount: this.importSourceTeams().length,
@@ -1962,6 +2000,7 @@ class Component extends DCLogic {
         : [],
 
       regLoading: s.regs === undefined || s.regs === null,
+      regReady: !(s.regs === undefined || s.regs === null),
       regSearch: s.regSearch,
       onRegSearch: (e) => this.onRegSearch(e),
       regTeamCount: reg ? reg.teams.length : 0,

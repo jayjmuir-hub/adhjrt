@@ -20,6 +20,13 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased}
   input,select,button{font-family:inherit}
+  /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
+     no inline background or colour is ever overridden. */
+  button{transition:filter .15s ease,transform .08s ease}
+  button:hover:not(:disabled){filter:brightness(0.94)}
+  button:active:not(:disabled){transform:scale(.98)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
 </style>
 </helmet>
 
@@ -45,10 +52,10 @@
       <p style="color:#454D58;font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
 
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-      <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
+      <input name="username" autocomplete="username" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input name="password" autocomplete="current-password" type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
       </div>
       <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
@@ -101,12 +108,12 @@
       </div>
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
       </div>
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
       </div>
       <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
@@ -139,7 +146,7 @@
 
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input name="invite-code" autocomplete="off" type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
       </div>
       <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>

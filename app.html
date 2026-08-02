@@ -38,7 +38,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Barlow',system-ui,sans-serif;background:var(--paper);color:var(--text);
-     -webkit-font-smoothing:antialiased;overflow-x:hidden}
+     -webkit-font-smoothing:antialiased;overflow-x:hidden;font-variant-numeric:tabular-nums;
+     text-size-adjust:100%;-webkit-text-size-adjust:100%}
 button,input,select{font-family:inherit;font-size:inherit}
 button{border:none;background:none;cursor:pointer;color:inherit}
 a{color:inherit}
@@ -241,7 +242,7 @@ tr.me td:nth-child(1),tr.me td:nth-child(2){background:#fffdf4}
              pointer-events:none;transition:opacity .25s}
 .sheet-scrim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:#fff;
-       border-radius:22px 22px 0 0;max-height:92vh;max-height:92dvh;overflow-y:auto;transform:translateY(100%);
+       border-radius:22px 22px 0 0;max-height:92vh;max-height:92dvh;overflow-y:auto;overscroll-behavior:contain;transform:translateY(100%);
        transition:transform .28s cubic-bezier(.32,.72,0,1);
        padding-bottom:calc(env(safe-area-inset-bottom) + 18px);max-width:900px;margin:0 auto}
 .sheet.on{transform:translateY(0)}
@@ -294,6 +295,23 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
 /* No tab bar on desktop, so it can sit lower. */
 @media(min-width:820px){ .toast{bottom:calc(env(safe-area-inset-bottom) + 28px)} }
 .spin{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* A ring that moves — static "Loading…" text is indistinguishable from a
+   frozen app on stadium wifi. Honour reduced motion. */
+@media(prefers-reduced-motion:no-preference){
+  .spin::before{content:"";display:block;width:22px;height:22px;margin:0 auto 10px;
+    border:2.5px solid var(--line);border-top-color:var(--red);border-radius:50%;
+    animation:spinring .8s linear infinite}
+  @keyframes spinring{to{transform:rotate(360deg)}}
+}
+/* Pressed + hover feedback on the app's main tap targets (design audit, Aug 2026). */
+.mrow:active,.row:active{background:#faf9f7}
+.pill:active,.btn:active,.keybtn:active{transform:scale(.97)}
+.tabbar button:active{opacity:.55}
+@media(hover:hover){
+  .mrow:hover,.row:hover{background:#faf9f7}
+  .pill:hover,.btn:hover,.keybtn:hover{filter:brightness(.97)}
+}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 /* team card + chips */
 .tcard{background:var(--ink);color:#fff;border-radius:var(--radius);padding:18px;margin-bottom:14px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
 .tcard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--red),var(--red) 45%,var(--green))}
@@ -593,8 +611,12 @@ $('goHome').onclick = () => { closeSheet(); go('today'); };
 function openSheet(title, html){
   $('sheetTitle').textContent = title; $('sheetBody').innerHTML = html;
   $('sheet').classList.add('on'); $('scrim').classList.add('on');
+  document.body.style.overflow = 'hidden';   // the page must not scroll behind the sheet
 }
-function closeSheet(){ $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+function closeSheet(){
+  $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
+  document.body.style.overflow = '';
+}
 const sheetOpen = () => $('sheet').classList.contains('on');
 $('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
 
@@ -669,7 +691,7 @@ function pills(){
 function loadFail(){
   return `<div class="card"><div class="empty"><b>Couldn't load</b>
     <div>Check your signal, then try again.</div>
-    <button class="btn" data-age="${esc(S.browseId || '')}" style="margin-top:12px">Try again</button></div></div>`;
+    <button class="btn btn-o" data-age="${esc(S.browseId || '')}" style="margin-top:12px;display:inline-block;width:auto;padding:12px 26px">Try again</button></div></div>`;
 }
 
 function dayTag(agId){
@@ -1168,24 +1190,31 @@ function openMatch(id){
   $('wo').onchange = recalc;
   recalc();
 
-  if (r && $('sclr')) $('sclr').onclick = async () => {
-    if (!confirm('Clear this result? The match goes back to unplayed and the pool table is recalculated.')) return;
+  /* Inline two-button confirm at the top of the score sheet — a native
+     confirm() drops an OS dialog with the site URL into an otherwise fully
+     app-styled flow (design audit, Aug 2026). */
+  const askInSheet = (msg, okLabel, okClass, onOk) => {
+    $('scErr').innerHTML = `<div class="note">${msg}
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button type="button" class="btn btn-o" id="cfNo" style="flex:1;width:auto">Cancel</button>
+        <button type="button" class="btn ${okClass}" id="cfYes" style="flex:1;width:auto">${esc(okLabel)}</button>
+      </div></div>`;
+    $('cfNo').onclick = () => { $('scErr').innerHTML = ''; };
+    $('cfYes').onclick = () => { $('scErr').innerHTML = ''; onOk(); };
+    $('scErr').scrollIntoView({ block: 'nearest' });
+  };
+
+  const doClear = async () => {
     $('sclr').textContent = 'Clearing…';
     const res = await api.clearResult(m.id, S.session);
     if (res.ok) { closeSheet(); toast('Result cleared'); await afterWrite(); }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not clear.')}</div>`; $('sclr').textContent = 'Clear result'; }
   };
+  if (r && $('sclr')) $('sclr').onclick = () =>
+    askInSheet('Clear this result? The match goes back to unplayed and the pool table is recalculated.', 'Clear result', 'btn-p', doClear);
 
-  $('sgo').onclick = async () => {
+  const doSave = async () => {
     const wo = $('wo').value;
-    /* An all-zero save is a real 0-0 draw. Worth confirming, because the more
-       likely intent is to clear a result that was entered by mistake. */
-    if (!wo) {
-      const zero = ['home','away'].every(side => parts.every(k => !Number(($(`${side}-${k}`)||{}).value || 0)));
-      if (zero && !confirm('Save this as a 0–0 draw? Both teams get two league points.\n\nTo remove the result instead, use Clear result.')) {
-        return;
-      }
-    }
     $('sgo').textContent = 'Saving…';
     const payload = { walkover: wo || null };
     ['home','away'].forEach(side => parts.forEach(k => {
@@ -1202,6 +1231,19 @@ function openMatch(id){
       await afterWrite();
     }
     else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
+  };
+
+  $('sgo').onclick = () => {
+    /* An all-zero save is a real 0-0 draw. Worth confirming, because the more
+       likely intent is to clear a result that was entered by mistake. */
+    if (!$('wo').value) {
+      const zero = ['home','away'].every(side => parts.every(k => !Number(($(`${side}-${k}`)||{}).value || 0)));
+      if (zero) {
+        askInSheet('Save this as a 0–0 draw? Both teams get two league points. To remove the result instead, use Clear result.', 'Save 0–0', 'btn-g', doSave);
+        return;
+      }
+    }
+    doSave();
   };
 }
 

@@ -114,8 +114,11 @@ section('The binding contract: the new prop/attr actually exist in the markup');
     /onScoresAgeChange:\s*\(/.test(home));
 
   const scores = readRepo('Scores & Standings.dc.html');
+  /* Aug 2026 (design audit): the pill select also clears `standings` in the
+     same setState, so the previous group's table cannot render under the new
+     pill while the fetch runs — the anchor tracks the new literal. */
   check('the public Results tab reports its own pick upward',
-    /onSelect: \(\) => this\.setState\(\{ selectedAgeId: a\.id \}, \(\) => \{[\s\S]{0,200}?this\.props\.onAgeChange\(a\.id\)/.test(scores));
+    /onSelect: \(\) => this\.setState\(\{ selectedAgeId: a\.id, standings: null \}, \(\) => \{[\s\S]{0,200}?this\.props\.onAgeChange\(a\.id\)/.test(scores));
   check('…guarded so the standalone \/scores page (no onAgeChange prop) never throws',
     /typeof this\.props\.onAgeChange === 'function'/.test(scores));
   /* Aug 2026: loadEditor() is gone — the /scores Manager area was deleted

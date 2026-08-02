@@ -54,8 +54,15 @@
 <meta name="twitter:image" content="https://adhjrt.com/assets/crest.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
   input,button{font-family:inherit}
+  /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
+     no inline background or colour is ever overridden. */
+  button{transition:filter .15s ease,transform .08s ease}
+  button:hover:not(:disabled){filter:brightness(1.18)}
+  button:active:not(:disabled){transform:scale(.98)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  a:focus-visible,button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 </style>
 </helmet>
 
@@ -127,6 +134,10 @@
           <div style="font-family:'Anton';font-size:30px;color:#fff">Festival age group</div>
           <p style="margin-top:8px">{{ selectedName }} is a non-competitive festival — no standings are kept.</p>
         </div>
+      </sc-if>
+
+      <sc-if value="{{ standingsLoading }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:40px;text-align:center;color:#aeb4bf">Loading {{ selectedName }}&hellip;</div>
       </sc-if>
 
       <sc-if value="{{ showTables }}" hint-placeholder-val="{{ true }}">
@@ -410,7 +421,10 @@ class Component extends DCLogic {
       // the Fixtures section (and so, via its own prop back down, the public
       // Results view a visitor DIDN'T touch) on the same age group. Standalone
       // /scores has no onAgeChange prop, so this is a no-op there.
-      onSelect: () => this.setState({ selectedAgeId: a.id }, () => {
+      /* standings:null in the same set — without it the PREVIOUS group's
+         table keeps rendering under the newly-selected pill until the fetch
+         lands (design audit, Aug 2026). */
+      onSelect: () => this.setState({ selectedAgeId: a.id, standings: null }, () => {
         this.loadPublic();
         if (typeof this.props.onAgeChange === 'function') this.props.onAgeChange(a.id);
       }),
@@ -568,6 +582,10 @@ class Component extends DCLogic {
       isPublic: true,
 
       ageTabs, selectedName: selName, selectedFestival: festival && !(st && st.awaitingPublication),
+      /* True while a group's standings fetch is in flight — the pills clear
+         `standings` on select, so this is what stops the page sitting blank
+         (or worse, on the previous group's table) during the load. */
+      standingsLoading: !st && !festival && !!s.selectedAgeId,
       /* Nothing is shown publicly until an organiser publishes. An
          auto-generated draw is sample data and must never reach parents. */
       awaitingPublication: !!(st && st.awaitingPublication),

@@ -43,9 +43,17 @@
 
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
   input,select,button{font-family:inherit}
   table{border-collapse:collapse}
+  /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
+     no inline background or colour is ever overridden. */
+  button{transition:filter .15s ease,transform .08s ease}
+  button:hover:not(:disabled){filter:brightness(0.94)}
+  button:active:not(:disabled){transform:scale(.98)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  tbody tr:hover td{background:rgba(0,0,0,0.025)}
 </style>
 </helmet>
 
@@ -134,6 +142,13 @@
           <span>{{ dataError }}</span>
           <button onClick="{{ onRetryLoad }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Retry</button>
         </div>
+      </sc-if>
+
+      <!-- Loading vs empty, told apart: while the registrations/accounts fetch
+           is in flight the tables would otherwise read "No team registrations
+           match your filters" with "(0)" counts — which looks like an answer. -->
+      <sc-if value="{{ dataLoading }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:14px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:9px;padding:12px 14px;color:#5A626E;font-size:14px;font-weight:600">Loading registrations and accounts&hellip;</div>
       </sc-if>
 
       <!-- registration window tab -->
@@ -1064,7 +1079,7 @@ class Component extends DCLogic {
        /signin when there is none. */
     api: null, session: null,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
-    teams: [], players: [], accounts: [], dataError: '',
+    teams: [], players: [], accounts: [], dataError: '', dataLoading: false,
     /* The Tournament tab's bulk publish — moved from the old /scores Manager
        area. bulkMsg is the outcome sentence ("Published 15 age groups.") and
        is set LAST, after any refresh, so nothing can blank it on the way in
@@ -1143,6 +1158,11 @@ class Component extends DCLogic {
     if (session) this.loadData(api);
     else this.redirect('/signin?next=/organizer');
 
+    /* Escape closes the open confirm/prompt modal — standard dialog manners
+       (design audit, Aug 2026). */
+    this._escHandler = (e) => { if (e.key === 'Escape' && this.state.modal) this.closeModal(); };
+    document.addEventListener('keydown', this._escHandler);
+
     /* Keeps the Registration tab's "what the public page says" preview honest
        as the clock crosses a boundary. Five seconds, not one: the preview is a
        back-office read-out, and a one-second re-render would rebuild the teams
@@ -1159,16 +1179,21 @@ class Component extends DCLogic {
 
   componentWillUnmount() {
     if (this._regClock) clearInterval(this._regClock);
+    if (this._escHandler) document.removeEventListener('keydown', this._escHandler);
   }
 
   async loadData(api) {
+    /* dataLoading tells the tables apart from "0 registrations" while the
+       fetch is in flight — the same loading-vs-empty ambiguity the 30 Jul
+       dataError banner fixed for the FAILURE case (design audit, Aug 2026). */
+    this.setState({ dataLoading: true });
     const [data, acctResult] = await Promise.all([api.getRegistrations(), api.listAccounts()]);
     // 30 Jul: a failed load (a broken deployed backend, not "nothing's
     // registered yet") now says so, with a Retry button, instead of leaving
     // the Teams/Players/Accounts tables silently empty. See getRegistrations()/
     // listAccounts() in organizer-data.js for where `error` comes from.
     const dataError = data.error || acctResult.error || '';
-    this.setState({ teams: data.teams, players: data.players, accounts: acctResult.accounts, dataError });
+    this.setState({ teams: data.teams, players: data.players, accounts: acctResult.accounts, dataError, dataLoading: false });
   }
 
   async refreshAccounts() {
@@ -2794,7 +2819,7 @@ class Component extends DCLogic {
       // actually grows as the window grows (a fixed wider number wouldn't),
       // capped so it doesn't run edge-to-edge on an ultrawide monitor.
       dashboardMaxWidth: (s.tab === 'teams' || s.tab === 'players') ? 'min(96vw,2400px)' : '1300px',
-      dataError: s.dataError, onRetryLoad: () => this.onRetryLoad(),
+      dataError: s.dataError, dataLoading: s.dataLoading, onRetryLoad: () => this.onRetryLoad(),
       showTeams: () => this.setState({ tab: 'teams' }),
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),

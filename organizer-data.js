@@ -365,6 +365,12 @@ export {
   DEFAULT_REGISTRATION, REGISTRATION_MODES,
 } from './scores-data.js';
 
+/* The Tournament tab's bulk publish calls the same publish path the scores
+   and manager pages use — re-exported, not reimplemented, so "publish" cannot
+   quietly come to mean two different things. Same reasoning as the pitch
+   model and registration rules above. */
+export { publishDraw, unpublishDraw } from './scores-data.js';
+
 export async function getRegistrationWindow() {
   const r = await tryFetchJson('/.netlify/functions/registration-window');
   if (r.real && r.json && r.json.ok) return r.json;

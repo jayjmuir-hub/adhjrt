@@ -209,6 +209,7 @@
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
         <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
         <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
+        <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
       </div>
 
       <!-- 30 Jul: a failed load used to leave teams/players/accounts as empty
@@ -311,6 +312,27 @@
               <sc-if value="{{ rPreviewTestMode }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:14px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);border-radius:8px;padding:9px 13px;color:#f5c518;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Test mode strip is showing on the public page</div>
               </sc-if>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- tournament tab — tournament-wide tools, moved here from the old
+           /scores Manager area (Aug 2026). These are organiser jobs, and this
+           is the organiser page; the server re-checks the role on every call
+           regardless. -->
+      <sc-if value="{{ isTournament }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+
+          <!-- ===== ALL AGE GROUPS — bulk publish ===== -->
+          <div style="background:#151517;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+            <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">All age groups</div>
+            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <button onClick="{{ onPublishAll }}" disabled="{{ bulkBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Publish all age groups</button>
+              <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
+              <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
             </div>
           </div>
 
@@ -1089,6 +1111,11 @@ class Component extends DCLogic {
     googlePendingToken: '', googlePendingName: '', googleTitle: '', googleCode: '', showGoogleCode: false,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
     teams: [], players: [], accounts: [], dataError: '',
+    /* The Tournament tab's bulk publish — moved from the old /scores Manager
+       area. bulkMsg is the outcome sentence ("Published 15 age groups.") and
+       is set LAST, after any refresh, so nothing can blank it on the way in
+       (the runClear() lesson from the old cleanup panel). */
+    bulkBusy: false, bulkMsg: '',
     /* The venue layout being edited. `venue` is the working copy the form
        mutates; `venueSaved` is what the server last confirmed, so the Save
        button can tell whether anything actually changed. Both null until the
@@ -1913,6 +1940,44 @@ class Component extends DCLogic {
   /* opts: { okLabel, wide }. The confirm button says what it does — "Remove
      pitch" reads very differently from "OK" on a dialog that lists the fixtures
      about to be stranded. */
+  /* ---------------- Tournament tab — bulk publish ----------------
+     Moved verbatim from the old /scores Manager area (Aug 2026), minus that
+     page's own view refreshes. No new rules: publish-schedule.js re-checks
+     the role server-side on every call, and the skip detection reads the
+     server's own "nothing to publish / save a draw" wording. The loop is one
+     call per age group, all fifteen, deliberately — a bulk endpoint would be
+     faster and far easier to get catastrophically wrong. */
+  async onPublishAll() {
+    this.confirmModal('Publish every age group that has a saved draw? Parents and coaches will see all of them on the public pages straight away.', async () => {
+      const { api, session } = this.state;
+      this.setState({ bulkBusy: true, bulkMsg: '' });
+      let published = 0, skipped = 0, failed = 0;
+      for (const ag of MANAGER_AGE_GROUPS) {
+        const res = await api.publishDraw(ag.id, session);
+        if (res && res.ok) published++;
+        else if (res && /nothing to publish|save a draw/i.test(res.error || '')) skipped++;
+        else failed++;
+      }
+      const msg = `Published ${published} age group${published === 1 ? '' : 's'}.`
+        + (skipped ? ` Skipped ${skipped} with no saved draw.` : '')
+        + (failed ? ` ${failed} could not be published.` : '');
+      this.setState({ bulkBusy: false, bulkMsg: msg });
+    }, { okLabel: 'Publish all' });
+  }
+  async onUnpublishAll() {
+    this.confirmModal('Unpublish EVERY age group? Parents and coaches will no longer see any fixtures or standings until you publish again.', async () => {
+      const { api, session } = this.state;
+      this.setState({ bulkBusy: true, bulkMsg: '' });
+      let done = 0, failed = 0;
+      for (const ag of MANAGER_AGE_GROUPS) {
+        const res = await api.unpublishDraw(ag.id, session);
+        if (res && res.ok) done++; else failed++;
+      }
+      const msg = `Unpublished ${done} age group${done === 1 ? '' : 's'}.` + (failed ? ` ${failed} could not be unpublished.` : '');
+      this.setState({ bulkBusy: false, bulkMsg: msg });
+    }, { okLabel: 'Unpublish all' });
+  }
+
   confirmModal(message, onConfirm, opts) {
     this.setState({ modal: { kind: 'confirm', title: message, onConfirm, ...(opts || {}) } });
   }
@@ -2607,6 +2672,10 @@ class Component extends DCLogic {
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
+      isTournament: s.tab === 'tournament',
+      bulkBusy: s.bulkBusy, bulkMsg: s.bulkMsg,
+      onPublishAll: () => this.onPublishAll(),
+      onUnpublishAll: () => this.onUnpublishAll(),
       // Jay, 1 Aug: on Teams/Players, stretch to use a big window instead of
       // staying capped at 1300px like every other tab -- min(96vw, 2400px)
       // actually grows as the window grows (a fixed wider number wouldn't),
@@ -2618,11 +2687,13 @@ class Component extends DCLogic {
       showAccounts: () => this.setState({ tab: 'accounts' }),
       showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
+      showTournament: () => this.setState({ tab: 'tournament' }),
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
       tabVenueStyle: s.tab === 'venue' ? tabOn : tabOff,
       tabRegistrationStyle: s.tab === 'registration' ? tabOn : tabOff,
+      tabTournamentStyle: s.tab === 'tournament' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
 

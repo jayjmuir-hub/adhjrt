@@ -1779,6 +1779,58 @@ const FAULTS = [
       "  const aAge = String(a.ageGroup || ''), bAge = String(b.ageGroup || '');\n  if (aAge !== bAge) return aAge < bAge ? -1 : 1;"),
     expect: ['age groups are grouped in real youngest-to-oldest order, not alphabetically'],
   },
+  /* ---- the Tournament tab (test-organizer-tournament.js) ----------------
+     The bulk publish moved here from the old /scores Manager area. The
+     dangerous regressions are the quiet ones: a loop that stops early, a
+     skip-detection that stops matching the server's wording, a binding that
+     silently resolves to empty. */
+
+  {
+    name: 'the Publish-all loop is truncated to the first age group',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '      let published = 0, skipped = 0, failed = 0;\n      for (const ag of MANAGER_AGE_GROUPS) {',
+      '      let published = 0, skipped = 0, failed = 0;\n      for (const ag of MANAGER_AGE_GROUPS.slice(0, 1)) {'),
+    expect: ['every age group is published, tail included'],
+  },
+  {
+    name: 'the Unpublish-all loop is truncated to the first age group',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '      let done = 0, failed = 0;\n      for (const ag of MANAGER_AGE_GROUPS) {',
+      '      let done = 0, failed = 0;\n      for (const ag of MANAGER_AGE_GROUPS.slice(0, 1)) {'),
+    expect: ['every age group is unpublished, tail included'],
+  },
+  {
+    name: 'the skipped-group detection stops matching the server\'s wording',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      "        else if (res && /nothing to publish|save a draw/i.test(res.error || '')) skipped++;",
+      "        else if (res && /this wording never comes back/i.test(res.error || '')) skipped++;"),
+    expect: ['a group with no saved draw is counted as skipped'],
+  },
+  {
+    name: 'the Tournament tab button is deleted from the markup',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '        <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>\n', ''),
+    expect: ['the Tournament tab button exists'],
+  },
+  {
+    name: 'the onPublishAll binding is dropped from renderVals, so the button silently does nothing',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '      onPublishAll: () => this.onPublishAll(),\n', ''),
+    expect: ['renderVals returns onPublishAll'],
+  },
+  {
+    name: 'the publish re-export is removed from organizer-data.js',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('organizer-data.js',
+      "export { publishDraw, unpublishDraw } from './scores-data.js';", ''),
+    expect: ['publishDraw is re-exported from scores-data.js'],
+  },
+
   {
     /* NOT `localeCompare()` with no options — Node's default locale already
        sorts case-insensitively at the primary level, so dropping just the
@@ -2398,7 +2450,8 @@ seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
- 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js'].forEach((f) => {
+ 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
+ 'test-organizer-tournament.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

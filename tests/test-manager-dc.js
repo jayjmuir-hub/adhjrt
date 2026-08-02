@@ -201,62 +201,34 @@ section('Boot and age-group scoping');
 }
 {
   const c = buildManager({ currentSession: () => null });
+  const gone = [];
+  c.redirect = (url) => gone.push(url);
   const landed = await c.boot();
-  check('no session at all leaves the login screen up', landed === false && c.state.session === null);
+  check('no session at all redirects to the unified sign-in page, carrying next',
+    landed === false && c.state.session === null && gone.length === 1 && gone[0] === '/signin?next=/manager',
+    JSON.stringify(gone));
 }
 
-section('Login screen');
+section('Sign-in lives on /signin — this page only redirects and signs out');
+/* Aug 2026 (claude/specs/spec-unified-login.md): the login card, doLogin()
+   and their bindings are gone. The signed-out shell links to /signin, boot()
+   redirects there (asserted above), and doLogout() clears the unified
+   session then hands over to the sign-in page. */
 {
-  const c = buildManager({ currentSession: () => null });
+  const src = readRepo('Manager.dc.html');
+  check('the signed-out shell links to /signin with next=/manager',
+    /href="\/signin\?next=\/manager"/.test(src));
+  check('no password field or login form remains on this page',
+    !/loginPass/.test(src) && !/doLogin/i.test(src.replace(/\/\*[\s\S]*?\*\//g, '')));
+
+  let loggedOut = 0; const gone = [];
+  const c = buildManager({ currentSession: () => ({ ageGroupId: 'u14b', token: 't' }), logout: () => { loggedOut++; } });
   await c.boot();
-  const vals = c.renderVals();
-  check('the login screen is what renders with no session', vals.loggedOut === true && vals.loggedIn === false);
-
-  c.setState({ loginUser: '', loginPass: '' });
-  await c.doLogin();
-  check('an empty form is refused with a message, without calling the API',
-    c.state.loginError === 'Enter your username and password.');
-}
-{
-  let calledWith = null;
-  const c = buildManager({
-    currentSession: () => null,
-    login: async (u, p) => { calledWith = [u, p]; return { ok: false, error: 'Wrong username or password.' }; },
-  });
-  c.setState({ loginUser: '  mgr-u14b  ', loginPass: 'secret' });
-  await c.doLogin();
-  check('the username is trimmed before it is sent', eq('login args', calledWith, ['mgr-u14b', 'secret']));
-  check('a rejected login shows the server\'s message', c.state.loginError === 'Wrong username or password.');
-  check('…and the login screen stays up', !c.state.session);
-  check('…and the button goes back to its idle label', c.renderVals().loginLabel === 'Sign in');
-}
-{
-  // A successful login must run the SAME boot() the page load runs — and must
-  // only say "Signed in" when boot() actually landed on the dashboard.
-  let sessionNow = null;
-  const c = buildManager({
-    currentSession: () => sessionNow,
-    login: async () => { sessionNow = { ageGroupId: 'u14b', token: 't' }; return { ok: true }; },
-  });
-  c.setState({ loginUser: 'mgr', loginPass: 'pw' });
-  await c.doLogin();
-  check('a successful login lands on the dashboard', !!c.state.session && c.state.ageId === 'u14b');
-  check('…and confirms it', c.state.toast === 'Signed in');
-  check('…and clears the typed password out of state', c.state.loginPass === '');
-}
-{
-  // FAULT-PROOF for the "landed" contract: login succeeds but the account's
-  // age group does not exist, so boot() bounces back to the login screen. The
-  // "Signed in" toast must NOT stomp the explanation.
-  let sessionNow = null;
-  const c = buildManager({
-    currentSession: () => sessionNow,
-    login: async () => { sessionNow = { ageGroupId: 'u99', token: 't' }; return { ok: true }; },
-  });
-  c.setState({ loginUser: 'mgr', loginPass: 'pw' });
-  await c.doLogin();
-  check('a login whose age group is missing does not claim "Signed in"', c.state.toast !== 'Signed in');
-  check('…it explains the real problem instead', /age group is not set up/i.test(c.state.toast));
+  c.redirect = (url) => gone.push(url);
+  c.doLogout();
+  check('sign-out clears the session through the data layer', loggedOut === 1);
+  check('…leaves no session in state', c.state.session === null);
+  check('…and hands over to /signin', gone.length === 1 && gone[0] === '/signin?next=/manager', JSON.stringify(gone));
 }
 
 section('Tab bar');
@@ -293,7 +265,9 @@ section('Sign out');
   check('…drops the session', c.state.session === null);
   check('…drops the loaded fixtures and standings', c.state.fixtures === null && c.state.standings === null);
   check('…and returns to the Today tab for the next person on this device', c.state.tab === 'today');
-  check('…and says so', c.state.toast === 'Signed out');
+  /* No "Signed out" toast any more — sign-out hands straight over to
+     /signin (asserted in the section above), and a toast on a page being
+     left is a message nobody reads. */
 }
 
 section('In-app confirm/prompt modal (window.confirm is blocked in the DC preview iframe)');

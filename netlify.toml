@@ -27,6 +27,11 @@
   status = 200
 
 [[redirects]]
+  from = "/signin"
+  to = "/Signin.dc.html"
+  status = 200
+
+[[redirects]]
   from = "/legal"
   to = "/legal.html"
   status = 200

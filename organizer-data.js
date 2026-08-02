@@ -70,96 +70,12 @@ async function tryFetchJson(url, opts) {
   }
 }
 
-export async function login(username, password) {
-  const r = await tryFetchJson('/.netlify/functions/organizer-login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-  const json = r.real ? r.json : (await local()).organizerLogin({ username, password });
-  if (json.ok) {
-    const session = { ...json.session, token: json.token };
-    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-    return { ok: true, session };
-  }
-  // If these were actually manager credentials (they clicked the wrong login),
-  // sign them in as a manager and send them to /manager — the organizer
-  // dashboard is organizer-only, so there's nothing useful to show a manager
-  // here. (This whole fallback is scheduled to die with the unified login —
-  // see claude/specs/spec-unified-login.md.)
-  const rm = await tryFetchJson('/.netlify/functions/manager-login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-  const mjson = rm.real ? rm.json : (await local()).managerLogin({ username, password });
-  if (mjson.ok) {
-    const mgrSession = { ...mjson.session, token: mjson.token };
-    // One key for both roles now, so this is no longer a write into another
-    // data layer's storage — /manager reads the same key.
-    try { localStorage.setItem(SESSION_KEY, JSON.stringify(mgrSession)); } catch (e) {}
-    return { ok: true, redirect: '/manager' };
-  }
-  return { ok: false, error: json.error || 'Incorrect username or password.' };
-}
-
-// Organizer self-signup, gated by ORGANIZER_INVITE_CODE (see
-// organizer-signup.js). `title` is a free-text label shown next to the
-// organizer's name (e.g. "Registrar", "Medical Lead") — every organizer
-// currently has the same full access to both registration tables.
-// New accounts are pending until an existing organizer approves them
-// (res.pending === true) — the very first organizer ever created is
-// auto-approved.
-export async function signup({ name, title, username, password, inviteCode }) {
-  const r = await tryFetchJson('/.netlify/functions/organizer-signup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, title, username, password, inviteCode }),
-  });
-  const json = r.real ? r.json : (await local()).organizerSignup({ name, title, username, password, inviteCode });
-  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
-  if (json.ok) {
-    const session = { ...json.session, token: json.token };
-    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-    return { ok: true, session };
-  }
-  return { ok: false, error: json.error || 'Could not create account.' };
-}
-
-// Google sign-in (added 29 Jul 2026) — an ADDITIONAL way in, not a
-// replacement for username/password. See netlify/functions/google-auth.js
-// for the full contract; this just forwards the ID token Google's Identity
-// Services library hands the page after someone clicks the Google button.
-//
-//   - no inviteCode, existing Google-linked account -> { ok, session }
-//   - no inviteCode, no account yet                -> { ok, needsSignup, name }
-//   - inviteCode supplied (first-time sign-up)      -> { ok, session } or
-//                                                      { ok, pending, message }
-//   - anything wrong                                -> { ok: false, error }
-//
-// role is always 'organizer' here — Scores & Standings.dc.html calls the
-// same endpoint with role 'manager' for the Manager area's own sign-in.
-export async function googleAuth({ idToken, inviteCode, username, name, title }) {
-  const r = await tryFetchJson('/.netlify/functions/google-auth', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, role: 'organizer', inviteCode, username, name, title }),
-  });
-  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role: 'organizer', inviteCode, username, name, title });
-  if (json.ok && json.needsSignup) return { ok: true, needsSignup: true, name: json.name };
-  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
-  if (json.ok) {
-    const session = { ...json.session, token: json.token };
-    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
-    return { ok: true, session };
-  }
-  return { ok: false, error: json.error || 'Could not sign in with Google.' };
-}
-
-// The Client ID the page needs to render the Google button — see
-// netlify/functions/google-config.js. Returns null (not an error) if it
-// isn't configured yet, so the page can just not show the button.
-export async function googleClientId() {
-  const r = await tryFetchJson('/.netlify/functions/google-config', { method: 'GET' });
-  if (!r.real) return null;
-  return (r.json && r.json.clientId) || null;
-}
+/* Sign-in, sign-up and Google auth all live on the /signin page now, which
+   talks to scores-data.js — including THE fallback hack this file used to
+   carry (try organizer-login, then manager-login, then hand-write the token
+   into the other data layer's localStorage key before redirecting). The
+   unified endpoint made the whole chain unnecessary: one call, the account's
+   own role decides where you land. See claude/specs/spec-unified-login.md. */
 
 export function currentSession() {
   migrateSession();

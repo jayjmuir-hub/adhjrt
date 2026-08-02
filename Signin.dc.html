@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in — ADH JRT</title>
+<meta name="theme-color" content="#0C0C0E">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  input,select,button{font-family:inherit}
+</style>
+</helmet>
+
+<!-- THE one sign-in page (Aug 2026 — claude/specs/spec-unified-login.md).
+     /organizer and /manager both send a signed-out visitor here; after
+     sign-in the page routes by the account's ROLE — organizer → /organizer,
+     manager → /manager. A ?next= parameter is honoured only from the
+     allow-list of exactly those two paths, and only when the role permits
+     it. All the sign-up flows live here too (they used to live on the pages
+     this replaces): password or Google, manager (per-age-group invite code)
+     or organizer (admin invite code). -->
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:400px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:36px">
+    <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;color:#fff">
+      <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+      </div>
+      <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
+    </a>
+
+    <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
+      <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Sign in</div>
+      <p style="color:#aeb4bf;font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
+
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
+      <input value="{{ loginUser }}" onInput="{{ onUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
+      <div style="position:relative;margin:6px 0 16px">
+        <input type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
+      </div>
+      <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
+      <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">New here? <a onClick="{{ onShowSignup }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+
+      <!-- Google sign-in. Only appears once GOOGLE_CLIENT_ID is set in
+           Netlify; password sign-in above works the same either way. The
+           button is drawn by Google's own script into this div — see
+           renderGoogleButton() in the script block. -->
+      <sc-if value="{{ hasGoogleSignIn }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;margin:20px 0 4px">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.12)"></div>
+          <div style="font-size:11px;color:#7f8794;font-weight:700;letter-spacing:.5px">OR</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.12)"></div>
+        </div>
+        <div id="google-signin-btn" style="display:flex;justify-content:center;margin-top:10px"></div>
+        <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ googleError }}</div></sc-if>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
+      <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
+      <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#8ff0b0;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794"><a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+    </sc-if>
+
+    <!-- Creating an account starts with the one question the server cannot
+         answer for a brand-new signup: which KIND of invite code you hold. -->
+    <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
+      <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create an account</div>
+      <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Requires an invite code. New accounts also need approval before signing in.</p>
+
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:18px">I AM SIGNING UP AS</label>
+      <div style="display:flex;gap:8px;margin:8px 0 6px">
+        <button onClick="{{ onRoleManager }}" style="{{ roleManagerStyle }}">Age-group manager</button>
+        <button onClick="{{ onRoleOrganizer }}" style="{{ roleOrganizerStyle }}">Organiser</button>
+      </div>
+      <p style="color:#5a616d;font-size:12px;margin:0 0 10px;line-height:1.5">{{ roleBlurb }}</p>
+
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:8px">YOUR NAME</label>
+      <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+      <sc-if value="{{ signupIsOrganizer }}" hint-placeholder-val="{{ false }}">
+        <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">ROLE / TITLE</label>
+        <input value="{{ signupTitle }}" onInput="{{ onSignupTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+      </sc-if>
+      <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Your login username will be</div>
+        <div style="font-size:22px;font-weight:800;color:#F5C518;margin-top:2px">{{ signupUserPreview }}</div>
+      </div>
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
+      <div style="position:relative;margin:6px 0 16px">
+        <input type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
+      </div>
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <div style="position:relative;margin:6px 0 16px">
+        <input type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
+      </div>
+      <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
+      <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
+    </sc-if>
+
+    <!-- First-time Google sign-in: the identity is already verified, this is
+         the same role + invite-code gate password signup asks for, with the
+         name pre-filled from the Google account. -->
+    <sc-if value="{{ isGoogleCodeView }}" hint-placeholder-val="{{ false }}">
+      <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">One more step</div>
+      <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Signed in with Google as <strong style="color:#fff">{{ googlePendingName }}</strong>. Pick your role and enter its invite code. New accounts also need approval before signing in.</p>
+
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:18px">I AM SIGNING UP AS</label>
+      <div style="display:flex;gap:8px;margin:8px 0 16px">
+        <button onClick="{{ onRoleManager }}" style="{{ roleManagerStyle }}">Age-group manager</button>
+        <button onClick="{{ onRoleOrganizer }}" style="{{ roleOrganizerStyle }}">Organiser</button>
+      </div>
+
+      <div style="background:#151517;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:0 0 16px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#7f8794;text-transform:uppercase">Your login username will be</div>
+        <div style="font-size:22px;font-weight:800;color:#F5C518;margin-top:2px">{{ googleUserPreview }}</div>
+      </div>
+
+      <sc-if value="{{ signupIsOrganizer }}" hint-placeholder-val="{{ false }}">
+        <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">ROLE / TITLE</label>
+        <input value="{{ googleTitle }}" onInput="{{ onGoogleTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+      </sc-if>
+
+      <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <div style="position:relative;margin:6px 0 16px">
+        <input type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#fff;font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#7f8794;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
+      </div>
+      <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>
+      <button onClick="{{ onGoogleSignupSubmit }}" disabled="{{ googleBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ googleSignupLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:#7f8794">Not you? <a onClick="{{ onShowLogin }}" style="color:#fff;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+    </sc-if>
+
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);text-align:center">
+      <a href="/" style="color:#7f8794;font-size:12.5px;font-weight:700;text-decoration:none">&larr; Back to the main site</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
+class Component extends DCLogic {
+  state = {
+    api: null,
+    authMode: 'login',
+    loginUser: '', loginPass: '', loginError: '', loginBusy: false,
+    showLoginPass: false, showSignupPass: false, showSignupCode: false, showGoogleCode: false,
+    /* Which KIND of account a signup creates. Sign-IN never asks — the
+       account's stored role decides where you land. */
+    signupRole: 'manager',
+    signupName: '', signupTitle: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
+    signupPending: false, signupPendingMessage: '',
+    googleClientId: '', googleBusy: false, googleError: '',
+    googlePendingToken: '', googlePendingName: '', googleTitle: '', googleCode: '',
+  };
+
+  /* Where a session belongs. ?next= is honoured ONLY from this allow-list —
+     never an arbitrary URL, this is a redirect after authentication — and
+     only when the role permits it: a manager asked to go to /organizer goes
+     to /manager, because /organizer would only 403 every read. */
+  destFor(session) {
+    const isOrg = !!(session && (session.isOrganizer || session._role === 'organizer' || session.role === 'organizer'));
+    const next = this._next;
+    const allowed = next === '/organizer' || next === '/manager';
+    if (isOrg) return allowed ? next : '/organizer';
+    return '/manager';
+  }
+
+  redirect(url) {
+    try { window.location.replace(url); } catch (e) { /* non-browser context */ }
+  }
+
+  async componentDidMount() {
+    try { this._next = new URLSearchParams(window.location.search).get('next') || ''; } catch (e) { this._next = ''; }
+    const api = await import(new URL('scores-data.js', document.baseURI).href);
+    this.setState({ api });
+
+    /* Already signed in (or migrated from an old key)? Straight through. */
+    const session = api.currentSession();
+    if (session) { this.redirect(this.destFor(session)); return; }
+
+    /* Google sign-in is an enhancement only — anything that goes wrong here
+       must never block password sign-in. */
+    try {
+      const clientId = await api.googleClientId();
+      if (clientId) {
+        this.setState({ googleClientId: clientId });
+        await this.loadGoogleScript();
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+          window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => this.onGoogleCredential(r) });
+          this.renderGoogleButton();
+          this._googleButtonMode = 'login';
+        }
+      }
+    } catch (e) { /* enhancement only */ }
+  }
+
+  componentDidUpdate() {
+    // The login view sits inside an sc-if, so switching away and back
+    // unmounts and remounts the Google button's div — re-render it whenever
+    // the login view returns.
+    const { authMode, googleClientId } = this.state;
+    if (authMode === 'login' && googleClientId && this._googleButtonMode !== 'login') {
+      this._googleButtonMode = 'login';
+      this.renderGoogleButton();
+    } else if (authMode !== 'login') {
+      this._googleButtonMode = null;
+    }
+  }
+
+  loadGoogleScript() {
+    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
+    if (this._googleScriptPromise) return this._googleScriptPromise;
+    this._googleScriptPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true; s.defer = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Could not load Google sign-in.'));
+      document.head.appendChild(s);
+    });
+    return this._googleScriptPromise;
+  }
+
+  renderGoogleButton() {
+    const el = document.getElementById('google-signin-btn');
+    if (el && window.google && window.google.accounts && window.google.accounts.id) {
+      el.innerHTML = '';
+      window.google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', width: 336, text: 'signin_with' });
+    }
+  }
+
+  async doLogin() {
+    const { api } = this.state;
+    const u = (this.state.loginUser || '').trim();
+    const p = this.state.loginPass || '';
+    if (!u || !p) { this.setState({ loginError: 'Enter your username and password.' }); return; }
+    this.setState({ loginBusy: true, loginError: '' });
+    const r = await api.login(u, p);
+    if (!r.ok) {
+      this.setState({ loginBusy: false, loginError: r.error || 'Incorrect username or password.' });
+      return;
+    }
+    this.setState({ loginBusy: false, loginPass: '' });
+    this.redirect(this.destFor(r.session));
+  }
+
+  usernameFromName(name) {
+    const parts = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s'-]/g, '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0];
+    return parts[0] + '.' + parts[parts.length - 1];
+  }
+
+  /* Same dedupe-retry-on-409 shape the old pages used — one collision
+     strategy, not two. */
+  async doSignup() {
+    const { api, signupRole, signupName, signupTitle, signupPass, signupCode } = this.state;
+    const base = this.usernameFromName(signupName);
+    if (!base) { this.setState({ signupError: 'Please enter your name.' }); return; }
+    this.setState({ signupBusy: true, signupError: '' });
+    let username = base, attempt = 0, res;
+    while (attempt < 30) {
+      res = await api.signup({ role: signupRole, name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });
+      if (res.ok || res.error !== 'That username is already taken.') break;
+      attempt += 1;
+      username = base + (attempt + 1);
+    }
+    if (res.ok && res.pending) {
+      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
+    } else if (res.ok) {
+      this.setState({ signupBusy: false, signupPass: '', signupCode: '' });
+      this.redirect(this.destFor(res.session));
+    } else {
+      this.setState({ signupError: res.error || 'Could not create account.', signupBusy: false });
+    }
+  }
+
+  async onGoogleCredential(response) {
+    const { api } = this.state;
+    const idToken = response && response.credential;
+    if (!idToken) return;
+    this.setState({ googleBusy: true, googleError: '', loginError: '' });
+    const res = await api.googleAuth({ idToken });
+    if (res.ok && res.needsSignup) {
+      this.setState({
+        googleBusy: false, authMode: 'google-code',
+        googlePendingToken: idToken, googlePendingName: res.name || '',
+        googleTitle: '', googleCode: '', googleError: '',
+      });
+      return;
+    }
+    if (res.ok && res.pending) {
+      this.setState({ googleBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message });
+      return;
+    }
+    if (res.ok) {
+      this.setState({ googleBusy: false });
+      this.redirect(this.destFor(res.session));
+      return;
+    }
+    this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.', loginError: res.error || 'Could not sign in with Google.' });
+  }
+
+  async doGoogleSignup() {
+    const { api, signupRole, googlePendingToken, googlePendingName, googleTitle, googleCode } = this.state;
+    const base = this.usernameFromName(googlePendingName) || signupRole;
+    this.setState({ googleBusy: true, googleError: '' });
+    let username = base, attempt = 0, res;
+    while (attempt < 30) {
+      res = await api.googleAuth({ idToken: googlePendingToken, role: signupRole, inviteCode: googleCode, username, name: googlePendingName || undefined, title: googleTitle });
+      if (res.ok || res.error !== 'That username is already taken.') break;
+      attempt += 1;
+      username = base + (attempt + 1);
+    }
+    if (res.ok && res.pending) {
+      this.setState({ googleBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message, googlePendingToken: '', googleCode: '' });
+    } else if (res.ok) {
+      this.setState({ googleBusy: false, googlePendingToken: '', googleCode: '' });
+      this.redirect(this.destFor(res.session));
+    } else {
+      this.setState({ googleBusy: false, googleError: res.error || 'Could not create account.' });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const roleBase = 'flex:1;font-weight:700;font-size:13px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1px solid ';
+    const roleOn = roleBase + '#E11B22;background:#E11B22;color:#fff';
+    const roleOff = roleBase + 'rgba(255,255,255,0.18);background:transparent;color:#cdd2da';
+    return {
+      isLoginMode: s.authMode === 'login',
+      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
+      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
+      isGoogleCodeView: s.authMode === 'google-code',
+
+      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
+      loginBusy: s.loginBusy, loginLabel: s.loginBusy ? 'Signing in…' : 'Sign in',
+      onUser: (e) => this.setState({ loginUser: e.target.value }),
+      onPass: (e) => this.setState({ loginPass: e.target.value }),
+      onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
+      onLogin: () => this.doLogin(),
+      loginPassType: s.showLoginPass ? 'text' : 'password',
+      loginPassToggleLabel: s.showLoginPass ? 'HIDE' : 'SHOW',
+      onToggleLoginPass: () => this.setState((st) => ({ showLoginPass: !st.showLoginPass })),
+
+      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '', googleError: '', signupPending: false }),
+      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false, googleError: '', googlePendingToken: '', googlePendingName: '' }),
+
+      signupIsOrganizer: s.signupRole === 'organizer',
+      onRoleManager: () => this.setState({ signupRole: 'manager', signupError: '', googleError: '' }),
+      onRoleOrganizer: () => this.setState({ signupRole: 'organizer', signupError: '', googleError: '' }),
+      roleManagerStyle: s.signupRole === 'manager' ? roleOn : roleOff,
+      roleOrganizerStyle: s.signupRole === 'organizer' ? roleOn : roleOff,
+      roleBlurb: s.signupRole === 'organizer'
+        ? 'Organisers see every age group’s registrations and settings. Needs the admin invite code.'
+        : 'A manager runs ONE age group — which one is decided by the invite code you were given.',
+      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',
+
+      signupName: s.signupName, signupTitle: s.signupTitle,
+      signupUserPreview: this.usernameFromName(s.signupName) || '—',
+      signupPass: s.signupPass, signupCode: s.signupCode,
+      signupError: s.signupError, signupBusy: s.signupBusy,
+      signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
+      signupPendingMessage: s.signupPendingMessage,
+      onSignupName: (e) => this.setState({ signupName: e.target.value }),
+      onSignupTitle: (e) => this.setState({ signupTitle: e.target.value }),
+      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
+      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
+      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
+      onSignup: () => this.doSignup(),
+      signupPassType: s.showSignupPass ? 'text' : 'password',
+      signupPassToggleLabel: s.showSignupPass ? 'HIDE' : 'SHOW',
+      onToggleSignupPass: () => this.setState((st) => ({ showSignupPass: !st.showSignupPass })),
+      signupCodeType: s.showSignupCode ? 'text' : 'password',
+      signupCodeToggleLabel: s.showSignupCode ? 'HIDE' : 'SHOW',
+      onToggleSignupCode: () => this.setState((st) => ({ showSignupCode: !st.showSignupCode })),
+
+      hasGoogleSignIn: !!s.googleClientId,
+      googleError: s.googleError,
+      googlePendingName: s.googlePendingName,
+      googleUserPreview: this.usernameFromName(s.googlePendingName) || '—',
+      googleTitle: s.googleTitle, googleCode: s.googleCode,
+      onGoogleTitle: (e) => this.setState({ googleTitle: e.target.value }),
+      onGoogleCode: (e) => this.setState({ googleCode: e.target.value }),
+      onGoogleCodeKey: (e) => { if (e.key === 'Enter') this.doGoogleSignup(); },
+      googleCodeType: s.showGoogleCode ? 'text' : 'password',
+      googleCodeToggleLabel: s.showGoogleCode ? 'HIDE' : 'SHOW',
+      onToggleGoogleCode: () => this.setState((st) => ({ showGoogleCode: !st.showGoogleCode })),
+      googleBusy: s.googleBusy,
+      googleSignupLabel: s.googleBusy ? 'Creating…' : 'Create account',
+      onGoogleSignupSubmit: () => this.doGoogleSignup(),
+    };
+  }
+}
+</script>
+</x-dc>
+</body>
+</html>

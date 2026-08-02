@@ -43,6 +43,8 @@ const NEEDED = [
      dies on ENOENT and takes every later check with it (see the 1 Aug lesson
      in state-of-play). */
   'Manager.dc.html',
+  /* test-signin-page.js reads the unified sign-in page. */
+  'Signin.dc.html',
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -2223,6 +2225,72 @@ const FAULTS = [
     expect: ['u9\'s saved draw had its knockout cleared'],
   },
 
+  /* ---- the /signin page (test-signin-page.js) ---------------------------- */
+
+  {
+    name: 'the next allow-list is widened to any same-site path — an open-redirect foothold',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "    const allowed = next === '/organizer' || next === '/manager';",
+      "    const allowed = typeof next === 'string' && next.startsWith('/');"),
+    expect: ['even a same-site path outside the allow-list is refused'],
+  },
+  {
+    name: 'a manager\'s next=/organizer is honoured, landing them on a page that 403s every read',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "    if (isOrg) return allowed ? next : '/organizer';\n    return '/manager';",
+      "    if (allowed) return next;\n    return isOrg ? '/organizer' : '/manager';"),
+    expect: ['a manager asked for /organizer is routed to /manager instead'],
+  },
+  {
+    name: 'the role routing collapses to /organizer for everyone',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "    if (isOrg) return allowed ? next : '/organizer';\n    return '/manager';",
+      "    return allowed ? next : '/organizer';"),
+    expect: ['a manager with no next lands on /manager'],
+  },
+  {
+    name: 'an already-signed-in visitor is shown the form instead of being routed through',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "    const session = api.currentSession();\n    if (session) { this.redirect(this.destFor(session)); return; }",
+      "    "),
+    expect: ['componentDidMount routes an existing session'],
+  },
+  {
+    name: '/organizer stops handing signed-out visitors to /signin',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Organizer.dc.html',
+      "    else this.redirect('/signin?next=/organizer');",
+      "    "),
+    expect: ['/organizer redirects its signed-out visitors to /signin'],
+  },
+  {
+    name: '/manager stops handing signed-out visitors to /signin',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Manager.dc.html',
+      "      this.redirect('/signin?next=/manager');\n      return false;",
+      "      return false;"),
+    expect: ['/manager redirects its signed-out visitors to /signin'],
+  },
+  {
+    name: 'the /signin rewrite is dropped from netlify.toml, orphaning every hand-off',
+    suite: 'test-signin-page.js',
+    apply: () => patch('netlify.toml',
+      '[[redirects]]\n  from = "/signin"\n  to = "/Signin.dc.html"\n  status = 200\n', ''),
+    expect: ['netlify.toml serves /signin'],
+  },
+  {
+    name: 'the signup role picker stops being sent, every signup hitting the manager gate',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "      res = await api.signup({ role: signupRole, name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });",
+      "      res = await api.signup({ name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });"),
+    expect: ['an organizer signup posts role organizer'],
+  },
+
   /* ---- one session key + migration (test-session-migration.js) ---------- */
 
   {
@@ -2387,12 +2455,14 @@ const FAULTS = [
     expect: ['tools row goes to /manager'],
   },
   {
-    name: 'the organizer login\'s manager fallback reverts to redirecting at /scores',
+    /* The fallback (and its redirect) were deleted whole with the unified
+       sign-in page; the danger now is the chain quietly coming back. */
+    name: 'a manager-login fallback creeps back into organizer-data.js',
     suite: 'test-organizer-manager-link.js',
     apply: () => patch('organizer-data.js',
-      "    return { ok: true, redirect: '/manager' };",
-      "    return { ok: true, redirect: '/scores' };"),
-    expect: ['manager fallback redirects to /manager'],
+      "export function currentSession() {",
+      "export async function loginFallback(username, password) {\n  const rm = await tryFetchJson('/.netlify/functions/manager-login', { method: 'POST' });\n  if (rm.real && rm.json.ok) return { ok: true, redirect: '/manager' };\n  return { ok: false };\n}\n\nexport function currentSession() {"),
+    expect: ['carries no login fallback at all any more'],
   },
 
   /* ---- HSBC / sponsors (test-sponsors.js) ------------------------------- */
@@ -2706,7 +2776,8 @@ seed();
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
  'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
- 'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js'].forEach((f) => {
+ 'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js',
+ 'test-signin-page.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

@@ -1806,15 +1806,22 @@ export async function login(username, password) {
   return { ok: false, error: json.error || 'Incorrect username or password.' };
 }
 
-// Manager self-signup. Which age group the account is tied to is decided
-// entirely by which invite code was entered (see manager-signup.js) — no
-// dropdown, so a manager can't accidentally sign up for the wrong group.
-export async function signup({ name, username, password, inviteCode }) {
-  const r = await tryFetchJson('/.netlify/functions/manager-signup', {
+// Self-signup, either role (the /signin page's Create-account flows). A
+// manager's age group is decided entirely by which invite code was entered
+// (see manager-signup.js); an organizer signup takes the admin invite code
+// and an optional free-text title. The signup ENDPOINTS stay per-role — the
+// invite-code semantics genuinely differ — this just picks the right one.
+export async function signup({ role = 'manager', name, title, username, password, inviteCode }) {
+  const endpoint = role === 'organizer' ? 'organizer-signup' : 'manager-signup';
+  const r = await tryFetchJson('/.netlify/functions/' + endpoint, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, username, password, inviteCode }),
+    body: JSON.stringify(role === 'organizer'
+      ? { name, title, username, password, inviteCode }
+      : { name, username, password, inviteCode }),
   });
-  const json = r.real ? r.json : (await local()).managerSignup({ name, username, password, inviteCode });
+  const json = r.real ? r.json : (role === 'organizer'
+    ? (await local()).organizerSignup({ name, title, username, password, inviteCode })
+    : (await local()).managerSignup({ name, username, password, inviteCode }));
   if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
   if (json.ok) {
     const session = { ...json.session, token: json.token };
@@ -1883,18 +1890,18 @@ export function logout() {
   try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}
 }
 
-// Google sign-in for managers (added 29 Jul 2026) — same google-auth.js
-// endpoint organizer-data.js's googleAuth() calls, just role: 'manager'
-// instead of 'organizer'. Which age group a NEW account gets is still
-// decided entirely by which invite code was entered (see manager-signup.js
-// and MANAGER_INVITE_CODES) — Google only supplies a verified identity,
-// never a role or an age group.
-export async function googleAuth({ idToken, inviteCode, username, name }) {
+// Google sign-in, either role. For an EXISTING Google-linked account the
+// role sent here is irrelevant — google-auth.js matches on the verified
+// googleSub and answers with the account's own stored role. The role only
+// matters on first-time signup, where it decides which invite-code gate the
+// request goes through; Google supplies a verified identity, never a role
+// or an age group.
+export async function googleAuth({ idToken, role = 'manager', inviteCode, username, name, title }) {
   const r = await tryFetchJson('/.netlify/functions/google-auth', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, role: 'manager', inviteCode, username, name }),
+    body: JSON.stringify({ idToken, role, inviteCode, username, name, title }),
   });
-  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role: 'manager', inviteCode, username, name });
+  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role, inviteCode, username, name, title });
   if (json.ok && json.needsSignup) return { ok: true, needsSignup: true, name: json.name };
   if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
   if (json.ok) {

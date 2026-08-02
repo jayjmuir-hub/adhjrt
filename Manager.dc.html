@@ -37,26 +37,17 @@
 
 <div style="min-height:100vh">
 
-  <!-- ===================== LOGIN ===================== -->
+  <!-- ===================== SIGNED OUT ===================== -->
+  <!-- Sign-in lives on /signin now (one page, both roles — see
+       claude/specs/spec-unified-login.md). boot() redirects there; this
+       shell shows for the moment before that lands, or when boot() signed
+       an unusable account out and the toast explains why. -->
   <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-      <div style="width:100%;max-width:400px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:36px">
-        <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;color:#fff">
-          <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;position:relative;flex:none">
-            <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
-          </div>
-          <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
-        </a>
-        <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Manager sign in</div>
-        <p style="color:#aeb4bf;font-size:14px;margin-top:6px">Scores, fixtures and your age group's draw, in one place.</p>
-
-        <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-        <input value="{{ loginUser }}" onInput="{{ onLoginUser }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-        <label style="font-size:11px;font-weight:700;color:#7f8794;letter-spacing:.5px;display:block">PASSWORD</label>
-        <input type="password" value="{{ loginPass }}" onInput="{{ onLoginPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-        <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#ff6b6b;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
-        <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
-        <p style="margin-top:18px;font-size:13px;color:#7f8794;line-height:1.6">Use the account you created with your age group invite code. An organiser account also works here.</p>
+      <div style="width:100%;max-width:400px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:36px;text-align:center">
+        <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px;margin-bottom:10px">ADH JRT</div>
+        <p style="color:#aeb4bf;font-size:14px;line-height:1.6">Taking you to the sign-in page&hellip;</p>
+        <p style="margin-top:14px"><a href="/signin?next=/manager" style="color:#fff;font-weight:700;text-decoration:underline;font-size:14px">Sign in</a></p>
       </div>
     </div>
   </sc-if>
@@ -668,7 +659,6 @@ const MANAGER_TABS = [
 class Component extends DCLogic {
   state = {
     api: null, session: null, ageGroups: [], ageId: '', tab: 'today',
-    loginUser: '', loginPass: '', loginError: '', loginBusy: false,
     fixtures: null, standings: null, spiritAward: null,
     /* draw is `undefined` before the first fetch, `null` both while a fetch is
        in flight AND after a settled fetch that legitimately found no draw
@@ -697,12 +687,18 @@ class Component extends DCLogic {
   componentWillUnmount() { if (this._toastT) clearTimeout(this._toastT); }
 
   /* Returns true when boot() actually landed on the dashboard, false when it
-     left the login screen up (no session, or an unusable one). doLogin() uses
-     this to decide whether "Signed in" is still an honest thing to say. */
+     redirected to /signin (no session) or signed an unusable account out. */
   async boot() {
     const { api } = this.state;
     const session = api.currentSession();
-    if (!session) { this.setState({ session: null }); return false; }
+    if (!session) {
+      /* Sign-in lives on /signin (one page, both roles). The unusable-account
+         path below deliberately does NOT redirect — its toast is the only
+         explanation the person gets, and /signin cannot show it. */
+      this.setState({ session: null });
+      this.redirect('/signin?next=/manager');
+      return false;
+    }
     const ageGroups = await api.getAgeGroups();
     const agId = api.isOrganiserSession(session) ? null : session.ageGroupId;
     if (agId && !ageGroups.some((a) => a.id === agId)) {
@@ -726,20 +722,8 @@ class Component extends DCLogic {
     return true;
   }
 
-  async doLogin() {
-    const { api } = this.state;
-    const u = (this.state.loginUser || '').trim();
-    const p = this.state.loginPass || '';
-    if (!u || !p) { this.setState({ loginError: 'Enter your username and password.' }); return; }
-    this.setState({ loginBusy: true, loginError: '' });
-    const r = await api.login(u, p);
-    if (!r.ok) {
-      this.setState({ loginBusy: false, loginError: r.error || 'Wrong username or password.' });
-      return;
-    }
-    this.setState({ loginBusy: false, loginPass: '', loginError: '' });
-    const landed = await this.boot();
-    if (landed) this.showToast('Signed in');
+  redirect(url) {
+    try { window.location.replace(url); } catch (e) { /* non-browser context — the shell's own link covers it */ }
   }
 
   doLogout() {
@@ -752,9 +736,8 @@ class Component extends DCLogic {
       clash: null, clashBusy: false,
       regs: undefined, regSearch: '',
       sheetMatchId: null, sheetDraft: {}, sheetError: '',
-      loginUser: '', loginPass: '', loginError: '',
     });
-    this.showToast('Signed out');
+    this.redirect('/signin?next=/manager');
   }
 
   go(tab) {
@@ -1843,12 +1826,6 @@ class Component extends DCLogic {
     const spiritOn = !!(sa && sa.supported);
     return {
       loggedOut: !s.session, loggedIn: !!s.session,
-      loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
-      loginBusy: s.loginBusy, loginLabel: s.loginBusy ? 'Signing in…' : 'Sign in',
-      onLoginUser: (e) => this.setState({ loginUser: e.target.value }),
-      onLoginPass: (e) => this.setState({ loginPass: e.target.value }),
-      onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
-      onLogin: () => this.doLogin(),
       onLogout: () => this.doLogout(),
 
       sessionName: (s.session && (s.session.username || s.session.name)) || '',

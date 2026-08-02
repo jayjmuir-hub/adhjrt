@@ -333,7 +333,7 @@ check('an HSBC logo follows it, in the same block',
    again, one surface across. */
 check('the app does not claim "hundreds of" players', !/hundreds of (young players|players|kids)/i.test(APP));
 
-section('The full scores page carries a band, and only when standalone');
+section('The scores page carries it in the header, and only when standalone');
 
 const SCORES = readRepo('Scores & Standings.dc.html').replace(/\r\n/g, '\n');
 
@@ -342,14 +342,51 @@ eq('one HSBC image on the scores page', scImgs.length, 1);
 check('it uses the white lockup', (scImgs[0] || '').includes(WHITE));
 check('it has an alt attribute', /alt="HSBC"/.test(scImgs[0] || ''));
 
+/* ⚠️ IN THE HEADER, INSIDE THE BRAND GROUP. It started as a band above the
+   age-group pills; Jay moved it beside "ADH JRT · LIVE" on 2 Aug, matching
+   the website header. Two together were redundant — a band 150px below a
+   header carrying the same logo reads as a mistake rather than as prominence.
+
+   It must sit INSIDE the brand group, not as a third child of the header row:
+   that row is space-between, so a third child gets spread into the middle of
+   the bar where it reads as a control. Same trap as the homepage header, and
+   the check is the same shape — the logo has to appear between the
+   "ADH JRT · LIVE" wording and the end of the group that contains it. */
+check('the ADH JRT · LIVE wording is still there', SCORES.includes('>ADH JRT · LIVE<'));
+
+/* ⚠️ THE FIRST VERSION OF THIS CHECK WAS TOO WEAK AND ONLY THE FAULT FOUND IT.
+   It asked whether the logo appeared between the "ADH JRT · LIVE" text and the
+   Standings/Manager toggle — which is still true when the logo is moved OUT of
+   the brand group and becomes a third child of the header row, i.e. exactly
+   the mistake being guarded against. Position in the file is not containment.
+   This walks the brand group's tags and asks whether the logo is inside it. */
+const groupOpen = SCORES.indexOf('<div style="display:flex;align-items:center;gap:14px">');
+check('the header brand group was found', groupOpen >= 0);
+const groupInner = groupOpen >= 0 ? innerOf(SCORES, groupOpen) : '';
+check('the ADH JRT · LIVE wording is inside it', groupInner.includes('>ADH JRT · LIVE<'));
+check('the logo is inside it too, not a third child of the header row',
+  groupInner.includes('sponsor-hsbc-white.webp'));
+
+/* Not a link, for the same reason as the site header: this bar is the page's
+   own navigation and a tap target leaving the site does not belong in it. */
+const scPartnerAt = SCORES.indexOf('<sc-if value="{{ showPartner }}"');
+const scPartner = scPartnerAt >= 0 ? SCORES.slice(scPartnerAt, SCORES.indexOf('</sc-if>', scPartnerAt)) : '';
+check('the scores header mark is not a link', scPartner.length > 0 && !/<a[\s>]/.test(scPartner));
+check('it has a divider rule before it', /rgba\(255,255,255,0\.18\)/.test(scPartner));
+
+/* And the old band is gone, not merely hidden. */
+check('the band above the age-group pills is gone',
+  !/In partnership with/i.test(SCORES));
+
 /* ⚠️⚠️ THE THING THAT MAKES THIS NON-TRIVIAL. This component is ALSO embedded
-   in the homepage's Results section via <dc-import name="Scores & Standings">.
-   Ungated, the logo would render TWICE on the homepage — once under the hero
-   and again a few sections down inside the widget — which reads as a bug, not
-   as sponsorship. Both halves are asserted here because either one alone is
-   useless: the gate with no attribute never fires, and the attribute with no
-   gate does nothing. */
-check('the band is wrapped in a showPartner gate', /<sc-if value="\{\{ showPartner \}\}"/.test(SCORES));
+   in the homepage's Results section via <dc-import name="Scores & Standings">,
+   and the header renders in that embed too — it is outside the isPublic gate.
+   Ungated, the logo would render TWICE on the homepage — once in the site
+   header and again a few sections down inside the widget — which reads as a
+   bug, not as sponsorship. Both halves are asserted here because either one
+   alone is useless: the gate with no attribute never fires, and the attribute
+   with no gate does nothing. */
+check('the mark is wrapped in a showPartner gate', /<sc-if value="\{\{ showPartner \}\}"/.test(SCORES));
 check('showPartner is derived from the embedded prop',
   /showPartner:\s*!this\.props\.embedded/.test(SCORES));
 check('the homepage dc-import declares itself embedded',

@@ -153,6 +153,18 @@ const SD = 'scores-data.js';
    the block exactly, so that if the markup is edited the injection refuses
    rather than quietly doing nothing. */
 const HOME = 'Quins JRT.dc.html';
+/* The scores page's header partner mark, verbatim, so the fault that MOVES it
+   carries the block exactly - if the markup is edited the injection refuses
+   rather than quietly doing nothing. */
+const SC_MARK = [
+  '      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">',
+  '        <span style="display:flex;align-items:center;gap:14px;flex:none">',
+  '          <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>',
+  '          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">',
+  '        </span>',
+  '      </sc-if>',
+  '',
+].join('\n');
 const HDR_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">';
 const BAND_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">';
 const BAND_BLOCK = [
@@ -2249,10 +2261,36 @@ const FAULTS = [
   {
     /* THE ONE THAT MATTERS. Remove the gate and the homepage shows the logo
        twice — once under the hero, once inside the embedded scores widget. */
-    name: 'the scores band loses its embedded gate, doubling the logo on the homepage',
+    name: 'the scores header mark loses its embedded gate, doubling the logo on the homepage',
     suite: 'test-sponsors.js',
     apply: () => patch('Scores & Standings.dc.html', '      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">\n', '      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">\n'),
     expect: ['wrapped in a showPartner gate'],
+  },
+  {
+    /* The space-between trap: moved out of the brand group it becomes a third
+       direct child of the header row and gets spread into the middle of the
+       bar, between the wording and the Standings/Manager toggle. */
+    name: 'the scores header mark is moved out of the brand group',
+    suite: 'test-sponsors.js',
+    apply: () => {
+      patch('Scores & Standings.dc.html', SC_MARK, '');
+      patch('Scores & Standings.dc.html', '    <div style="display:flex;gap:8px;background:#151517;', SC_MARK + '    <div style="display:flex;gap:8px;background:#151517;');
+    },
+    expect: ['not a third child of the header row'],
+  },
+  {
+    name: 'the scores header mark becomes a link off the site',
+    suite: 'test-sponsors.js',
+    apply: () => patch('Scores & Standings.dc.html', '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px',
+      '<a href="https://www.hsbc.ae"><img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px'),
+    expect: ['scores header mark is not a link'],
+  },
+  {
+    name: 'the old scores band is put back under the header, duplicating the mark',
+    suite: 'test-sponsors.js',
+    apply: () => patch('Scores & Standings.dc.html', '      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">',
+      '      <div><span>In partnership with</span><img src="assets/sponsor-hsbc-white.webp" alt="HSBC"></div>\n      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">'),
+    expect: ['band above the age-group pills is gone', 'one HSBC image on the scores page'],
   },
   {
     name: 'showPartner stops reading the embedded prop, so the gate can never close',

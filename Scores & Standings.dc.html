@@ -75,6 +75,21 @@
         <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · LIVE</div>
         <div style="font-size:11px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">SCORES &amp; STANDINGS</div>
       </div>
+      <!-- HSBC beside the ADH JRT · LIVE wording, the same treatment the site
+           header uses. It sits INSIDE this brand group rather than as a third
+           child of the header row, because that row is space-between: a third
+           child would be spread into the middle of the bar, where it reads as
+           a control rather than as a partner. Same reason the homepage wraps
+           its crest link and mark together.
+           Not a link, for the same reason as everywhere else - and gated on
+           showPartner, because this header renders inside the homepage's
+           Results widget too. -->
+      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">
+        <span style="display:flex;align-items:center;gap:14px;flex:none">
+          <span style="width:1px;height:28px;background:rgba(255,255,255,0.18)"></span>
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:18px;width:auto;display:block">
+        </span>
+      </sc-if>
     </div>
     <div style="display:flex;gap:8px;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:5px">
       <button onClick="{{ showPublic }}" style="{{ tabPublicStyle }}">Standings</button>
@@ -90,20 +105,12 @@
   <!-- ===================== PUBLIC ===================== -->
   <sc-if value="{{ isPublic }}" hint-placeholder-val="{{ true }}">
     <div style="margin-top:26px">
-      <!-- HSBC, principal partner. Shown ONLY on the standalone /scores page.
-           ⚠️ THIS COMPONENT IS ALSO EMBEDDED IN THE HOMEPAGE, inside the
-           Results section, via <dc-import name="Scores & Standings">. The
-           homepage already carries its own partner band under the hero, so
-           without this gate the logo would appear TWICE on one page - once
-           near the top and once again a few sections down, inside the widget.
-           `showPartner` is false whenever the `embedded` prop is set, and the
-           homepage's dc-import sets it. -->
-      <sc-if value="{{ showPartner }}" hint-placeholder-val="{{ true }}">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:4px 0 26px">
-          <span style="font-size:10.5px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>
-          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:38px;width:auto;max-width:100%;display:block">
-        </div>
-      </sc-if>
+      <!-- The HSBC mark used to sit here, as a band above the age-group pills.
+           It moved into the header beside "ADH JRT · LIVE" on 2 Aug at Jay's
+           request. The two together were redundant - a band 150px below a
+           header carrying the same logo reads as a mistake, not as
+           prominence. If a band is ever wanted back, it belongs further down
+           the page, not directly under the header. -->
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
         <sc-for list="{{ ageTabs }}" as="a" hint-placeholder-count="4">
           <button onClick="{{ a.onSelect }}" style="{{ a.style }}">{{ a.name }}</button>

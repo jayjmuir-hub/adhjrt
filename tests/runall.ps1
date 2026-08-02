@@ -12,7 +12,16 @@
 #
 # Exits non-zero if anything fails, so it can gate a commit.
 
-$ErrorActionPreference = 'Stop'
+# ⚠️ 'Continue', NOT 'Stop', AND THAT IS A BUG FIX (2 Aug 2026).
+# With 'Stop', PowerShell treats ANYTHING node writes to stderr as a
+# terminating error — including a harmless Node warning. test-knockout-
+# brackets.js emits MODULE_TYPELESS_PACKAGE_JSON, so this script had been
+# aborting there every run: the file after it never ran, and neither did the
+# fault-injection pass at the bottom. It printed no failure and exited 1, which
+# reads like one test failing rather than a third of the run not happening.
+# Nothing is lost by relaxing it — every pass/fail decision below is made from
+# $LASTEXITCODE, not from the error preference.
+$ErrorActionPreference = 'Continue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $failed = @()
 
@@ -41,7 +50,8 @@ $tests = @(
   'test-manager-dc-score-sheet.js',
   'test-manager-dc-draw.js',
   'test-knockout-brackets.js',
-  'test-simulate-spirit-award.js'
+  'test-simulate-spirit-award.js',
+  'test-sponsors.js'
 )
 
 Write-Host ''

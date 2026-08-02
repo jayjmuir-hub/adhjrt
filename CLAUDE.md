@@ -63,7 +63,8 @@ support.js, deck-stage.js, doc-page.js, image-slot.js, local-backend.js
                            framework/runtime support — do not edit
 netlify/functions/         all backend (see below)
 assets/                    crest.jpeg, crest.png (+crest-bat/-shield), action
-                           shots, venue map, sponsor logos, organisers.jpg
+                           shots, venue map, sponsor-hsbc-white.webp (used) +
+                           sponsor-hsbc.webp (master), organisers.jpg
                            (the "Run by volunteers" group photo)
 ```
 
@@ -203,6 +204,59 @@ white-background version. As of 25 Jul 2026 nothing references it: the homepage,
 `/scores` and `/app` all use `crest.png`. It is kept only as the original.
 Check what a page actually uses before changing a reference — a broken crest reference once killed every social
 share preview.
+
+---
+
+## HSBC — the principal partner (added 2 Aug 2026)
+
+HSBC are the tournament's **principal partner** and the only confirmed sponsor.
+The mark appears in three places on the homepage, all on `#0C0C0E`:
+
+| Where | Size | Notes |
+|---|---|---|
+| sticky header, beside the crest | 19px | not a link; hidden below 1000px |
+| `<section id="partner">`, between the hero and the stat strip | 54px | "In partnership with" above it |
+| `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
+
+**Two assets ship and only one is used.** `assets/sponsor-hsbc-white.webp` is
+the reverse lockup (white wordmark, red hexagon, transparent) and is what every
+placement references. `assets/sponsor-hsbc.webp` is the black-wordmark master,
+kept **only** so a future light-background placement does not need the artwork
+found again. Referencing the black one on the page makes the wordmark vanish
+into the background — a failure that renders no error anywhere, the same shape
+as the crest reference that once killed every social share preview.
+`test-sponsors.js` asserts the black one is not referenced.
+
+⚠️ **The header hide is at 1000px, NOT at the 760px nav breakpoint, and the
+number was measured.** Rendered in headless Chromium with the real Anton and
+Barlow faces (fallback fonts are wider and give a different, wrong answer), the
+header holds one line down to **850px** without the mark and only to **950px**
+with it. Folding the rule into the 760 block — which looks like tidying — puts
+a second line back into a *sticky* header between 850 and 950, and nobody sees
+it on a 1440px screen. 1000 is 950 with margin. There is a fault for exactly
+this tidy-up.
+
+The header mark is deliberately **not a link**. The header is sticky, so a tap
+target leaving the site follows a visitor down every page — including a parent
+part way through the registration form.
+
+The crest link and the mark are wrapped in **one** flex child of `.hdr-row`,
+because the row is `justify-content:space-between`: a fourth direct child would
+have been spread into the middle of the bar. As a side effect the wrapper's
+`min-width:0` also fixed a pre-existing ~42px horizontal overflow of the header
+just above the mobile breakpoint.
+
+### Nineteen company names were in this repo as if they had signed
+
+`sponsorNames` in `Quins JRT.dc.html` listed Transguard Group, MODON, Kibsons,
+Crompton Partners and fifteen others, and `renderVals()` returned it doubled as
+`sponsors:` for a marquee. **Nothing rendered it** — the markup that consumed it
+had already been replaced by the "coming soon" placeholder — so it was invisible
+on the site and fully visible in a PUBLIC GitHub repo. Jay confirmed on 1 Aug
+2026 that none of them are confirmed. All of it is deleted, and
+`test-sponsors.js` asserts each of the nineteen names ABSENT **by name** — a
+check on the identifier alone would pass the moment somebody re-added the same
+list under a different one.
 
 ---
 
@@ -1728,7 +1782,8 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
   correct, static, with a scroll count-up animation — not a bug.
 - Footer email is `admin@adhjrt.com` (previously mangled Cloudflare
   obfuscation markup rendered as "[email protected]" — fixed).
-- Sponsors section is a deliberate placeholder.
+- Sponsors: **HSBC is the principal partner and is live in three places** — see
+  the HSBC section below. Everyone else is unconfirmed; the section says so.
 - Pool fixtures/results/standings show full team NAMES; knockout and the
   bracket stay CODES (team key). `teamLabel()` in scores-data.js maps
   code→name and auto-shortens "Abu Dhabi …" to "AD …" for any club.
@@ -1804,8 +1859,9 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    results and the saved draws exists (see Clearing the rehearsal data above);
    unpublishing and the sheet rows are Jay's to press. Until this is done a coach
    visiting adhjrt.com sees fiction.
-5. **Sponsors** placeholder — when artwork arrives, a comment directly above
-   the section gives the exact `<img>` tag to swap in.
+5. **The rest of the sponsor line-up.** HSBC is confirmed and live (see below).
+   Nobody else is. When another signs, add a card to the second block in the
+   sponsors section — do not demote HSBC into a row of equals without asking.
 6. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and

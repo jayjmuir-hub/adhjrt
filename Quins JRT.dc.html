@@ -56,7 +56,6 @@
   @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
   /* Stretch the native calendar-picker icon over the whole date field so a
      click anywhere opens the picker, not just the small default icon area
      (pseudo-element sizing can't be expressed as an inline style). */
@@ -146,6 +145,22 @@
 
      !important throughout: these elements are styled inline and inline wins over
      a stylesheet rule without it (same trap as style-hover, see CLAUDE.md). */
+
+  /* The HSBC mark comes out of the header well ABOVE the mobile breakpoint, and
+     THE NUMBER IS MEASURED, NOT PICKED. Rendered in headless Chromium with the
+     real Anton and Barlow faces (fallback fonts are wider and give a different,
+     wrong answer): the nav shows all nine links down to 760px, and the header
+     holds ONE line down to 850px as it is. Add the mark and that becomes 950px
+     - so between 850 and 950 it tips the bar onto a second line, which is
+     exactly the "sticky header eats a quarter of the screen" problem the block
+     below was written to stop. 1000 is 950 with a little room for a machine
+     that renders the fonts slightly wider.
+     Nothing is lost by hiding it: the partner band sits directly under the
+     hero, a few hundred pixels down, at three times the size.
+     !important for the same reason as everything else here - the span is styled
+     inline with display:flex and an ordinary rule would silently lose. */
+  @media(max-width:1000px){ .hdr-partner{display:none!important} }
+
   @media(max-width:760px){
     /* Header stays ONE line. Wrapping the links made everything reachable but
        took three lines, and the header is sticky - so a quarter of the screen
@@ -229,15 +244,34 @@
     <!-- red->green signature line -->
     <div style="height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
     <div class="hdr-row" data-nav-open="{{ navOpenAttr }}" style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
-      <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
-        <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
-          <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
-        </div>
-        <div style="display:flex;flex-direction:column;line-height:1">
-          <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px">AD HARLEQUINS</span>
-          <span style="font-size:10px;letter-spacing:2px;color:#2fbf5f;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
-        </div>
-      </a>
+      <!-- The crest link and the partner mark are wrapped in ONE flex child, so
+           the row's space-between still puts the nav hard right. Three direct
+           children would have spread the sponsor mark into the middle of the
+           bar, where it reads as a nav item rather than a partner. -->
+      <div style="display:flex;align-items:center;gap:16px;min-width:0">
+        <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
+          <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
+            <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
+          </div>
+          <div style="display:flex;flex-direction:column;line-height:1">
+            <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px">AD HARLEQUINS</span>
+            <span style="font-size:10px;letter-spacing:2px;color:#2fbf5f;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
+          </div>
+        </a>
+        <!-- Deliberately NOT a link. The header is sticky, so a tap target that
+             leaves the site would follow a visitor down every page — and a
+             parent who taps it mid-registration loses the form. The partner
+             band under the hero is where the logo is big enough to be worth
+             clicking, if a link is ever wanted at all.
+             The mark is the REVERSE (white wordmark) lockup, which sits
+             straight on the dark bar. Do not swap in assets/sponsor-hsbc.webp
+             here — that one has a black wordmark and would need a white plate
+             behind it, which reads as a sticker stuck on the page. -->
+        <span class="hdr-partner" style="display:flex;align-items:center;gap:16px;flex:none">
+          <span style="width:1px;height:30px;background:rgba(255,255,255,0.18)"></span>
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">
+        </span>
+      </div>
       <!-- Shown only under 760px (see .hdr-toggle in the mobile block). -->
       <button class="hdr-toggle" onClick="{{ toggleNav }}" aria-label="{{ navToggleLabel }}" aria-expanded="{{ navOpenAttr }}" style="display:none;background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:9px;color:#fff;font-size:22px;line-height:1;padding:7px 12px;cursor:pointer">{{ navToggleIcon }}</button>
       <!-- onClick on the NAV, not each link: a tap on any link bubbles up and
@@ -343,6 +377,21 @@
         </sc-if>
     </div>
   </div>
+  </section>
+
+  <!-- ============ PRINCIPAL PARTNER BAND ============ -->
+  <!-- HSBC are the tournament's principal partner, so the mark gets the first
+       slot after the fold - its own band, with nothing else competing for the
+       eye. It sits BETWEEN the hero and the stat strip deliberately: inside the
+       hero it would fight the headline and the two Register buttons, and below
+       the stat strip it would be just another row on a long page.
+       Same #0C0C0E as the hero above it, so the two read as one block and the
+       stat strip's colour is still the first break on the page. -->
+  <section id="partner" style="background:#0C0C0E;color:#fff;padding:34px 32px 40px">
+    <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px" data-reveal>
+      <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>
+      <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">
+    </div>
   </section>
 
   <!-- ============ STAT STRIP (red->green signature) ============ -->
@@ -733,19 +782,30 @@
   </section>
 
   <!-- ============ SPONSORS ============ -->
-  <!-- Placeholder while the sponsor line-up is confirmed. When the artwork is
-       ready, swap the card below for:
-         <img src="assets/sponsors-logos.png" alt="..." style="width:100%;height:auto;display:block"> -->
+  <!-- HSBC is the one CONFIRMED partner. Everyone else is still in conversation,
+       so this section shows exactly one logo and then says plainly that more are
+       to come. It deliberately does NOT lay out a grid of empty placeholder
+       boxes: an empty grid advertises how few have signed, and it is the kind of
+       thing a prospective sponsor reads before deciding.
+       When more are confirmed, add cards to the second block - do not demote
+       HSBC into a row of equals without asking, because principal partner is
+       what they are paying for.
+       The white-wordmark asset is used here for the same reason as the header:
+       the card is dark. -->
   <section id="sponsors" style="background:#0C0C0E;color:#fff;padding:74px 32px 84px">
     <div style="max-width:1100px;margin:0 auto;text-align:center">
       <div style="font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:14px" data-reveal>Sponsors &amp; partners</div>
       <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;margin-bottom:36px" data-reveal>With thanks to our sponsors</h2>
 
-      <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:56px 40px;overflow:hidden">
+      <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:52px 40px;overflow:hidden">
         <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
-        <span style="display:inline-block;background:linear-gradient(90deg,#E11B22,#17A34A);color:#fff;font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:100px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,.4)">Coming soon</span>
-        <div style="font-family:'Anton';font-size:clamp(24px,3.3vw,40px);color:#fff;margin-top:20px;text-transform:uppercase;line-height:1.05">Our 2026 partners</div>
-        <p style="margin:16px auto 0;max-width:540px;color:#aeb4bf;font-size:17px;line-height:1.6">This year&rsquo;s sponsors are being confirmed and will be announced here before the tournament. Interested in supporting a volunteer-run festival of junior rugby? <a href="mailto:admin@adhjrt.com" style="color:#3bd070;font-weight:700">Get in touch</a>.</p>
+        <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:24px">Principal partner</div>
+        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;max-width:100%;display:block;margin:0 auto">
+        <p style="margin:26px auto 0;max-width:560px;color:#aeb4bf;font-size:17px;line-height:1.6">HSBC are the principal partner of the 2026 Abu Dhabi Harlequins Junior Rugby Tournament, and a large part of the reason hundreds of young players get two full days of rugby.</p>
+      </div>
+
+      <div data-reveal style="margin-top:20px;border:1px dashed rgba(255,255,255,0.16);border-radius:18px;padding:30px 40px">
+        <p style="margin:0 auto;max-width:560px;color:#aeb4bf;font-size:16px;line-height:1.6">More partners will be announced here before the tournament. Interested in supporting a volunteer-run festival of junior rugby? <a href="mailto:admin@adhjrt.com" style="color:#3bd070;font-weight:700">Get in touch</a>.</p>
       </div>
     </div>
   </section>
@@ -2267,7 +2327,6 @@ class Component extends DCLogic {
       { ...bracketTop, title: 'Top Bracket' },
       { ...bracketBottom, title: 'Bottom Bracket' },
     ] : [];
-    const sponsorNames = ['Craft by Side Hustle', 'Pizza di Rocco', "Gino's Deli", 'Transguard Group', "McCafferty's", 'MODON', 'Smile Rite Dental Care', 'Stanford Medical Center', 'BEOND', 'Kibsons International', 'Sedbergh School', "The Sportsman's Arms", 'BestBites', 'Crompton Partners', 'The Club', 'Arabian Swim Academy', 'RECOVER', 'Broadway Malyan', 'JOOS MENA Cycles'];
     const sp = this.state.statsP;
     /* The registration window, decided in one place. `open` is the same boolean
        the old `registrationOpen` prop carried, so everything that used to read
@@ -2554,7 +2613,6 @@ class Component extends DCLogic {
       mins: this.state.mins,
       secs: this.state.secs,
       standingsPreview: [1, 2, 3, 4, 5, 6],
-      sponsors: sponsorNames.concat(sponsorNames),
     };
   }
 }

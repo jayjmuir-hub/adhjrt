@@ -143,6 +143,32 @@ const MAIL_BLOCK = [
 const REG = path.join('netlify', 'functions', '_registration.js');
 const SD = 'scores-data.js';
 
+/* ---- the HSBC placements, verbatim ---------------------------------------
+   Same discipline as MAIL_BLOCK above: a fault that MOVES a block has to carry
+   the block exactly, so that if the markup is edited the injection refuses
+   rather than quietly doing nothing. */
+const HOME = 'Quins JRT.dc.html';
+const HDR_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">';
+const BAND_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">';
+const BAND_BLOCK = [
+  '  <!-- ============ PRINCIPAL PARTNER BAND ============ -->',
+  "  <!-- HSBC are the tournament's principal partner, so the mark gets the first",
+  '       slot after the fold - its own band, with nothing else competing for the',
+  '       eye. It sits BETWEEN the hero and the stat strip deliberately: inside the',
+  '       hero it would fight the headline and the two Register buttons, and below',
+  '       the stat strip it would be just another row on a long page.',
+  '       Same #0C0C0E as the hero above it, so the two read as one block and the',
+  "       stat strip's colour is still the first break on the page. -->",
+  '  <section id="partner" style="background:#0C0C0E;color:#fff;padding:34px 32px 40px">',
+  '    <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px" data-reveal>',
+  '      <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>',
+  '      ' + BAND_IMG,
+  '    </div>',
+  '  </section>',
+  '',
+  '',
+].join('\n');
+
 const FAULTS = [
   {
     name: 'the opening boundary is made exclusive (t <= o)',
@@ -2055,6 +2081,127 @@ const FAULTS = [
       + "        }"),
     expect: ['u9\'s saved draw had its knockout cleared'],
   },
+
+  /* ---- HSBC / sponsors (test-sponsors.js) ------------------------------- */
+
+  {
+    name: 'an unconfirmed company is named as a sponsor again',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'More partners will be announced here before the tournament.',
+      'More partners, including Transguard Group, will be announced here before the tournament.'),
+    expect: ['does not name "Transguard Group"'],
+  },
+  {
+    name: 'a sponsorNames list is put back',
+    suite: 'test-sponsors.js',
+    /* Deliberately holds a name that is NOT on the unconfirmed list, so the
+       only thing that can catch it is the check on the list itself. A fault
+       using a real name would be caught by the name checks and prove nothing
+       about this one. */
+    apply: () => patch(HOME, '    const sp = this.state.statsP;',
+      "    const sponsorNames = ['Nobody In Particular'];\n    const sp = this.state.statsP;"),
+    expect: ['sponsorNames list is gone'],
+  },
+  {
+    name: 'renderVals returns a sponsors list again',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '      standingsPreview: [1, 2, 3, 4, 5, 6],',
+      '      standingsPreview: [1, 2, 3, 4, 5, 6],\n      sponsors: [],'),
+    expect: ['no longer returns a sponsors list'],
+  },
+  {
+    name: 'the marquee keyframes come back',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '  @keyframes fadeIn{from{opacity:0}to{opacity:1}}',
+      '  @keyframes fadeIn{from{opacity:0}to{opacity:1}}\n  @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}'),
+    expect: ['marquee keyframes are gone'],
+  },
+  {
+    name: 'the band is switched to the black-wordmark logo (invisible on the dark page)',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px',
+      'src="assets/sponsor-hsbc.webp" alt="HSBC" style="height:54px'),
+    expect: ['uses the white lockup, not the black one'],
+  },
+  {
+    name: 'one of the three placements loses its logo',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, BAND_IMG, ''),
+    expect: ['three HSBC images on the page'],
+  },
+  {
+    name: 'the header mark is unwrapped, so space-between spreads it into the bar',
+    suite: 'test-sponsors.js',
+    apply: () => {
+      patch(HOME, '      <div style="display:flex;align-items:center;gap:16px;min-width:0">\n        <a href="#top"', '        <a href="#top"');
+      patch(HOME, '        </span>\n      </div>\n      <!-- Shown only under 760px', '        </span>\n      <!-- Shown only under 760px');
+    },
+    expect: ['exactly three direct children'],
+  },
+  {
+    name: 'the header mark is made a link off the site',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, HDR_IMG, '<a href="https://www.hsbc.ae">' + HDR_IMG + '</a>'),
+    expect: ['header mark is not a link'],
+  },
+  {
+    name: 'the narrow-screen hide loses its !important (inline display:flex wins, silently)',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '.hdr-partner{display:none!important}', '.hdr-partner{display:none}'),
+    expect: ['carries !important'],
+  },
+  {
+    name: 'the narrow-screen hide is deleted entirely',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '  @media(max-width:1000px){ .hdr-partner{display:none!important} }', ''),
+    expect: ['own hide rule'],
+  },
+  {
+    /* The tempting tidy-up: fold the rule into the 760 block with the rest of
+       the header's mobile CSS. It looks right and it puts a second line back
+       into a sticky header between 850 and 950px. */
+    name: 'the hide is "tidied" into the 760px nav breakpoint',
+    suite: 'test-sponsors.js',
+    apply: () => {
+      patch(HOME, '  @media(max-width:1000px){ .hdr-partner{display:none!important} }\n\n', '');
+      patch(HOME, '    .hdr-nav{display:none!important}', '    .hdr-nav{display:none!important}\n    .hdr-partner{display:none!important}');
+    },
+    expect: ['hides at 1000px', 'does not repeat the hide'],
+  },
+  {
+    name: 'the partner band is moved BELOW the stat strip',
+    suite: 'test-sponsors.js',
+    apply: () => {
+      patch(HOME, BAND_BLOCK, '');
+      patch(HOME, '  <!-- ============ ABOUT ============ -->', BAND_BLOCK + '  <!-- ============ ABOUT ============ -->');
+    },
+    expect: ['band sits ABOVE the stat strip'],
+  },
+  {
+    name: 'the band label is reworded away from what Jay chose',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '>In partnership with<', '>Our sponsors<'),
+    expect: ['In partnership with'],
+  },
+  {
+    name: 'the band logo loses its narrow-screen bound',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'style="height:54px;width:auto;max-width:100%;display:block"',
+      'style="height:54px;width:auto;display:block"'),
+    expect: ['bounded on a narrow screen'],
+  },
+  {
+    name: 'the "coming soon" badge is put back above a confirmed partner',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '>Principal partner</div>', '>Principal partner</div><span>Coming soon</span>'),
+    expect: ['coming soon'],
+  },
+  {
+    name: 'the get-in-touch invitation stops being a mail link',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'junior rugby? <a href="mailto:admin@adhjrt.com"', 'junior rugby? <a href="#"'),
+    expect: ['get-in-touch invitation is kept'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -2067,7 +2214,7 @@ seed();
 ['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
- 'test-fixtures-results-sync.js', 'test-simulate-tournament.js'].forEach((f) => {
+ 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

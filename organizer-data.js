@@ -371,6 +371,14 @@ export {
    model and registration rules above. */
 export { publishDraw, unpublishDraw } from './scores-data.js';
 
+/* The scoring rules editor, same story: the rules, their labels and their
+   point values all come from scores-data.js, which is what the score entry
+   forms themselves read — so the editor can never describe a scoring world
+   the forms do not live in. */
+export {
+  loadScoringRules, saveScoringRules, scoringFor, allScoreTypes, scoreLabel, scorePoints,
+} from './scores-data.js';
+
 export async function getRegistrationWindow() {
   const r = await tryFetchJson('/.netlify/functions/registration-window');
   if (r.real && r.json && r.json.ok) return r.json;

@@ -1836,6 +1836,45 @@ const FAULTS = [
     expect: ['publishDraw is re-exported from scores-data.js'],
   },
 
+  {
+    name: 'the never-empty scoring guard is deleted, so a group can be left scoring nothing',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      "      return { scoringDraft: { ...(st.scoringDraft || {}), [ag]: next.length ? next : ['tries'] }, scoringMsg: '' };",
+      "      return { scoringDraft: { ...(st.scoringDraft || {}), [ag]: next }, scoringMsg: '' };"),
+    expect: ['unticking the last box falls back to tries'],
+  },
+  {
+    name: 'saving posts the WHOLE scoring draft instead of the selected group',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '    const res = await api.saveScoringRules({ [tournAgeId]: list }, session);',
+      '    const res = await api.saveScoringRules(scoringDraft, session);'),
+    expect: ['only the selected age group is sent'],
+  },
+  {
+    name: 'the Tournament tab stops loading the stored scoring rules on open',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '    if (!this.state.scoringLoaded && this.state.api && this.state.api.loadScoringRules) {',
+      '    if (false) {'),
+    expect: ['loads the stored scoring rules exactly once'],
+  },
+  {
+    name: 'the age-group picker is deleted from the scoring card',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('Organizer.dc.html',
+      '<select value="{{ tournAgeId }}" onChange="{{ onTournAge }}"', '<select value="{{ tournAgeId }}"'),
+    expect: ['the tab\'s age-group picker'],
+  },
+  {
+    name: 'the scoring re-exports are removed from organizer-data.js',
+    suite: 'test-organizer-tournament.js',
+    apply: () => patch('organizer-data.js',
+      'export {\n  loadScoringRules, saveScoringRules, scoringFor, allScoreTypes, scoreLabel, scorePoints,\n} from \'./scores-data.js\';', ''),
+    expect: ['saveScoringRules is re-exported from scores-data.js'],
+  },
+
   /* ---- /manager: teamNames rebuilt on every save (test-manager-dc-draw.js)
      The withTeamNames rule ported from the old /scores editor. The quiet
      regressions: the wrap dropped from either save site, the merge order

@@ -150,6 +150,71 @@ section('Unpublish all: every age group is called and failures are reported');
 }
 
 /* ====================================================================== */
+section('Scoring rules: the editor lives on the Tournament tab, per age group');
+{
+  const page = readRepo('Organizer.dc.html');
+  const start = page.indexOf('<sc-if value="{{ isTournament }}"');
+  const end = page.indexOf('<sc-if value="{{ showFilters }}"');
+  const sect = page.slice(start, end);
+  check('the scoring card is in the Tournament section', /onClick="\{\{ onSaveScoring \}\}"/.test(sect));
+  check('…with the tab\'s age-group picker', /onChange="\{\{ onTournAge \}\}"/.test(sect));
+  check('…and the score-type checkboxes', /\{\{ scoreTypeToggles \}\}/.test(sect));
+}
+{
+  /* Opening the tab loads the stored rules — once. */
+  const c = build();
+  let loads = 0;
+  c.state = {
+    ...c.state,
+    api: { loadScoringRules: async () => { loads++; }, scoringFor: () => ['tries'], allScoreTypes: () => ['tries'], scoreLabel: (k) => k, scorePoints: () => 5 },
+    session: { token: 't', _role: 'organizer' },
+  };
+  c.openTournament();
+  await new Promise((r) => setImmediate(r));
+  c.setState({ tab: 'teams' });
+  c.openTournament();
+  await new Promise((r) => setImmediate(r));
+  eq('opening the Tournament tab loads the stored scoring rules exactly once', loads, 1);
+}
+{
+  const c = build();
+  const savedCalls = [];
+  const fake = {
+    scoringFor: (ag) => (ag === 'u16b' ? ['tries', 'conversions'] : ['tries']),
+    allScoreTypes: () => ['tries', 'conversions', 'penalties', 'drops'],
+    scoreLabel: (k) => k, scorePoints: () => 5,
+    saveScoringRules: async (rules) => { savedCalls.push(rules); return { ok: true }; },
+  };
+  c.state = { ...c.state, api: fake, session: { token: 't', _role: 'organizer' }, tab: 'tournament', tournAgeId: 'u16b' };
+
+  /* Saving with nothing changed does not post. */
+  await c.onSaveScoring();
+  eq('saving with no draft posts nothing', savedCalls.length, 0);
+  eq('…and says so', c.state.scoringMsg, 'Nothing changed.');
+
+  /* Tick and untick. */
+  c.toggleScoreType('penalties');
+  eq('a tick lands in the draft for the SELECTED group', c.state.scoringDraft.u16b, ['tries', 'conversions', 'penalties']);
+  c.toggleScoreType('conversions');
+  eq('an untick removes it', c.state.scoringDraft.u16b, ['tries', 'penalties']);
+
+  /* The never-empty rule. */
+  c.setState({ scoringDraft: { ...c.state.scoringDraft, u16b: ['tries'] } });
+  c.toggleScoreType('tries');
+  eq('unticking the last box falls back to tries — a group can never score nothing',
+    c.state.scoringDraft.u16b, ['tries']);
+
+  /* Drafts are per group, and only the selected group is sent. */
+  c.setState({ tournAgeId: 'u10', scoringDraft: { ...c.state.scoringDraft, u16b: ['tries', 'penalties'] } });
+  c.toggleScoreType('conversions');
+  eq('switching the picker keeps the other group\'s draft', c.state.scoringDraft.u16b, ['tries', 'penalties']);
+  await c.onSaveScoring();
+  eq('only the selected age group is sent — never the whole draft',
+    savedCalls, [{ u10: ['tries', 'conversions'] }]);
+  eq('a good save reports itself', c.state.scoringMsg, 'Saved — score entry updated.');
+}
+
+/* ====================================================================== */
 section('The data layer provides the publish calls — re-exported, not copied');
 {
   const data = readRepo('organizer-data.js');
@@ -157,6 +222,8 @@ section('The data layer provides the publish calls — re-exported, not copied')
     .flatMap((m) => m[1].split(',').map((x) => x.trim()).filter(Boolean));
   check('publishDraw is re-exported from scores-data.js', reExported.includes('publishDraw'));
   check('unpublishDraw is re-exported from scores-data.js', reExported.includes('unpublishDraw'));
+  ['loadScoringRules', 'saveScoringRules', 'scoringFor', 'allScoreTypes', 'scoreLabel', 'scorePoints'].forEach((fn) =>
+    check(`${fn} is re-exported from scores-data.js`, reExported.includes(fn)));
   /* Not reimplemented — a second implementation is the drift this whole
      branch exists to remove. */
   check('organizer-data.js does not carry its own publishDraw implementation',

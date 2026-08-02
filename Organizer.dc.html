@@ -325,6 +325,32 @@
       <sc-if value="{{ isTournament }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
+          <!-- ===== SCORING RULES (per age group) ===== -->
+          <div style="background:#151517;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+            <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Scoring for {{ tournAgeName }}</div>
+            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
+
+            <select value="{{ tournAgeId }}" onChange="{{ onTournAge }}" style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:11px 14px;color:#fff;font-size:14px;margin-bottom:16px">
+              <sc-for list="{{ tournAgeOptions }}" as="ta" hint-placeholder-count="15">
+                <option value="{{ ta.id }}">{{ ta.name }}</option>
+              </sc-for>
+            </select>
+
+            <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px">
+              <sc-for list="{{ scoreTypeToggles }}" as="t" hint-placeholder-count="4">
+                <label style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
+                  <input type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
+                  {{ t.label }} <span style="color:#7f8794;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
+                </label>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <button onClick="{{ onSaveScoring }}" disabled="{{ scoringBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;font-size:13px">Save scoring</button>
+              <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:#3bd070;font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
+            </div>
+          </div>
+
           <!-- ===== ALL AGE GROUPS — bulk publish ===== -->
           <div style="background:#151517;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">All age groups</div>
@@ -1116,6 +1142,11 @@ class Component extends DCLogic {
        is set LAST, after any refresh, so nothing can blank it on the way in
        (the runClear() lesson from the old cleanup panel). */
     bulkBusy: false, bulkMsg: '',
+    /* The scoring rules editor, also from the old /scores Manager area.
+       tournAgeId is the Tournament tab's own age-group picker — the tab's
+       per-group tools share it. scoringDraft holds unsaved ticks PER GROUP,
+       so switching the picker never silently discards an edit. */
+    tournAgeId: 'u6', scoringDraft: null, scoringBusy: false, scoringMsg: '', scoringLoaded: false,
     /* The venue layout being edited. `venue` is the working copy the form
        mutates; `venueSaved` is what the server last confirmed, so the Save
        button can tell whether anything actually changed. Both null until the
@@ -1940,6 +1971,45 @@ class Component extends DCLogic {
   /* opts: { okLabel, wide }. The confirm button says what it does — "Remove
      pitch" reads very differently from "OK" on a dialog that lists the fixtures
      about to be stranded. */
+  /* ---------------- Tournament tab — opening it ----------------
+     The scoring rules live server-side; load them once, on first open, so
+     the checkboxes show what is actually stored. A failed load falls back to
+     the built-in defaults inside scoringFor() — the tab must not brick. */
+  openTournament() {
+    this.setState({ tab: 'tournament' });
+    if (!this.state.scoringLoaded && this.state.api && this.state.api.loadScoringRules) {
+      this.state.api.loadScoringRules()
+        .then(() => this.setState({ scoringLoaded: true }))
+        .catch(() => {});
+    }
+  }
+
+  /* ---------------- Tournament tab — scoring rules ----------------
+     Moved from the old /scores Manager area. Only the SELECTED age group's
+     list is sent — the server merges per group, so an unsaved draft for
+     another group can never ride along by accident. */
+  toggleScoreType(key) {
+    const ag = this.state.tournAgeId; if (!ag) return;
+    this.setState((st) => {
+      const cur = (st.scoringDraft && st.scoringDraft[ag]) || (st.api ? st.api.scoringFor(ag) : ['tries']);
+      const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+      // Never leave an age group with nothing scoreable.
+      return { scoringDraft: { ...(st.scoringDraft || {}), [ag]: next.length ? next : ['tries'] }, scoringMsg: '' };
+    });
+  }
+  async onSaveScoring() {
+    const { api, session, tournAgeId, scoringDraft } = this.state;
+    const list = scoringDraft && scoringDraft[tournAgeId];
+    if (!list) { this.setState({ scoringMsg: 'Nothing changed.' }); return; }
+    this.setState({ scoringBusy: true, scoringMsg: '' });
+    const res = await api.saveScoringRules({ [tournAgeId]: list }, session);
+    if (res.ok) {
+      this.setState({ scoringBusy: false, scoringMsg: 'Saved — score entry updated.' });
+    } else {
+      this.setState({ scoringBusy: false, scoringMsg: res.error || 'Could not save.' });
+    }
+  }
+
   /* ---------------- Tournament tab — bulk publish ----------------
      Moved verbatim from the old /scores Manager area (Aug 2026), minus that
      page's own view refreshes. No new rules: publish-schedule.js re-checks
@@ -2676,6 +2746,20 @@ class Component extends DCLogic {
       bulkBusy: s.bulkBusy, bulkMsg: s.bulkMsg,
       onPublishAll: () => this.onPublishAll(),
       onUnpublishAll: () => this.onUnpublishAll(),
+      tournAgeId: s.tournAgeId,
+      tournAgeName: (MANAGER_AGE_GROUPS.find((g) => g.id === s.tournAgeId) || {}).name || s.tournAgeId,
+      tournAgeOptions: MANAGER_AGE_GROUPS,
+      onTournAge: (e) => this.setState({ tournAgeId: e.target.value, scoringMsg: '' }),
+      scoringBusy: s.scoringBusy, scoringMsg: s.scoringMsg,
+      onSaveScoring: () => this.onSaveScoring(),
+      scoreTypeToggles: (s.api && s.api.allScoreTypes ? s.api.allScoreTypes() : []).map((k) => {
+        const ag = s.tournAgeId;
+        const cur = (s.scoringDraft && s.scoringDraft[ag]) || (s.api && s.api.scoringFor ? s.api.scoringFor(ag) : []);
+        return {
+          key: k, label: s.api.scoreLabel(k), pts: s.api.scorePoints(k) + ' pts',
+          on: cur.includes(k), toggle: () => this.toggleScoreType(k),
+        };
+      }),
       // Jay, 1 Aug: on Teams/Players, stretch to use a big window instead of
       // staying capped at 1300px like every other tab -- min(96vw, 2400px)
       // actually grows as the window grows (a fixed wider number wouldn't),
@@ -2687,7 +2771,7 @@ class Component extends DCLogic {
       showAccounts: () => this.setState({ tab: 'accounts' }),
       showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
-      showTournament: () => this.setState({ tab: 'tournament' }),
+      showTournament: () => this.openTournament(),
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,

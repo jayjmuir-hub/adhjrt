@@ -4,7 +4,10 @@
    spirit of rugby, at the end one player should have more votes than
    others so there is a winner showing."
 
-   Built into runSimulateTournament() (Scores & Standings.dc.html): every
+   Built into runSimulateTournament() — originally on
+   "Scores & Standings.dc.html", MOVED to Organizer.dc.html's Tournament tab
+   in Aug 2026 with the rest of the simulate tooling; this file was repointed
+   in the same commit. Every
    match in a spirit-eligible age group (api.supportsSpiritAward — U14B/G,
    U16B/G, U18B/G only) now submits spiritNomineeHome/spiritNomineeAway
    pulled from that team's real registered roster (roster[0], a fixed
@@ -57,8 +60,8 @@ function build(file, props) {
 }
 
 function buildScores(overrides) {
-  const c = build('Scores & Standings.dc.html', {});
-  c.state = { ...c.state, session: { token: 't', ageGroupId: '*' }, ...overrides };
+  const c = build('Organizer.dc.html', {});
+  c.state = { ...c.state, session: { token: 't', _role: 'organizer' }, ...overrides };
   return c;
 }
 
@@ -101,7 +104,7 @@ section('runSimulateTournament(): nominates from the real roster, only for spiri
     ageGroupOfMatch: (id) => String(id || '').split(':')[0],
   };
 
-  const c = buildScores({ api, ageGroups: [
+  const c = buildScores({ api, tournAgeGroups: [
     { id: 'u9', name: 'U9 Mixed Contact', hasStandings: true },
     { id: 'u14b', name: 'U14B Contact', hasStandings: true },
   ] });
@@ -130,7 +133,7 @@ section('runSimulateTournament(): a team with no imported roster still gets a (s
     allResults: async () => ({ ...results }),
     ageGroupOfMatch: (id) => String(id || '').split(':')[0],
   };
-  const c = buildScores({ api, ageGroups: [{ id: 'u14b', name: 'U14B Contact', hasStandings: true }] });
+  const c = buildScores({ api, tournAgeGroups: [{ id: 'u14b', name: 'U14B Contact', hasStandings: true }] });
   await c.runSimulateTournament();
   check('still ran without throwing and produced a result', !!results['u14b:A:0-1']);
   eq('the fallback nominee names the team, not a blank/undefined', results['u14b:A:0-1'].spiritNomineeHome, 'ADH1 Player');

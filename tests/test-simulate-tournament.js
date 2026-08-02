@@ -7,8 +7,12 @@
    only, there would also be a single button to reset everything."
 
    Built as onSimulateTournament()/runSimulateTournament() and
-   onResetSimulation()/runResetSimulation() in
-   "Scores & Standings.dc.html", reusing the exact same api.* calls the
+   onResetSimulation()/runResetSimulation() — originally in
+   "Scores & Standings.dc.html", MOVED to Organizer.dc.html's Tournament tab
+   in Aug 2026 when the /scores Manager area was retired (see
+   claude/specs/spec-scores-manager-removal.md). This file was repointed in
+   the same commit; every check below is unchanged in what it proves.
+   Reuses the exact same api.* calls the
    real editor UI goes through (submitResult, autoKnockoutSlots, saveDraw,
    publishDraw, unpublishDraw, clearResult) - no second write path for a
    result or a draw.
@@ -198,8 +202,8 @@ const AGE_GROUPS = [
 ];
 
 function buildScores(overrides) {
-  const c = build('Scores & Standings.dc.html', {});
-  c.state = { ...c.state, session: { token: 't', ageGroupId: '*' }, ageGroups: AGE_GROUPS, ...overrides };
+  const c = build('Organizer.dc.html', {});
+  c.state = { ...c.state, session: { token: 't', _role: 'organizer' }, tournAgeGroups: AGE_GROUPS, ...overrides };
   return c;
 }
 
@@ -208,16 +212,20 @@ async function main() {
 /* ======================================================================== */
 section('The binding contract: the new tokens actually exist in the markup');
 {
-  const scores = readRepo('Scores & Standings.dc.html');
-  check('the panel button is wired to onSimulateTournament', /onClick="\{\{ onSimulateTournament \}\}"/.test(scores));
-  check('…and the reset button to onResetSimulation', /onClick="\{\{ onResetSimulation \}\}"/.test(scores));
-  check('simBusy is a real renderVals key, not a typo the template silently swallows', /simBusy:\s*s\.simBusy/.test(scores));
-  check('…so is simMsg', /simMsg:\s*s\.simMsg/.test(scores));
-  check('…so is simProgress', /simProgress:\s*s\.simProgress/.test(scores));
-  check('onSimulateTournament itself is a real renderVals key', /onSimulateTournament:\s*\(\)\s*=>\s*this\.onSimulateTournament\(\)/.test(scores));
-  check('onResetSimulation itself is a real renderVals key', /onResetSimulation:\s*\(\)\s*=>\s*this\.onResetSimulation\(\)/.test(scores));
-  check('the panel is gated to organisers only',
-    /SIMULATE A TOURNAMENT[\s\S]{0,60}-->\s*<sc-if value="\{\{ isOrganiserView \}\}"[^>]*>[\s\S]{0,300}Simulate a tournament/.test(scores));
+  const page = readRepo('Organizer.dc.html');
+  check('the panel button is wired to onSimulateTournament', /onClick="\{\{ onSimulateTournament \}\}"/.test(page));
+  check('…and the reset button to onResetSimulation', /onClick="\{\{ onResetSimulation \}\}"/.test(page));
+  check('simBusy is a real renderVals key, not a typo the template silently swallows', /simBusy:\s*s\.simBusy/.test(page));
+  check('…so is simMsg', /simMsg:\s*s\.simMsg/.test(page));
+  check('…so is simProgress', /simProgress:\s*s\.simProgress/.test(page));
+  check('onSimulateTournament itself is a real renderVals key', /onSimulateTournament:\s*\(\)\s*=>\s*this\.onSimulateTournament\(\)/.test(page));
+  check('onResetSimulation itself is a real renderVals key', /onResetSimulation:\s*\(\)\s*=>\s*this\.onResetSimulation\(\)/.test(page));
+  /* On /organizer the whole page is organiser-only; the card's home is the
+     Tournament tab's section. Prove the slice found something real first. */
+  const start = page.indexOf('<sc-if value="{{ isTournament }}"');
+  const end = page.indexOf('<sc-if value="{{ showFilters }}"');
+  check('the simulate card lives inside the Tournament tab section',
+    start > -1 && end > start && /Simulate whole tournament/.test(page.slice(start, end)));
 }
 
 /* ======================================================================== */

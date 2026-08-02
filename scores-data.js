@@ -1597,6 +1597,34 @@ export async function getFixtures(agId) {
   return { pool, knockout };
 }
 
+/* THE team display-name rule, as a plain function (added Aug 2026 for the
+   /organizer simulate tools): club name minus the RFC-style suffixes,
+   numbered only when the club has more than one side in THIS age group —
+   "Abu Dhabi Harlequins 1" when they entered three, plain "Barrelhouse"
+   when they entered one. Scoped to one age group because a team code is
+   only unique within its group. Reads ONLY club / teamName / ageGroup —
+   the contact columns sit in the same rows and must never reach a draw.
+   Manager.dc.html carries its own component-scoped copy of this rule
+   (teamNamesFromRegistrations) predating this export; if either changes,
+   change both — test-manager-dc-draw.js pins the behaviour there. */
+export function teamNamesFromRegs(regTeams, agName) {
+  const nm = String(agName || '').trim().toLowerCase();
+  if (!nm) return {};
+  const src = (regTeams || []).filter((r) => String(r.ageGroup || '').trim().toLowerCase() === nm);
+  const perClub = {};
+  src.forEach((r) => { const c = String(r.club || '').trim(); perClub[c] = (perClub[c] || 0) + 1; });
+  const out = {};
+  src.forEach((r) => {
+    const code = String(r.teamName || '').trim();
+    const rawClub = String(r.club || '').trim();
+    const club = rawClub.replace(/\b(RFC|Rugby Football Club|Rugby Club)\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (!code || !club) return;
+    const n = (code.match(/(\d+)$/) || [])[1];
+    out[code] = (perClub[rawClub] > 1 && n) ? (club + ' ' + n) : club;
+  });
+  return out;
+}
+
 /* -------- Fixture Editor (drag teams into pools/slots, edit times) --------
    Only available to a signed-in manager (their own age group, or the
    "admin" invite code) or an organizer (any age group) — enforced again

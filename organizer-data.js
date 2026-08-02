@@ -379,6 +379,18 @@ export {
   loadScoringRules, saveScoringRules, scoringFor, allScoreTypes, scoreLabel, scorePoints,
 } from './scores-data.js';
 
+/* Simulate a tournament / Reset the simulation, same story again: every call
+   a simulation makes is the exact call the real editor UI makes — same
+   server-side checks, same write-and-verify, no second write path. venue()
+   and loadVenue() feed the match-day guard; getAgeGroups() carries
+   hasStandings; teamNamesFromRegs() is the canonical display-name rule the
+   per-group saves rebuild names with. */
+export {
+  getAgeGroups, getDraw, saveDraw, submitResult, clearResult, allResults,
+  ageGroupOfMatch, autoKnockoutSlots, supportsSpiritAward, getMyRegistrations,
+  venue, loadVenue, teamNamesFromRegs,
+} from './scores-data.js';
+
 export async function getRegistrationWindow() {
   const r = await tryFetchJson('/.netlify/functions/registration-window');
   if (r.real && r.json && r.json.ok) return r.json;

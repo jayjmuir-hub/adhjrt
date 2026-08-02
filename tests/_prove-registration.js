@@ -2166,7 +2166,7 @@ const FAULTS = [
   {
     name: 'runSimulateTournament’s pass-1 isFinal filter is inverted, so pass 1 no longer walks over the double-bracket semis',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
+    apply: () => patch('Organizer.dc.html',
       "      for (const slot of knockout) {\n        if (isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };\n        const r = await api.submitResult(slot.id, data, session);\n        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;\n      }\n\n      // Pass 2:",
       "      for (const slot of knockout) {\n        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };\n        const r = await api.submitResult(slot.id, data, session);\n        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;\n      }\n\n      // Pass 2:"),
     expect: ['pass 1 walked over the semis'],
@@ -2174,12 +2174,11 @@ const FAULTS = [
   {
     name: 'runSimulateTournament’s second knockout pass (the regenerate + walk-the-finals block) is deleted, so no group ever gets its finals scored',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
-      "      // Pass 2: regenerate now the semis have winners — this is what fills in\n"
-      + "      // the finals for a double-bracket group — save it, and walk those over.\n"
+    apply: () => patch('Organizer.dc.html',
+      "      // Pass 2: regenerate now the semis have winners, save, walk the finals.\n"
       + "      this.setState({ simProgress: `${ag.name} — finals…` });\n"
       + "      knockout = await api.autoKnockoutSlots(ag.id, session);\n"
-      + "      saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout }), session);\n"
+      + "      saved = await api.saveDraw(ag.id, this.simWithTeamNames(ag.name, { ...draw, knockout }), session);\n"
       + "      if (!saved || !saved.ok) failed++;\n"
       + "      for (const slot of knockout) {\n"
       + "        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;\n"
@@ -2193,7 +2192,7 @@ const FAULTS = [
   {
     name: 'runSimulateTournament stops special-casing festival groups (U6/U7), so it tries to score matches the API refuses',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
+    apply: () => patch('Organizer.dc.html',
       "      // Festival groups (U6/U7): no standings, no knockout, no scores allowed\n"
       + "      // by the API at all — just publish whatever draw they have.\n"
       + "      if (!ag.hasStandings) {\n"
@@ -2208,7 +2207,7 @@ const FAULTS = [
   {
     name: 'onSimulateTournament loses its typed-word check, running on ANY input to the confirm dialog',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
+    apply: () => patch('Organizer.dc.html',
       "        if (typed.trim().toUpperCase() !== 'SIMULATE') {\n"
       + "          this.setState({ simMsg: `Not run — you typed \"${typed.trim()}\" rather than SIMULATE.` });\n"
       + "          return;\n"
@@ -2220,7 +2219,7 @@ const FAULTS = [
   {
     name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 7-8 November',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
+    apply: () => patch('Organizer.dc.html',
       "  onSimulateTournament() {\n    if (this.isTournamentDayNow()) return;\n    this.promptModal(",
       "  onSimulateTournament() {\n    this.promptModal("),
     expect: ['on a real tournament day, pressing Simulate does not even open the confirm dialog'],
@@ -2228,9 +2227,9 @@ const FAULTS = [
   {
     name: 'runResetSimulation stops clearing the generated knockout, leaving a reset tournament with a stale bracket',
     suite: 'test-simulate-tournament.js',
-    apply: () => patch('Scores & Standings.dc.html',
+    apply: () => patch('Organizer.dc.html',
       "        if (draw) {\n"
-      + "          const saved = await api.saveDraw(ag.id, this.withTeamNames({ ...draw, knockout: [] }), session);\n"
+      + "          const saved = await api.saveDraw(ag.id, this.simWithTeamNames(ag.name, { ...draw, knockout: [] }), session);\n"
       + "          if (!saved || !saved.ok) failed++;\n"
       + "        }",
       "        if (draw) {\n"

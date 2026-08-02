@@ -362,6 +362,30 @@
             </div>
           </div>
 
+          <!-- ===== SIMULATE A TOURNAMENT (testing) ===== -->
+          <div style="background:#151517;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+            <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Simulate a tournament</div>
+            <div style="font-size:13px;line-height:1.6;color:#8b93a3;margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
+            <div style="font-size:12px;line-height:1.6;color:#5a616d;margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:#8b93a3">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
+
+            <sc-if value="{{ simIsMatchDay }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#f5c518;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 7 or 8 November.</div>
+            </sc-if>
+
+            <sc-if value="{{ simNotMatchDay }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <button onClick="{{ onSimulateTournament }}" disabled="{{ simBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Simulate whole tournament</button>
+                <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ff8a8a;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
+              </div>
+              <sc-if value="{{ simProgress }}" hint-placeholder-val="">
+                <div style="margin-top:12px;font-size:13px;color:#aeb4bf;font-weight:600">{{ simProgress }}</div>
+              </sc-if>
+              <sc-if value="{{ simMsg }}" hint-placeholder-val="">
+                <div style="margin-top:12px;font-size:13px;color:#3bd070;font-weight:700;line-height:1.5">{{ simMsg }}</div>
+              </sc-if>
+            </sc-if>
+          </div>
+
         </div>
       </sc-if>
 
@@ -1147,6 +1171,11 @@ class Component extends DCLogic {
        per-group tools share it. scoringDraft holds unsaved ticks PER GROUP,
        so switching the picker never silently discards an edit. */
     tournAgeId: 'u6', scoringDraft: null, scoringBusy: false, scoringMsg: '', scoringLoaded: false,
+    /* Simulate a tournament / Reset the simulation — also from the old
+       /scores Manager area. tournAgeGroups is the data layer's own list
+       (with hasStandings), loaded when the tab opens; simRegs is the
+       registrations snapshot one simulate run works from. */
+    tournAgeGroups: [], simBusy: false, simMsg: '', simProgress: '', simRegs: null,
     /* The venue layout being edited. `venue` is the working copy the form
        mutates; `venueSaved` is what the server last confirmed, so the Save
        button can tell whether anything actually changed. Both null until the
@@ -1982,6 +2011,291 @@ class Component extends DCLogic {
         .then(() => this.setState({ scoringLoaded: true }))
         .catch(() => {});
     }
+    /* The simulate tools need the data layer's age-group list (it carries
+       hasStandings, which decides who gets scores at all) and the venue
+       layout (the match-day guard reads the tournament dates off it). Both
+       fall back safely — the built-in defaults — if a fetch fails. */
+    const api = this.state.api;
+    if (api && !this.state.tournAgeGroups.length && api.getAgeGroups) {
+      api.getAgeGroups().then((ags) => this.setState({ tournAgeGroups: ags || [] })).catch(() => {});
+    }
+    if (api && api.loadVenue) { api.loadVenue().catch(() => {}); }
+  }
+
+  /* Is today one of the tournament days? Read off the venue layout rather
+     than hardcoded, and compared in local terms because that is how a person
+     standing at Zayed Sports City experiences the date. A UI guard on the
+     browser's clock, not a security boundary — what it protects against is a
+     mis-click on match morning. */
+  isTournamentDayNow() {
+    const { api } = this.state;
+    if (!api || !api.venue) return false;
+    const v = api.venue();
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return today === (v.day1 || {}).date || today === (v.day2 || {}).date;
+  }
+
+  /* Simulate/reset save draws for EVERY age group in turn, so the name
+     rebuild has to be scoped per group — teamNamesFromRegs() is the data
+     layer's canonical copy of the display-name rule. (The old /scores
+     simulate reused that page's editor-scoped withTeamNames(), which derived
+     whichever group the EDITOR happened to be showing; this fixes that.) An
+     empty derived map is a no-op, so a failed registrations read can never
+     blank a draw's names. */
+  simWithTeamNames(agName, draw) {
+    if (!draw) return draw;
+    const { api, simRegs } = this.state;
+    const derived = (api && api.teamNamesFromRegs)
+      ? api.teamNamesFromRegs((simRegs && simRegs.teams) || [], agName) : {};
+    if (!Object.keys(derived).length) return draw;
+    return { ...draw, teamNames: { ...(draw.teamNames || {}), ...derived } };
+  }
+
+  /* ---------------- SIMULATE A TOURNAMENT (testing) ----------------
+     Ported from the old /scores Manager area — see that page's git history
+     for the design notes. Deliberately reuses exactly the same api.* calls
+     the real editor UI does (submitResult, autoKnockoutSlots, saveDraw,
+     publishDraw) rather than a dedicated bulk endpoint — same server-side
+     checks a real score goes through, no second way for a result to be
+     written. Two-pass knockout so both bracket shapes work: the plain
+     waterfall has no semis (pass 1's non-final loop matches nothing, pass
+     2 walks the seeded finals), the U16 double bracket does (pass 1 walks
+     the semis, pass 2 regenerates to pick up their winners, then walks the
+     finals). U6/U7 refuse scores at the API — just published. */
+  onSimulateTournament() {
+    if (this.isTournamentDayNow()) return;
+    this.promptModal(
+      'Simulate the WHOLE tournament, for testing? This publishes every age group, records a walkover '
+      + '(the first team listed wins) for every pool match, generates the knockout stage and walks that over '
+      + 'too including the finals — overwriting any score already recorded for a match, real or otherwise. '
+      + 'Type SIMULATE to confirm.',
+      '',
+      (typed) => {
+        if (typed.trim().toUpperCase() !== 'SIMULATE') {
+          this.setState({ simMsg: `Not run — you typed "${typed.trim()}" rather than SIMULATE.` });
+          return;
+        }
+        this.runSimulateTournament();
+      },
+    );
+  }
+  /* Every match in a spirit-eligible age group nominates each team's own
+     roster[0] player — simple and traceable, but by construction it ties
+     whenever two teams have played the exact same number of games, which a
+     symmetric bracket reliably does. While more than one player shares the
+     top nomination count, move exactly one vote off a rival (re-submit one
+     of THAT team's matches with a teammate nominated) — never touching the
+     eventual leader's own tally. */
+  async breakSpiritTies(agId, agName, spiritLog, api, session, rosterFor) {
+    let corrections = 0;
+    for (let guard = 0; guard < 20; guard++) { // always terminates in a handful of passes — this just bounds a runaway
+      const tally = {}; // nominee name -> { count, matches: [{matchId, side, team}] }
+      Object.entries(spiritLog).forEach(([matchId, entry]) => {
+        [['home', entry.data.spiritNomineeHome, entry.home], ['away', entry.data.spiritNomineeAway, entry.away]]
+          .forEach(([side, name, team]) => {
+            if (!name) return;
+            if (!tally[name]) tally[name] = { count: 0, matches: [] };
+            tally[name].count++;
+            tally[name].matches.push({ matchId, side, team });
+          });
+      });
+      const ranked = Object.entries(tally).map(([name, v]) => ({ name, ...v }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      if (ranked.length < 2 || ranked[0].count > ranked[1].count) break; // already a clear single winner
+
+      const rival = ranked[1];
+      const m = rival.matches[rival.matches.length - 1]; // any of the rival's matches works
+      const entry = spiritLog[m.matchId];
+      const roster = rosterFor(agName, m.team);
+      const altIdx = roster.findIndex((n) => n !== rival.name);
+      const alt = altIdx >= 0 ? roster[altIdx] : `${m.team} Player 2`;
+      const newData = { ...entry.data };
+      if (m.side === 'home') newData.spiritNomineeHome = alt; else newData.spiritNomineeAway = alt;
+      const r = await api.submitResult(m.matchId, newData, session);
+      if (r && r.ok) { spiritLog[m.matchId] = { ...entry, data: newData }; corrections++; }
+      else break; // the correction itself failed to write — stop rather than loop forever
+    }
+    return corrections;
+  }
+  async runSimulateTournament() {
+    const { api, session } = this.state;
+    const ageGroups = this.state.tournAgeGroups;
+    if (!api || !session || !ageGroups.length) return;
+    this.setState({ simBusy: true, simMsg: '', simProgress: 'Starting…' });
+    const isFinal = (id) => /:(CUP|BOWL|PLATE|SHIELD|FINAL)$/i.test(id || '');
+    let pools = 0, knockoutGames = 0, published = 0, failed = 0, spiritCorrections = 0;
+
+    /* One registrations snapshot up front — an organiser session sees every
+       group. Used for BOTH the Spirit of Rugby nominations and the per-group
+       team-name rebuild on every draw save. */
+    let regs = { teams: [] };
+    if (typeof api.getMyRegistrations === 'function') {
+      regs = (await api.getMyRegistrations(session)) || { teams: [] };
+    }
+    this.setState({ simRegs: regs });
+    // A team code (e.g. "ADH1") is only unique WITHIN an age group, so the
+    // roster lookup keys on age-group name AND code together.
+    const rosterFor = (agName, code) => {
+      const team = (regs.teams || []).find((t) => t.teamName === code
+        && String(t.ageGroup || '').trim().toLowerCase() === String(agName || '').trim().toLowerCase());
+      if (!team) return [];
+      try {
+        const arr = JSON.parse(team.players || '[]');
+        return Array.isArray(arr)
+          ? arr.map((p) => [p.firstName, p.lastName].filter(Boolean).join(' ').trim()).filter(Boolean)
+          : [];
+      } catch (e) { return []; }
+    };
+    // Falls back to a synthetic-but-distinct-per-team name if the roster is
+    // not found — the tool keeps working rather than crashing.
+    const nomineeFor = (agName, code) => {
+      const roster = rosterFor(agName, code);
+      return roster.length ? roster[0] : `${code} Player`;
+    };
+    const spiritData = (agId, agName, home, away) => (
+      (api.supportsSpiritAward && api.supportsSpiritAward(agId))
+        ? { spiritNomineeHome: nomineeFor(agName, home), spiritNomineeAway: nomineeFor(agName, away) }
+        : {}
+    );
+
+    for (const ag of ageGroups) {
+      this.setState({ simProgress: `${ag.name}…` });
+
+      // Festival groups (U6/U7): no standings, no knockout, no scores allowed
+      // by the API at all — just publish whatever draw they have.
+      if (!ag.hasStandings) {
+        const res = await api.publishDraw(ag.id, session);
+        if (res && res.ok) published++;
+        else if (!(res && /nothing to publish|save a draw/i.test(res.error || ''))) failed++;
+        continue;
+      }
+
+      const draw = await api.getDraw(ag.id, session);
+      if (!draw) { failed++; continue; }
+
+      // Every result actually submitted for THIS age group, keyed by match
+      // id — what breakSpiritTies() corrects against.
+      const spiritLog = {};
+
+      this.setState({ simProgress: `${ag.name} — pool matches…` });
+      for (const slot of (draw.slots || [])) {
+        if (!slot.home || !slot.away) continue;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { pools++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
+      }
+
+      // Pass 1: seed the knockout from the now-final standings and walk over
+      // anything that has both teams and ISN'T a final.
+      this.setState({ simProgress: `${ag.name} — knockout…` });
+      let knockout = await api.autoKnockoutSlots(ag.id, session);
+      let saved = await api.saveDraw(ag.id, this.simWithTeamNames(ag.name, { ...draw, knockout }), session);
+      if (!saved || !saved.ok) failed++;
+      for (const slot of knockout) {
+        if (isFinal(slot.id) || !slot.home || !slot.away) continue;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
+      }
+
+      // Pass 2: regenerate now the semis have winners, save, walk the finals.
+      this.setState({ simProgress: `${ag.name} — finals…` });
+      knockout = await api.autoKnockoutSlots(ag.id, session);
+      saved = await api.saveDraw(ag.id, this.simWithTeamNames(ag.name, { ...draw, knockout }), session);
+      if (!saved || !saved.ok) failed++;
+      for (const slot of knockout) {
+        if (!isFinal(slot.id) || !slot.home || !slot.away) continue;
+        const data = { walkover: 'home', ...spiritData(ag.id, ag.name, slot.home, slot.away) };
+        const r = await api.submitResult(slot.id, data, session);
+        if (r && r.ok) { knockoutGames++; spiritLog[slot.id] = { data, home: slot.home, away: slot.away }; } else failed++;
+      }
+
+      if (api.supportsSpiritAward && api.supportsSpiritAward(ag.id)) {
+        this.setState({ simProgress: `${ag.name} — Spirit of Rugby…` });
+        spiritCorrections += await this.breakSpiritTies(ag.id, ag.name, spiritLog, api, session, rosterFor);
+      }
+
+      this.setState({ simProgress: `${ag.name} — publishing…` });
+      const pubRes = await api.publishDraw(ag.id, session);
+      if (pubRes && pubRes.ok) published++; else failed++;
+    }
+    const msg = `Simulated ${pools} pool result${pools === 1 ? '' : 's'} and ${knockoutGames} knockout result${knockoutGames === 1 ? '' : 's'}, `
+      + `published ${published} age group${published === 1 ? '' : 's'}`
+      + (spiritCorrections ? `, resolved ${spiritCorrections} Spirit of Rugby tie${spiritCorrections === 1 ? '' : 's'}` : '')
+      + '.'
+      + (failed ? ` ${failed} step${failed === 1 ? '' : 's'} failed — press again to retry.` : '');
+    this.setState({ simBusy: false, simProgress: '', simMsg: msg });
+  }
+
+  /* Undoes exactly what a simulation does — and only that. Saved pools and
+     team assignments are a real editing decision an organiser may have made
+     by hand and are left alone; only the results and the generated knockout
+     bracket come back out, one match at a time through the same
+     write-and-verify path a real score uses. */
+  onResetSimulation() {
+    if (this.isTournamentDayNow()) return;
+    this.promptModal(
+      'Reset the simulated tournament? This unpublishes every age group, removes every recorded result '
+      + '(one at a time, the same write-and-verify way a real score is removed) and clears the generated '
+      + 'knockout bracket for each age group — saved pools and team assignments are left untouched. '
+      + 'Type RESET to confirm.',
+      '',
+      (typed) => {
+        if (typed.trim().toUpperCase() !== 'RESET') {
+          this.setState({ simMsg: `Not reset — you typed "${typed.trim()}" rather than RESET.` });
+          return;
+        }
+        this.runResetSimulation();
+      },
+    );
+  }
+  async runResetSimulation() {
+    const { api, session } = this.state;
+    const ageGroups = this.state.tournAgeGroups;
+    if (!api || !session || !ageGroups.length) return;
+    this.setState({ simBusy: true, simMsg: '', simProgress: 'Starting…' });
+    let unpublished = 0, cleared = 0, failed = 0;
+
+    /* The name rebuild on the knockout-clearing saves below reads simRegs —
+       refresh it here too, so a reset run straight after a page load still
+       rebuilds names rather than finding an empty snapshot. */
+    if (typeof api.getMyRegistrations === 'function') {
+      this.setState({ simRegs: (await api.getMyRegistrations(session)) || { teams: [] } });
+    }
+
+    const stored = await api.allResults();
+    const ids = Object.keys(stored || {});
+
+    for (const ag of ageGroups) {
+      this.setState({ simProgress: `${ag.name} — unpublishing…` });
+      const unpub = await api.unpublishDraw(ag.id, session);
+      if (unpub && unpub.ok) unpublished++; else failed++;
+
+      const agIds = ids.filter((id) => api.ageGroupOfMatch(id) === ag.id);
+      if (agIds.length) {
+        this.setState({ simProgress: `${ag.name} — removing ${agIds.length} result${agIds.length === 1 ? '' : 's'}…` });
+        for (const id of agIds) {
+          try {
+            const r = await api.clearResult(id, session);
+            if (r && r.ok === false) failed++; else cleared++;
+          } catch (e) { failed++; }
+        }
+      }
+
+      if (ag.hasStandings) {
+        this.setState({ simProgress: `${ag.name} — clearing the generated knockout…` });
+        const draw = await api.getDraw(ag.id, session);
+        if (draw) {
+          const saved = await api.saveDraw(ag.id, this.simWithTeamNames(ag.name, { ...draw, knockout: [] }), session);
+          if (!saved || !saved.ok) failed++;
+        }
+      }
+    }
+
+    const msg = `Unpublished ${unpublished} age group${unpublished === 1 ? '' : 's'}, removed ${cleared} result${cleared === 1 ? '' : 's'}.`
+      + (failed ? ` ${failed} step${failed === 1 ? '' : 's'} failed — press again to retry.` : '');
+    this.setState({ simBusy: false, simProgress: '', simMsg: msg });
   }
 
   /* ---------------- Tournament tab — scoring rules ----------------
@@ -2752,6 +3066,11 @@ class Component extends DCLogic {
       onTournAge: (e) => this.setState({ tournAgeId: e.target.value, scoringMsg: '' }),
       scoringBusy: s.scoringBusy, scoringMsg: s.scoringMsg,
       onSaveScoring: () => this.onSaveScoring(),
+      simBusy: s.simBusy, simMsg: s.simMsg, simProgress: s.simProgress,
+      simIsMatchDay: this.isTournamentDayNow(),
+      simNotMatchDay: !this.isTournamentDayNow(),
+      onSimulateTournament: () => this.onSimulateTournament(),
+      onResetSimulation: () => this.onResetSimulation(),
       scoreTypeToggles: (s.api && s.api.allScoreTypes ? s.api.allScoreTypes() : []).map((k) => {
         const ag = s.tournAgeId;
         const cur = (s.scoringDraft && s.scoringDraft[ag]) || (s.api && s.api.scoringFor ? s.api.scoringFor(ag) : []);

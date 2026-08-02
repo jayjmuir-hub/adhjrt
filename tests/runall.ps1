@@ -45,13 +45,13 @@ $tests = @(
   'test-simulate-tournament.js',
   'test-team-logos.js',
   'test-fixtures-logos.js',
-  'test-scores-draw-editor.js',
   'test-organizer-manager-link.js',
   'test-manager-dc.js',
   'test-manager-dc-score-sheet.js',
   'test-manager-dc-draw.js',
   'test-knockout-brackets.js',
   'test-simulate-spirit-award.js',
+  'test-scores-public.js',
   'test-sponsors.js',
   'test-back-office-links.js'
 )

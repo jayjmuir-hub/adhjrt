@@ -20,7 +20,7 @@ first, every session.)
 | URL | serves |
 |---|---|
 | `/` | `Quins JRT.dc.html` |
-| `/scores` | `Scores & Standings.dc.html` |
+| `/scores` | `Scores & Standings.dc.html` — purely public since Aug 2026; the Manager area moved to `/manager` and `/organizer` |
 | `/organizer` | `Organizer.dc.html` |
 | `/manager` | `Manager.dc.html` — the age-group manager dashboard (score entry, draw editor, registrations) |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
@@ -46,7 +46,7 @@ manifest.webmanifest       PWA manifest (start_url /app)
 sw.js                      service worker — network-first, never caches
                            /.netlify/functions/
 Quins JRT.dc.html          public marketing site  →  /
-Scores & Standings.dc.html live scores + manager area  →  /scores
+Scores & Standings.dc.html public live scores (no manager area since Aug 2026)  →  /scores
 Organizer.dc.html          organiser back office  →  /organizer
 Manager.dc.html            age-group manager dashboard  →  /manager. Rebuilt
                            from the old plain-HTML Manager.html onto the same
@@ -1783,15 +1783,14 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
 - Homepage Fixtures section shows each match's SCORE (pool rows + knockout/
   finals bracket) from `getSchedule` — walkover-aware, blank until a result
   exists.
-- Fixture editor has two gated knockout buttons ("Generate knockout from
-  standings" needs all pool scores; "Generate finals from knockout" fills
+- The fixture editor (on `/manager` since Aug 2026 — `/scores` is public
+  only) has two gated knockout buttons ("Generate knockout from standings"
+  needs all pool scores; "Generate finals from knockout" fills
   Cup/Bowl/Plate/Shield/Final from the winners so far) plus "Clear knockout."
-  Organisers also have "Publish all"/"Unpublish all."
-- `/scores` has "Jump to current match" (scrolls to first unscored match) and
-  "Back to menu."
-- Pitches are picked, not typed — "Pitches for this age group" panel
-  (type-to-add chips) stored on the draw as `pitches`; each match's pitch is a
-  dropdown of those pitches (editor rows + score-entry tab).
+  Organisers have "Publish all"/"Unpublish all" on `/organizer` → Tournament.
+- `/scores` has "Back to menu" and a footer "Manager sign-in →" link.
+- Pitches are picked, not typed — each match's pitch is a dropdown of the
+  venue layout's pitches for that age group.
 
 
 ---

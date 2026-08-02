@@ -118,10 +118,13 @@ section('The binding contract: the new prop/attr actually exist in the markup');
     /onSelect: \(\) => this\.setState\(\{ selectedAgeId: a\.id \}, \(\) => \{[\s\S]{0,200}?this\.props\.onAgeChange\(a\.id\)/.test(scores));
   check('…guarded so the standalone \/scores page (no onAgeChange prop) never throws',
     /typeof this\.props\.onAgeChange === 'function'/.test(scores));
-  check('loadEditor reports a manager\'s / organiser\'s age group upward too',
-    /async loadEditor\(agId\)[\s\S]{0,1200}?this\.props\.onAgeChange\(agId\)/.test(scores));
-  check('…only when it actually changed, not on every editor reload',
-    /const ageChanged = agId !== this\.state\.editorAgeId;[\s\S]{0,900}?if \(ageChanged && typeof this\.props\.onAgeChange/.test(scores));
+  /* Aug 2026: loadEditor() is gone — the /scores Manager area was deleted
+     (claude/specs/spec-scores-manager-removal.md), so the editor half of this
+     sync channel no longer exists. The public half above is the whole
+     contract now; assert the deletion is total rather than leaving a check
+     anchored on code that no longer exists. */
+  check('the editor half of the channel is gone with the Manager area',
+    !/loadEditor/.test(scores));
 }
 
 /* ======================================================================== */
@@ -234,37 +237,6 @@ section('Scores & Standings: public Results tab calls onAgeChange upward');
     try { tab.onSelect(); } catch (e) { threw = true; }
     check('clicking a tab on the standalone /scores page (no onAgeChange prop) does not throw', !threw);
     check('…and still updates its own state normally', c.state.selectedAgeId === 'u9');
-  }
-}
-
-/* ======================================================================== */
-section('Scores & Standings: loadEditor calls onAgeChange upward, once per real change');
-{
-  function build2(props) { return build('Scores & Standings.dc.html', props); }
-
-  {
-    const calls = [];
-    const c = build2({ onAgeChange: (id) => calls.push(id) });
-    c.state = { ...c.state, session: { ageGroupId: 'u16b', token: 't' }, api: { getDraw: async () => ({ pools: [], _publish: null }) } };
-    await c.loadEditor('u16b');
-    eq('a manager landing on their own age group reports it upward', calls, ['u16b']);
-
-    await c.loadEditor('u16b'); // e.g. a re-load after a save, same group
-    eq('reloading the SAME age group (a save, a publish, a regenerate...) does not fire again', calls, ['u16b']);
-
-    await c.loadEditor('u9'); // organiser switches the admin picker
-    eq('switching the admin picker to a different group DOES fire, with the new id', calls, ['u16b', 'u9']);
-  }
-
-  {
-    // Standalone /scores again -- the editor is used there too (a manager can
-    // sign in directly on /scores, not only via the homepage embed).
-    const c = build2({});
-    c.state = { ...c.state, session: { ageGroupId: 'u9', token: 't' }, api: { getDraw: async () => ({ pools: [], _publish: null }) } };
-    let threw = false;
-    try { await c.loadEditor('u9'); } catch (e) { threw = true; }
-    check('logging in on the standalone /scores page (no onAgeChange prop) does not throw', !threw);
-    check('…and still sets editorAgeId normally', c.state.editorAgeId === 'u9');
   }
 }
 

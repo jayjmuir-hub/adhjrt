@@ -2148,22 +2148,6 @@ const FAULTS = [
     expect: ['clicking a tab on the standalone /scores page (no onAgeChange prop) does not throw'],
   },
   {
-    name: 'loadEditor loses its ageChanged guard, re-firing onAgeChange on every editor reload',
-    suite: 'test-fixtures-results-sync.js',
-    apply: () => patch('Scores & Standings.dc.html',
-      "    if (ageChanged && typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);",
-      "    if (typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);"),
-    expect: ['reloading the SAME age group (a save, a publish, a regenerate...) does not fire again'],
-  },
-  {
-    name: 'loadEditor stops reporting a manager/organiser’s age group upward at all',
-    suite: 'test-fixtures-results-sync.js',
-    apply: () => patch('Scores & Standings.dc.html',
-      "    if (ageChanged && typeof this.props.onAgeChange === 'function') this.props.onAgeChange(agId);\n",
-      ''),
-    expect: ['a manager landing on their own age group reports it upward'],
-  },
-  {
     name: 'runSimulateTournament’s pass-1 isFinal filter is inverted, so pass 1 no longer walks over the double-bracket semis',
     suite: 'test-simulate-tournament.js',
     apply: () => patch('Organizer.dc.html',
@@ -2236,6 +2220,49 @@ const FAULTS = [
       + "          /* knockout clear intentionally skipped */\n"
       + "        }"),
     expect: ['u9\'s saved draw had its knockout cleared'],
+  },
+
+  /* ---- /scores is purely public now (test-scores-public.js) ------------- */
+
+  {
+    name: 'the festival filter is dropped, offering U6/U7 tabs that can only say "no standings"',
+    suite: 'test-scores-public.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      'const publicAgeGroups = s.ageGroups.filter((a) => a.hasStandings);',
+      'const publicAgeGroups = s.ageGroups;'),
+    expect: ['festival groups are hidden from the public tabs'],
+  },
+  {
+    name: 'the footer\'s Manager sign-in pointer is deleted',
+    suite: 'test-scores-public.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      '<a href="/manager" style="color:#7f8794;font-size:12.5px;font-weight:700;letter-spacing:.3px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.18)" style-hover="color:#cdd2da">Manager sign-in &rarr;</a>',
+      ''),
+    expect: ['the footer carries a Manager sign-in link to /manager'],
+  },
+  {
+    name: 'an unpublished group\'s tables render anyway (sample data reaching parents)',
+    suite: 'test-scores-public.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "showTables: !!(st && st.ageGroup.hasStandings && !st.awaitingPublication),",
+      "showTables: !!(st && st.ageGroup.hasStandings),"),
+    expect: ['suppresses the tables'],
+  },
+  {
+    name: 'a session read creeps back into the public page',
+    suite: 'test-scores-public.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "    this.setState({ api, ageGroups, selectedAgeId: linked ? propAge : (firstComp && firstComp.id) }, () => {",
+      "    this.setState({ api, ageGroups, session: api.currentSession(), selectedAgeId: linked ? propAge : (firstComp && firstComp.id) }, () => {"),
+    expect: ['never reads a session'],
+  },
+  {
+    name: 'the team key\'s open/closed state stops being bound',
+    suite: 'test-scores-public.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      '      showTeamKey: s.showTeamKey, onToggleTeamKey: () => this.toggleTeamKey(),',
+      '      onToggleTeamKey: () => this.toggleTeamKey(),'),
+    expect: ['the team key renders and toggles'],
   },
 
   /* ---- signed-in routes point at /manager (test-organizer-manager-link.js) */
@@ -2430,8 +2457,8 @@ const FAULTS = [
   {
     name: 'the component starts reading an embedded prop again',
     suite: 'test-sponsors.js',
-    apply: () => patch('Scores & Standings.dc.html', '      isPublic: s.view === \'public\', isAdmin:',
-      '      showPartner: !this.props.embedded,\n      isPublic: s.view === \'public\', isAdmin:'),
+    apply: () => patch('Scores & Standings.dc.html', '      isPublic: true,',
+      '      showPartner: !this.props.embedded,\n      isPublic: true,'),
     expect: ['takes no `embedded` prop', 'NOT behind a showPartner gate'],
   },
   {
@@ -2448,7 +2475,13 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => {
       patch('Scores & Standings.dc.html', SC_MARK, '');
-      patch('Scores & Standings.dc.html', '    <div style="display:flex;gap:8px;background:#151517;', SC_MARK + '    <div style="display:flex;gap:8px;background:#151517;');
+      /* The Standings/Manager-area toggle that used to be the row's second
+         child was deleted with the Manager area (Aug 2026), so "a third
+         child" is now simply a sibling appended after the brand group,
+         before the header row closes. */
+      patch('Scores & Standings.dc.html',
+        '    </div>\n  </div>\n\n  <!-- ===================== PUBLIC ===================== -->',
+        '    </div>\n' + SC_MARK + '  </div>\n\n  <!-- ===================== PUBLIC ===================== -->');
     },
     expect: ['not a third child of the header row'],
   },
@@ -2561,7 +2594,8 @@ seed();
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
- 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js'].forEach((f) => {
+ 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
+ 'test-scores-public.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

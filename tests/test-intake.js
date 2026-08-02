@@ -598,12 +598,16 @@ check('neither is silently dropped', !V('team-registration', goodTeam()).drop
   if (mgr !== null && sco !== null) {
     check('Manager.dc.html reads a preference with /[A-Z]/i',
       /preferredPool \|\| ''\)\.match\(\/\[A-Z\]\/i\)/.test(mgr));
-    check('Scores & Standings.dc.html reads a preference with /[A-D]/i (NOT the same — known gap)',
-      /preferredPool \|\| ''\)\.match\(\/\[A-D\]\/i\)/.test(sco));
+    /* Aug 2026: the two-editors disagreement (parked item 5) ended by
+       DELETION — the /scores Manager area and its /[A-D]/i matcher are gone,
+       and no reading rule changed. Manager.dc.html's /[A-Z]/i is now the only
+       matcher, asserted above. What is asserted here is that the deletion is
+       total: no preference matcher of any width has crept back into the
+       now-public scores page. */
+    check('Scores & Standings.dc.html no longer reads a pool preference at all',
+      !/preferredPool \|\| ''\)\.match\(/.test(sco));
     check('Manager.dc.html has NOT been narrowed to A-C to match the form\'s new list',
       !/preferredPool \|\| ''\)\.match\(\/\[A-C\]\/i\)/.test(mgr));
-    check('Scores & Standings.dc.html has NOT been narrowed to A-C either',
-      !/preferredPool \|\| ''\)\.match\(\/\[A-C\]\/i\)/.test(sco));
   }
 }
 

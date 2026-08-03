@@ -1,31 +1,33 @@
 # tests/runall.ps1
 # ---------------------------------------------------------------------------
-# THIS IS NOT YET THE WHOLE SUITE. Thirteen more test files — 577 checks — are
-# still in C:\Users\jayjm\adhjrt-sim on jay-pc and are not in version control.
-# tests/README.md has the procedure for bringing them in, and the data check
-# that has to happen first because this repo is public.
+# THIS IS THE SUITE. The files named below, plus the fault-injection run at the
+# bottom, are the authority for this repo. A green run here is a green run.
 #
-# Until that is done, run BOTH before trusting a change.
+# The old C:\Users\jayjm\adhjrt-sim folder on jay-pc is NOT a missing half, and
+# does NOT need running alongside this. Triaged 2 Aug 2026: seven of its
+# thirteen files are stale or test subjects that have since been deleted, and
+# the rest overlap what is here. Optional extra signal at best. Detail in
+# tests/README.md and in CLAUDE.md's Tests section.
 #
 #   powershell tests/runall.ps1              everything
 #   powershell tests/runall.ps1 -NoProve     skip the slow fault-injection run
 #
 # Exits non-zero if anything fails, so it can gate a commit.
 
-# ⚠️ 'Continue', NOT 'Stop', AND THAT IS A BUG FIX (2 Aug 2026).
+# WARNING: 'Continue', NOT 'Stop', AND THAT IS A BUG FIX (2 Aug 2026).
 # With 'Stop', PowerShell treats ANYTHING node writes to stderr as a
-# terminating error — including a harmless Node warning. test-knockout-
+# terminating error - including a harmless Node warning. test-knockout-
 # brackets.js emits MODULE_TYPELESS_PACKAGE_JSON, so this script had been
 # aborting there every run: the file after it never ran, and neither did the
 # fault-injection pass at the bottom. It printed no failure and exited 1, which
 # reads like one test failing rather than a third of the run not happening.
-# Nothing is lost by relaxing it — every pass/fail decision below is made from
+# Nothing is lost by relaxing it - every pass/fail decision below is made from
 # $LASTEXITCODE, not from the error preference.
 $ErrorActionPreference = 'Continue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $failed = @()
 
-# THE EXPLICIT LIST. Add new test files here BY HAND — a file that is not named
+# THE EXPLICIT LIST. Add new test files here BY HAND - a file that is not named
 # here never runs again, and nothing will tell you.
 $tests = @(
   'test-registration.js',
@@ -93,5 +95,4 @@ if ($failed.Count -gt 0) {
 }
 
 Write-Host 'All green.' -ForegroundColor Green
-Write-Host 'Reminder: thirteen more test files are still on jay-pc only — see tests/README.md.' -ForegroundColor DarkYellow
 exit 0

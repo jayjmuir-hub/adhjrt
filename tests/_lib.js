@@ -12,8 +12,9 @@
    REPO PATH. Normally just the parent of this folder. ADHJRT_REPO still wins if
    it is set, and the old out-of-repo locations are still tried, so a stray copy
    of this file in someone's adhjrt-sim keeps working rather than failing
-   obscurely. Drop those fallbacks once the thirteen older files have moved in
-   here too — see tests/README.md. */
+   obscurely. Those fallbacks cost nothing and can go whenever that folder does
+   — it was triaged on 2 Aug 2026 and is history, not a pending migration; this
+   folder is the suite. See tests/README.md. */
 
 const fs = require('fs');
 const path = require('path');

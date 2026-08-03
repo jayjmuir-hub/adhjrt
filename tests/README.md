@@ -14,14 +14,22 @@ machine with a checkout and no path needs editing.
 
 ---
 
-## This folder is HALF the suite. The other half is still on one disk.
+## This folder IS the suite. The old sim folder is history, not a missing half.
 
-`C:\Users\jayjm\adhjrt-sim` on **jay-pc** holds thirteen more test files plus
-`validate-bindings.js` — **577 checks** — and its own `runall.ps1`. None of it is
-in version control anywhere.
+`C:\Users\jayjm\adhjrt-sim` on **jay-pc** holds thirteen older test files plus
+`validate-bindings.js`, and its own `runall.ps1`. None of it is in version
+control anywhere.
 
-That is the problem this folder exists to end, and it is only half ended. Moving
-the rest in is a job for a session bridged to jay-pc:
+**It was triaged on 2 Aug 2026 and it is no longer coverage you are missing.**
+Seven of its files are stale or test subjects that have since been deleted —
+their live coverage moved in here — and the rest overlap what is already in this
+folder. **Treat this folder as the authority. Do not tell a session it has to
+run both**; that instruction sat in `runall.ps1` for a day after the triage and
+sent people chasing a suite that had been superseded.
+
+What is left there is optional extra signal, and pruning it is housekeeping
+rather than a gap. If anyone ever does move the remainder in, it is a job for a
+session bridged to jay-pc:
 
 1. **Read every file first and check for real registration data.** This repo is
    **public**. The rehearsal used invented players (the giveaway is the phone
@@ -38,7 +46,7 @@ the rest in is a job for a session bridged to jay-pc:
    lives outside the repo.
 6. Delete `C:\Users\jayjm\adhjrt-sim` only after all of that passes.
 
-Until step 6, run **both** suites before trusting a change.
+None of that is blocking. A green run of `runall.ps1` is a green run.
 
 ---
 
@@ -56,8 +64,10 @@ checks not just that a suite fails but that **the check which fails is the one
 claiming to guard that behaviour**. A suite that dies with an exception "fails"
 for every fault and proves nothing.
 
-Run it after changing either the code under test or the tests themselves. 17
-faults, and all 17 have to be caught by name.
+Run it after changing either the code under test or the tests themselves. Every
+fault has to be caught by name — **370 of them as of 3 Aug 2026**, and the number
+climbs with every feature. Trust the run's own last line over this sentence; it
+prints `N/N faults caught` and the count of suites clean on an undamaged copy.
 
 ---
 
@@ -84,5 +94,9 @@ first place. See step 1 above.
 | `test-intake.js` | the sheet column order, the round trip between the writer and the two readers, the allow-list, the validation rules, the rate limit, the whole submission flow and the thinness of the function itself — 468 checks |
 | `test-functions-load.js` | loads and CALLS every Netlify function, signed out and signed in — the only test that executes them at all — 170 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 171 faults, all caught by the named check |
-| `runall.ps1` | the explicit list |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 370 faults, all caught by the named check |
+| `runall.ps1` | the explicit list — **the whole suite**, this file plus the 31 above |
+
+⚠️ **The per-file check counts above are a snapshot and they drift.** They are
+not asserted by anything. `runall.ps1`'s own output is the current answer; this
+table is a guide to what each file is *for*.

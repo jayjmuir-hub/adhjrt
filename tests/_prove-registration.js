@@ -1,6 +1,9 @@
 /* tests/_prove-registration.js
    ------------------------------------------------------------------------
-   NOT part of runall.ps1. This is the thing that makes test-registration.js
+   NOT in runall.ps1's $tests list — it is run as a separate step at the bottom
+   of that script, and skipped by `runall.ps1 -NoProve`, because it is slow (a
+   node process per fault) and because it is a check on the TESTS, not on the
+   site. This is the thing that makes the rest of the suite
    worth running: it breaks the real code on purpose, one fault at a time, and
    checks that the suite NOTICES — and that the check which notices is the one
    that claims to be guarding that behaviour.

@@ -1,13 +1,16 @@
 /* ============================================================
    ADH JRT — Organizer data layer  (LIVE backend, with local fallback)
    ------------------------------------------------------------
-   Organizer accounts self-signup via organizer-signup.js (gated by a
-   shared invite code) and are stored server-side in Netlify Blobs.
+   Organizer accounts are created in the back office (Accounts -> Create a
+   login -> Organiser) and stored server-side in Netlify Blobs. Self-signup
+   via organizer-signup.js is CLOSED as of 3 Aug 2026 — ORGANIZER_INVITE_CODE
+   was deleted in Netlify and that endpoint refuses every signup while it is
+   absent.
    Registrations are read live from the two Google Sheets via
    get-registrations.js, which requires the signed-in organizer's
    session token. See those files in netlify/functions/ for one-time
-   setup (ORGANIZER_INVITE_CODE + SESSION_SECRET env vars, on top of
-   the GOOGLE_* vars documented in submission-created.js).
+   setup (SESSION_SECRET, on top of the GOOGLE_* vars documented in
+   submission-created.js). ORGANIZER_INVITE_CODE is deliberately NOT set.
 
    LOCAL PREVIEW: before this site is deployed to Netlify, none of the
    /.netlify/functions/* endpoints exist, so every call below falls back
@@ -168,10 +171,11 @@ export async function revokeAccount(username) {
    round trip.
 
    `role` is 'manager' (needs ageGroupId) or 'organizer' (takes an optional
-   title). Being able to make an ORGANIZER here is what lets
-   ORGANIZER_INVITE_CODE be deleted from Netlify altogether: one shared code for
-   everybody, with no expiry and no way to revoke it for one person, was the
-   weakest thing about the old route. */
+   title). Being able to make an ORGANIZER here is what let
+   ORGANIZER_INVITE_CODE be deleted from Netlify altogether, which Jay did on
+   3 Aug 2026: one shared code for everybody, with no expiry and no way to
+   revoke it for one person, was the weakest thing about the old route. This
+   is now the only way an organiser account gets made. */
 export async function createAccount({ role, name, username, password, ageGroupId, title }) {
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
     method: 'POST',

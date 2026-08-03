@@ -523,6 +523,18 @@ const FAULTS = [
     expect: ['a missing invite code refuses every signup'],
   },
   {
+    /* The twin of the organizer-signup.js fault above, for the Google path.
+       Since 3 Aug 2026 organiser signup is closed by the ABSENCE of
+       ORGANIZER_INVITE_CODE, and that only holds while BOTH paths refuse on
+       absence. This half had only its mismatch clause pinned. */
+    name: 'google-auth.js stops refusing organiser signup when ORGANIZER_INVITE_CODE is absent',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      'if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
+      'if (inviteCode !== process.env.ORGANIZER_INVITE_CODE) {'),
+    expect: ['refuses on the variable being ABSENT'],
+  },
+  {
     name: 'the Registration tab stops reading the shared validator',
     suite: 'test-registration-panel.js',
     apply: () => patch('Organizer.dc.html', 'api.validateSettings(', 'this._ownValidate('),

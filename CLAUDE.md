@@ -144,7 +144,7 @@ age group from the match id itself; preserve that pattern).
 
 ## Environment variables (set in Netlify, never in the repo)
 
-`SESSION_SECRET`, `MANAGER_INVITE_CODES`, `ORGANIZER_INVITE_CODE`,
+`SESSION_SECRET`, `MANAGER_INVITE_CODES`,
 `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`,
 `GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`,
 `BLOBS_SITE_ID`, `BLOBS_TOKEN`,
@@ -411,16 +411,32 @@ approval round trip. `accounts-admin.js` `action:'create'` takes a `role`
 - An **organiser** needs none — they see everything — and takes an optional
   free-text title.
 
-**The point of being able to create an organiser here is that
-`ORGANIZER_INVITE_CODE` can now be DELETED in Netlify.** `organizer-signup.js`
-already refuses every signup when that variable is absent, so removing it shuts
-self-signup off with no deploy and no code change. That closes two things at
-once: one shared code for everybody with no expiry, no per-person revocation and
-no record of who used it; and the first-organiser-auto-approved bootstrap, which
-would hand an approved organiser account — and children's medical notes — to
-whoever signed up first if the accounts blob were ever lost.
+⚠️ **`ORGANIZER_INVITE_CODE` WAS DELETED IN NETLIFY ON 3 AUG 2026, so this is
+now the ONLY way an organiser account gets made.** `organizer-signup.js`
+refuses every signup while that variable is absent, so the deletion shut
+self-signup off with no deploy and no code change. It closed two things at
+once: one shared code for everybody with no expiry, no per-person revocation
+and no record of who used it; and the first-organiser-auto-approved bootstrap,
+which would hand an approved organiser account — and children's medical notes —
+to whoever signed up first if the accounts blob were ever lost.
 
-Jay's call whether to delete it. Until he does, the old route still works.
+**Google organiser signup is closed by the same deletion** — `google-auth.js`
+reads the same variable. Signing IN with Google is unaffected, both roles.
+
+⚠️ **`organizer-signup.js` is kept rather than deleted, because it is the
+recovery path.** If every organiser account were ever lost there would be no
+way back in: re-add `ORGANIZER_INVITE_CODE` in Netlify, sign up (the first
+organiser auto-approves), then delete it again. The variable is read per
+request, so neither step needs a deploy. `test-accounts.js`'s "a missing invite
+code refuses every signup" is what keeps the closed state true and is now
+load-bearing.
+
+**`MANAGER_INVITE_CODES` is NOT redundant the same way and stays.** Fifteen age
+groups means the alternative is creating fifteen accounts by hand and
+transmitting fifteen passwords — and a password is a working credential the
+moment it exists, where an invite code yields only a PENDING account somebody
+still has to approve. The manager codes are also scoped one per age group,
+where the organiser code was one secret for total access.
 
 ### One sign-in for everything (Aug 2026)
 
@@ -941,10 +957,19 @@ password hid this; that comes off about 20 days before the tournament.
   it too, so the four endpoints cannot drift apart on the wording.
 - `tests/test-signup-ratelimit.js` DRIVES all three handlers; seven faults.
 
-**The cheaper half of this is not code:** `organizer-signup.js` already refuses
-every signup when `ORGANIZER_INVITE_CODE` is absent, so deleting that variable
-in Netlify shuts organiser self-signup off entirely, with no deploy. See
-Accounts above.
+**The cheaper half of this was not code, and it is DONE:**
+`ORGANIZER_INVITE_CODE` was deleted in Netlify on 3 Aug 2026, so organiser
+self-signup is closed outright and the rate limit is defence in depth there.
+It still does real work on the manager codes, which stay. See Accounts above.
+
+⚠️ **The severity of this was overstated when it shipped, and the record should
+say so.** A self-signed-up organiser lands `approved: false` (the auto-approve
+only fires when NO organiser exists), and `login.js` refuses a pending account
+with a 403 — so guessing the code never yielded access to anyone's data. It
+yielded a pending account awaiting an organiser's approval. The real risks were
+account-spam filling the store, a plausible pending account being approved by
+mistake, and the bootstrap if the store were ever emptied. Worth fixing; not
+the emergency the commit message described.
 
 ⚠️ **Twenty hits at the same instant cannot tell a fixed window from a sliding
 one.** The first rollover test did exactly that and missed a fault that pushed

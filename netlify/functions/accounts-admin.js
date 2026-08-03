@@ -22,10 +22,11 @@
 //                    organizer except sharing ORGANIZER_INVITE_CODE and then
 //                    approving them — one code for everybody, no expiry, no
 //                    revoking it for one person, and no record of who used it.
-//                    With this here, that variable can be DELETED from Netlify
-//                    and organizer-signup.js refuses every signup on its own
-//                    (it already 401s when the variable is absent), which also
-//                    shuts the first-organizer-auto-approved bootstrap.
+//                    With this here, that variable WAS deleted from Netlify
+//                    (3 Aug 2026), and organizer-signup.js now refuses every
+//                    signup on its own — it 401s while the variable is absent
+//                    — which also shut the first-organizer-auto-approved
+//                    bootstrap. THIS IS NOW THE ONLY WAY TO MAKE AN ORGANISER.
 //
 // 'password' and 'changeMine' BOTH EXISTED IN THE UI AND NOWHERE ELSE until
 // 27 Jul 2026. Organizer.dc.html called api.resetAccountPassword() and

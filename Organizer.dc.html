@@ -2834,7 +2834,7 @@ class Component extends DCLogic {
       onCmRoleManager: () => this.setState({ cmRole: 'manager', cmError: '', cmSuccess: '' }),
       onCmRoleOrganizer: () => this.setState({ cmRole: 'organizer', cmError: '', cmSuccess: '' }),
       cmRoleNote: s.cmRole === 'organizer'
-        ? 'An organiser sees every registration, including medical notes, and can change the tournament-wide settings. Creating one here means nobody needs the shared invite code — once every organiser is made this way, ORGANIZER_INVITE_CODE can be deleted in Netlify and self-signup shuts off by itself.'
+        ? 'An organiser sees every registration, including medical notes, and can change the tournament-wide settings. This is the only way to make one: the shared invite code was deleted in August 2026, so organiser self-signup is closed.'
         : 'A manager sees the scores, fixtures and registrations for one age group only — in full, medical notes included, which is deliberate for player welfare.',
       cmTitle: s.cmTitle,
       onCmTitle: (e) => this.setState({ cmTitle: e.target.value }),

@@ -37,9 +37,12 @@
 //      response is pending-or-session exactly like every other signup path.
 //
 // ONE-TIME SETUP: GOOGLE_CLIENT_ID must be set (see _googleAuth.js).
-// MANAGER_INVITE_CODES / ORGANIZER_INVITE_CODE / SESSION_SECRET are the same
-// variables manager-signup.js/organizer-signup.js already use — nothing new
-// to configure there.
+// MANAGER_INVITE_CODES / SESSION_SECRET are the same variables
+// manager-signup.js/organizer-signup.js already use — nothing new to
+// configure there. ⚠️ ORGANIZER_INVITE_CODE was DELETED in Netlify on
+// 3 Aug 2026, so the organiser branch below refuses every signup, by the
+// same guard and for the same reasons as organizer-signup.js. Signing IN
+// with Google is unaffected; only organiser signup is closed.
 
 const { loadAccounts, saveAccounts, sign, blobStore } = require('./_auth');
 const { checkSignupRate, tooManyResponse } = require('./_ratelimit');

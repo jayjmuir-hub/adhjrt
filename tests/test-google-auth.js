@@ -88,6 +88,16 @@ section('google-auth.js — creating a NEW account via Google uses the same rule
   check('an organiser needs ORGANIZER_INVITE_CODE, same env var as organizer-signup.js',
     /inviteCode !== process\.env\.ORGANIZER_INVITE_CODE/.test(src));
 
+  /* ⚠️ LOAD-BEARING SINCE 3 AUG 2026. Jay deleted ORGANIZER_INVITE_CODE in
+     Netlify, so organiser signup is closed by the ABSENCE of a variable — and
+     that only holds while BOTH signup paths refuse on absence, not just on a
+     mismatch. organizer-signup.js's half is asserted in test-accounts.js; this
+     is the Google half, which had only the mismatch clause pinned and would
+     have passed with the absence clause deleted. */
+  check('…and refuses on the variable being ABSENT, not just on a mismatch',
+    /!process\.env\.ORGANIZER_INVITE_CODE \|\| inviteCode !== process\.env\.ORGANIZER_INVITE_CODE/.test(src),
+    'deleting the env var must be enough to shut Google organiser signup off too');
+
   check('the first-ever organiser is still auto-approved, same bootstrap rule as organizer-signup.js',
     /isFirstOrganizer = role === 'organizer' && !accounts\.some\(\(a\) => a\.role === 'organizer'\)/.test(src));
   check('…and every organiser after that starts pending',

@@ -653,63 +653,74 @@ const FAULTS = [
   },
 
   /* ---- the map chips being readable -----------------------------------
-     Every one of these was possible before 27 Jul 2026 and one of them was
-     actually shipped: white text on a see-through chip. */
+     Two generations of this. Before 27 Jul 2026: white text on a
+     see-through tinted chip (shipped). 27 Jul - 2 Aug: computed ink ON the
+     tint — WCAG-clean and still hard to read. Since 2 Aug the chip is an
+     opaque white card with constant dark ink and an outlined swatch of the
+     exact tint per group; the ink-picking machinery is deleted, and these
+     faults guard the new design instead. */
 
   {
-    name: 'the chip ink goes back to always-white',
+    name: 'the chip body goes translucent again (the original bug, third attempt)',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      'text-align:center;color:${chipFg};', 'text-align:center;color:#fff;'),
-    expect: ['carries dark ink', 'not hard-coded to white'],
+      "          chipBg = '#FFFFFF';", "          chipBg = 'rgba(255,255,255,0.72)';"),
+    expect: ['the chip body is opaque white'],
   },
   {
-    name: 'the chip is made see-through again (the original bug)',
-    suite: 'test-venue-map.js',
-    apply: () => patch('Organizer.dc.html', '            ? fills[0]', "            ? fills[0] + 'E0'"),
-    expect: ['the chip is opaque'],
-  },
-  {
-    name: 'a time-shared chip picks its ink from the first tint only',
+    name: 'the chip ink goes back to being keyed off the tint',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      '  const worst = (ink) => list.reduce((m, t) => Math.min(m, contrastRatio(ink, t)), Infinity);',
-      '  const worst = (ink) => contrastRatio(ink, list[0]);'),
-    expect: ['time-share chip takes dark ink', 'clears'],
+      "          chipFg = '#1A1C1F';", '          chipFg = blockTints[0];'),
+    expect: ['the ink is the constant page ink'],
   },
   {
-    name: 'the contrast top-up is removed, leaving two tints just short',
+    name: 'the swatch loses its exact tint, collapsing every group to one grey',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      '    for (let step = 1; step <= 8 && contrastRatio(ink, c) < CHIP_MIN_CONTRAST; step += 1) {',
-      '    for (let step = 1; step <= 0; step += 1) {'),
-    expect: ['clears'],
+      "background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)",
+      "background:#5A626E;border:1px solid rgba(0,0,0,0.35)"),
+    expect: ['the swatch carries the EXACT tint'],
   },
   {
-    name: 'the top-up is applied to every tint instead of only the ones that need it',
-    suite: 'test-venue-map.js',
-    apply: () => patch('Organizer.dc.html', '    let c = t;', '    let c = mixHex(t, away, 0.05);'),
-    expect: ['is left exactly as it is', 'need no adjustment'],
-  },
-  {
-    name: 'relLuminance drops the sRGB gamma step',
+    name: 'the swatch outline is removed, so the pale tints vanish on the white card',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      '    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);',
-      '    return c;'),
-    /* Note what does NOT catch this: the contrast ratios still clear 4.5,
-       because the top-up compensates for the worse ink choice. The damage
-       shows as more colours being nudged than need to be — and, directly, as
-       mid-grey reading 50% instead of 21.6%. */
-    expect: ['the gamma step is applied', 'need no adjustment'],
+      "background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)",
+      "background:${AGE_TINT[ag] || '#5A626E'}"),
+    expect: ['outlined so pale tints register'],
   },
   {
-    name: 'contrastRatio drops the +0.05 offsets, so dark colours score absurdly well',
+    name: 'the age-group code is drawn in the tint again',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      '  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);',
-      '  return Math.max(la, lb) / Math.min(la, lb);'),
-    expect: ['black on white is the maximum ratio', 'white ink on U6 red', 'clears'],
+      "            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:#1A1C1F',",
+      "            codeStyle: `font-size:14px;font-weight:800;letter-spacing:.3px;color:${AGE_TINT[ag] || '#5A626E'}`,"),
+    expect: ['the code is constant dark ink, never the tint'],
+  },
+  {
+    name: 'a shared block collapses back to one swatch',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      '          mapGroups: blockUsers.map((ag) => ({',
+      '          mapGroups: blockUsers.slice(0, 1).map((ag) => ({'),
+    expect: ['a shared block carries two swatches'],
+  },
+  {
+    name: 'the schematic label goes back to tint-on-tint ink',
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      "              who = users[0].toUpperCase(); whoColor = '#1A1C1F';",
+      '              who = users[0].toUpperCase(); whoColor = tints[0];'),
+    expect: ['the label ink is the dark page ink, never the tint'],
+  },
+  {
+    name: "the schematic time-share label goes back to the dark-mode era's light grey",
+    suite: 'test-venue-map.js',
+    apply: () => patch('Organizer.dc.html',
+      "              whoColor = '#1A1C1F';  /* was #e7eaef",
+      "              whoColor = '#e7eaef';  /* was #e7eaef"),
+    expect: ['the shared label is dark ink too'],
   },
   {
     name: 'the block name on the map shrinks back to 11px',

@@ -448,7 +448,19 @@
                               <div style="{{ blk.mapNameStyle }}">{{ blk.name }}</div>
                               <div style="{{ blk.mapSplitStyle }}">{{ blk.mapSplit }}</div>
                             </div>
-                            <div style="{{ blk.mapWhoStyle }}">{{ blk.mapWho }}</div>
+                            <sc-if value="{{ blk.hasUsers }}">
+                              <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-top:4px">
+                                <sc-for list="{{ blk.mapGroups }}" as="mg" hint-placeholder-count="1">
+                                  <span style="display:inline-flex;align-items:center;gap:4px">
+                                    <span style="{{ mg.swatchStyle }}"></span>
+                                    <span style="{{ mg.codeStyle }}">{{ mg.code }}</span>
+                                  </span>
+                                </sc-for>
+                              </div>
+                            </sc-if>
+                            <sc-if value="{{ blk.isFree }}">
+                              <div style="{{ blk.mapWhoStyle }}">{{ blk.mapWho }}</div>
+                            </sc-if>
                           </div>
                         </sc-if>
                       </sc-for>
@@ -944,91 +956,18 @@ const AGE_TINT = {
   u18b: '#5B8DEF', u18g: '#40C4B4',
 };
 
-/* ============================================================
-   READABLE TEXT ON A COLOURED CHIP.
-   ------------------------------------------------------------
-   The map chips sit on top of somebody else's artwork — a bright, light
-   drawing with its own white-on-green labels. White text on every tint does
-   not work: U8 is #f5c518 and U9 is #8DC63F, and white on those is around
-   1.8:1, which is not "a bit hard to read", it is unreadable.
-
-   So the ink is CHOSEN, not fixed. These are the real WCAG formulas rather
-   than an eyeballed brightness fudge, because the whole point is to be able to
-   assert a contrast RATIO in a test instead of arguing about whether something
-   looks alright on the screen it was written on.
-   ============================================================ */
-
-/* WCAG 2.1 relative luminance of a #rrggbb colour. */
-function relLuminance(hex) {
-  const h = String(hex || '').replace('#', '');
-  if (!/^[0-9a-fA-F]{6}$/.test(h)) return 0;
-  const lin = [0, 2, 4].map((i) => {
-    const c = parseInt(h.substr(i, 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-}
-
-/* WCAG contrast ratio between two colours. 1 = identical, 21 = black on white. */
-function contrastRatio(a, b) {
-  const la = relLuminance(a), lb = relLuminance(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
-
-/* The two inks a chip may use. Near-black rather than pure black so it matches
-   the rest of the panel; near-white for the same reason. */
-const CHIP_INK_DARK = '#111317';
-const CHIP_INK_LIGHT = '#FFFFFF';
-
-/* WCAG AA for text this size. Not decoration: it is the number the test
-   asserts, which is the only reason any of this is worth writing. */
-const CHIP_MIN_CONTRAST = 4.5;
-
-/* Picks the ink for a chip carrying one or more tints.
-
-   MAXIMISES THE WORST CASE, not the average. A time-shared block is a gradient
-   of two tints and one piece of text lies across both, so the ink has to be
-   legible on the harder of them — averaging would let a chip be beautiful on
-   one half and unreadable on the other. U6 red plus U7 orange is exactly that
-   case: white is 4.8:1 on the red but 2.9:1 on the orange, so dark wins. */
-function chipInk(tints) {
-  const list = (Array.isArray(tints) ? tints : [tints]).filter(Boolean);
-  if (!list.length) return CHIP_INK_LIGHT;
-  const worst = (ink) => list.reduce((m, t) => Math.min(m, contrastRatio(ink, t)), Infinity);
-  return worst(CHIP_INK_DARK) >= worst(CHIP_INK_LIGHT) ? CHIP_INK_DARK : CHIP_INK_LIGHT;
-}
-
-/* Moves a colour a fraction of the way toward another. */
-function mixHex(hex, toward, amount) {
-  const h = String(hex || '').replace('#', ''), g = String(toward || '').replace('#', '');
-  if (!/^[0-9a-fA-F]{6}$/.test(h) || !/^[0-9a-fA-F]{6}$/.test(g)) return hex;
-  const k = Math.max(0, Math.min(1, amount));
-  const ch = [0, 2, 4].map((i) => {
-    const a = parseInt(h.substr(i, 2), 16), b = parseInt(g.substr(i, 2), 16);
-    return Math.round(a + (b - a) * k).toString(16).padStart(2, '0');
-  });
-  return '#' + ch.join('').toUpperCase();
-}
-
-/* Even after picking the better ink, two of the fifteen tints land just under
-   4.5:1 and a red/orange time-share lands at 3.9. Rather than accept that or
-   hand-edit the palette — which is shared with the schematic and the standings
-   — the chip's own fill is nudged away from the ink until it clears.
-
-   BOUNDED AND ONLY WHEN NEEDED. A tint that already passes is returned
-   untouched, and the shift is capped at 40% so a colour cannot drift into
-   being a different colour: past that the chip is drawn as-is rather than
-   quietly becoming pastel. Most cases need one or two 5% steps. */
-function chipFill(tints, ink) {
-  const away = ink === CHIP_INK_DARK ? '#FFFFFF' : '#000000';
-  return (Array.isArray(tints) ? tints : [tints]).map((t) => {
-    let c = t;
-    for (let step = 1; step <= 8 && contrastRatio(ink, c) < CHIP_MIN_CONTRAST; step += 1) {
-      c = mixHex(t, away, step * 0.05);
-    }
-    return c;
-  });
-}
+/* THE CHIP CONTRAST MACHINERY IS GONE (2 Aug 2026). The map chips used to
+   be filled with the age-group tint, with an ink chosen per chip by real
+   WCAG maths (relLuminance / contrastRatio / chipInk / chipFill / mixHex
+   lived here) and the fill nudged when even the better ink fell short.
+   Jay still found the chips hard to read — twice — because the real
+   problem was using the TINT AS A TEXT SURFACE at all, on top of a busy
+   bright drawing. The redesign: every chip is an opaque WHITE card with
+   the page's constant dark ink, and the tint appears as a small outlined
+   swatch beside each age-group code (the schematic labels went dark-ink
+   for the same reason). Contrast is now a constant by construction
+   (#1A1C1F on #FFFFFF is ~16.9:1), so there is nothing left to compute —
+   test-venue-map.js pins the new invariants instead. */
 
 /* How a block is cut up, from the number of surfaces it has that day. Shown on
    the chip so the split can be read off the map without switching to the
@@ -1455,16 +1394,18 @@ class Component extends DCLogic {
            The rim is near-black rather than the tint: the tint against a light
            green pitch has almost no edge, and without an edge two chips that
            overlap read as one. */
+        /* An OPAQUE WHITE card with the page's dark ink — the tint is a
+           swatch beside each code, never the surface the text sits on (see
+           the tombstone above venueMaps' helpers). The free chip stays the
+           dark dashed ghost: "nobody here" should look unlike every real
+           allocation at a glance. */
         let chipBg, chipBorder, chipFg;
         if (!blockUsers.length) {
           chipBg = '#111317'; chipBorder = '1px dashed rgba(255,255,255,0.45)'; chipFg = '#CFD4DC';
         } else {
-          chipFg = chipInk(blockTints);
-          const fills = chipFill(blockTints, chipFg);
+          chipBg = '#FFFFFF';
           chipBorder = '2px solid rgba(0,0,0,0.55)';
-          chipBg = fills.length === 1
-            ? fills[0]
-            : `linear-gradient(100deg, ${fills.map((t, i) => `${t} ${(i * 100) / fills.length}%, ${t} ${((i + 1) * 100) / fills.length}%`).join(', ')})`;
+          chipFg = '#1A1C1F';
         }
 
         return {
@@ -1476,6 +1417,18 @@ class Component extends DCLogic {
           placed,
           notPlaced: !placed,
           mapWho: blockUsers.length ? blockUsers.map((a) => a.toUpperCase()).join(' · ') : 'free',
+          hasUsers: blockUsers.length > 0,
+          isFree: blockUsers.length === 0,
+          /* One swatch-plus-code per group. The swatch carries the EXACT
+             tint (it is the same identity the schematic and the standings
+             use) and is outlined so the pale tints (U8 yellow, U9 green)
+             still register against the white card. The code itself is
+             always the dark page ink. */
+          mapGroups: blockUsers.map((ag) => ({
+            code: ag.toUpperCase(),
+            swatchStyle: `display:inline-block;flex:none;width:11px;height:11px;border-radius:3px;background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)`,
+            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:#1A1C1F',
+          })),
           /* How the block is cut up, on the chip, so it can be read off the map
              without switching views. Kept on the same line as the name and set
              a size down, because it is the answer to a second question. */
@@ -1513,7 +1466,10 @@ class Component extends DCLogic {
               title = `${p} — no age group is using this pitch`;
             } else if (users.length === 1) {
               bg = tints[0] + '30'; border = `1px solid ${tints[0]}`;
-              who = users[0].toUpperCase(); whoColor = tints[0];
+              /* Dark ink, NOT the tint — tint-coloured text on a wash of the
+                 same tint was near-invisible on the light page (Jay, 2 Aug).
+                 The tint still identifies the group via the fill and border. */
+              who = users[0].toUpperCase(); whoColor = '#1A1C1F';
               title = `${p} — ${nameOf(users[0])}`;
             } else {
               /* TWO GROUPS ON ONE PITCH IS A TIME-SHARE, NOT A CLASH. D4 and D5
@@ -1526,7 +1482,7 @@ class Component extends DCLogic {
               bg = `linear-gradient(100deg, ${stops})`;
               border = '1px solid rgba(0,0,0,0.34)';
               who = users.map((a) => a.toUpperCase()).join(' · ');
-              whoColor = '#e7eaef';
+              whoColor = '#1A1C1F';  /* was #e7eaef — light grey from the dark-mode era */
               title = `${p} — shared by ${users.map(nameOf).join(' and ')}. Two groups on one pitch at different times is a time-share, not a clash.`;
             }
             return {

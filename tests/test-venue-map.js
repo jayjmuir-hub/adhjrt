@@ -68,8 +68,7 @@ function helpers() {
   const m = t.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
   // eslint-disable-next-line no-new-func
   return new Function('DCLogic', 'window', 'document',
-    m[1] + '\n;return { relLuminance, contrastRatio, chipInk, chipFill, mixHex, splitMark, splitLabel,'
-         + ' AGE_TINT, CHIP_INK_DARK, CHIP_INK_LIGHT, CHIP_MIN_CONTRAST };')(
+    m[1] + '\n;return { splitMark, splitLabel, AGE_TINT };')(
     DCLogic, { addEventListener() {} },
     { addEventListener() {}, body: { style: {} }, baseURI: 'https://adhjrt.com/', getElementById: () => null }
   );
@@ -243,7 +242,11 @@ section('Who is on each pitch');
   const u10 = cell(sat, 'C5'), u11 = cell(sat, 'C4');
   check('a used pitch is tinted', /background:#[0-9A-Fa-f]{6}30/.test(u10.style), u10.style);
   check('two different groups get two different tints', u10.style !== u11.style);
-  check('the tint matches the label colour', u10.whoColor && u10.style.includes(u10.whoColor.slice(1)));
+  /* 2 Aug 2026: the label used to be drawn IN the tint, on a wash of the
+     same tint — near-invisible on the light page. Dark ink now; the tint
+     identifies the group through the fill and border instead. */
+  eq('the label ink is the dark page ink, never the tint', u10.whoColor, '#1A1C1F');
+  check('the tint still identifies the cell — solid in the border', /border:1px solid #[0-9A-Fa-f]{6}/.test(u10.style), u10.style);
   check('the tooltip names the group in full', /U10 Mixed Contact/.test(u10.title), u10.title);
 }
 
@@ -258,6 +261,7 @@ section('A time-share is drawn as a time-share, NOT as a problem');
   eq('D4a names both groups', d4a.who, 'U6 · U7');
   check('…as a split of both colours', d4a.style.includes('linear-gradient'), d4a.style);
   check('…and NOT in a warning colour', !/f5c518|8F6400|E11B22|ff8a8a|A62626/i.test(d4a.style.replace(/linear-gradient\([^)]*\)/, '')), d4a.style);
+  eq('the shared label is dark ink too, not the dark-mode-era light grey', d4a.whoColor, '#1A1C1F');
   check('the tooltip says it is a time-share, not a clash', /time-share, not a clash/i.test(d4a.title), d4a.title);
   check('the tooltip names both groups in full', /U6 Tag/.test(d4a.title) && /U7 Tag/.test(d4a.title), d4a.title);
 
@@ -416,6 +420,10 @@ section('Every {{ token }} the schematic uses is returned');
       vm: vals.vMaps[0],
       blk: vals.vMaps[0].blocks[0],
       pp: vals.vMaps[0].blocks[0].pitches[0],
+      /* mg = one swatch-plus-code entry (2 Aug 2026 chip redesign). The
+         first block on the shipped layout is D5, which is occupied, so its
+         mapGroups is never empty. */
+      mg: (vals.vMaps[0].blocks[0].mapGroups || [])[0],
       nt: oddVals.vMaps[0].notes[0],
       st: oddVals.vMaps[0].strays[0],
     };
@@ -779,97 +787,21 @@ section('The server side of the positions');
 /* ====================================================================== */
 section('The map labels can actually be read');
 
-/* WHY THIS SECTION EXISTS. Jay, 27 July 2026: "the labels over the map are a
-   little difficult to read". The cause was not the font size. The chips were
-   the age-group tint at 88% opacity with white text on top, sitting on a
-   bright, light drawing that has its own white-on-green labels — so the map
-   showed through every label, and on the lighter tints white text was around
-   1.8:1, which is not hard to read, it is not readable.
-
-   THE ASSERTION THAT MATTERS is not "the chip is opaque" or "the font is
-   bigger". It is that the ink the code chooses clears a CONTRAST RATIO against
-   the fill the code chooses, for every colour combination the layout can
-   produce. That is a number, so it can be checked; "looks alright" cannot, and
-   "looks alright" is what shipped the problem. */
+/* WHY THIS SECTION EXISTS — rewritten 2 Aug 2026. Jay found the chips hard
+   to read twice: first white-on-tint at 88% opacity (fixed 27 Jul with
+   WCAG-computed inks and nudged fills), then STILL hard to read, because
+   the real problem was using the tint as a text surface at all on top of a
+   bright, busy drawing. The redesign removes the computation entirely:
+   every occupied chip is an opaque WHITE card carrying the page's constant
+   dark ink, and each age group appears as an outlined swatch of its EXACT
+   tint beside its code. #1A1C1F on #FFFFFF is ~16.9:1 — a constant, so
+   there is no ratio left to compute and the old machinery (relLuminance /
+   contrastRatio / chipInk / chipFill / mixHex) is deleted. What CAN still
+   silently rot is pinned below: the body staying opaque white, the ink
+   staying constant and never tint-keyed, the swatch carrying the exact
+   tint with its outline, and every group getting exactly one swatch. */
 {
   const H = helpers();
-  const TINTS = Object.values(H.AGE_TINT);
-
-  /* The maths first, against values with known answers, so a failure further
-     down means the picking is wrong rather than the arithmetic. */
-  eq('black on white is the maximum ratio', Math.round(H.contrastRatio('#000000', '#FFFFFF')), 21);
-  eq('a colour against itself is the minimum', Math.round(H.contrastRatio('#8DC63F', '#8DC63F')), 1);
-  check('the ratio does not care which way round it is given',
-    Math.abs(H.contrastRatio('#111317', '#F5C518') - H.contrastRatio('#F5C518', '#111317')) < 1e-9);
-  check('white is lighter than black', H.relLuminance('#FFFFFF') > H.relLuminance('#000000'));
-  eq('junk has no luminance rather than throwing', H.relLuminance('not a colour'), 0);
-  /* THE GAMMA STEP, pinned to a number. sRGB channel values are not linear
-     light, and skipping the conversion is the easy mistake: it looks like it
-     works, because black and white still come out 0 and 1. It is the middle
-     that moves. Mid-grey is 21.6% of white's light, not 50% — assert that, or
-     nothing here notices the model being wrong, only that the colours came out
-     a bit muddier. */
-  check('mid-grey is 21.6% of white, not 50% — the gamma step is applied',
-    Math.abs(H.relLuminance('#808080') - 0.2159) < 0.002, H.relLuminance('#808080').toFixed(4));
-  eq('white is exactly 1', Math.round(H.relLuminance('#FFFFFF') * 1000) / 1000, 1);
-  eq('black is exactly 0', H.relLuminance('#000000'), 0);
-
-  /* The two cases that motivated the change, named. */
-  eq('dark ink on U8 yellow', H.chipInk(['#F5C518']), H.CHIP_INK_DARK);
-  eq('dark ink on U9 light green', H.chipInk(['#8DC63F']), H.CHIP_INK_DARK);
-  eq('white ink on U6 red', H.chipInk(['#E11B22']), H.CHIP_INK_LIGHT);
-  check('the old fixed white would have been unreadable on U8',
-    H.contrastRatio('#FFFFFF', '#F5C518') < 2, H.contrastRatio('#FFFFFF', '#F5C518').toFixed(2));
-
-  /* A TIME-SHARE IS THE HARD CASE and it is the one on the busiest chips —
-     D4 and D5 carry U6 and U7 together. One piece of text lies across both
-     tints, so the ink has to be picked for the WORSE of them. Averaging would
-     leave a chip legible on one half and not the other. */
-  {
-    const pair = [H.AGE_TINT.u6, H.AGE_TINT.u7];
-    const ink = H.chipInk(pair);
-    check('white would fail on the orange half', H.contrastRatio('#FFFFFF', H.AGE_TINT.u7) < H.CHIP_MIN_CONTRAST);
-    eq('so the time-share chip takes dark ink', ink, H.CHIP_INK_DARK);
-  }
-
-  /* THE PROPERTY, across everything the layout can produce: every age group on
-     its own, and every pair of age groups sharing a block. 15 + 105 chips. */
-  {
-    const worstOf = (tints) => {
-      const ink = H.chipInk(tints);
-      return H.chipFill(tints, ink).reduce((m, fill) => Math.min(m, H.contrastRatio(ink, fill)), Infinity);
-    };
-    let worst = Infinity, worstAt = '';
-    const ids = Object.keys(H.AGE_TINT);
-    ids.forEach((a) => {
-      const r = worstOf([H.AGE_TINT[a]]);
-      if (r < worst) { worst = r; worstAt = a; }
-    });
-    check(`every age group alone clears ${H.CHIP_MIN_CONTRAST}:1`,
-      worst >= H.CHIP_MIN_CONTRAST, `worst was ${worstAt} at ${worst.toFixed(2)}`);
-
-    let pairWorst = Infinity, pairAt = '';
-    ids.forEach((a, i) => ids.slice(i + 1).forEach((b) => {
-      const r = worstOf([H.AGE_TINT[a], H.AGE_TINT[b]]);
-      if (r < pairWorst) { pairWorst = r; pairAt = `${a}+${b}`; }
-    }));
-    check(`every pair sharing a block clears ${H.CHIP_MIN_CONTRAST}:1`,
-      pairWorst >= H.CHIP_MIN_CONTRAST, `worst was ${pairAt} at ${pairWorst.toFixed(2)}`);
-    eq('105 pairs were actually tried', (ids.length * (ids.length - 1)) / 2, 105);
-  }
-
-  /* The nudge is a last resort, not a filter everything goes through. A tint
-     that already passes must come back BYTE-IDENTICAL — otherwise the palette
-     on the map slowly stops being the palette on the schematic. */
-  {
-    const passing = TINTS.filter((t) => H.contrastRatio(H.chipInk([t]), t) >= H.CHIP_MIN_CONTRAST);
-    check('most tints need no adjustment at all', passing.length >= 13, `${passing.length} of 15 pass untouched`);
-    passing.forEach((t) => eq(`${t} is left exactly as it is`, H.chipFill([t], H.chipInk([t]))[0], t));
-  }
-  eq('mixing nothing changes nothing', H.mixHex('#8DC63F', '#FFFFFF', 0), '#8DC63F');
-  eq('mixing all the way lands on the target', H.mixHex('#8DC63F', '#FFFFFF', 1), '#FFFFFF');
-  eq('mixing half way is half way', H.mixHex('#000000', '#FFFFFF', 0.5), '#808080');
-  eq('junk in is returned unchanged rather than corrupted', H.mixHex('nope', '#FFFFFF', 0.5), 'nope');
 
   /* The split, on the chip. Jay asked for the pitch count; it is a count and
      not a word because "QUARTERS" spelled out made the chips wide enough to
@@ -881,48 +813,79 @@ section('The map labels can actually be read');
   eq('…including quarters', H.splitLabel(4), 'quarters');
   eq('an unexpected count is reported, not rounded to a lie', H.splitLabel(3), '3 surfaces');
 
-  /* Driven through the component, on the shipped layout. */
+  const C2 = build(RECT);
+  const POS = require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js')).DEFAULT_POSITIONS;
+  const m = C2.venueMaps(clone(VENUE), POS, true)[0];
+  const EMPTY = { mapStyle: '', mapNameStyle: '', mapWhoStyle: '', mapSplit: '', mapTitle: '', mapWho: '', mapGroups: [] };
+  const blk = (name) => m.blocks.find((b) => b.name === name) || EMPTY;
+
+  /* The body: opaque white, constant dark ink, strong rim. Checked across
+     EVERY occupied block on the shipped layout, not one example. */
+  m.blocks.filter((b) => b.mapWho !== 'free').forEach((b) => {
+    const bg = (b.mapStyle.match(/background:([^;]+);/) || [])[1] || '';
+    eq(`${b.name}: the chip body is opaque white`, bg, '#FFFFFF');
+    check(`${b.name}: the ink is the constant page ink`, b.mapStyle.includes('color:#1A1C1F'), b.mapStyle);
+    check(`${b.name}: the rim still gives it an edge on the drawing`,
+      /border:2px solid rgba\(0,0,0,0\.55\)/.test(b.mapStyle), b.mapStyle);
+  });
+
+  /* THE SWEEP: all fifteen groups, one at a time, through the real builder.
+     The swatch must carry the group's EXACT tint (byte-identical — it is
+     the same identity the schematic and the standings use), outlined so the
+     pale tints register on white, with the code in constant dark ink. */
+  Object.keys(H.AGE_TINT).forEach((ag) => {
+    const one = (C2.venueMaps(
+      { day1: { label: 'x', pitches: ['D1'], groups: { [ag]: ['D1'] } }, day2: { label: 'y', pitches: [], groups: {} } },
+      { D1: { x: 5, y: 5 } }, true
+    )[0].blocks[0]) || EMPTY;
+    const g = (one.mapGroups || [])[0] || {};
+    eq(`${ag}: exactly one swatch`, (one.mapGroups || []).length, 1);
+    check(`${ag}: the swatch carries the EXACT tint`,
+      (g.swatchStyle || '').includes(`background:${H.AGE_TINT[ag]}`), g.swatchStyle);
+    check(`${ag}: the swatch is outlined so pale tints register on white`,
+      /border:1px solid rgba\(0,0,0,0\.35\)/.test(g.swatchStyle || ''), g.swatchStyle);
+    check(`${ag}: the code is constant dark ink, never the tint`,
+      (g.codeStyle || '').includes('color:#1A1C1F')
+      && !(g.codeStyle || '').toLowerCase().includes(H.AGE_TINT[ag].replace('#', '').toLowerCase()), g.codeStyle);
+    eq(`${ag}: the code names the group`, g.code, ag.toUpperCase());
+    check(`${ag}: the code is at least 14px`, /font-size:1[4-9]px/.test(g.codeStyle || ''), g.codeStyle);
+  });
+
+  /* A time-share gets one swatch PER GROUP, in the layout's order — the two
+     identities sit side by side instead of a gradient nobody could read
+     text across. */
   {
-    const C = build(RECT);
-    const POS = require(path.join(repoRoot(), 'netlify', 'functions', '_venue.js')).DEFAULT_POSITIONS;
-    const m = C.venueMaps(clone(VENUE), POS, true)[0];
-    /* Empty strings rather than undefined for the same reason as everywhere
-       else in this file: a missing block should make the check below REPORT
-       it, not throw and take the rest of the section with it. */
-    const EMPTY = { mapStyle: '', mapNameStyle: '', mapWhoStyle: '', mapSplit: '', mapTitle: '', mapWho: '' };
-    const blk = (name) => m.blocks.find((b) => b.name === name) || EMPTY;
+    const d4 = blk('D4');
+    eq('a shared block carries two swatches', (d4.mapGroups || []).length, 2);
+    eq('…in the layout order', (d4.mapGroups || []).map((g) => g.code).join(','), 'U6,U7');
+    check('…each with its own exact tint',
+      ((d4.mapGroups || [])[0] || {}).swatchStyle.includes(`background:${H.AGE_TINT.u6}`)
+      && ((d4.mapGroups || [])[1] || {}).swatchStyle.includes(`background:${H.AGE_TINT.u7}`));
+  }
 
-    /* OPACITY. This is what let the map bleed through the label. An 8-digit
-       hex or an rgba() with a fraction in it is the bug coming back. */
-    m.blocks.forEach((b) => {
-      const bg = (b.mapStyle.match(/background:([^;]+);/) || [])[1] || '';
-      check(`${b.name}: the chip is opaque`, !/#[0-9a-fA-F]{8}\b/.test(bg) && !/rgba\([^)]*0\.\d/.test(bg), bg);
-    });
+  /* The name row is untouched by the redesign — still 16px/900, still the
+     size that fixed the first complaint. */
+  check('the block name is at least 14px', /font-size:1[4-9]px/.test(blk('D3').mapNameStyle), blk('D3').mapNameStyle);
+  check('…and heavier than the old 800', /font-weight:900/.test(blk('D3').mapNameStyle));
 
-    /* The ink is on the chip, and it is the one the picker chose. */
-    check('the U8 chip carries dark ink', blk('B1').mapStyle.includes(`color:${H.CHIP_INK_DARK}`), blk('B1').mapStyle);
-    check('the U12 chip does too', blk('D3').mapStyle.includes(`color:${H.CHIP_INK_DARK}`));
-    check('a chip is not hard-coded to white any more', !/color:#fff\b/i.test(blk('B1').mapStyle));
+  /* The split reads off the chip. */
+  eq('D3 is in halves on Saturday, and says so', blk('D3').mapSplit, '×2');
+  eq('B1 is in quarters', blk('B1').mapSplit, '×4');
+  eq('C4 is whole', blk('C4').mapSplit, '×1');
+  check('the tooltip spells it out', /halves/.test(blk('D3').mapTitle), blk('D3').mapTitle);
+  check('…and still names every surface', /D3a, D3b/.test(blk('D3').mapTitle), blk('D3').mapTitle);
 
-    /* Bigger, and provably bigger than what it replaced. */
-    check('the block name is at least 14px', /font-size:1[4-9]px/.test(blk('D3').mapNameStyle), blk('D3').mapNameStyle);
-    check('…and heavier than the old 800', /font-weight:900/.test(blk('D3').mapNameStyle));
-    check('the age groups are at least 11px', /font-size:1[1-9]px/.test(blk('D3').mapWhoStyle), blk('D3').mapWhoStyle);
-
-    /* The split reads off the chip. */
-    eq('D3 is in halves on Saturday, and says so', blk('D3').mapSplit, '×2');
-    eq('B1 is in quarters', blk('B1').mapSplit, '×4');
-    eq('C4 is whole', blk('C4').mapSplit, '×1');
-    check('the tooltip spells it out', /halves/.test(blk('D3').mapTitle), blk('D3').mapTitle);
-    check('…and still names every surface', /D3a, D3b/.test(blk('D3').mapTitle), blk('D3').mapTitle);
-
-    /* An empty block is legible too — it is the one an organiser is looking
-       for when a pitch has nobody on it. */
-    const free = m.blocks.find((b) => b.mapWho === 'free');
-    if (free) {
-      check('a free block has its own readable colour', /color:#CFD4DC/.test(free.mapStyle), free.mapStyle);
-      check('…and is dashed rather than solid, as before', /dashed/.test(free.mapStyle));
-    }
+  /* An empty block keeps the dark dashed ghost — "nobody here" should look
+     unlike every real allocation at a glance, and it carries no swatches. */
+  {
+    const free = (C2.venueMaps(
+      { day1: { label: 'x', pitches: ['D1'], groups: {} }, day2: { label: 'y', pitches: [], groups: {} } },
+      { D1: { x: 5, y: 5 } }, true
+    )[0].blocks[0]) || EMPTY;
+    check('a free block has its own readable colour', /color:#CFD4DC/.test(free.mapStyle), free.mapStyle);
+    check('…and is dashed rather than solid, as before', /dashed/.test(free.mapStyle));
+    eq('…and carries no swatches', (free.mapGroups || []).length, 0);
+    check('…and is flagged for the template the simple way', free.isFree === true && free.hasUsers === false);
   }
 }
 
@@ -954,27 +917,22 @@ section('The map labels can actually be read');
      * touch-action dropped               -> "will not scroll the page instead"
      * validatePositions not range-checking -> "a coordinate past the right edge"
 
-   And the label legibility (faults 61-70), all caught by the named check:
+   And the label legibility (redesigned 2 Aug 2026 — white cards, constant
+   dark ink, exact-tint swatches; the old ink-picking machinery and its
+   seven faults were deleted WITH their subject), all caught by name:
 
-     * chip ink hard-coded white again    -> "carries dark ink"
-     * the chip made see-through again    -> "the chip is opaque"
-     * time-share ink picked from the
-       first tint only                    -> "takes dark ink" / "clears 4.5:1"
-     * the contrast top-up removed        -> "clears 4.5:1"
-     * the top-up applied to every tint   -> "is left exactly as it is"
-     * relLuminance without the gamma step-> "the gamma step is applied"
-     * contrastRatio without the +0.05    -> "black on white is the maximum"
+     * chip body translucent again        -> "the chip body is opaque white"
+     * chip ink keyed off the tint again  -> "the ink is the constant page ink"
+     * swatch loses its exact tint        -> "the swatch carries the EXACT tint"
+     * swatch outline removed             -> "outlined so pale tints register"
+     * code drawn in the tint again       -> "constant dark ink, never the tint"
+     * shared block down to one swatch    -> "a shared block carries two swatches"
+     * schematic label in the tint again  -> "the label ink is the dark page ink"
+     * schematic time-share label back to
+       the dark-mode light grey           -> "the shared label is dark ink too"
      * the name shrunk back to 11px       -> "at least 14px"
      * every chip reporting whole         -> "in halves on Saturday, and says so"
      * the tooltip losing the split word  -> "the tooltip spells it out"
-
-   THE GAMMA FAULT IS INSTRUCTIVE. Dropping the sRGB conversion does NOT break
-   any contrast ratio — the top-up quietly compensates for the worse ink choice,
-   so every chip still clears 4.5:1. The only things that notice are the direct
-   assertion that mid-grey reads 21.6% rather than 50%, and the count of how
-   many tints needed adjusting at all. A system with a fallback in it will hide
-   a fault in the thing the fallback is covering for, so something has to check
-   the thing itself.
 
    THE UNMEASURABLE-MAP FAULT IS THE ONE WORTH READING. Replacing pointerPct's
    `return null` with a constant `{x:50,y:50}` passed a full down-then-move test

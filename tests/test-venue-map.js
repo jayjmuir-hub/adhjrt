@@ -856,11 +856,19 @@ section('The map labels can actually be read');
      text across. */
   {
     const d4 = blk('D4');
+    /* String(x || '') on BOTH entries — under the collapse-to-one-swatch
+       fault the second entry does not exist, and reaching .includes through
+       it killed this file on the PC on 2 Aug (the exact trap this file's
+       own header warns about: a test that throws proves nothing about the
+       checks after it). The guarded form REPORTS instead. */
+    const mg0 = (d4.mapGroups || [])[0] || {};
+    const mg1 = (d4.mapGroups || [])[1] || {};
     eq('a shared block carries two swatches', (d4.mapGroups || []).length, 2);
     eq('…in the layout order', (d4.mapGroups || []).map((g) => g.code).join(','), 'U6,U7');
     check('…each with its own exact tint',
-      ((d4.mapGroups || [])[0] || {}).swatchStyle.includes(`background:${H.AGE_TINT.u6}`)
-      && ((d4.mapGroups || [])[1] || {}).swatchStyle.includes(`background:${H.AGE_TINT.u7}`));
+      String(mg0.swatchStyle || '').includes(`background:${H.AGE_TINT.u6}`)
+      && String(mg1.swatchStyle || '').includes(`background:${H.AGE_TINT.u7}`),
+      `${mg0.swatchStyle} | ${mg1.swatchStyle}`);
   }
 
   /* The name row is untouched by the redesign — still 16px/900, still the

@@ -38,6 +38,7 @@
 // api.* the page calls actually exists.
 
 const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
+const { readSignIns } = require('./_signins');
 
 // Age-group ids a created manager may be bound to. Mirrors AGE_GROUPS in
 // scores-data.js. '*' is the special "all age groups" admin-manager.
@@ -58,6 +59,12 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'GET') {
       const accounts = await loadAccounts();
+      /* Last sign-in per account, from the separate store. Read here rather
+         than by a second call from the page: the card's other-person mode
+         renders this listing and nothing else, so one round trip keeps it one
+         round trip. A store that cannot be read yields nulls, not an error —
+         the Accounts tab must not go blank over a display field. */
+      const signIns = await readSignIns(accounts.map((a) => a.username));
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -69,7 +76,7 @@ exports.handler = async (event) => {
           // derived here: the local version this replaced could not return
           // 'Both', so a password login with Google linked read as "Google
           // only" — see the comment on that function.
-          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }) })),
+          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }), lastSignInAt: signIns[rest.username] || null })),
         }),
       };
     }

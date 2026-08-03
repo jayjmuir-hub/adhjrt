@@ -45,6 +45,7 @@
 // with Google is unaffected; only organiser signup is closed.
 
 const { loadAccounts, saveAccounts, sign, blobStore } = require('./_auth');
+const { recordSignIn } = require('./_signins');
 const { checkSignupRate, tooManyResponse } = require('./_ratelimit');
 const { verifyGoogleIdToken } = require('./_googleAuth');
 
@@ -83,6 +84,9 @@ exports.handler = async (event) => {
       if (!existing.approved) {
         return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Your account is still pending approval from a tournament organizer.' }) };
       }
+      // Same stamp the password endpoint writes, same store, same reason —
+      // signing in through the other door is still signing in.
+      await recordSignIn(existing.username);
       return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(existing) }) };
     }
 
@@ -147,6 +151,10 @@ exports.handler = async (event) => {
     if (!account.approved) {
       return { statusCode: 200, body: JSON.stringify({ ok: true, pending: true, message: 'Account created. A tournament organizer needs to approve you before you can sign in.' }) };
     }
+    // A brand-new account that is approved immediately is signed in right
+    // here, so it gets a stamp too — otherwise the first organiser would read
+    // as never having signed in.
+    await recordSignIn(account.username);
     return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(account) }) };
   } catch (err) {
     console.error('google-auth error:', err);

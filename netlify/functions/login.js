@@ -27,6 +27,7 @@
 
 const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');
 const { checkRate, tooManyResponse } = require('./_ratelimit');
+const { recordSignIn } = require('./_signins');
 
 const LOGIN_RATE_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
 const clientIp = (event) => (event.headers || {})['x-nf-client-connection-ip'] || '';
@@ -70,6 +71,13 @@ exports.handler = async (event) => {
     if (!account.approved) {
       return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Your account is still pending approval from a tournament organizer.' }) };
     }
+    /* ⚠️ AFTER the password and the approval check, never before — a failed
+       attempt is not a sign-in, and stamping one would let anyone move
+       somebody else's "last signed in" by guessing at their username. It goes
+       to its OWN blob store, one key per person, NOT onto the account record:
+       the accounts list is a single blob rewritten whole, so a write on every
+       login would race the organiser approving somebody. See _signins.js. */
+    await recordSignIn(account.username);
     return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(account) }) };
   } catch (err) {
     console.error('login error:', err);

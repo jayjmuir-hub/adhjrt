@@ -572,6 +572,51 @@ Google code there is the LINK button. A widened check is a check with less to
 say, so the linking machinery got its own assertions rather than being covered
 by silence.
 
+### Last sign in (added Aug 2026)
+
+The My account card shows when each account last signed in, under *Member
+since*. On your own it is trivia; on somebody else's it answers the question an
+organiser actually has — **which managers have never got in.** No record reads
+as **Never**, which covers both "never signed in" and "the store could not be
+read": honest either way, since we do not know that they have.
+
+⚠️ **THE STAMPS LIVE IN THEIR OWN BLOB STORE (`signins`), ONE KEY PER PERSON —
+NOT ON THE ACCOUNT RECORD, AND THIS IS THE WHOLE DESIGN.** Every account lives
+in ONE blob under the key `list`, and `saveAccounts()` writes the whole array
+back; Netlify Blobs has no compare-and-set. That is tolerable today only
+because the accounts blob is written rarely — create, approve, reject, revoke,
+a password change, a Google link. **A field on the account record would make it
+a write on EVERY LOGIN**, and then fifteen managers signing in inside a minute
+on tournament morning, while an organiser approves somebody, means one write
+silently discards the other and the approval just quietly did not happen.
+
+That is not hypothetical. It is exactly the bug that lost match results in July
+2026 and forced the results store to be split one blob per age group — see
+**Results storage** above. One key per person means two people signing in at
+the same moment touch two different keys and cannot collide at all, and no
+sign-in can ever damage an account record. `test-my-account.js` **proves** it
+rather than asserting it in a comment: it interleaves two sign-ins with an
+organiser approval and checks the approval survives, and there is an injected
+fault that moves the stamp back onto the account record.
+
+- **Recorded AFTER the password and approval checks, never before.** A failed
+  attempt is not a sign-in, and stamping one would let anyone move somebody
+  else's "last signed in" just by guessing at their username. Two faults.
+- **Both doors record it** — `login.js` and `google-auth.js`, including a
+  brand-new account that is approved immediately, or the first organiser would
+  read as never having signed in.
+- **It FAILS OPEN, both ways.** `recordSignIn()` swallows everything: a display
+  nicety must never cost somebody a sign-in on the one morning it matters.
+  `readSignIn()` answers null rather than throwing.
+- **The username is sanitised before it becomes a blob key**, the same way
+  `_ratelimit.js` sanitises the client address.
+- Your own card reads it from `my-account.js`; somebody else's reads it from
+  `accounts-admin.js`'s listing, which the card already renders — no second
+  endpoint and no second round trip.
+- The card shows the **time as well as the date**: "3 August" alone cannot
+  answer "did they get in this morning?", which is the only question the line
+  exists for. There is a fault for dropping the time.
+
 ### Passwords
 
 **One floor, `MIN_PASSWORD_LENGTH` in `netlify/functions/_password.js`, currently

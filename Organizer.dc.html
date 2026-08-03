@@ -846,6 +846,10 @@
               <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Member since</div>
               <div style="font-size:15px;margin-top:2px">{{ acctMemberSince }}</div>
             </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Last sign in</div>
+              <div style="font-size:15px;margin-top:2px">{{ acctLastSignIn }}</div>
+            </div>
             <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
               <div style="background:rgba(245,197,24,0.14);border:1px solid rgba(245,197,24,0.4);border-radius:9px;padding:10px 12px;color:#8F6400;font-size:13px;font-weight:700">Awaiting approval - cannot sign in yet.</div>
             </sc-if>
@@ -1238,6 +1242,17 @@ class Component extends DCLogic {
 
   /* An age group's real NAME for the account card. MANAGER_AGE_GROUPS is the
      same list the Create-a-login picker uses, so there is no third copy. */
+  /* Last sign-in wants the TIME as well as the date — "3 August" alone cannot
+     answer "did they get in this morning?", which is the whole question this
+     line exists to answer. Never renders "Invalid Date". */
+  fmtAcctDateTime(iso) {
+    if (!iso) return 'Never';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Never';
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+      + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
   ageGroupName(id) {
     const found = MANAGER_AGE_GROUPS.find((g) => g.id === id);
     return (found && found.name) || '';
@@ -3006,6 +3021,11 @@ class Component extends DCLogic {
         ? 'Password and Google'
         : (s.acct.signInMethod === 'Google' ? 'Google only' : 'Password only')),
       acctMemberSince: this.fmtDate((s.acct && s.acct.createdAt) || ''),
+      /* "Never" means we hold no record — which covers both a person who has
+         genuinely never signed in and a stamp store that could not be read.
+         On somebody else's card this is the useful line on the whole thing:
+         it is how you see which managers have never got in. */
+      acctLastSignIn: this.fmtAcctDateTime(s.acct && s.acct.lastSignInAt),
       acctIsPending: !!(s.acct && !s.acct.approved),
       acctIsApproved: !!(s.acct && s.acct.approved),
       acctCurrent: s.acctCurrent, acctNew: s.acctNew,

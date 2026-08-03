@@ -662,6 +662,10 @@
               <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Member since</div>
               <div style="font-size:15px;margin-top:2px">{{ acctMemberSince }}</div>
             </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Last sign in</div>
+              <div style="font-size:15px;margin-top:2px">{{ acctLastSignIn }}</div>
+            </div>
           </div>
 
           <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
@@ -1863,6 +1867,16 @@ class Component extends DCLogic {
     if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   }
+  /* Last sign-in wants the TIME as well as the date — "3 August" alone cannot
+     answer "did they get in this morning?", which is the whole question an
+     organiser is asking. Never renders "Invalid Date". */
+  fmtAcctDateTime(iso) {
+    if (!iso) return 'Never';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Never';
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+      + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
   tName(code) {
     const { api, ageId } = this.state;
     return (api && api.teamLabel ? api.teamLabel(code, ageId) : code) || code || '';
@@ -2292,6 +2306,10 @@ class Component extends DCLogic {
         ? 'Password and Google'
         : (s.acct.signInMethod === 'Google' ? 'Google only' : 'Password only')),
       acctMemberSince: this.fmtAcctDate(s.acct && s.acct.createdAt),
+      /* "Never" means we hold no record — which covers both a person who has
+         genuinely never signed in and a stamp store that could not be read.
+         Honest either way; we do not know that they have. */
+      acctLastSignIn: this.fmtAcctDateTime(s.acct && s.acct.lastSignInAt),
       acctCurrent: s.acctCurrent, acctNew: s.acctNew,
       acctCurrentType: s.acctShowCurrent ? 'text' : 'password',
       acctCurrentToggleLabel: s.acctShowCurrent ? 'HIDE' : 'SHOW',

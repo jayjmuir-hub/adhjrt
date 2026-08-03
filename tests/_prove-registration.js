@@ -86,6 +86,11 @@ const NEEDED = [
   path.join('netlify', 'functions', '_publish.js'),
   path.join('netlify', 'functions', '_password.js'),
   path.join('netlify', 'functions', '_auth.js'),
+  /* Aug 2026 — last sign in. login.js and google-auth.js REQUIRE this, so
+     without it here every suite that loads either dies on ENOENT and takes
+     its faults with it, reporting them as "failed, but not on the named
+     check". Hit for real the moment it was added. */
+  path.join('netlify', 'functions', '_signins.js'),
   path.join('netlify', 'functions', 'accounts-admin.js'),
   path.join('netlify', 'functions', 'organizer-signup.js'),
   path.join('netlify', 'functions', 'manager-signup.js'),
@@ -2163,8 +2168,8 @@ const FAULTS = [
     name: 'accounts-admin.js stops stripping googleSub from the account listing',
     suite: 'test-google-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }) })),",
-      "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: 'Password' })),"),
+      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }), lastSignInAt: signIns[rest.username] || null })),",
+      "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: 'Password', lastSignInAt: null })),"),
     expect: ['googleSub is stripped from the listing the same way passwordHash is'],
   },
   {
@@ -2417,6 +2422,107 @@ const FAULTS = [
       "      signupCodeLabel: 'AGE GROUP INVITE CODE',",
       "      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',"),
     expect: ['the invite-code label no longer switches'],
+  },
+
+  /* ---- last sign in (test-my-account.js) -------------------------------- */
+  {
+    /* ⚠️ THE STORAGE DECISION, AS A FAULT. Moving the stamp onto the account
+       record is the "tidier" version of this feature and it is the wrong one:
+       the accounts list is one blob rewritten whole with no compare-and-set,
+       so a write on every login races an organiser approving somebody. The
+       concurrency check is what catches it. */
+    name: 'the sign-in stamp is moved onto the account record, racing the accounts blob',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', '_signins.js'),
+      "    await blobStore(STORE).setJSON(keyFor(username), {",
+      "    const all = await require('./_auth').loadAccounts();\n    const i = all.findIndex((a) => a.username === username);\n    if (i !== -1) { all[i].lastSignInAt = whenIso || new Date().toISOString(); await require('./_auth').saveAccounts(all); }\n    await blobStore(STORE).setJSON(keyFor(username), {"),
+    expect: ['four sign-ins added NO further write to the accounts list', 'the accounts list is byte-unchanged by signing in'],
+  },
+  {
+    name: 'every account shares one sign-in key, so signing in moves everybody',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', '_signins.js'),
+      "  return raw.replace(/[^0-9a-zA-Z._-]/g, '_').slice(0, 60) || 'unknown';",
+      "  return 'last';"),
+    expect: ['one person signing in does not move anybody else'],
+  },
+  {
+    name: 'the username stops being sanitised, so it can pick its own blob key',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', '_signins.js'),
+      "  return raw.replace(/[^0-9a-zA-Z._-]/g, '_').slice(0, 60) || 'unknown';",
+      "  return raw.slice(0, 60) || 'unknown';"),
+    expect: ['a username with a slash cannot pick its own key'],
+  },
+  {
+    /* ⚠️ Stamping before the password check would let anyone move somebody
+       else's "last signed in" just by guessing at their username. */
+    name: 'login.js stamps the sign-in BEFORE checking the password',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "    const account = accounts.find((a) => a.username === uname);",
+      "    const account = accounts.find((a) => a.username === uname);\n    if (account) await recordSignIn(account.username);"),
+    expect: ['and records nothing'],
+  },
+  {
+    name: 'login.js stamps a PENDING account that was refused a session',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "    if (!account.approved) {",
+      "    if (!account.approved) {\n      await recordSignIn(account.username);"),
+    expect: ['and records nothing — it did not sign in'],
+  },
+  {
+    name: 'the Google door stops recording, so half the sign-ins go unseen',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "      await recordSignIn(existing.username);",
+      "      await Promise.resolve();"),
+    expect: ['and is recorded the same way'],
+  },
+  {
+    name: 'my-account.js stops carrying the stamp to your own card',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "      const lastSignInAt = await readSignIn(all[me].username);",
+      "      const lastSignInAt = null;"),
+    expect: ['your own account carries the stamp'],
+  },
+  {
+    name: "accounts-admin.js stops carrying it, so nobody else's card can show it",
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "lastSignInAt: signIns[rest.username] || null",
+      "lastSignInAt: null"),
+    expect: ['the organiser listing carries it too'],
+  },
+  {
+    /* A date with no time cannot answer "did they get in this morning?", which
+       is the only question this line exists for. */
+    name: 'the card drops the time and shows the date alone',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      "    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })\n      + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });",
+      "    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });"),
+    expect: ['did they get in this morning'],
+  },
+  {
+    /* "Never" is a claim about what we hold. An unparseable stamp rendering as
+       "Invalid Date" would be the visible version of the same mistake. */
+    name: 'an unreadable stamp renders as Invalid Date instead of Never',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      "    if (isNaN(d.getTime())) return 'Never';",
+      "    if (isNaN(d.getTime())) return String(iso);"),
+    expect: ['and so does an unparseable one'],
+  },
+  {
+    name: 'the organiser card stops showing Never for a manager who never got in',
+    suite: 'test-my-account.js',
+    apply: () => patch('Organizer.dc.html',
+      "      acctLastSignIn: this.fmtAcctDateTime(s.acct && s.acct.lastSignInAt),",
+      "      acctLastSignIn: this.fmtAcctDateTime((s.acct && s.acct.lastSignInAt) || s.acct && s.acct.createdAt),"),
+    expect: ['Never for a manager who has never signed in'],
   },
 
   /* ---- the My account card (test-my-account.js) ------------------------- */

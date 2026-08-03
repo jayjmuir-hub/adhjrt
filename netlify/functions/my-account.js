@@ -30,6 +30,7 @@
 
 const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
 const { verifyGoogleIdToken } = require('./_googleAuth');
+const { readSignIn } = require('./_signins');
 
 const json = (statusCode, body) => ({ statusCode, body: JSON.stringify(body) });
 const fail = (statusCode, error) => json(statusCode, { ok: false, error });
@@ -64,7 +65,13 @@ exports.handler = async (event) => {
     const me = all.findIndex((a) => a.username === session.username);
     if (me === -1) return fail(404, 'Your account no longer exists.');
 
-    if (event.httpMethod === 'GET') return json(200, { ok: true, account: publicView(all[me]) });
+    if (event.httpMethod === 'GET') {
+      /* Last sign-in comes from its own store, not the account record — see
+         _signins.js for why. null means "no record", which the card renders
+         as Never; it is never allowed to fail the whole GET. */
+      const lastSignInAt = await readSignIn(all[me].username);
+      return json(200, { ok: true, account: { ...publicView(all[me]), lastSignInAt } });
+    }
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
     const payload = JSON.parse(event.body || '{}');

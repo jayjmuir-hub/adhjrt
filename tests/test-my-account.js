@@ -566,6 +566,198 @@ section('The two copies of the card cannot drift on WHAT they call');
     /onOpenMyAccount/.test(o) && /onOpenAccount/.test(m));
 }
 
+/* ======================================================================
+   LAST SIGN IN (Aug 2026).
+
+   ⚠️ The interesting half of this feature is NOT the field on the card, it is
+   WHERE the stamp is written. Every account lives in one blob under the key
+   `list` and saveAccounts() rewrites the whole array; Netlify Blobs has no
+   compare-and-set. Stamping the account record on every login would put a
+   write-on-every-sign-in against that single object — the same shape as the
+   bug that lost match results in July and forced the results store to be
+   split one blob per age group. So the stamps live in their own store, one
+   key per person, and the check below PROVES two concurrent sign-ins cannot
+   damage an account rather than asserting it in a comment. */
+
+section('Last sign in — the stamp is written, and to its OWN store');
+{
+  const { recordSignIn, readSignIn, keyFor, STORE } = require(FN('_signins.js'));
+  blobData.clear();
+  /* ⚠️ THE ACCOUNTS LIST MUST EXIST for the no-accounts-write check below to
+     mean anything. Seeded empty, a fault that stamps the account record finds
+     nobody to stamp and writes nothing — so the check would pass on the very
+     mistake it exists to catch. The fixture has to DISCRIMINATE. */
+  await require(FN('_auth.js')).saveAccounts(SEED());
+  const accountWritesBefore = [...blobData.keys()].filter((k) => k.startsWith('accounts/')).length;
+
+  eq('an account that has never signed in reads as null', await readSignIn('mgr'), null);
+
+  await recordSignIn('mgr', '2026-08-03T09:15:00.000Z');
+  eq('…and reads back once recorded', await readSignIn('mgr'), '2026-08-03T09:15:00.000Z');
+
+  await recordSignIn('mgr', '2026-08-03T11:45:00.000Z');
+  eq('a later sign-in replaces it — the card shows the most recent',
+    await readSignIn('mgr'), '2026-08-03T11:45:00.000Z');
+
+  /* ⚠️ One key PER PERSON is the whole design. If they shared a key, or rode
+     on the accounts list, two people signing in at once would collide. */
+  await recordSignIn('orga', '2026-08-02T08:00:00.000Z');
+  eq('one person signing in does not move anybody else', await readSignIn('mgr'), '2026-08-03T11:45:00.000Z');
+  eq('…and each has their own', await readSignIn('orga'), '2026-08-02T08:00:00.000Z');
+  check('…in a store of its own, not the accounts store', STORE === 'signins');
+  /* Counted, not merely absent: the seed above wrote the list once, so the
+     assertion is that FOUR sign-ins added no further write to it. */
+  eq('…and four sign-ins added NO further write to the accounts list',
+    [...blobData.keys()].filter((k) => k.startsWith('accounts/')).length, accountWritesBefore);
+  check('…the accounts list is byte-unchanged by signing in',
+    JSON.stringify(await require(FN('_auth.js')).loadAccounts()) === JSON.stringify(SEED()),
+    'a sign-in that touched the accounts blob would race an organiser approving somebody');
+
+  /* The username decides a blob key, so it is sanitised the same way
+     _ratelimit.js sanitises the client address. */
+  check('a username with a slash cannot pick its own key', !/\//.test(keyFor('a/../b')));
+  check('…nor an empty one', keyFor('') === 'unknown');
+
+  eq('a missing username is a no-op, not a throw', await recordSignIn(''), undefined);
+}
+{
+  /* THE CONCURRENCY CLAIM, PROVEN. Two sign-ins land in the same instant while
+     an organiser approval is in flight against the accounts list. With the
+     stamps on their own keys the approval survives; the whole point of not
+     putting them on the account record is that it would not. */
+  blobData.clear();
+  const { recordSignIn, readSignIn } = require(FN('_signins.js'));
+  const { loadAccounts, saveAccounts } = require(FN('_auth.js'));
+
+  const seed = SEED();
+  seed[1] = { ...seed[1], approved: false };
+  await saveAccounts(seed);
+
+  /* The organiser reads the list, and BEFORE writing it back, two people sign
+     in — the exact interleaving that destroyed a result in July. */
+  const held = await loadAccounts();
+  await Promise.all([recordSignIn('mgr', '2026-08-03T07:00:00.000Z'), recordSignIn('goog', '2026-08-03T07:00:01.000Z')]);
+  held[1].approved = true;
+  await saveAccounts(held);
+
+  const after = await loadAccounts();
+  check('the approval survives two simultaneous sign-ins',
+    after.find((a) => a.username === 'mgr').approved === true,
+    'this is the assertion the whole storage decision exists for');
+  eq('…and both stamps survive too', [await readSignIn('mgr'), await readSignIn('goog')],
+    ['2026-08-03T07:00:00.000Z', '2026-08-03T07:00:01.000Z']);
+}
+
+section('Last sign in — recorded by BOTH doors, and only on success');
+{
+  blobData.clear();
+  const { readSignIn } = require(FN('_signins.js'));
+  const { saveAccounts } = require(FN('_auth.js'));
+  await saveAccounts(SEED());
+  const login = require(FN('login.js')).handler;
+
+  const wrong = await login({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ username: 'mgr', password: 'nope' }) });
+  eq('a wrong password is refused', wrong.statusCode, 401);
+  /* ⚠️ A failed attempt is NOT a sign-in. Stamping one would let anyone move
+     somebody else's "last signed in" just by guessing at their username. */
+  eq('…and records nothing', await readSignIn('mgr'), null);
+
+  const ok = await login({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ username: 'mgr', password: 'pw-mgr' }) });
+  eq('a correct password signs in', ok.statusCode, 200);
+  check('…and IS recorded', typeof (await readSignIn('mgr')) === 'string');
+}
+{
+  blobData.clear();
+  const { readSignIn } = require(FN('_signins.js'));
+  const { saveAccounts } = require(FN('_auth.js'));
+  const seed = SEED();
+  seed[1] = { ...seed[1], approved: false };
+  await saveAccounts(seed);
+  const login = require(FN('login.js')).handler;
+  const pending = await login({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ username: 'mgr', password: 'pw-mgr' }) });
+  eq('a pending account is refused even with the right password', pending.statusCode, 403);
+  check('…and records nothing — it did not sign in', (await readSignIn('mgr')) === null);
+}
+{
+  /* The Google door. Signing in through it is still signing in. */
+  blobData.clear();
+  const { readSignIn } = require(FN('_signins.js'));
+  const { saveAccounts } = require(FN('_auth.js'));
+  await saveAccounts(SEED());
+  const googleAuth = require(FN('google-auth.js')).handler;
+  const res = await googleAuth({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ idToken: 'tok-goog' }) });
+  eq('Google sign-in works', res.statusCode, 200);
+  check('…and is recorded the same way', typeof (await readSignIn('goog')) === 'string');
+}
+
+section('Last sign in — how it reaches each half of the card');
+{
+  blobData.clear();
+  const { recordSignIn } = require(FN('_signins.js'));
+  const { saveAccounts } = require(FN('_auth.js'));
+  await saveAccounts(SEED());
+  await recordSignIn('mgr', '2026-08-03T06:30:00.000Z');
+
+  /* YOUR OWN card reads my-account.js. */
+  const mine = JSON.parse((await handler({
+    httpMethod: 'GET', headers: { authorization: 'Bearer ' + sign({ username: 'mgr', role: 'manager', ageGroupId: 'u14b' }) },
+  })).body);
+  eq('your own account carries the stamp', mine.account.lastSignInAt, '2026-08-03T06:30:00.000Z');
+  check('…and still carries no secret', !('passwordHash' in mine.account) && !('googleSub' in mine.account));
+
+  /* SOMEBODY ELSE'S card reads accounts-admin.js's listing — no second
+     endpoint, because that listing is already the exact field set the card
+     renders in other-person mode. */
+  const adminHandler = require(FN('accounts-admin.js')).handler;
+  const listed = JSON.parse((await adminHandler({
+    httpMethod: 'GET', headers: { authorization: 'Bearer ' + sign({ username: 'orga', role: 'organizer' }) },
+  })).body);
+  const row = listed.accounts.find((a) => a.username === 'mgr');
+  eq('the organiser listing carries it too', row.lastSignInAt, '2026-08-03T06:30:00.000Z');
+  eq('…and null for somebody who never has', listed.accounts.find((a) => a.username === 'orga').lastSignInAt, null);
+  check('…while still stripping the secrets', !('passwordHash' in row) && !('googleSub' in row));
+}
+
+section('Last sign in — on the card, both pages');
+{
+  const c = buildPage('Manager.dc.html');
+  c.state = { ...c.state, api: accountApi({
+    myAccount: async () => ({ ok: true, account: { name: 'Pat Tester', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password', lastSignInAt: '2026-08-03T06:30:00.000Z' } }),
+  }), ageGroups: [] };
+  await c.openAccount();
+  const v = c.renderVals();
+  check('/manager shows a real date AND a time — "did they get in this morning?"',
+    /2026/.test(v.acctLastSignIn) && /\d{1,2}[:.]\d{2}/.test(v.acctLastSignIn));
+  check('…sitting under Member since', v.acctMemberSince !== v.acctLastSignIn);
+}
+{
+  const c = buildPage('Manager.dc.html');
+  c.state = { ...c.state, api: accountApi({
+    myAccount: async () => ({ ok: true, account: { name: 'Pat', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password' } }),
+  }), ageGroups: [] };
+  await c.openAccount();
+  /* No stamp at all, and a malformed one, both render the same honest word —
+     never "Invalid Date", and never a date we cannot stand behind. */
+  eq('no record reads as Never', c.renderVals().acctLastSignIn, 'Never');
+  c.setState({ acct: { ...c.state.acct, lastSignInAt: 'not-a-date' } });
+  eq('…and so does an unparseable one', c.renderVals().acctLastSignIn, 'Never');
+}
+{
+  const c = buildPage('Organizer.dc.html');
+  c.state = { ...c.state, api: accountApi(), accounts: [
+    { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password', lastSignInAt: '2026-08-03T06:30:00.000Z' },
+    /* createdAt is deliberately SET while lastSignInAt is null — a card that
+       quietly fell back to the join date would otherwise render 'Never' here
+       anyway and the fault would pass. */
+    { username: 'newbie', name: 'New Person', role: 'manager', ageGroupId: 'u9', approved: true, createdAt: '2026-07-20T00:00:00.000Z', signInMethod: 'Password', lastSignInAt: null },
+  ] };
+  c.openOtherAccount('mgr');
+  check('/organizer shows it on somebody else', /2026/.test(c.renderVals().acctLastSignIn));
+  c.openOtherAccount('newbie');
+  /* THE USEFUL CASE: which managers have never got in. */
+  eq('…and Never for a manager who has never signed in', c.renderVals().acctLastSignIn, 'Never');
+}
+
 restore();
 summary('test-my-account.js');
 }

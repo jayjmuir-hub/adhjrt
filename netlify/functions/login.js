@@ -3,15 +3,23 @@
 // ONE sign-in for both roles (added Aug 2026 — claude/specs/spec-unified-login.md).
 // The password twin of google-auth.js: look the account up by username alone,
 // no role filter, and mint the session/token from the account's OWN stored
-// role. The shapes are character-for-character the ones organizer-login.js
-// and manager-login.js produce — test-unified-login.js asserts the parity
-// against those files directly, which is also what pins the two older
-// endpoints (kept, but no longer called by any page) against drift until
-// they are retired in a commit of their own.
+// role.
 //
-// Rate limiting: same options AND the same `${ip}:login` bucket as the two
-// older endpoints, so the attempt budget stays one pool — nobody gets extra
-// guesses by alternating endpoints.
+// THE ONLY PASSWORD ENDPOINT. organizer-login.js and manager-login.js were
+// kept byte-identical and uncalled through the unification so the old tests
+// could pass unchanged; they were retired on 3 Aug 2026 and test-unified-
+// login.js now asserts they have not come back. The session and token shapes
+// below started life as a character-for-character copy of theirs and are
+// pinned by hardcoded literal — they are load-bearing downstream
+// (isOrganiserSession() reads _role, manager code reads ageGroupId), and
+// there is no second copy left to compare against.
+//
+// Rate limiting: the `${ip}:login` bucket, kept separate from the
+// registration bucket. It was shared with the two older endpoints so nobody
+// could buy extra guesses by alternating between them; with one endpoint
+// left the bucket name no longer has to be shared, but it is still what
+// stands between a public password check and a script working through an
+// account that can read every registrant's DOB and medical notes.
 //
 // ⚠️ No password-length check here, ever. The floor applies when a password
 // is SET (see _password.js), never at login — a length check here would lock
@@ -23,8 +31,9 @@ const { checkRate } = require('./_ratelimit');
 const LOGIN_RATE_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
 const clientIp = (event) => (event.headers || {})['x-nf-client-connection-ip'] || '';
 
-/* The same per-role shapes organizer-login.js / manager-login.js return —
-   and the same sessionFor() switch google-auth.js already uses. */
+/* The same sessionFor() switch google-auth.js already uses — the two files
+   must agree, or which door somebody came in through starts to matter to
+   every downstream reader. test-google-auth.js asserts both sides. */
 function sessionFor(account) {
   if (account.role === 'organizer') {
     return {

@@ -110,11 +110,9 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 | File | Purpose |
 |---|---|
 | `_auth.js` | shared helpers — Blobs store, bcrypt hashing, HMAC session tokens, `hasAgeGroupAccess` |
-| `login.js` | **THE sign-in endpoint (Aug 2026)** — both roles, account looked up by username alone, session/token minted from the account's own stored role. Same rate bucket as the two per-role endpoints below. |
+| `login.js` | **THE sign-in endpoint (Aug 2026)** — and since 3 Aug, the ONLY password endpoint. Both roles, account looked up by username alone, session/token minted from the account's own stored role. `${ip}:login` rate bucket, kept separate from the registration bucket. |
 | `manager-signup.js` | per-age-group invite code decides the age group; account starts pending |
-| `manager-login.js` | pre-Aug-2026 per-role login. **Kept byte-identical but no page calls it** — pinned against drift by test-unified-login.js's parity checks, pending retirement in its own commit (which must update test-accounts.js/test-google-auth.js in the same change). |
 | `organizer-signup.js` | shared invite code; first organiser account auto-approved |
-| `organizer-login.js` | as manager-login.js — kept, uncalled, pending retirement |
 | `accounts-admin.js` | organiser-only: list / approve / reject / revoke; create a manager **or organiser** login directly (`action:'create'`); reset someone's password (`action:'password'`) or change your own (`action:'changeMine'`) |
 | `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`. Dependency-free on purpose — see Accounts below |
 | `get-results.js` | public read of all match results (merges every age group's blob) |
@@ -439,9 +437,22 @@ the match-day PWA) but calls the same unified endpoint.
 **One endpoint** — `netlify/functions/login.js`, the password twin of
 `google-auth.js`: account looked up by username alone (no role filter),
 session/token minted from the account's stored role, same `${ip}:login`
-rate bucket as the old per-role endpoints so the attempt budget stays one
-pool. The old `organizer-login.js`/`manager-login.js` are kept byte-identical
-and uncalled — see the Functions table.
+rate bucket as the old per-role endpoints so the attempt budget stayed one
+pool while all three existed.
+
+⚠️ **`organizer-login.js` and `manager-login.js` are RETIRED — deleted
+3 Aug 2026, and they must not come back.** They were kept byte-identical and
+uncalled through the unification for one reason: `test-accounts.js` and
+`test-google-auth.js` read them by name, and Jay's gate was that those files
+pass byte-unchanged. That scaffolding is spent. On retirement every check
+that read them moved to its subject rather than being deleted with it — the
+parity checks became hardcoded literals on `login.js`, `test-google-auth.js`
+now pins the Google session against `login.js` (better: that is the live
+endpoint, not a dead one), and `test-accounts.js`'s no-length-check-at-login
+rule reads `login.js`. `test-unified-login.js` asserts both files are absent,
+with a fault that writes one back to prove the check fires. A resurrected
+copy would be dead code published on a public repo AND a second password
+endpoint with its own rate-limit bucket.
 
 **One session key** — `adhjrt_session_v2`, both data layers. The one-time
 migration (`migrateSession()` in scores-data.js, imported by
@@ -473,9 +484,11 @@ is what lets `test-accounts.js` require the rule directly. A test that needs
 re-exports it, so every existing `require('./_auth')` is unaffected.
 
 ⚠️ **The floor applies when a password is SET, never at login.** A length check
-in `manager-login.js` or `organizer-login.js` would lock out every account whose
-password predates the change — the whole committee, on the morning somebody
-needed to get in. `test-accounts.js` asserts neither login file has one.
+in `login.js` would lock out every account whose password predates the change —
+the whole committee, on the morning somebody needed to get in. `test-accounts.js`
+asserts it has none, and so does `test-unified-login.js` from its own angle;
+each is proven by its own injected fault. (This rule named the two per-role
+endpoints until they were retired on 3 Aug 2026.)
 
 `Organizer.dc.html` carries its own copy of the number so the form can complain
 before sending; the test asserts the two match. A client floor *lower* than the

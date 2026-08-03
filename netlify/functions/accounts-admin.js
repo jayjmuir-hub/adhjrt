@@ -2,7 +2,8 @@
 //
 // Lets a signed-in Organizer view every account (organizer + manager)
 // and approve or reject pending signups. Requires an Authorization:
-// Bearer <token> header from organizer-login.js / organizer-signup.js
+// Bearer <token> header minted by login.js, google-auth.js or
+// organizer-signup.js
 // — any organizer can approve/reject any account, including other
 // organizers (this is a small trusted team, not a public product).
 //

@@ -90,8 +90,10 @@ const NEEDED = [
   path.join('netlify', 'functions', 'organizer-signup.js'),
   path.join('netlify', 'functions', 'manager-signup.js'),
   path.join('netlify', 'functions', 'login.js'),
-  path.join('netlify', 'functions', 'organizer-login.js'),
-  path.join('netlify', 'functions', 'manager-login.js'),
+  /* organizer-login.js and manager-login.js were here until they were retired
+     on 3 Aug 2026. Do not add them back to satisfy a check — the check that
+     asserts they are GONE is satisfied by their absence from this list too,
+     and the fault that proves it CREATES one in the damaged copy. */
   path.join('netlify', 'functions', '_googleAuth.js'),
   path.join('netlify', 'functions', 'google-auth.js'),
   path.join('netlify', 'functions', 'google-config.js'),
@@ -481,7 +483,7 @@ const FAULTS = [
   {
     /* The one that would lock the whole committee out on the morning somebody
        needed in, because every existing password predates the new floor. */
-    name: 'a length check is added to organizer-login.js',
+    name: 'a length check is added to login.js (was organizer-login.js before its retirement)',
     suite: 'test-accounts.js',
     /* The realistic regression: somebody applies the shared rule "for
        consistency" at the one place it must never be applied, and every account
@@ -494,7 +496,11 @@ const FAULTS = [
        check that fired on it would be wrong. A fault has to be the actual
        mistake, not something adjacent to it. */
     apply: () => {
-      const f = path.join('netlify', 'functions', 'organizer-login.js');
+      /* Repointed 3 Aug 2026 with its subject: organizer-login.js was retired,
+         but the RULE it guarded is alive on login.js, which is now the only
+         password endpoint that could make this mistake. A fault deleted along
+         with its file would have taken real coverage with it. */
+      const f = path.join('netlify', 'functions', 'login.js');
       patch(f, "const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');",
         "const { loadAccounts, verifyPassword, sign, blobStore, passwordProblem } = require('./_auth');");
       patch(f, "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
@@ -2441,7 +2447,7 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
       'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:login`,',
       'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:signin`,'),
-    expect: ['login.js counts into the shared :login bucket'],
+    expect: ['login.js counts into the :login bucket'],
   },
   {
     name: 'login.js stops checking approval, signing pending accounts straight in',
@@ -2457,7 +2463,56 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
       "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
       "session: { username: account.username, name: account.name, role: account.title || 'Organizer' },"),
-    expect: ['with the organizer session shape', 'organizer session literal matches'],
+    expect: ['with the organizer session shape', 'the organizer session literal is exactly the shape downstream reads'],
+  },
+
+  /* ---- the retired per-role endpoints stay retired (3 Aug 2026) ---------
+     A deletion is only permanent if something notices it being undone. The
+     repo root IS the deployed site and the repo is public, so a resurrected
+     endpoint is dead code published to the world — and a second password
+     endpoint would come with its own rate-limit bucket, handing back exactly
+     the extra guess budget the shared bucket exists to deny. These two write
+     the file into the damaged copy rather than patching it, because there is
+     no longer anything there to patch. */
+  {
+    name: 'organizer-login.js is resurrected, putting a second password endpoint back on a public site',
+    suite: 'test-unified-login.js',
+    apply: () => fs.writeFileSync(
+      path.join(TMP, 'netlify', 'functions', 'organizer-login.js'),
+      "exports.handler = async () => ({ statusCode: 405, body: 'Method not allowed' });\n"),
+    expect: ['organizer-login.js is retired and has not come back'],
+  },
+  {
+    name: 'manager-login.js is resurrected',
+    suite: 'test-unified-login.js',
+    apply: () => fs.writeFileSync(
+      path.join(TMP, 'netlify', 'functions', 'manager-login.js'),
+      "exports.handler = async () => ({ statusCode: 405, body: 'Method not allowed' });\n"),
+    expect: ['manager-login.js is retired and has not come back'],
+  },
+
+  /* ---- google-auth.js and login.js must mint the SAME session -----------
+     These two patch login.js, not google-auth.js, and that is the point: the
+     shape check used to compare google-auth.js against the retired
+     organizer-login.js / manager-login.js, and was repointed at login.js on
+     3 Aug 2026. If it had quietly become a one-sided check on google-auth.js
+     alone, a drift in the PASSWORD path would sail past it — which is the
+     half a Google-signed-in organiser would never notice. */
+  {
+    name: 'login.js hardcodes the organiser title, so a Google organiser and a password organiser get different sessions',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
+      "session: { username: account.username, name: account.name, role: 'Organizer', _role: 'organizer' },"),
+    expect: ['organiser session fields match login.js'],
+  },
+  {
+    name: 'login.js renames ageGroupId in the manager session, so the two sign-in doors disagree',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "session: { username: account.username, name: account.name, ageGroupId: account.ageGroupId },",
+      "session: { username: account.username, name: account.name, ageGroup: account.ageGroupId },"),
+    expect: ['manager session fields match login.js'],
   },
 
   /* ---- /scores is purely public now (test-scores-public.js) ------------- */

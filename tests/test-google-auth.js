@@ -110,24 +110,32 @@ section('google-auth.js — creating a NEW account via Google uses the same rule
     /title:\s*title \|\| 'Organizer'/.test(organizerSignupSrc));
 }
 
-section('google-auth.js — session shape matches organizer-login.js / manager-login.js exactly');
+/* Google sign-in and password sign-in must mint the SAME session, or which
+   door somebody came through starts to matter to every downstream reader.
+   This compared google-auth.js against organizer-login.js / manager-login.js
+   until those were retired on 3 Aug 2026; it compares against login.js now —
+   which is strictly better, because login.js is the live password endpoint
+   and those two were dead code by then. Both halves are asserted, so a drift
+   in EITHER file fails this. */
+section('google-auth.js — session shape matches the password endpoint (login.js) exactly');
 {
   const src = google();
-  const organizerLogin = readRepo(path.join('netlify', 'functions', 'organizer-login.js'));
-  const managerLogin = readRepo(path.join('netlify', 'functions', 'manager-login.js'));
+  const passwordLogin = readRepo(path.join('netlify', 'functions', 'login.js'));
 
-  check('organiser session fields match organizer-login.js',
+  check('organiser session fields match login.js',
     /session: \{ username: account\.username, name: account\.name, role: account\.title \|\| 'Organizer', _role: 'organizer' \}/.test(src)
-    && /session = \{ username: account\.username, name: account\.name, role: account\.title \|\| 'Organizer', _role: 'organizer' \}/.test(organizerLogin));
+    && /\{ username: account\.username, name: account\.name, role: account\.title \|\| 'Organizer', _role: 'organizer' \}/.test(passwordLogin));
 
-  check('manager session fields match manager-login.js',
+  check('manager session fields match login.js',
     /session: \{ username: account\.username, name: account\.name, ageGroupId: account\.ageGroupId \}/.test(src)
-    && /session = \{ username: account\.username, name: account\.name, ageGroupId: account\.ageGroupId \}/.test(managerLogin));
+    && /\{ username: account\.username, name: account\.name, ageGroupId: account\.ageGroupId \}/.test(passwordLogin));
 
-  check('the signed token payload matches organizer-login.js for organisers',
-    /sign\(\{ username: account\.username, role: 'organizer' \}\)/.test(src));
-  check('the signed token payload matches manager-login.js for managers',
-    /sign\(\{ username: account\.username, role: 'manager', ageGroupId: account\.ageGroupId \}\)/.test(src));
+  check('the signed token payload matches login.js for organisers',
+    /sign\(\{ username: account\.username, role: 'organizer' \}\)/.test(src)
+    && /sign\(\{ username: account\.username, role: 'organizer' \}\)/.test(passwordLogin));
+  check('the signed token payload matches login.js for managers',
+    /sign\(\{ username: account\.username, role: 'manager', ageGroupId: account\.ageGroupId \}\)/.test(src)
+    && /sign\(\{ username: account\.username, role: 'manager', ageGroupId: account\.ageGroupId \}\)/.test(passwordLogin));
 }
 
 section('google-config.js — the client id is handed out, nothing else is');

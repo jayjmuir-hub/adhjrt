@@ -2,7 +2,8 @@
 //
 // Returns the live team & player registrations from the two Google
 // Sheets, for a signed-in Organizer. Requires an Authorization: Bearer
-// <token> header from organizer-login.js / organizer-signup.js — the
+// <token> header minted by login.js, google-auth.js or organizer-signup.js
+// — the
 // token is verified here (see _auth.js), so the sheets themselves never
 // need to be public.
 //

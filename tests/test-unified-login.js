@@ -10,10 +10,19 @@
       that come back are verified with the real verify(). This is the proof
       that existing accounts of BOTH roles work through the single endpoint.
 
-   2. PIN THE PARITY. The session and token shapes must match
-      organizer-login.js / manager-login.js character for character — those
-      two files stay (uncalled by any page) until their own retirement
-      commit, and this is what stops the three drifting apart meanwhile.
+   2. PIN THE SHAPES. The session and token literals are asserted as
+      HARDCODED STRINGS, and the two retired endpoints are asserted GONE.
+
+      ⚠️ This section used to be a parity check against organizer-login.js /
+      manager-login.js, which were kept byte-identical and uncalled after the
+      unification. They were deleted in their retirement commit (3 Aug 2026),
+      so there is nothing left to compare against — and that is fine, because
+      the hardcoded literal was always the half that did the work. A parity
+      check between two copies passes on a change made to both; only the
+      literal catches a change made to the one copy that is left. The session
+      shapes are load-bearing downstream (`isOrganiserSession()` reads
+      `_role`, manager code reads `ageGroupId`), which is why they are pinned
+      by text and not merely exercised.
 
    ⚠️ Nothing here is a real credential. The hashes are the literal strings
    'hash-orga' etc., the secret is a test value, and the stub bcrypt says
@@ -22,7 +31,8 @@
 
 const path = require('path');
 const Module = require('module');
-const { readRepo, section, check, eq, summary } = require('./_lib');
+const fs = require('fs');
+const { repoRoot, readRepo, section, check, eq, summary } = require('./_lib');
 
 /* ------------------------------------------------------------------ */
 /* Stubs — an in-memory blob store so the rate limiter really counts,
@@ -157,35 +167,48 @@ section('Rate limiting: same budget, same shared bucket as the old endpoints');
   const other = parse(await post({ username: 'orga', password: 'pw-orga' }, '198.51.100.8'));
   eq('a different address is unaffected', other.status, 200);
 
-  /* The bucket KEY matters as much as the numbers: all three login endpoints
-     must count into `${ip}:login`, or alternating endpoints buys extra
-     guesses. Asserted on the source of all three. */
-  const files = ['login.js', 'organizer-login.js', 'manager-login.js']
-    .map((f) => readRepo(path.join('netlify', 'functions', f)));
-  files.forEach((src, i) => {
-    check(`${['login.js', 'organizer-login.js', 'manager-login.js'][i]} counts into the shared :login bucket`,
-      src.includes('`${clientIp(event)}:login`'));
-    check('…with the same 10-per-15-minutes budget',
-      src.includes('{ max: 10, windowMs: 15 * 60 * 1000 }'));
-  });
+  /* The bucket KEY mattered most when there were three login endpoints —
+     alternating between them would otherwise have bought extra guesses, so
+     they all counted into `${ip}:login`. Two of the three are retired now
+     and login.js is the only password endpoint left, but the assertion is
+     still worth making on it: the bucket name and the budget are what stand
+     between a public password check and a script working through an account
+     that can read every registrant's name, DOB and medical notes. */
+  const uniSrc = readRepo(path.join('netlify', 'functions', 'login.js'));
+  check('login.js counts into the :login bucket, kept separate from registrations',
+    uniSrc.includes('`${clientIp(event)}:login`'));
+  check('…with the 10-per-15-minutes budget',
+    uniSrc.includes('{ max: 10, windowMs: 15 * 60 * 1000 }'));
 }
 
 /* ====================================================================== */
-section('Parity: the shapes match the old endpoints character for character');
+section('The shapes are pinned by literal, and the retired endpoints stay gone');
 {
   const uni = readRepo(path.join('netlify', 'functions', 'login.js'));
-  const org = readRepo(path.join('netlify', 'functions', 'organizer-login.js'));
-  const mgr = readRepo(path.join('netlify', 'functions', 'manager-login.js'));
 
   const ORG_SESSION = "{ username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' }";
   const MGR_SESSION = "{ username: account.username, name: account.name, ageGroupId: account.ageGroupId }";
   const ORG_TOKEN = "sign({ username: account.username, role: 'organizer' })";
   const MGR_TOKEN = "sign({ username: account.username, role: 'manager', ageGroupId: account.ageGroupId })";
 
-  check('organizer session literal matches organizer-login.js', uni.includes(ORG_SESSION) && org.includes(ORG_SESSION));
-  check('manager session literal matches manager-login.js', uni.includes(MGR_SESSION) && mgr.includes(MGR_SESSION));
-  check('organizer token payload matches', uni.includes(ORG_TOKEN) && org.includes(ORG_TOKEN));
-  check('manager token payload matches', uni.includes(MGR_TOKEN) && mgr.includes(MGR_TOKEN));
+  check('the organizer session literal is exactly the shape downstream reads', uni.includes(ORG_SESSION),
+    "isOrganiserSession() reads _role — drop it and the Publish button silently disappears");
+  check('the manager session literal is exactly the shape downstream reads', uni.includes(MGR_SESSION),
+    'manager code reads s.ageGroupId');
+  check('the organizer token payload is exact', uni.includes(ORG_TOKEN));
+  check('the manager token payload is exact', uni.includes(MGR_TOKEN));
+
+  /* ⚠️ RETIRED 3 Aug 2026, and they must not come back. They were kept
+     byte-identical and uncalled through the unification so the old tests
+     could pass unchanged; that scaffolding is spent. The repo root IS the
+     deployed site and the repo is public, so a resurrected copy is dead
+     code published to the world — and worse, a SECOND password endpoint
+     with its own rate-limit bucket, which is exactly the extra guess budget
+     the shared bucket exists to deny. */
+  ['organizer-login.js', 'manager-login.js'].forEach((f) => {
+    check(`${f} is retired and has not come back`,
+      !fs.existsSync(path.join(repoRoot(), 'netlify', 'functions', f)));
+  });
 
   check('the lookup has NO role filter — that filter is what forced the old fallback chains',
     uni.includes('accounts.find((a) => a.username === uname)')

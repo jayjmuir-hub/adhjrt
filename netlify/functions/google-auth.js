@@ -2,10 +2,10 @@
 //
 // One endpoint for BOTH "sign in with Google" and "sign up with Google", for
 // BOTH organizer and manager accounts. Google sign-in is an ADDITIONAL way
-// in, not a replacement — organizer-login.js/organizer-signup.js and
-// manager-login.js/manager-signup.js are untouched, existing
-// username/password accounts work exactly as before, and every session this
-// issues has the identical shape those functions produce, so nothing
+// in, not a replacement — the password path (login.js, plus the two signup
+// endpoints) is untouched, existing username/password accounts work exactly
+// as before, and every session this issues has the identical shape login.js
+// produces, so nothing
 // downstream (get-registrations.js, submit-result.js, accounts-admin.js,
 // hasAgeGroupAccess in _auth.js) needed to change.
 //
@@ -23,7 +23,7 @@
 //   1. Client gets an ID token from Google Identity Services, POSTs it here
 //      along with { role }.
 //   2. Token verifies -> look up an account with a matching googleSub.
-//        - found + approved   -> session, same as organizer-login/manager-login.
+//        - found + approved   -> session, byte-identical to login.js's.
 //        - found + not approved -> pending message, same as the others.
 //        - not found          -> respond { needsSignup: true, name } so the
 //          client can show an invite-code step, prefilling the Google name.

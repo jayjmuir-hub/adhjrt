@@ -21,8 +21,9 @@
 // ⚠️ IT APPLIES WHEN A PASSWORD IS SET, NEVER AT LOGIN. Raising it must not lock
 // out an existing account whose password is shorter — that would take the whole
 // committee out on the morning somebody needed to get in. Do NOT add a length
-// check to manager-login.js or organizer-login.js; test-accounts.js asserts
-// neither of them has one.
+// check to login.js, the one password endpoint; test-accounts.js asserts it
+// has none. (This named manager-login.js/organizer-login.js until those were
+// retired on 3 Aug 2026 — the rule moved with its subject, it did not lapse.)
 
 const MIN_PASSWORD_LENGTH = 10;
 

@@ -118,8 +118,15 @@ section('The password floor');
 
   /* AND NO LOGIN DOES. Raising the floor must never lock out an account whose
      password predates it — that would take the whole committee out on the
-     morning somebody needed to get in. */
-  ['organizer-login.js', 'manager-login.js'].forEach((f) => {
+     morning somebody needed to get in.
+
+     This read organizer-login.js and manager-login.js until they were retired
+     on 3 Aug 2026. login.js is the only password endpoint left, so it is the
+     only one that can make this mistake — the check moved with its subject
+     rather than being deleted with it. (test-unified-login.js asserts the
+     same rule from its own angle; both are proven by their own faults, so
+     neither is borrowing the other's cover.) */
+  ['login.js'].forEach((f) => {
     const src = readRepo(path.join('netlify', 'functions', f));
     check(`${f} does NOT check password length`, !/passwordProblem\(/.test(src) && !/password\.length/.test(src),
       'a length check at login would lock out every existing short password');
@@ -218,8 +225,9 @@ section('Self-signup can be switched off without a code change');
          -> "it is at least 10"
      * the page's copy of the floor left behind at 6
          -> "the page uses the same minimum as the server"
-     * a length check added to organizer-login.js
-         -> "organizer-login.js does NOT check password length"
+     * a length check added to login.js
+         -> "login.js does NOT check password length"
+           (was organizer-login.js until that endpoint was retired, 3 Aug 2026)
      * create no longer requiring an age group for a manager
          -> "a manager still needs an age group"
 

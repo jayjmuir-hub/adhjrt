@@ -1746,8 +1746,8 @@ export function canPublishNow(session, publishState) {
 
 /* An organiser session reaches this file in more than one shape depending on
    where it came from: currentSession() above builds { isOrganizer: true } from
-   the organizer app's stored session, while organizer-login.js returns an
-   object carrying _role (and `role` holding their job title, not a role name).
+   the organizer app's stored session, while login.js returns an object
+   carrying _role (and `role` holding their job title, not a role name).
    Check all of them — missing one silently hides the Publish button, which is
    exactly what happened the first time. The server re-checks properly from the
    signed token, so this is only about what the UI offers. */

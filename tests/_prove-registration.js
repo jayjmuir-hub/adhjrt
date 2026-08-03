@@ -2156,13 +2156,35 @@ const FAULTS = [
       ''),
     expect: ['the created account stores no password — passwordHash is explicitly null, not omitted'],
   },
+  /* ⚠️ REPOINTED Aug 2026, not dropped: the RULE (the listing shows a readable
+     sign-in method and never a raw googleSub) is still alive, but the
+     derivation moved out to _auth.js's signInMethodOf(). */
   {
     name: 'accounts-admin.js stops stripping googleSub from the account listing',
     suite: 'test-google-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: googleSub ? 'Google' : 'Password' })),",
-      "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: rest.googleSub ? 'Google' : 'Password' })),"),
+      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }) })),",
+      "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: 'Password' })),"),
     expect: ['googleSub is stripped from the listing the same way passwordHash is'],
+  },
+  {
+    /* The exact bug the shared helper was created to end: a local derivation
+       that cannot ever return 'Both', so a password login with Google linked
+       reads as "Google only" on the card. */
+    name: 'accounts-admin.js goes back to deriving signInMethod for itself',
+    suite: 'test-google-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "signInMethod: signInMethodOf({ passwordHash, googleSub })",
+      "signInMethod: googleSub ? 'Google' : 'Password'"),
+    expect: ['it is NOT derived locally', 'a human-readable sign-in method is shown instead'],
+  },
+  {
+    name: "signInMethodOf() loses the Both case, so a linked password login reads as Google only",
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "  if (a.passwordHash && a.googleSub) return 'Both';",
+      "  if (false) return 'Both';"),
+    expect: ['BOTH, once a password login has Google linked'],
   },
   {
     name: 'google-auth.js goes back to hardcoding every Google-created organiser’s title, ignoring a custom one',
@@ -2366,13 +2388,130 @@ const FAULTS = [
       '[[redirects]]\n  from = "/signin"\n  to = "/Signin.dc.html"\n  status = 200\n', ''),
     expect: ['netlify.toml serves /signin'],
   },
+  /* ⚠️ REPOINTED Aug 2026. This used to prove that the ROLE PICKER's choice
+     reached the payload. The picker is gone — ORGANIZER_INVITE_CODE was
+     deleted from Netlify, so an organiser signup can only ever be refused —
+     and the rule that replaced it is that signup can ONLY ask for a manager.
+     A fault whose subject is deleted must be repointed if the rule it guarded
+     is still alive somewhere; here it moved rather than died. */
   {
-    name: 'the signup role picker stops being sent, every signup hitting the manager gate',
+    name: 'the signup stops sending a role at all',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
       "      res = await api.signup({ role: signupRole, name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });",
       "      res = await api.signup({ name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });"),
-    expect: ['an organizer signup posts role organizer'],
+    expect: ['signup can only ever ask for a manager account now'],
+  },
+  {
+    name: 'the Organiser option creeps back onto the signup role picker',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      '      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
+      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
+    expect: ['no role picker survives on either signup view', 'the page never offers "Organiser" as something to sign up as'],
+  },
+  {
+    name: 'the invite-code label goes back to switching between admin and age group',
+    suite: 'test-signin-page.js',
+    apply: () => patch('Signin.dc.html',
+      "      signupCodeLabel: 'AGE GROUP INVITE CODE',",
+      "      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',"),
+    expect: ['the invite-code label no longer switches'],
+  },
+
+  /* ---- the My account card (test-my-account.js) ------------------------- */
+  {
+    /* ⚠️ THE ONE THAT MATTERS. Widening this gate to cover other-person mode
+       would let an organiser attach their OWN Google identity to somebody
+       else's login — the takeover google-auth.js's googleSub-only lookup
+       exists to prevent. */
+    name: "the Link Google gate on /organizer loses its 'this is my own account' clause",
+    suite: 'test-my-account.js',
+    apply: () => patch('Organizer.dc.html',
+      "acctCanLinkGoogle: !!(!s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),",
+      "acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),"),
+    expect: ['LINK GOOGLE IS ABSENT from somebody'],
+  },
+  {
+    /* The second guard, provable on its own because the test calls the
+       handler directly and so bypasses the view-model gate above. Two guards,
+       two faults — a guard nothing can catch alone is a guard too many. */
+    name: 'the credential handler stops refusing in other-person mode',
+    suite: 'test-my-account.js',
+    apply: () => patch('Organizer.dc.html',
+      '    if (this.state.acctSubject) return;',
+      '    if (false) return;'),
+    expect: ['the credential handler refuses outright in that mode'],
+  },
+  {
+    /* The account acted on must come from the TOKEN. A username in the body
+       is the thing my-account.js has no code path to read — and the card must
+       not start sending one either. */
+    name: '/manager starts sending a username with its own password change',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      '    const res = await api.changeMyPassword(acctCurrent, acctNew);',
+      '    const res = await api.changeMyPassword(acctCurrent, acctNew, this.state.session && this.state.session.username);'),
+    expect: ['no username rides along'],
+  },
+  {
+    name: '/manager loses the client-side password floor, so Save bounces off a 400',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      '    if (acctNew.length < MIN_PASSWORD_LENGTH) {',
+      '    if (false) {'),
+    expect: ['a too-short new password is refused before anything is sent'],
+  },
+  {
+    name: 'the card stops telling "still loading" apart from "the fetch failed"',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      '      acctLoading: s.acctOpen && s.acct === undefined,',
+      '      acctLoading: false,'),
+    expect: ['while the fetch is in flight the card says loading'],
+  },
+  {
+    name: 'Link Google keeps being offered after an identity is already attached',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      "      acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),",
+      '      acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct),'),
+    expect: ['Link Google disappears once it is linked'],
+  },
+  {
+    /* accounts-admin.js is organiser-only and stays that way. The card now
+       living on /manager is exactly the change that might tempt someone to
+       relax it. */
+    name: '/manager grows an organiser-only accounts-admin call',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      '  async openAccount() {',
+      '  async revokeSomeone(u) { return this.state.api.revokeAccount(u); }\n\n  async openAccount() {'),
+    expect: ['never calls api.revokeAccount'],
+  },
+  {
+    name: 'organizer-data.js stops re-exporting the Google client id the link button needs',
+    suite: 'test-accounts.js',
+    apply: () => patch('organizer-data.js',
+      "export { googleClientId } from './scores-data.js';",
+      "// export { googleClientId } from './scores-data.js';"),
+    expect: ['organizer-data.js provides api.googleClientId()'],
+  },
+  {
+    name: 'the age group on the card reverts to its raw id instead of its name',
+    suite: 'test-my-account.js',
+    apply: () => patch('Manager.dc.html',
+      "        : ('Age-group manager · ' + (this.ageName(s.acct.ageGroupId) || s.acct.ageGroupId || ''))),",
+      "        : ('Age-group manager · ' + (s.acct.ageGroupId || ''))),"),
+    expect: ['the age group NAME not its id'],
+  },
+  {
+    name: 'the old change-password dropdown is restored alongside the card on /organizer',
+    suite: 'test-my-account.js',
+    apply: () => patch('Organizer.dc.html',
+      '      acctOpen: s.acctOpen,\n      acctIsMe:',
+      '      showChangePwd: s.showChangePwd,\n      onToggleChangePwd: () => this.onToggleChangePwd(),\n      acctOpen: s.acctOpen,\n      acctIsMe:'),
+    expect: ['the old change-password dropdown is gone from /organizer'],
   },
 
   /* ---- one session key + migration (test-session-migration.js) ---------- */

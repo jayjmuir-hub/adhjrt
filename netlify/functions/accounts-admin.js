@@ -37,7 +37,7 @@
 // data-layer function in the same commit; test-accounts.js now checks every
 // api.* the page calls actually exists.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
 
 // Age-group ids a created manager may be bound to. Mirrors AGE_GROUPS in
 // scores-data.js. '*' is the special "all age groups" admin-manager.
@@ -64,8 +64,12 @@ exports.handler = async (event) => {
           ok: true,
           // googleSub is an internal Google account id, not meant for display —
           // stripped the same way passwordHash is. signInMethod is a display-only
-          // convenience for the Accounts tab (added with Google sign-in support).
-          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: googleSub ? 'Google' : 'Password' })),
+          // convenience, now rendered on the My account card in other-person
+          // mode. ⚠️ It comes from _auth.js's signInMethodOf() and must NOT be
+          // derived here: the local version this replaced could not return
+          // 'Both', so a password login with Google linked read as "Google
+          // only" — see the comment on that function.
+          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }) })),
         }),
       };
     }

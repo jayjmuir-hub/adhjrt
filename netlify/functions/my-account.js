@@ -28,7 +28,7 @@
 // a session for it, and the Google identity, by producing a valid token.
 // google-auth.js still never attaches itself to anyone silently.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
 const { verifyGoogleIdToken } = require('./_googleAuth');
 
 const json = (statusCode, body) => ({ statusCode, body: JSON.stringify(body) });
@@ -48,7 +48,10 @@ function publicView(a) {
     approved: !!a.approved,
     createdAt: a.createdAt || '',
     passwordChangedAt: a.passwordChangedAt || '',
-    signInMethod: a.passwordHash && a.googleSub ? 'Both' : (a.googleSub ? 'Google' : 'Password'),
+    // ⚠️ From _auth.js — the ONE copy. accounts-admin.js's listing derives the
+    // same field for the same card in other-person mode; when each had its own
+    // they disagreed. See signInMethodOf().
+    signInMethod: signInMethodOf(a),
   };
 }
 

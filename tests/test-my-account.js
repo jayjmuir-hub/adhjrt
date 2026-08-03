@@ -97,6 +97,25 @@ if (!process.env.SESSION_SECRET) process.env.SESSION_SECRET = 'test-not-a-real-s
 
 const { handler } = require(FN('my-account.js'));
 const { sign } = require(FN('_auth.js'));
+const { signInMethodOf } = require(FN('_auth.js'));
+
+section('signInMethodOf() — ONE copy, and it can say Both');
+{
+  /* ⚠️ DRIVEN, not grepped. accounts-admin.js's listing used to derive this
+     field for itself as `googleSub ? 'Google' : 'Password'`, which cannot ever
+     return 'Both' — so a password login with Google linked was reported as
+     "Google only" by the very listing the account card reads in other-person
+     mode. Harmless while nothing displayed it; the card displays it as one of
+     five facts about a person, and linking made 'Both' an ordinary state. Both
+     files now call this one function. */
+  eq('a password-only account', signInMethodOf({ passwordHash: 'h' }), 'Password');
+  eq('a Google-only account', signInMethodOf({ googleSub: 'g' }), 'Google');
+  eq('BOTH, once a password login has Google linked',
+    signInMethodOf({ passwordHash: 'h', googleSub: 'g' }), 'Both');
+  eq('a missing account does not throw', signInMethodOf(null), 'Password');
+  eq('…nor an empty one', signInMethodOf({}), 'Password');
+}
+
 
 const TOKENS = {
   orga: sign({ username: 'orga', role: 'organizer' }),
@@ -277,6 +296,274 @@ section('accounts-admin.js stays organiser-only — the other-people actions are
   check('changeMine is gone from accounts-admin.js — it lives here now',
     !/changeMine/.test(admin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')),
     'absence checked on the CODE, not the comments');
+}
+
+/* ======================================================================
+   THE CARD ITSELF, on both pages.
+
+   The endpoint above is only half of it. These sections DRIVE the two real
+   components — a source grep cannot see that Link Google is hidden in
+   other-person mode, only that a string is present somewhere. */
+
+class DCLogic {
+  setState(patch, cb) {
+    const p = typeof patch === 'function' ? patch(this.state) : patch;
+    this.state = { ...this.state, ...p };
+    if (typeof cb === 'function') cb();
+  }
+}
+
+function buildPage(file) {
+  const { readRepo } = require('./_lib');
+  const t = readRepo(file);
+  const m = t.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) throw new Error('no x-dc script in ' + file);
+  // eslint-disable-next-line no-new-func
+  const C = new Function('DCLogic', 'window', 'document', m[1] + '\n;return Component;')(
+    DCLogic,
+    { addEventListener() {}, google: undefined },
+    { addEventListener() {}, body: { style: {} }, baseURI: 'https://adhjrt.com/', getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } }
+  );
+  const c = new C();
+  c.props = {};
+  return c;
+}
+
+/* A fake account layer that RECORDS its calls. Discriminating on purpose:
+   changeMyPassword refuses unless it is given exactly the two arguments the
+   card should send, so a card that sent a username as well, or dropped the
+   current password, fails instead of quietly passing. */
+function accountApi(overrides) {
+  const calls = [];
+  const api = Object.assign({
+    calls,
+    myAccount: async () => { calls.push(['myAccount', ...arguments]); return { ok: true, account: { name: 'Pat Tester', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password' } }; },
+    changeMyPassword: async (...a) => { calls.push(['changeMyPassword', ...a]); return { ok: true }; },
+    linkGoogle: async (...a) => { calls.push(['linkGoogle', ...a]); return { ok: true, account: { name: 'Pat Tester', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Both' } }; },
+    googleClientId: async () => 'client-id.apps.googleusercontent.com',
+    resetAccountPassword: async (...a) => { calls.push(['resetAccountPassword', ...a]); return { ok: true }; },
+    approveAccount: async (...a) => { calls.push(['approveAccount', ...a]); return { ok: true }; },
+    rejectAccount: async (...a) => { calls.push(['rejectAccount', ...a]); return { ok: true }; },
+    revokeAccount: async (...a) => { calls.push(['revokeAccount', ...a]); return { ok: true }; },
+    listAccounts: async () => ({ ok: true, accounts: [] }),
+    /* renderVals() on both pages touches a lot of the data layer that has
+       nothing to do with this card. These are the no-op stand-ins that let it
+       run; none of them is what any assertion here is about. */
+    canPublishNow: () => false,
+    isOrganiserSession: (x) => !!(x && x.isOrganizer),
+    canScoreAgeGroup: () => true,
+    teamLabel: (code) => code,
+    minutesToDisplay: (m) => String(m),
+    minutesToTimeInput: (m) => String(m),
+    pitchesForAgeGroup: () => [],
+    scoringRules: () => ({}),
+    registrationCopy: () => ({}),
+    venueDays: () => [],
+  }, overrides || {});
+  return api;
+}
+
+/* ====================================================================== */
+section('/manager — the card, on a page that had no account UI at all');
+{
+  const c = buildPage('Manager.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, ageGroups: [{ id: 'u14b', name: 'U14B Contact' }] };
+  await c.openAccount();
+
+  const v = c.renderVals();
+  check('opening it fetches your own account', v.acctOpen === true && v.acctLoaded === true);
+  eq('the name and username are shown', [v.acctName, v.acctUsername], ['Pat Tester', 'pat']);
+  /* The id is not what anybody calls it. */
+  eq('the role reads in words, with the age group NAME not its id',
+    v.acctRoleLabel, 'Age-group manager · U14B Contact');
+  eq('the sign-in method is in words too', v.acctSignInMethod, 'Password only');
+  check('member since is a real date, not "Invalid Date"', /2026/.test(v.acctMemberSince));
+  check('nothing is still shown as loading once it has arrived', v.acctLoading === false);
+}
+{
+  /* Loading and failed must not render the same — the design audit went
+     through the whole site removing exactly this. */
+  const c = buildPage('Manager.dc.html');
+  c.state = { ...c.state, api: accountApi({ myAccount: async () => ({ ok: false, error: 'Not signed in.' }) }) };
+  const before = (() => { c.setState({ acctOpen: true, acct: undefined }); return c.renderVals(); })();
+  check('while the fetch is in flight the card says loading', before.acctLoading === true && before.acctLoaded === false);
+  await c.openAccount();
+  const after = c.renderVals();
+  check('once it has failed it says so instead of loading forever',
+    after.acctLoading === false && after.acctLoaded === false && after.acctLoadError === 'Not signed in.');
+}
+{
+  const c = buildPage('Manager.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, ageGroups: [] };
+  await c.openAccount();
+  c.setState({ acctCurrent: 'old-password-1', acctNew: 'new-password-1' });
+  await c.doChangeMyPassword();
+  const call = api.calls.find((x) => x[0] === 'changeMyPassword');
+  eq('changing your password sends the current one and the new one', call.slice(1), ['old-password-1', 'new-password-1']);
+  /* ⚠️ The whole security property of the endpoint. */
+  eq('…and NOTHING else — no username rides along', call.length, 3);
+  check('a success message is shown and the fields are cleared',
+    c.state.acctSuccess === 'Password changed.' && c.state.acctCurrent === '' && c.state.acctNew === '');
+}
+{
+  const c = buildPage('Manager.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, ageGroups: [] };
+  await c.openAccount();
+  c.setState({ acctCurrent: 'old-password-1', acctNew: 'short' });
+  await c.doChangeMyPassword();
+  check('a too-short new password is refused before anything is sent',
+    !api.calls.some((x) => x[0] === 'changeMyPassword') && /at least/.test(c.state.acctError));
+  c.setState({ acctCurrent: '', acctNew: 'new-password-1', acctError: '' });
+  await c.doChangeMyPassword();
+  check('…and so is a missing current password',
+    !api.calls.some((x) => x[0] === 'changeMyPassword') && /current password/i.test(c.state.acctError));
+}
+{
+  const c = buildPage('Manager.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, ageGroups: [] };
+  await c.openAccount();
+  c.setState({ acctGoogleClientId: 'cid' });
+  check('Link Google is offered to a password-only account', c.renderVals().acctCanLinkGoogle === true);
+  await c.onAccountGoogleCredential({ credential: 'google-id-token' });
+  const call = api.calls.find((x) => x[0] === 'linkGoogle');
+  eq('the credential is passed straight to linkGoogle', call.slice(1), ['google-id-token']);
+  check('…and the card now says both methods work',
+    c.renderVals().acctSignInMethod === 'Password and Google');
+  /* The server REFUSES to replace an identity, so the button would only ever
+     produce an error once one is attached. */
+  check('Link Google disappears once it is linked', c.renderVals().acctCanLinkGoogle === false);
+}
+{
+  /* GOOGLE_CLIENT_ID not set in Netlify — googleClientId() answers null, the
+     same signal /signin uses to decide Google sign-in exists at all. */
+  const c = buildPage('Manager.dc.html');
+  c.state = { ...c.state, api: accountApi({ googleClientId: async () => null }), ageGroups: [] };
+  await c.openAccount();
+  check('with no Google client id configured, no link button is offered',
+    c.renderVals().acctCanLinkGoogle === false,
+    'the same clientId===null rule /signin uses to decide Google exists at all');
+  check('…and the rest of the card still works — linking is an enhancement only',
+    c.renderVals().acctLoaded === true && c.renderVals().acctUsername === 'pat');
+}
+
+/* ====================================================================== */
+section('/organizer — the same card, and the line between the two modes');
+{
+  const c = buildPage('Organizer.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, accounts: [] };
+  await c.openMyAccount();
+  c.setState({ acctGoogleClientId: 'cid' });
+  const v = c.renderVals();
+  check('your own account opens in "me" mode', v.acctIsMe === true && v.acctIsOther === false);
+  eq('…titled as yours', v.acctHeading, 'My account');
+  check('…with Link Google offered', v.acctCanLinkGoogle === true);
+}
+{
+  const c = buildPage('Organizer.dc.html');
+  const api = accountApi();
+  /* Deliberately a password-only, approved account with the client id present
+     — every OTHER condition for the link button is satisfied, so the only
+     thing that can be suppressing it is the mode. */
+  c.state = { ...c.state, api, accounts: [
+    { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password' },
+  ], acctGoogleClientId: 'cid' };
+  c.openOtherAccount('mgr');
+  const v = c.renderVals();
+  check('a row opens that person in other-person mode', v.acctIsOther === true && v.acctIsMe === false);
+  eq('…titled neutrally, not "My account"', v.acctHeading, 'Account');
+  eq('…showing their details', [v.acctName, v.acctUsername], ['Mgr Person', 'mgr']);
+  eq('…with their role in words', v.acctRoleLabel, 'Age-group manager · U14B Contact');
+
+  /* ⚠️ THE ONE THAT MATTERS. An organiser attaching a Google identity to
+     somebody else's login would be attaching their OWN — exactly the takeover
+     google-auth.js's googleSub-only lookup exists to prevent. Every other
+     condition for the button is true here, so this can only be failing on the
+     mode itself. */
+  check('LINK GOOGLE IS ABSENT from somebody else’s account', v.acctCanLinkGoogle === false);
+}
+{
+  /* Defence in depth: even if the button were somehow rendered, the handler
+     refuses. Two guards, and this one is provable on its own because the
+     view-model guard is bypassed by calling the handler directly. */
+  const c = buildPage('Organizer.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, accounts: [
+    { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, signInMethod: 'Password' },
+  ] };
+  c.openOtherAccount('mgr');
+  await c.onAccountGoogleCredential({ credential: 'google-id-token' });
+  check('…and the credential handler refuses outright in that mode',
+    !api.calls.some((x) => x[0] === 'linkGoogle'));
+}
+{
+  const c = buildPage('Organizer.dc.html');
+  const api = accountApi();
+  c.state = { ...c.state, api, accounts: [
+    { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, signInMethod: 'Password' },
+    { username: 'newbie', name: 'New Person', role: 'manager', ageGroupId: 'u9', approved: false, signInMethod: 'Password' },
+  ], acctGoogleClientId: 'cid' };
+
+  c.openOtherAccount('newbie');
+  let v = c.renderVals();
+  check('a pending account is flagged as awaiting approval', v.acctIsPending === true && v.acctIsApproved === false);
+  v.onAcctApprove();
+  eq('Approve acts on THAT person', api.calls.find((x) => x[0] === 'approveAccount').slice(1), ['newbie']);
+
+  c.openOtherAccount('mgr');
+  v = c.renderVals();
+  check('an approved account offers Revoke instead', v.acctIsApproved === true && v.acctIsPending === false);
+  v.onAcctRevoke();
+  eq('Revoke acts on THAT person too', api.calls.find((x) => x[0] === 'revokeAccount').slice(1), ['mgr']);
+}
+{
+  const c = buildPage('Organizer.dc.html');
+  c.state = { ...c.state, api: accountApi(), accounts: [] };
+  c.openOtherAccount('ghost');
+  check('a username no longer in the list says so rather than rendering blanks',
+    c.renderVals().acctLoaded === false && /no longer/.test(c.renderVals().acctLoadError));
+}
+
+/* ====================================================================== */
+section('The two copies of the card cannot drift on WHAT they call');
+{
+  const { readRepo } = require('./_lib');
+  const org = readRepo('Organizer.dc.html');
+  const mgr = readRepo('Manager.dc.html');
+  const strip = (t) => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const o = strip(org), m = strip(mgr);
+
+  /* There is no build step and no shared component system, so the card's
+     MARKUP is a second copy by design. Its DATA LAYER is not: both pages call
+     the same three functions out of scores-data.js. */
+  for (const fn of ['myAccount', 'changeMyPassword', 'linkGoogle']) {
+    check(`/organizer calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(o));
+    check(`/manager calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(m));
+  }
+  check('organizer-data.js re-exports them rather than reimplementing',
+    /export \{ myAccount, changeMyPassword, linkGoogle \} from '\.\/scores-data\.js';/.test(readRepo('organizer-data.js')));
+  check('…and the Google client id the link button needs, which it did not before',
+    /export \{ googleClientId \} from '\.\/scores-data\.js';/.test(readRepo('organizer-data.js')));
+
+  /* ⚠️ accounts-admin.js is organiser-only and stays that way. The card now
+     living on /manager is exactly the change that might tempt someone to
+     relax it, so /manager is asserted to reach NONE of those actions. */
+  for (const fn of ['resetAccountPassword', 'approveAccount', 'rejectAccount', 'revokeAccount', 'listAccounts']) {
+    check(`/manager never calls api.${fn} — those are organiser powers`,
+      !new RegExp('\\.' + fn + '\\(').test(m));
+  }
+  check('/organizer does have them', /\.resetAccountPassword\(/.test(o) && /\.revokeAccount\(/.test(o));
+
+  /* The header dropdown that only changed a password is gone from /organizer,
+     replaced by the card — checked on the code, not the comments explaining it. */
+  check('the old change-password dropdown is gone from /organizer',
+    !/showChangePwd/.test(o) && !/onToggleChangePwd/.test(o));
+  check('…and both pages open the card from their header',
+    /onOpenMyAccount/.test(o) && /onOpenAccount/.test(m));
 }
 
 restore();

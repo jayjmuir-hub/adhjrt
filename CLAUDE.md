@@ -441,8 +441,7 @@ where the organiser code was one secret for total access.
 ### One sign-in for everything (Aug 2026)
 
 **Sign-in lives at `/signin`, and only there.** `Signin.dc.html` carries
-password sign-in, the Google button and BOTH signup flows (a role picker
-decides which invite-code gate a new account goes through). After sign-in it
+password sign-in, the Google button and BOTH signup flows. After sign-in it
 routes by the account's role — organizer → `/organizer`, manager →
 `/manager`; `?next=` is honoured only from the allow-list of exactly those
 two paths and only when the role permits it. `/organizer` and `/manager`
@@ -485,6 +484,94 @@ each endpoint had a role filter. The unified endpoint has none — one call,
 the account's own role decides where you land. test-signin-page.js,
 test-session-migration.js and test-unified-login.js hold all of this.
 
+### The signup role picker is GONE (Aug 2026)
+
+**Both signup flows on `/signin` — password and Google — now create an
+age-group manager, and nothing else.** The picker that chose between Manager
+and Organiser is deleted, along with its blurb, the organiser-only "role /
+title" inputs, and the invite-code label that switched between ADMIN INVITE
+CODE and AGE GROUP INVITE CODE.
+
+**Why:** `ORGANIZER_INVITE_CODE` was deleted in Netlify on 3 Aug 2026, so
+`organizer-signup.js` and `google-auth.js`'s organiser branch refuse EVERY
+organiser signup while it is absent. Leaving the option would have offered a
+choice that can only ever fail, answered by a wrong-code message that reads as
+"you typed it wrong" — the worst kind of dead end, because the person retypes
+a code that was never going to work.
+
+`signupRole` survives in state, fixed at `'manager'` and with no setter, so
+both signup payloads keep the exact shape they had. `signupTitle`/`googleTitle`
+survive the same way (always `''`, as a manager signup already sent), but their
+renderVals bindings are DELETED — a binding with no markup is dead code, and on
+a public repo whose root IS the deployed site, dead code is still published.
+
+**Organiser accounts are made in the back office only**: `/organizer` →
+Accounts → Create a login → Organiser. `test-signin-page.js` asserts the
+closure on the page source rather than on state — a check that drives a state
+the UI cannot reach proves nothing about what anyone can actually do.
+
+### My account (added Aug 2026)
+
+Design: `claude/specs/spec-my-account.md`. **One card, two modes**, rendered on
+both `/organizer` and `/manager`.
+
+**`netlify/functions/my-account.js` — the door is ANY valid session, not an
+organiser session.** That is the whole reason it is not in `accounts-admin.js`,
+whose `requireOrganizer` gate applies to every action behind it: a manager
+could not previously even change their own password. `GET` returns your own
+safe fields; `POST {action:'password'}` changes your own password (the current
+one required); `POST {action:'linkGoogle'}` attaches a Google identity.
+
+⚠️ **THE ACCOUNT ACTED ON IS ALWAYS THE ONE IN THE VERIFIED TOKEN.** There is
+deliberately no code path that reads a username, id or role off the request,
+and the cards send none. It is the only thing between "link my Google account"
+and "link my Google account to somebody else's login".
+
+**Linking refuses rather than replaces.** An identity already on another
+account → 409 (two accounts sharing one would resolve to whichever `find()`
+reached first — a silent mix-up in a store holding children's dates of birth
+and medical notes). A different identity already on YOUR account → 409, not a
+swap, or a stolen session could plant a way back in that survives the real
+owner changing their password. Re-linking the same identity is a no-op
+success. **Consequence, accepted: there is no unlink and no way to move one.**
+
+⚠️ **LINK GOOGLE DOES NOT EXIST IN OTHER-PERSON MODE, BY DESIGN.** An organiser
+attaching a Google identity to someone else's login would be attaching their
+OWN. Two guards, each with its own injected fault: the `!s.acctSubject` clause
+in `acctCanLinkGoogle`, and an early return in `onAccountGoogleCredential`.
+
+**`changeMine` was deleted from `accounts-admin.js`** in the same commit — two
+ways to change your own password is two rules that drift. `action:'password'`
+(an organiser resetting SOMEONE ELSE'S, with no current password, because the
+point is that it is lost) stays there, behind that door. `/manager` reaches
+none of the accounts-admin actions, asserted by name.
+
+⚠️ **`signInMethodOf()` lives in `_auth.js` and is the ONE copy.**
+`accounts-admin.js`'s listing used to derive the same field for itself as
+`googleSub ? 'Google' : 'Password'`, **which cannot ever return `'Both'`** — so
+a password login with Google linked read as "Google only". Invisible while
+nothing displayed the field; the card displays it as one of five facts about a
+person, and linking made `'Both'` an ordinary state rather than an impossible
+one. Both readers now call the shared function, and its behaviour is DRIVEN in
+`test-my-account.js`, not grepped.
+
+**The card's markup is a second copy on purpose** (no build step, no shared
+component system — the cost already paid by `DEFAULT_VENUE` and the
+registration copy block). Its DATA LAYER is not: `myAccount()`,
+`changeMyPassword()` and `linkGoogle()` live in `scores-data.js` and
+`organizer-data.js` re-exports them, along with `googleClientId()` — which the
+Link Google button needs and which was missing until `test-accounts.js`'s
+`api.*` sweep caught it. That sweep exists because this is exactly how the two
+password features below died.
+
+⚠️ **`/organizer` and `/manager` load Google's script now, and that is NOT a
+sign-in path.** `test-signin-page.js` used to assert no Google machinery of any
+kind existed on `/organizer`; that check was NARROWED, deliberately and in
+four parts, to "no Google SIGN-IN" plus positive assertions that the only
+Google code there is the LINK button. A widened check is a check with less to
+say, so the linking machinery got its own assertions rather than being covered
+by silence.
+
 ### Passwords
 
 **One floor, `MIN_PASSWORD_LENGTH` in `netlify/functions/_password.js`, currently
@@ -506,8 +593,9 @@ asserts it has none, and so does `test-unified-login.js` from its own angle;
 each is proven by its own injected fault. (This rule named the two per-role
 endpoints until they were retired on 3 Aug 2026.)
 
-`Organizer.dc.html` carries its own copy of the number so the form can complain
-before sending; the test asserts the two match. A client floor *lower* than the
+`Organizer.dc.html` **and `Manager.dc.html`** each carry their own copy of the
+number so the My account form can complain before sending; the test asserts
+they match the server's. A client floor *lower* than the
 server's means Create goes ahead and bounces off a 400 with the password already
 typed.
 

@@ -122,5 +122,21 @@ function hasAgeGroupAccess(session, ageGroupId) {
   return false;
 }
 
+/* How an account can sign in, as one word, for display only.
+   ⚠️ ONE COPY ON PURPOSE. accounts-admin.js's listing and my-account.js's own
+   view both need this, and until Aug 2026 they each had their own: the listing
+   said `googleSub ? 'Google' : 'Password'`, which CANNOT EVER SAY 'Both' and
+   so reported a password login with Google linked as "Google only". That was
+   invisible while nothing displayed the field; the My account card displays it
+   as one of five facts about you, and linking made 'Both' an ordinary state
+   rather than an impossible one. Two copies of one rule drift — this is the
+   one copy, and a test asserts neither file derives it for itself again. */
+function signInMethodOf(account) {
+  const a = account || {};
+  if (a.passwordHash && a.googleSub) return 'Both';
+  if (a.googleSub) return 'Google';
+  return 'Password';
+}
+
 module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore,
-  MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem };
+  MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem, signInMethodOf };

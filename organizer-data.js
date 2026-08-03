@@ -212,6 +212,15 @@ export async function resetAccountPassword(username, password) {
    3 Aug 2026 so a manager could reach it too. */
 export { myAccount, changeMyPassword, linkGoogle } from './scores-data.js';
 
+/* The Google CLIENT ID, for the Link Google button on the account card.
+   ⚠️ This is NOT a sign-in path. /organizer has no way to sign in with Google
+   and must not grow one - the card only ever ATTACHES an identity to the
+   account you already hold a session for. Re-exported rather than
+   reimplemented, same as the three above; test-accounts.js's api.* sweep is
+   what caught it missing, which is exactly how the two password features
+   died before it existed. */
+export { googleClientId } from './scores-data.js';
+
 /* -------- The venue: pitches per day, and which day each age group plays --------
    Read is public (venue-layout.js GET); adding ?usage=1 with an organiser token
    also returns how many saved match slots sit on each pitch, so the back office

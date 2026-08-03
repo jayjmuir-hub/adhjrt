@@ -96,30 +96,15 @@
             <div style="font-weight:700;font-size:14px">{{ sessionName }}</div>
             <div style="font-size:12px;color:#5A626E">{{ sessionRole }}</div>
           </div>
-          <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#454D58;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Change password</button>
+          <!-- My account. This replaced a header dropdown that did nothing but
+               change your own password: the card shows the same person their
+               name, username, role, sign-in method and join date, and carries
+               Link Google as well. The SAME card, in other-person mode, opens
+               from any row in the Accounts tab.
+               Design: claude/specs/spec-my-account.md -->
+          <button onClick="{{ onOpenMyAccount }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#454D58;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">My account</button>
           <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
 
-          <sc-if value="{{ showChangePwd }}" hint-placeholder-val="{{ false }}">
-            <div style="position:absolute;top:calc(100% + 10px);right:0;width:300px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:12px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.4);z-index:20">
-              <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:12px">Change password</div>
-              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CURRENT PASSWORD</label>
-              <div style="position:relative;margin:6px 0 12px">
-                <input type="{{ cpCurrentType }}" value="{{ cpCurrent }}" onInput="{{ onCpCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleCpCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpCurrentToggleLabel }}</button>
-              </div>
-              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NEW PASSWORD</label>
-              <div style="position:relative;margin:6px 0 12px">
-                <input type="{{ cpNewType }}" value="{{ cpNew }}" onInput="{{ onCpNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleCpNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ cpNewToggleLabel }}</button>
-              </div>
-              <sc-if value="{{ cpError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpError }}</div></sc-if>
-              <sc-if value="{{ cpSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-bottom:10px">{{ cpSuccess }}</div></sc-if>
-              <div style="display:flex;gap:8px">
-                <button onClick="{{ onCpSubmit }}" disabled="{{ cpBusy }}" style="flex:1;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ cpLabel }}</button>
-                <button onClick="{{ onToggleChangePwd }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:10px 14px;border-radius:8px;cursor:pointer">Cancel</button>
-              </div>
-            </div>
-          </sc-if>
         </div>
       </div>
 
@@ -655,7 +640,7 @@
             <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
               <sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="2">
                 <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
-                  <div>
+                  <div onClick="{{ a.onOpen }}" style="cursor:pointer;flex:1;min-width:200px">
                     <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#5A626E;font-weight:500">— {{ a.username }}</span></div>
                     <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
                   </div>
@@ -682,11 +667,15 @@
               </thead>
               <tbody>
                 <sc-for list="{{ approvedAccounts }}" as="a" hint-placeholder-count="3">
+                  <!-- Clicking the row opens the account card. The two action
+                       buttons in the last cell keep working as they always did
+                       and are NOT inside the clickable region, so a click on
+                       Revoke cannot also open the card behind the dialog. -->
                   <tr style="border-top:1px solid rgba(0,0,0,0.06)">
-                    <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ a.name }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#454D58">{{ a.username }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ a.roleLabel }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#0E6B33;font-weight:700">Active</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:14px;font-weight:700;cursor:pointer">{{ a.name }}</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#454D58;cursor:pointer">{{ a.username }}</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#343A42;cursor:pointer">{{ a.roleLabel }}</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#0E6B33;font-weight:700;cursor:pointer">Active</td>
                     <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
                   </tr>
                 </sc-for>
@@ -800,6 +789,124 @@
           <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No player registrations match your filters.</div></sc-if>
         </div>
       </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===================== ACCOUNT CARD =====================
+       ONE card, TWO modes. The information is identical in both; only the
+       actions differ, and the difference is not cosmetic:
+
+         your own          -> Change password (needs your current one), Link Google
+         someone else's    -> Reset password (no current one - the point is it is
+                              lost), Approve / Reject / Revoke, and NEVER Link Google
+
+       ⚠️ LINK GOOGLE IS ABSENT FROM OTHER-PERSON MODE BY DESIGN, NOT OMISSION.
+       The whole security property is that the account holder proves control of
+       BOTH halves - the account by holding a session for it, the Google
+       identity by producing a valid token for it. An organiser attaching a
+       Google identity to someone else's login would be attaching their OWN,
+       which is exactly the takeover google-auth.js's googleSub-only lookup
+       exists to prevent. A manager who wants Google links it themselves.
+       Design: claude/specs/spec-my-account.md -->
+  <sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-start;justify-content:center;padding:24px;z-index:190;overflow-y:auto">
+      <div style="width:100%;max-width:460px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:14px;padding:22px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+          <div style="font-family:'Anton';font-size:20px;text-transform:uppercase;letter-spacing:.4px">{{ acctHeading }}</div>
+          <button onClick="{{ onCloseAccount }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer">Close</button>
+        </div>
+
+        <sc-if value="{{ acctLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:28px 0;text-align:center;color:#5A626E;font-size:14px">Loading your account&hellip;</div>
+        </sc-if>
+
+        <sc-if value="{{ acctLoadError }}" hint-placeholder-val="">
+          <div style="margin-top:16px;color:#A62626;font-size:13px;font-weight:600">{{ acctLoadError }}</div>
+        </sc-if>
+
+        <sc-if value="{{ acctLoaded }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:18px;display:flex;flex-direction:column;gap:12px">
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</div>
+              <div style="font-size:15px;font-weight:700;margin-top:2px">{{ acctName }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">{{ acctUsernameLabel }}</div>
+              <div style="font-size:15px;font-weight:700;margin-top:2px">{{ acctUsername }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</div>
+              <div style="font-size:15px;margin-top:2px">{{ acctRoleLabel }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Sign-in method</div>
+              <div style="font-size:15px;margin-top:2px">{{ acctSignInMethod }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Member since</div>
+              <div style="font-size:15px;margin-top:2px">{{ acctMemberSince }}</div>
+            </div>
+            <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
+              <div style="background:rgba(245,197,24,0.14);border:1px solid rgba(245,197,24,0.4);border-radius:9px;padding:10px 12px;color:#8F6400;font-size:13px;font-weight:700">Awaiting approval - cannot sign in yet.</div>
+            </sc-if>
+          </div>
+
+          <!-- YOUR OWN ACCOUNT: change your password. The current one is
+               required, so a borrowed laptop is not a permanent takeover. -->
+          <sc-if value="{{ acctIsMe }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Change password</div>
+              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
+              <div style="position:relative;margin:6px 0 12px">
+                <input name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleAcctCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctCurrentToggleLabel }}</button>
+              </div>
+              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
+              <div style="position:relative;margin:6px 0 12px">
+                <input name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleAcctNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctNewToggleLabel }}</button>
+              </div>
+              <div style="font-size:12px;color:#69727E;margin-bottom:10px">Passwords are at least {{ acctMinPassword }} characters.</div>
+              <sc-if value="{{ acctError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-bottom:10px">{{ acctError }}</div></sc-if>
+              <sc-if value="{{ acctSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-bottom:10px">{{ acctSuccess }}</div></sc-if>
+              <button onClick="{{ onAcctSubmit }}" disabled="{{ acctBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:11px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ acctSaveLabel }}</button>
+            </div>
+          </sc-if>
+
+          <!-- YOUR OWN ACCOUNT: link Google. Offered only when Google is
+               configured AND this login has no identity yet, because the server
+               refuses to REPLACE one - showing the button otherwise would be
+               showing a control whose only possible answer is an error. -->
+          <sc-if value="{{ acctCanLinkGoogle }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Link a Google account</div>
+              <p style="color:#5A626E;font-size:13px;line-height:1.5;margin:8px 0 12px">Adds the Google button as a second way into this same login. Your username and password keep working exactly as they do now.</p>
+              <div id="account-google-btn" style="display:flex;justify-content:center"></div>
+              <sc-if value="{{ acctGoogleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleError }}</div></sc-if>
+              <sc-if value="{{ acctGoogleSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleSuccess }}</div></sc-if>
+            </div>
+          </sc-if>
+
+          <!-- SOMEONE ELSE'S ACCOUNT. No Link Google here, ever - see the
+               comment at the top of this card. -->
+          <sc-if value="{{ acctIsOther }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Organiser actions</div>
+              <p style="color:#5A626E;font-size:13px;line-height:1.5;margin:8px 0 14px">Resetting a password does not ask for their old one - the point is that it is lost. Tell them the new one yourself; nothing is emailed.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onClick="{{ onAcctResetPassword }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reset password</button>
+                <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ onAcctApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
+                  <button onClick="{{ onAcctReject }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
+                </sc-if>
+                <sc-if value="{{ acctIsApproved }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ onAcctRevoke }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Revoke</button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+      </div>
     </div>
   </sc-if>
 
@@ -1081,8 +1188,15 @@ class Component extends DCLogic {
        { kind: 'confirm'|'prompt', title, onConfirm, okLabel?, wide? }.
        modalValue is the prompt's input. */
     modal: null, modalValue: '',
-    showChangePwd: false, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '', cpBusy: false,
-    showCpCurrent: false, showCpNew: false,
+    /* The account card (Aug 2026). acctSubject is null for YOUR OWN account
+       and a username string for somebody else's; it is the one flag the whole
+       two-mode card turns on. acct is undefined while the GET is in flight and
+       null when it failed - "loading" and "we asked and got nothing" must not
+       render the same. */
+    acctOpen: false, acctSubject: null, acct: undefined, acctLoadError: '',
+    acctCurrent: '', acctNew: '', acctShowCurrent: false, acctShowNew: false,
+    acctError: '', acctSuccess: '', acctBusy: false,
+    acctGoogleClientId: '', acctGoogleError: '', acctGoogleSuccess: '',
   };
 
   async componentDidMount() {
@@ -1099,7 +1213,13 @@ class Component extends DCLogic {
 
     /* Escape closes the open confirm/prompt modal — standard dialog manners
        (design audit, Aug 2026). */
-    this._escHandler = (e) => { if (e.key === 'Escape' && this.state.modal) this.closeModal(); };
+    /* Escape closes the top overlay - the confirm dialog sits above the
+       account card (z 200 vs 190), so it goes first. */
+    this._escHandler = (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.state.modal) this.closeModal();
+      else if (this.state.acctOpen) this.closeAccount();
+    };
     document.addEventListener('keydown', this._escHandler);
 
     /* Keeps the Registration tab's "what the public page says" preview honest
@@ -1114,6 +1234,24 @@ class Component extends DCLogic {
 
   redirect(url) {
     try { window.location.replace(url); } catch (e) { /* non-browser context — the shell's own link covers it */ }
+  }
+
+  /* An age group's real NAME for the account card. MANAGER_AGE_GROUPS is the
+     same list the Create-a-login picker uses, so there is no third copy. */
+  ageGroupName(id) {
+    const found = MANAGER_AGE_GROUPS.find((g) => g.id === id);
+    return (found && found.name) || '';
+  }
+
+  componentDidUpdate() {
+    /* The account card sits inside an sc-if, so opening it mounts a FRESH
+       #account-google-btn div and Google's button has to be drawn into that
+       new one. Guarded on _acctGoogleRendered so it is not redrawn on every
+       keystroke in the password fields. */
+    const s = this.state;
+    const canLink = !!(s.acctOpen && !s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password');
+    if (canLink && !this._acctGoogleRendered) this.renderAccountGoogleButton();
+    if (!s.acctOpen) this._acctGoogleRendered = false;
   }
 
   componentWillUnmount() {
@@ -2567,18 +2705,126 @@ class Component extends DCLogic {
       : (res.error || 'Failed to reset password.'));
   }
 
-  onToggleChangePwd() {
-    this.setState((s) => ({ showChangePwd: !s.showChangePwd, cpCurrent: '', cpNew: '', cpError: '', cpSuccess: '' }));
+  /* ---------- The account card (Aug 2026) ---------------------------------
+     Design: claude/specs/spec-my-account.md. Two modes, one card.
+
+     ⚠️ YOUR OWN half acts on the account in the SESSION TOKEN and sends no
+     username at all - my-account.js deliberately has no code path that would
+     read one. The OTHER-PERSON half goes through accounts-admin.js, which is
+     organiser-only and names its subject explicitly. They are separate
+     endpoints on purpose, and Link Google exists on the first only. */
+
+  async openMyAccount() {
+    this.setState({
+      acctOpen: true, acctSubject: null, acct: undefined, acctLoadError: '',
+      acctCurrent: '', acctNew: '', acctError: '', acctSuccess: '',
+      acctGoogleError: '', acctGoogleSuccess: '',
+    });
+    const res = await this.state.api.myAccount();
+    if (res && res.ok) this.setState({ acct: res.account });
+    else this.setState({ acct: null, acctLoadError: (res && res.error) || 'Could not load your account.' });
+    this.setupAccountGoogle();
   }
 
-  async doChangePassword() {
-    const { api, cpCurrent, cpNew } = this.state;
-    this.setState({ cpBusy: true, cpError: '', cpSuccess: '' });
-    const res = await api.changeMyPassword(cpCurrent, cpNew);
-    if (res.ok) {
-      this.setState({ cpBusy: false, cpSuccess: 'Password changed.', cpCurrent: '', cpNew: '' });
+  /* Somebody else's. No fetch: accounts-admin.js's listing already returns
+     every account with passwordHash and googleSub stripped and signInMethod
+     derived, which is exactly the field set this card renders - a second
+     endpoint would be a second copy of that shape. */
+  openOtherAccount(username) {
+    const found = (this.state.accounts || []).find((a) => a.username === username);
+    this.setState({
+      acctOpen: true, acctSubject: username, acct: found || null,
+      acctLoadError: found ? '' : 'That account is no longer in the list.',
+      acctCurrent: '', acctNew: '', acctError: '', acctSuccess: '',
+      acctGoogleError: '', acctGoogleSuccess: '',
+    });
+  }
+
+  closeAccount() {
+    this._acctGoogleRendered = false;
+    this.setState({
+      acctOpen: false, acctSubject: null, acctCurrent: '', acctNew: '',
+      acctError: '', acctSuccess: '', acctGoogleError: '', acctGoogleSuccess: '',
+    });
+  }
+
+  async doChangeMyPassword() {
+    const { api, acctCurrent, acctNew } = this.state;
+    if (!acctCurrent) { this.setState({ acctError: 'Enter your current password.', acctSuccess: '' }); return; }
+    /* The client floor only decides when the form complains before sending.
+       _auth.js's passwordProblem() is the authority and runs regardless. */
+    if (acctNew.length < MIN_PASSWORD_LENGTH) {
+      this.setState({ acctError: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, acctSuccess: '' });
+      return;
+    }
+    this.setState({ acctBusy: true, acctError: '', acctSuccess: '' });
+    const res = await api.changeMyPassword(acctCurrent, acctNew);
+    if (res && res.ok) {
+      this.setState({ acctBusy: false, acctSuccess: 'Password changed.', acctCurrent: '', acctNew: '', acct: res.account || this.state.acct });
     } else {
-      this.setState({ cpBusy: false, cpError: res.error || 'Failed to change password.' });
+      this.setState({ acctBusy: false, acctError: (res && res.error) || 'Failed to change password.' });
+    }
+  }
+
+  /* Google linking is an ENHANCEMENT ONLY, exactly as on /signin: if the
+     client id is absent or Google's script will not load, the card still shows
+     the details and still changes passwords. Hence the blanket try. */
+  async setupAccountGoogle() {
+    const { api } = this.state;
+    if (!api || !api.googleClientId) return;
+    try {
+      const clientId = this.state.acctGoogleClientId || await api.googleClientId();
+      if (!clientId) return;
+      this.setState({ acctGoogleClientId: clientId });
+      await this.loadGoogleScript();
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => this.onAccountGoogleCredential(r) });
+        this.renderAccountGoogleButton();
+      }
+    } catch (e) { /* enhancement only */ }
+  }
+
+  loadGoogleScript() {
+    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
+    if (this._googleScriptPromise) return this._googleScriptPromise;
+    this._googleScriptPromise = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = 'https://accounts.google.com/gsi/client';
+      el.async = true; el.defer = true;
+      el.onload = () => resolve();
+      el.onerror = () => reject(new Error('Could not load Google sign-in.'));
+      document.head.appendChild(el);
+    });
+    return this._googleScriptPromise;
+  }
+
+  renderAccountGoogleButton() {
+    const el = document.getElementById('account-google-btn');
+    if (!el || !(window.google && window.google.accounts && window.google.accounts.id)) return;
+    el.innerHTML = '';
+    window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', text: 'continue_with', width: 280 });
+    this._acctGoogleRendered = true;
+  }
+
+  async onAccountGoogleCredential(resp) {
+    const token = resp && resp.credential;
+    if (!token) { this.setState({ acctGoogleError: 'Google sign-in did not return a token.' }); return; }
+    /* ⚠️ Only ever called from YOUR OWN card. The button it belongs to lives
+       inside the acctCanLinkGoogle gate, which is false in other-person mode -
+       linking somebody else's login to the organiser's own Google identity is
+       the takeover this whole design refuses. */
+    if (this.state.acctSubject) return;
+    this.setState({ acctGoogleError: '', acctGoogleSuccess: '' });
+    const res = await this.state.api.linkGoogle(token);
+    if (res && res.ok) {
+      this.setState({
+        acct: res.account || this.state.acct,
+        acctGoogleSuccess: res.alreadyLinked
+          ? 'That Google account is already linked to this login.'
+          : 'Google account linked. You can use the Google button next time you sign in.',
+      });
+    } else {
+      this.setState({ acctGoogleError: (res && res.error) || 'Could not link that Google account.' });
     }
   }
 
@@ -2736,19 +2982,56 @@ class Component extends DCLogic {
       sessionName: s.session ? s.session.name : '',
       sessionRole: s.session ? s.session.role : '',
 
-      showChangePwd: s.showChangePwd,
-      onToggleChangePwd: () => this.onToggleChangePwd(),
-      cpCurrent: s.cpCurrent, cpNew: s.cpNew, cpError: s.cpError, cpSuccess: s.cpSuccess,
-      cpBusy: s.cpBusy, cpLabel: s.cpBusy ? 'Saving…' : 'Save',
-      onCpCurrent: (e) => this.setState({ cpCurrent: e.target.value }),
-      onCpNew: (e) => this.setState({ cpNew: e.target.value }),
-      onCpSubmit: () => this.doChangePassword(),
-      cpCurrentType: s.showCpCurrent ? 'text' : 'password',
-      cpCurrentToggleLabel: s.showCpCurrent ? 'HIDE' : 'SHOW',
-      onToggleCpCurrent: () => this.setState((st) => ({ showCpCurrent: !st.showCpCurrent })),
-      cpNewType: s.showCpNew ? 'text' : 'password',
-      cpNewToggleLabel: s.showCpNew ? 'HIDE' : 'SHOW',
-      onToggleCpNew: () => this.setState((st) => ({ showCpNew: !st.showCpNew })),
+      /* ---- The account card ---- */
+      acctOpen: s.acctOpen,
+      acctIsMe: s.acctOpen && !s.acctSubject,
+      acctIsOther: s.acctOpen && !!s.acctSubject,
+      acctHeading: s.acctSubject ? 'Account' : 'My account',
+      /* undefined = the GET is still in flight, null = it came back and
+         failed. Rendering those two the same is the loading-vs-empty mistake
+         the design audit went through the whole site removing. Other-person
+         mode reads a row already in hand, so it is never in flight. */
+      acctLoading: s.acctOpen && !s.acctSubject && s.acct === undefined,
+      acctLoaded: !!s.acct,
+      acctLoadError: s.acctLoadError,
+      acctName: (s.acct && s.acct.name) || (s.acct && s.acct.username) || '',
+      acctUsernameLabel: s.acctSubject ? 'Signs in with' : 'You sign in with',
+      acctUsername: (s.acct && s.acct.username) || '',
+      /* Role in WORDS, and a manager's age group by its real NAME - an id like
+         'u14b' is not what anybody calls it. */
+      acctRoleLabel: !s.acct ? '' : (s.acct.role === 'organizer'
+        ? ('Organiser' + (s.acct.title ? ' · ' + s.acct.title : ''))
+        : ('Age-group manager · ' + (this.ageGroupName(s.acct.ageGroupId) || s.acct.ageGroupId || ''))),
+      acctSignInMethod: !s.acct ? '' : (s.acct.signInMethod === 'Both'
+        ? 'Password and Google'
+        : (s.acct.signInMethod === 'Google' ? 'Google only' : 'Password only')),
+      acctMemberSince: this.fmtDate((s.acct && s.acct.createdAt) || ''),
+      acctIsPending: !!(s.acct && !s.acct.approved),
+      acctIsApproved: !!(s.acct && s.acct.approved),
+      acctCurrent: s.acctCurrent, acctNew: s.acctNew,
+      acctCurrentType: s.acctShowCurrent ? 'text' : 'password',
+      acctCurrentToggleLabel: s.acctShowCurrent ? 'HIDE' : 'SHOW',
+      acctNewType: s.acctShowNew ? 'text' : 'password',
+      acctNewToggleLabel: s.acctShowNew ? 'HIDE' : 'SHOW',
+      acctMinPassword: MIN_PASSWORD_LENGTH,
+      acctError: s.acctError, acctSuccess: s.acctSuccess,
+      acctBusy: s.acctBusy, acctSaveLabel: s.acctBusy ? 'Saving…' : 'Save',
+      /* ⚠️ `!s.acctSubject` is the load-bearing clause: Link Google is offered
+         on YOUR OWN account only. Never widen this to cover other-person mode
+         - see the comment on the card itself. */
+      acctCanLinkGoogle: !!(!s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),
+      acctGoogleError: s.acctGoogleError, acctGoogleSuccess: s.acctGoogleSuccess,
+      onOpenMyAccount: () => this.openMyAccount(),
+      onCloseAccount: () => this.closeAccount(),
+      onAcctCurrent: (e) => this.setState({ acctCurrent: e.target.value }),
+      onAcctNew: (e) => this.setState({ acctNew: e.target.value }),
+      onToggleAcctCurrent: () => this.setState((p) => ({ acctShowCurrent: !p.acctShowCurrent })),
+      onToggleAcctNew: () => this.setState((p) => ({ acctShowNew: !p.acctShowNew })),
+      onAcctSubmit: () => this.doChangeMyPassword(),
+      onAcctResetPassword: () => this.doResetPassword(s.acctSubject),
+      onAcctApprove: () => { this.doApprove(s.acctSubject); this.closeAccount(); },
+      onAcctReject: () => { this.doReject(s.acctSubject); this.closeAccount(); },
+      onAcctRevoke: () => { this.doRevoke(s.acctSubject); this.closeAccount(); },
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
@@ -2816,12 +3099,14 @@ class Component extends DCLogic {
         createdAtDisplay: this.fmtDate(a.createdAt),
         onApprove: () => this.doApprove(a.username),
         onReject: () => this.doReject(a.username),
+        onOpen: () => this.openOtherAccount(a.username),
       })),
       approvedAccounts: s.accounts.filter((a) => a.approved).map((a) => ({
         ...a,
         roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
         onRevoke: () => this.doRevoke(a.username),
         onResetPassword: () => this.doResetPassword(a.username),
+        onOpen: () => this.openOtherAccount(a.username),
       })),
       hasPending: s.accounts.some((a) => !a.approved),
       pendingCount: s.accounts.filter((a) => !a.approved).length,

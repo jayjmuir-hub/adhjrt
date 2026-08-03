@@ -119,16 +119,41 @@ section('Signup: the role picker decides which invite-code gate is called');
   eq('…and an immediately-approved account is routed by its role', gone, ['/manager']);
 }
 {
+  /* ⚠️ REPOINTED, Aug 2026. This used to set signupRole:'organizer' by hand
+     and assert the payload carried it — an assertion the shipped page can no
+     longer reach, because ORGANIZER_INVITE_CODE was deleted from Netlify and
+     the role picker went with it. A check driving a state the UI cannot
+     produce proves nothing about what anyone can actually do, so what is
+     asserted now is the CLOSURE itself. The pending-view behaviour it also
+     covered is kept, driven through the manager path that still exists. */
   const calls = [];
   const c = build();
   spy(c);
   c.state = { ...c.state, api: { signup: async (args) => { calls.push(args); return { ok: true, pending: true, message: 'Needs approval.' }; } } };
-  c.setState({ authMode: 'signup', signupRole: 'organizer', signupName: 'Sam Helper', signupTitle: 'Registrar', signupPass: 'longpassword1', signupCode: 'ADMIN-CODE' });
+  c.setState({ authMode: 'signup', signupName: 'Sam Helper', signupPass: 'longpassword1', signupCode: 'CODE-U9' });
   await c.doSignup();
-  eq('an organizer signup posts role organizer, with the title',
-    [calls[0].role, calls[0].title], ['organizer', 'Registrar']);
+  eq('signup can only ever ask for a manager account now', calls[0].role, 'manager');
   check('a pending signup shows the Account created view, not a redirect',
     c.state.signupPending === true && c.renderVals().isSignupPendingView === true);
+}
+{
+  /* The closure, asserted on the page source rather than on state — this is
+     what a person can actually click. */
+  const src = readRepo('Signin.dc.html');
+  const code = src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  check('no role picker survives on either signup view',
+    !/onRoleOrganizer/.test(code) && !/onRoleManager/.test(code) && !/roleOrganizerStyle/.test(code));
+  check('…nor the role blurb that switched with it', !/roleBlurb/.test(code));
+  check('…nor the organiser-only title inputs', !/onSignupTitle/.test(code) && !/onGoogleTitle/.test(code));
+  check('the invite-code label no longer switches — it is always the age-group one',
+    /signupCodeLabel: 'AGE GROUP INVITE CODE'/.test(code) && !/ADMIN INVITE CODE/.test(code));
+  check('signupRole is fixed at manager and has no setter',
+    /signupRole: 'manager'/.test(code) && !/signupRole: 'organizer'/.test(code));
+  /* The word must not creep back into what the page offers. Checked on the
+     code with comments stripped, because the comments explain at length WHY
+     organiser signup is closed and must be free to say so. */
+  check('the page never offers "Organiser" as something to sign up as',
+    !/>Organiser</.test(code));
 }
 {
   /* The dedupe-retry: same 409 loop the old pages used. */
@@ -161,9 +186,11 @@ section('Google: existing account routes by its stored role; new one needs role 
 
   const calls = [];
   c.state.api.googleAuth = async (args) => { calls.push(args); return { ok: true, session: MGR_SESSION }; };
-  c.setState({ signupRole: 'manager', googleCode: 'CODE-U9' });
+  c.setState({ googleCode: 'CODE-U9' });
   await c.doGoogleSignup();
-  eq('the chosen role and code are what get posted', [calls[0].role, calls[0].inviteCode], ['manager', 'CODE-U9']);
+  /* No role is chosen any more — 'manager' is the only one the page can send,
+     and that is the assertion, not a passthrough of whatever state said. */
+  eq('the Google signup posts manager and the code', [calls[0].role, calls[0].inviteCode], ['manager', 'CODE-U9']);
 }
 
 /* ====================================================================== */
@@ -189,7 +216,23 @@ section('The pages around it: rewrites and hand-offs');
     /href="\/signin\?next=\/organizer"/.test(org));
   const orgCode = org.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   check('no login form remains on /organizer', !/loginPass/.test(orgCode) && !/doLogin/.test(orgCode));
-  check('no Google sign-in machinery remains on /organizer', !/gsi\/client/.test(orgCode) && !/renderGoogleButton/.test(orgCode));
+  /* ⚠️ NARROWED ON PURPOSE, Aug 2026 — and split into four so the narrowing
+     cannot be mistaken for coverage. This was one assertion that NO Google
+     machinery of any kind existed here, which was right when the unify moved
+     sign-in to /signin and became wrong the moment the My account card added
+     Link Google: that card loads Google's own script to ATTACH an identity to
+     the session you already hold. Signing IN with Google still cannot happen
+     on /organizer, and that is what the first two assert. A widened check is a
+     check with less to say, so the linking machinery gets its own positive
+     assertions rather than being covered by the silence. */
+  check('no Google SIGN-IN remains on /organizer — googleAuth is never called there',
+    !/\bgoogleAuth\s*\(/.test(orgCode));
+  check('…and /signin\'s sign-in button is not rendered there either',
+    !/google-signin-btn/.test(orgCode) && !/\brenderGoogleButton\b/.test(orgCode));
+  check('the only Google code on /organizer is the account card\'s LINK button',
+    /renderAccountGoogleButton/.test(orgCode) && /account-google-btn/.test(orgCode));
+  check('…and it calls linkGoogle, which acts on the session token alone',
+    /\.linkGoogle\(/.test(orgCode));
 
   const mgr = readRepo('Manager.dc.html');
   /* Same anchoring: boot()'s no-session path, not doLogout()'s. */
@@ -197,6 +240,17 @@ section('The pages around it: rewrites and hand-offs');
     /this\.setState\(\{ session: null \}\);\s*\n\s*this\.redirect\('\/signin\?next=\/manager'\);/.test(mgr));
   check('…and sign-out hands over to /signin as well',
     /doLogout\(\) \{[\s\S]{0,700}?this\.redirect\('\/signin\?next=\/manager'\);/.test(mgr));
+
+  /* The same split for /manager, which grew the identical card. */
+  const mgrCode = mgr.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  check('no Google SIGN-IN on /manager either — googleAuth is never called there',
+    !/\bgoogleAuth\s*\(/.test(mgrCode));
+  check('…nor /signin\'s sign-in button',
+    !/google-signin-btn/.test(mgrCode) && !/\brenderGoogleButton\b/.test(mgrCode));
+  check('the only Google code on /manager is the account card\'s LINK button',
+    /renderAccountGoogleButton/.test(mgrCode) && /account-google-btn/.test(mgrCode));
+  check('…and it calls linkGoogle too',
+    /\.linkGoogle\(/.test(mgrCode));
 }
 
 summary('test-signin-page.js');

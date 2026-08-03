@@ -163,9 +163,41 @@ section('accounts-admin.js — the Accounts tab never receives a raw googleSub')
   const src = admin();
   check('googleSub is stripped from the listing the same way passwordHash is',
     /accounts\.map\(\(\{ passwordHash, googleSub, \.\.\.rest \}\)/.test(src));
+  /* ⚠️ REPOINTED, NOT DELETED, Aug 2026. The rule — the listing shows a
+     human-readable sign-in method rather than a raw googleSub — is still
+     alive; what changed is where it is computed. It used to be derived here
+     as `googleSub ? 'Google' : 'Password'`, which CANNOT EVER RETURN 'Both',
+     so a password login with Google linked read as "Google only". That was
+     invisible while nothing displayed the field, and the My account card
+     displays it as one of five facts about a person. The derivation moved to
+     _auth.js's signInMethodOf() — one copy for both readers. */
   check('a human-readable sign-in method is shown instead',
-    /signInMethod: googleSub \? 'Google' : 'Password'/.test(src));
+    /signInMethod: signInMethodOf\(\{ passwordHash, googleSub \}\)/.test(src));
+  check('…and it is NOT derived locally, so it cannot drift from my-account.js',
+    !/signInMethod:\s*\w*\s*googleSub \?/.test(src));
+  check('…which means accounts-admin.js imports the shared one',
+    /signInMethodOf\s*\}?\s*=\s*require\('\.\/_auth'\)|,\s*signInMethodOf\s*\}\s*=\s*require\('\.\/_auth'\)/.test(src));
 }
+
+section('_auth.js — signInMethodOf() is the one copy both readers use');
+{
+  /* Source-text only here: this file loads no modules (_auth.js pulls bcryptjs
+     and @netlify/blobs, which only test-my-account.js stubs). The BEHAVIOUR of
+     signInMethodOf — including the 'Both' case the old inline copy could not
+     express — is DRIVEN in test-my-account.js. Asserting the absence of the
+     duplicate is not a test on its own; that is where the pair lives. */
+  const shared = readRepo(path.join('netlify', 'functions', '_auth.js'));
+  check('_auth.js defines it', /function signInMethodOf\(account\)/.test(shared));
+  check('…and exports it', /signInMethodOf\s*\}/.test(shared) || /,\s*signInMethodOf/.test(shared));
+  check('…and it is the only place \'Both\' is decided',
+    /return 'Both';/.test(shared));
+
+  const mine = readRepo(path.join('netlify', 'functions', 'my-account.js'));
+  check('my-account.js uses the shared derivation', /signInMethod: signInMethodOf\(a\)/.test(mine));
+  check('…and does not derive it locally either',
+    !/passwordHash && a\.googleSub \? 'Both'/.test(mine));
+}
+
 
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST — `node tests/_prove-registration.js`.

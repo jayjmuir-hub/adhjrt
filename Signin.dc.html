@@ -87,21 +87,21 @@
          answer for a brand-new signup: which KIND of invite code you hold. -->
     <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create an account</div>
-      <p style="color:#454D58;font-size:14px;margin-top:6px">Requires an invite code. New accounts also need approval before signing in.</p>
+      <p style="color:#454D58;font-size:14px;margin-top:6px">For age-group managers. Requires your age group's invite code, and new accounts need approval before signing in. Organisers are set up in the back office — ask one of them.</p>
 
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">I AM SIGNING UP AS</label>
-      <div style="display:flex;gap:8px;margin:8px 0 6px">
-        <button onClick="{{ onRoleManager }}" style="{{ roleManagerStyle }}">Age-group manager</button>
-        <button onClick="{{ onRoleOrganizer }}" style="{{ roleOrganizerStyle }}">Organiser</button>
-      </div>
-      <p style="color:#69727E;font-size:12px;margin:0 0 10px;line-height:1.5">{{ roleBlurb }}</p>
-
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:8px">YOUR NAME</label>
+      <!-- ⚠️ THE ROLE PICKER IS GONE, Aug 2026, and this is the whole reason:
+           ORGANIZER_INVITE_CODE was deleted in Netlify, so organizer-signup.js
+           and google-auth.js's organiser branch refuse EVERY organiser signup
+           while it is absent. Leaving the option would have offered a choice
+           that can only ever fail, answered by a wrong-code message that reads
+           as "you typed it wrong" — the worst kind of dead end, because the
+           person retypes a code that was never going to work. Age-group
+           manager is now the only kind of account you can create here, so the
+           picker, its blurb and the organiser/admin label switching all went
+           with it. Organiser accounts are made in the back office:
+           /organizer -> Accounts -> Create a login. -->
+      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
       <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
-      <sc-if value="{{ signupIsOrganizer }}" hint-placeholder-val="{{ false }}">
-        <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">ROLE / TITLE</label>
-        <input value="{{ signupTitle }}" onInput="{{ onSignupTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
-      </sc-if>
       <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
         <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Your login username will be</div>
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ signupUserPreview }}</div>
@@ -126,23 +126,12 @@
          name pre-filled from the Google account. -->
     <sc-if value="{{ isGoogleCodeView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">One more step</div>
-      <p style="color:#454D58;font-size:14px;margin-top:6px">Signed in with Google as <strong style="color:#1A1C1F">{{ googlePendingName }}</strong>. Pick your role and enter its invite code. New accounts also need approval before signing in.</p>
-
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">I AM SIGNING UP AS</label>
-      <div style="display:flex;gap:8px;margin:8px 0 16px">
-        <button onClick="{{ onRoleManager }}" style="{{ roleManagerStyle }}">Age-group manager</button>
-        <button onClick="{{ onRoleOrganizer }}" style="{{ roleOrganizerStyle }}">Organiser</button>
-      </div>
+      <p style="color:#454D58;font-size:14px;margin-top:6px">Signed in with Google as <strong style="color:#1A1C1F">{{ googlePendingName }}</strong>. Enter your age group's invite code. New accounts also need approval before signing in.</p>
 
       <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:0 0 16px">
         <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Your login username will be</div>
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ googleUserPreview }}</div>
       </div>
-
-      <sc-if value="{{ signupIsOrganizer }}" hint-placeholder-val="{{ false }}">
-        <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">ROLE / TITLE</label>
-        <input value="{{ googleTitle }}" onInput="{{ onGoogleTitle }}" placeholder="e.g. Registrar, Medical Lead" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
-      </sc-if>
 
       <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
@@ -169,7 +158,18 @@ class Component extends DCLogic {
     showLoginPass: false, showSignupPass: false, showSignupCode: false, showGoogleCode: false,
     /* Which KIND of account a signup creates. Sign-IN never asks — the
        account's stored role decides where you land. */
+    /* ⚠️ ALWAYS 'manager', and no longer settable. Kept as state rather than
+       inlined so the two signup call sites keep the exact payload shape they
+       had. What went is the PICKER: with ORGANIZER_INVITE_CODE deleted from
+       Netlify, an organiser signup can only ever be refused. */
     signupRole: 'manager',
+    /* signupTitle / googleTitle stay as state but are no longer editable and
+       are always ''. Their inputs were organiser-only and went with the role
+       picker; the field is still SENT so both signup payloads keep the exact
+       shape they had (a manager signup already sent an empty title, because
+       the input was gated). Nothing renders them, so their bindings are gone
+       — a binding with no markup is dead code, and on a public repo whose root
+       IS the deployed site, dead code is still published. */
     signupName: '', signupTitle: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
     signupPending: false, signupPendingMessage: '',
     googleClientId: '', googleBusy: false, googleError: '',
@@ -350,11 +350,6 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state;
-    const roleBase = 'flex:1;font-weight:700;font-size:13px;padding:10px 12px;border-radius:9px;cursor:pointer;border:1px solid ';
-    /* Green = selected, matching the role picker on /organizer's "Create a
-       login" — one accent for the same control in both places (design audit). */
-    const roleOn = roleBase + '#17A34A;background:#17A34A;color:#fff';
-    const roleOff = roleBase + 'rgba(0,0,0,0.18);background:transparent;color:#343A42';
     return {
       isLoginMode: s.authMode === 'login',
       isSignupPendingView: s.authMode === 'signup' && s.signupPending,
@@ -374,24 +369,15 @@ class Component extends DCLogic {
       onShowSignup: () => this.setState({ authMode: 'signup', loginError: '', googleError: '', signupPending: false }),
       onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false, googleError: '', googlePendingToken: '', googlePendingName: '' }),
 
-      signupIsOrganizer: s.signupRole === 'organizer',
-      onRoleManager: () => this.setState({ signupRole: 'manager', signupError: '', googleError: '' }),
-      onRoleOrganizer: () => this.setState({ signupRole: 'organizer', signupError: '', googleError: '' }),
-      roleManagerStyle: s.signupRole === 'manager' ? roleOn : roleOff,
-      roleOrganizerStyle: s.signupRole === 'organizer' ? roleOn : roleOff,
-      roleBlurb: s.signupRole === 'organizer'
-        ? 'Organisers see every age group’s registrations and settings. Needs the admin invite code.'
-        : 'A manager runs ONE age group — which one is decided by the invite code you were given.',
-      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',
+      signupCodeLabel: 'AGE GROUP INVITE CODE',
 
-      signupName: s.signupName, signupTitle: s.signupTitle,
+      signupName: s.signupName,
       signupUserPreview: this.usernameFromName(s.signupName) || '—',
       signupPass: s.signupPass, signupCode: s.signupCode,
       signupError: s.signupError, signupBusy: s.signupBusy,
       signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       signupPendingMessage: s.signupPendingMessage,
       onSignupName: (e) => this.setState({ signupName: e.target.value }),
-      onSignupTitle: (e) => this.setState({ signupTitle: e.target.value }),
       onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
       onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
       onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
@@ -407,8 +393,7 @@ class Component extends DCLogic {
       googleError: s.googleError,
       googlePendingName: s.googlePendingName,
       googleUserPreview: this.usernameFromName(s.googlePendingName) || '—',
-      googleTitle: s.googleTitle, googleCode: s.googleCode,
-      onGoogleTitle: (e) => this.setState({ googleTitle: e.target.value }),
+      googleCode: s.googleCode,
       onGoogleCode: (e) => this.setState({ googleCode: e.target.value }),
       onGoogleCodeKey: (e) => { if (e.key === 'Enter') this.doGoogleSignup(); },
       googleCodeType: s.showGoogleCode ? 'text' : 'password',

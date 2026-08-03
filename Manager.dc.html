@@ -75,15 +75,21 @@
               <div style="font-size:11px;letter-spacing:2px;color:#0E6B33;font-weight:700;margin-top:3px">{{ ageLabel }}</div>
             </div>
           </a>
-          <!-- Organiser-only: switch which age group this dashboard is viewing.
+          <!-- Organiser-only: switch which age group this dashboard is viewing,
+               plus the way back to the organizer area (the main-site link alone
+               strands an organiser two clicks from where they came from).
                A manager account has exactly one age group (their session), so it
-               never gets this — there is nothing for it to switch to. -->
+               never gets any of this — there is nothing for it to switch to. -->
           <sc-if value="{{ isOrganiser }}" hint-placeholder-val="{{ false }}">
-            <select value="{{ ageId }}" onChange="{{ onSwitchAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:8px 10px;color:#1A1C1F;font-size:13px;font-weight:700;flex:none">
-              <sc-for list="{{ ageSwitcherOptions }}" as="ag" hint-placeholder-count="3">
-                <option value="{{ ag.id }}">{{ ag.name }}</option>
-              </sc-for>
-            </select>
+            <div style="display:flex;align-items:center;gap:8px;flex:none">
+              <span style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#5A626E;white-space:nowrap">Viewing as</span>
+              <select value="{{ ageId }}" onChange="{{ onSwitchAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:8px 10px;color:#1A1C1F;font-size:13px;font-weight:700;flex:none">
+                <sc-for list="{{ ageSwitcherOptions }}" as="ag" hint-placeholder-count="3">
+                  <option value="{{ ag.id }}">{{ ag.name }}</option>
+                </sc-for>
+              </select>
+            </div>
+            <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>
           </sc-if>
           <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">← Main site</a>
         </div>
@@ -103,53 +109,10 @@
         </sc-for>
       </div>
 
-      <!-- TAB BODIES. Each placeholder card below is replaced wholesale by the
-           task that owns that tab: Today (Task 4), Fixtures & scoring (Task 5),
-           Results (Task 7), Tables (Task 8), Draw (Tasks 9-12),
-           Registrations (Task 13). -->
-      <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:24px">
-          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">{{ todayHeading }}</div>
-
-          <sc-if value="{{ todayLoading }}" hint-placeholder-val="{{ true }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#5A626E;font-size:14px">Loading…</div>
-          </sc-if>
-
-          <sc-if value="{{ todayAwaiting }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
-              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Fixtures not published yet</div>
-              <div style="color:#5A626E;font-size:14px">{{ comingSoonBlurb }}</div>
-            </div>
-          </sc-if>
-
-          <sc-if value="{{ todayHasNext }}" hint-placeholder-val="{{ true }}">
-            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Next up</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
-              <sc-for list="{{ todayNextRows }}" as="r" hint-placeholder-count="1">
-                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;cursor:pointer;color:#1A1C1F">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
-                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#5A626E;margin-top:3px">{{ r.meta }}</div></div>
-                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap;color:#454D58">{{ r.score }}</div>
-                </button>
-              </sc-for>
-            </div>
-          </sc-if>
-
-          <sc-if value="{{ todayHasRecent }}" hint-placeholder-val="{{ true }}">
-            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:18px 0 10px">Recent results</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
-              <sc-for list="{{ todayRecentRows }}" as="r" hint-placeholder-count="3">
-                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(0,0,0,0.08);cursor:pointer;color:#1A1C1F">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
-                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#5A626E;margin-top:3px">{{ r.meta }}</div></div>
-                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
-                </button>
-              </sc-for>
-            </div>
-          </sc-if>
-        </div>
-      </sc-if>
-      <sc-if value="{{ isFixtures }}" hint-placeholder-val="{{ false }}">
+      <!-- TAB BODIES. Fixtures & scoring is the landing tab — the Today tab
+           that used to sit before it was a subset of this one (next match +
+           recent results) and was removed Aug 2026 at Jay's call. -->
+      <sc-if value="{{ isFixtures }}" hint-placeholder-val="{{ true }}">
         <div style="margin-top:24px">
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Fixtures &amp; scoring</div>
 
@@ -185,14 +148,18 @@
             </div>
           </sc-if>
 
+          <!-- Compact click-to-score cards on an auto-fill grid (Aug 2026) —
+               a match here exists to be tapped open, so a full-width row per
+               match wasted the whole line. statusLine is the saved score, or
+               "Click to score" when there isn't one yet. -->
           <sc-for list="{{ poolGroups }}" as="g" hint-placeholder-count="2">
             <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:1px;color:#5A626E;margin:18px 0 8px">{{ g.name }}</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">
               <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(0,0,0,0.08);cursor:pointer;color:#1A1C1F">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
-                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#5A626E;margin-top:3px">{{ r.meta }}</div></div>
-                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+                <button onClick="{{ r.onOpen }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:13px 15px;text-align:left;cursor:pointer;color:#1A1C1F;display:flex;flex-direction:column;gap:7px;transition:border-color .18s ease,transform .12s ease" style-hover="border-color:rgba(0,0,0,0.4) !important">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</span><span style="font-size:11px;color:#5A626E;font-weight:600">{{ r.pitch }}</span></div>
+                  <div style="font-weight:600;font-size:14px;line-height:1.4">{{ r.teams }}</div>
+                  <div style="{{ r.statusStyle }}">{{ r.statusLine }}</div>
                 </button>
               </sc-for>
             </div>
@@ -200,12 +167,12 @@
 
           <sc-if value="{{ hasKnockout }}" hint-placeholder-val="{{ false }}">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin:20px 0 10px">Knockout</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">
               <sc-for list="{{ knockoutFixtureRows }}" as="r" hint-placeholder-count="2">
-                <button onClick="{{ r.onOpen }}" style="display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:14px 16px;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(0,0,0,0.08);cursor:pointer;color:#1A1C1F">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
-                  <div><div style="font-weight:600;font-size:14.5px;line-height:1.4">{{ r.teams }}</div><div style="font-size:11px;color:#5A626E;margin-top:3px">{{ r.meta }}</div></div>
-                  <div style="font-family:'Anton';font-size:19px;white-space:nowrap">{{ r.score }}</div>
+                <button onClick="{{ r.onOpen }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:13px 15px;text-align:left;cursor:pointer;color:#1A1C1F;display:flex;flex-direction:column;gap:7px;transition:border-color .18s ease,transform .12s ease" style-hover="border-color:rgba(0,0,0,0.4) !important">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</span><span style="font-size:11px;color:#5A626E;font-weight:600">{{ r.pitch }}</span></div>
+                  <div style="font-weight:600;font-size:14px;line-height:1.4"><span style="display:block;font-size:11px;color:#5A626E;margin-bottom:2px">{{ r.meta }}</span>{{ r.teams }}</div>
+                  <div style="{{ r.statusStyle }}">{{ r.statusLine }}</div>
                 </button>
               </sc-for>
             </div>
@@ -590,6 +557,14 @@
             <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
             <input type="number" inputmode="numeric" min="0" step="1" value="{{ sheetHomeCards }}" onInput="{{ onSheetHomeCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
           </div>
+          <!-- The nominee lives inside each team's box, directly under Cards —
+               parked at the bottom of the sheet it was routinely missed. -->
+          <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
+              <label style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
+              <input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
+            </div>
+          </sc-if>
         </div>
 
         <div style="margin-top:14px;border:1px solid rgba(0,0,0,0.1);border-radius:12px;overflow:hidden">
@@ -606,6 +581,12 @@
             <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
             <input type="number" inputmode="numeric" min="0" step="1" value="{{ sheetAwayCards }}" onInput="{{ onSheetAwayCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
           </div>
+          <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
+              <label style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
+              <input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
+            </div>
+          </sc-if>
         </div>
 
         <div style="margin-top:16px">
@@ -617,16 +598,6 @@
           </div>
           <p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>
         </div>
-
-        <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
-          <div style="margin-top:16px">
-            <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">SPIRIT OF RUGBY — ONE NOMINATION PER SIDE</label>
-            <div style="display:flex;gap:10px;margin-top:8px">
-              <input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player" style="flex:1;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
-              <input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player" style="flex:1;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
-            </div>
-          </div>
-        </sc-if>
 
         <button onClick="{{ onSheetSave }}" disabled="{{ sheetBusy }}" style="width:100%;margin-top:18px;background:#17A34A;color:#fff;font-weight:800;font-size:15px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ sheetSaveLabel }}</button>
         <sc-if value="{{ sheetHasResult }}" hint-placeholder-val="{{ false }}">
@@ -660,9 +631,10 @@
 
 </div>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
-/* The six tabs, in the order the old Manager.html showed them. */
+/* The five tabs. Fixtures & scoring comes first and is the landing tab —
+   the old Today tab (next match + recent results) duplicated it and was
+   removed Aug 2026. */
 const MANAGER_TABS = [
-  { id: 'today', label: 'Today' },
   { id: 'fixtures', label: 'Fixtures & scoring' },
   { id: 'results', label: 'Results' },
   { id: 'tables', label: 'Tables' },
@@ -672,7 +644,7 @@ const MANAGER_TABS = [
 
 class Component extends DCLogic {
   state = {
-    api: null, session: null, ageGroups: [], ageId: '', tab: 'today',
+    api: null, session: null, ageGroups: [], ageId: '', tab: 'fixtures',
     fixtures: null, standings: null, spiritAward: null,
     /* draw is `undefined` before the first fetch, `null` both while a fetch is
        in flight AND after a settled fetch that legitimately found no draw
@@ -754,7 +726,7 @@ class Component extends DCLogic {
   doLogout() {
     this.state.api.logout();
     this.setState({
-      session: null, tab: 'today', fixtures: null, standings: null, spiritAward: null,
+      session: null, tab: 'fixtures', fixtures: null, standings: null, spiritAward: null,
       draw: undefined, drawLoadedFor: null, drawDirty: false, drawMsg: '', drawBusy: false,
       picked: null, newTeamDrafts: {},
       importOpen: false, importMode: 'add', importRows: null, importNote: '',
@@ -1667,9 +1639,11 @@ class Component extends DCLogic {
     return (api && api.teamShort ? api.teamShort(code) : code) || code || '';
   }
 
-  /* The shared row view-model for every match list on this page (Today,
-     Fixtures & scoring, Results). One shape, so the three tabs cannot drift
-     apart the way three separate row templates would. */
+  /* The shared row view-model for every match list on this page (Fixtures &
+     scoring cards, Results rows). One shape, so the tabs cannot drift apart
+     the way separate row templates would. statusLine/statusStyle carry the
+     card's bottom line: the score once one is saved, otherwise a "Click to
+     score" invitation — the whole point of the card is opening the sheet. */
   matchRows(list) {
     return (list || []).map((m) => ({
       id: m.id,
@@ -1679,6 +1653,10 @@ class Component extends DCLogic {
       meta: m.poolName || m.round || '',
       hasResult: !!m.result,
       score: m.result ? `${m.result.homeScore}–${m.result.awayScore}` : '',
+      statusLine: m.result ? `${m.result.homeScore}–${m.result.awayScore}` : 'Click to score',
+      statusStyle: m.result
+        ? "font-family:'Anton';font-size:19px;color:#1A1C1F;white-space:nowrap"
+        : 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#0E6B33;white-space:nowrap',
       onOpen: () => this.openMatch(m.id),
     }));
   }
@@ -1740,8 +1718,6 @@ class Component extends DCLogic {
     /* A knockout slot with neither side decided is not a fixture anyone can
        play, so it is excluded everywhere a match list is built. */
     const playable = fxReady ? (fx.pool || []).concat((fx.knockout || []).filter((k) => k.home || k.away)) : [];
-    const nextUp = playable.find((m) => !m.result) || null;
-    const recent = [...playable].reverse().filter((m) => m.result).slice(0, 3);
     /* Grouped by pool in FIRST-APPEARANCE order — Object.keys on an object
        built while walking the list preserves insertion order for string keys,
        which is the same ordering the old dashboard produced. A match with no
@@ -1878,17 +1854,10 @@ class Component extends DCLogic {
         style: s.tab === t.id ? tabOn : tabOff,
         onPick: () => this.go(t.id),
       })),
-      isToday: s.tab === 'today', isFixtures: s.tab === 'fixtures',
+      isFixtures: s.tab === 'fixtures',
       isResults: s.tab === 'results', isTables: s.tab === 'tables',
       isDraw: s.tab === 'draw', isRegistrations: s.tab === 'registrations',
 
-      todayLoading: !fx,
-      todayAwaiting: !!(fx && fx.awaitingPublication),
-      todayHeading: this.ageName(s.ageId),
-      todayHasNext: !!nextUp,
-      todayNextRows: nextUp ? this.matchRows([nextUp]) : [],
-      todayHasRecent: recent.length > 0,
-      todayRecentRows: this.matchRows(recent),
       comingSoonBlurb: `The draw for ${this.ageName(s.ageId)} hasn't been released yet.`,
 
       fixturesLoading: !fx,

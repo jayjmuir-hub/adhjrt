@@ -188,8 +188,17 @@
     .hdr-row{padding:10px 16px!important}
     .hdr-toggle{display:inline-flex!important;align-items:center}
     .hdr-nav{display:none!important}
-    /* Open: a full-width panel under the header, links stacked. */
+    /* The Menu dropdown is desktop furniture. On a phone the hamburger panel
+       is the menu, and it carries the two sign-in links itself (they are
+       display:none inline; the a{display:block!important} rule below un-hides
+       them along with everything else). */
+    .hdr-menu{display:none!important}
+    /* Open: a full-width panel under the header, links stacked. The nav now
+       sits inside .hdr-right (which also holds the Menu dropdown), so the
+       wrapper has to go full width or the nav's own 100% is measured against
+       a shrink-wrapped flex item. */
     .hdr-row[data-nav-open="true"]{flex-wrap:wrap!important}
+    .hdr-row[data-nav-open="true"] .hdr-right{width:100%!important}
     .hdr-row[data-nav-open="true"] .hdr-nav{
       display:flex!important;flex-direction:column!important;align-items:stretch!important;
       width:100%!important;gap:2px!important;margin-top:10px!important;
@@ -302,22 +311,46 @@
       <!-- onClick on the NAV, not each link: a tap on any link bubbles up and
            closes the panel, so you are not left staring at an open menu after
            jumping to a section. -->
-      <nav class="hdr-nav" onClick="{{ closeNav }}" style="display:flex;align-items:center;gap:24px">
-        <a href="#about" style="color:#EDEDED;font-weight:600;font-size:15px">About</a>
-        <a href="#format" style="color:#EDEDED;font-weight:600;font-size:15px">Format</a>
-        <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
-        <a href="#results" style="color:#EDEDED;font-weight:600;font-size:15px">Results</a>
-        <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
-        <a href="/app" style="color:#3bd070;font-weight:700;font-size:15px">App</a>
-        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
-        <!-- The Organizer and Manager sign-ins are NOT here. They live in the
-             footer, once each. They are for a handful of volunteers, and every
-             other link in this bar is for the thousands of parents and coaches
-             the page is actually written for - so putting them up here spent
-             the most valuable space on the site on the smallest audience, and
-             on a phone they pushed two rows of genuinely public links further
-             down the collapsed menu. -->
-      </nav>
+      <div class="hdr-right" style="display:flex;align-items:center;gap:20px;min-width:0">
+        <nav class="hdr-nav" onClick="{{ closeNav }}" style="display:flex;align-items:center;gap:24px">
+          <a href="#about" style="color:#EDEDED;font-weight:600;font-size:15px">About</a>
+          <a href="#format" style="color:#EDEDED;font-weight:600;font-size:15px">Format</a>
+          <a href="#schedule" style="color:#EDEDED;font-weight:600;font-size:15px">Fixtures</a>
+          <a href="#results" style="color:#EDEDED;font-weight:600;font-size:15px">Results</a>
+          <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>
+          <a href="/app" style="color:#3bd070;font-weight:700;font-size:15px">App</a>
+          <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>
+          <!-- Sign-ins for the collapsed PHONE panel only — display:none inline,
+               un-hidden by the panel's `a{display:block!important}` rule when
+               the menu is open. On desktop the Menu dropdown next door carries
+               them instead, so they never spend nav-bar space (the 2 Aug rule:
+               the bar itself is for the thousands of parents and coaches, not
+               the handful of volunteers). -->
+          <a href="/organizer" style="display:none;color:#8a8f99;font-weight:600;font-size:15px">Quins Organizer sign-in</a>
+          <a href="/manager" style="display:none;color:#8a8f99;font-weight:600;font-size:15px">Quins Age Group Manager sign-in</a>
+        </nav>
+        <!-- Menu dropdown (Jay, Aug 2026): every section plus BOTH sign-ins,
+             reachable from the top of the page instead of only after scrolling
+             to the footer. Same bubble-up close trick as the nav. -->
+        <div class="hdr-menu" style="position:relative;flex:none">
+          <button onClick="{{ toggleMenu }}" aria-haspopup="true" aria-expanded="{{ menuOpenAttr }}" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:9px;color:#fff;font-weight:700;font-size:14px;padding:8px 14px;cursor:pointer">Menu <span style="font-size:10px;line-height:1">{{ menuChevron }}</span></button>
+          <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeMenu }}" style="position:absolute;right:0;top:calc(100% + 12px);background:rgba(12,12,14,0.97);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:8px;min-width:240px;box-shadow:0 18px 40px rgba(0,0,0,0.55)">
+              <a href="#about" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">About</a>
+              <a href="#format" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Format</a>
+              <a href="#schedule" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Fixtures</a>
+              <a href="#results" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Results</a>
+              <a href="#venue" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Venue</a>
+              <a href="/app" style="display:block;padding:9px 12px;border-radius:8px;color:#3bd070;font-weight:700;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">App</a>
+              <a href="#sponsors" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Sponsors</a>
+              <div style="height:1px;background:rgba(255,255,255,0.12);margin:8px 4px"></div>
+              <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;color:#8a8f99;padding:4px 12px 2px">SIGN IN</div>
+              <a href="/organizer" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px;white-space:nowrap" style-hover="background:rgba(255,255,255,0.08)">Quins Organizer →</a>
+              <a href="/manager" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px;white-space:nowrap" style-hover="background:rgba(255,255,255,0.08)">Quins Age Group Manager →</a>
+            </div>
+          </sc-if>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -1553,6 +1586,10 @@ class Component extends DCLogic {
        permanently over the content. Collapsed behind a button instead; CSS owns
        the breakpoint, this owns open/closed. */
     navOpen: false,
+    /* Desktop Menu dropdown (sections + the two sign-ins). Separate from
+       navOpen: one is the phone panel, the other the desktop dropdown, and
+       CSS breakpoints decide which of the two controls is even visible. */
+    menuOpen: false,
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '', teamCode: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
     /* True only when a send FAILED, as opposed to a field being invalid. The
@@ -1574,6 +1611,7 @@ class Component extends DCLogic {
       if (e.key !== 'Escape') return;
       if (this.state.teamModalOpen) this.closeTeamModal();
       else if (this.state.playerModalOpen) this.closePlayerModal();
+      else if (this.state.menuOpen) this.setState({ menuOpen: false });
     };
     document.addEventListener('keydown', this.escHandler);
   }
@@ -2377,6 +2415,13 @@ class Component extends DCLogic {
       navToggleLabel: this.state.navOpen ? 'Close menu' : 'Open menu',
       toggleNav: () => this.setState((s) => ({ navOpen: !s.navOpen })),
       closeNav: () => { if (this.state.navOpen) this.setState({ navOpen: false }); },
+      /* Desktop Menu dropdown. closeMenu sits on the panel itself so a click
+         on any link bubbles up and shuts it \u2014 same trick as closeNav. */
+      menuOpen: this.state.menuOpen,
+      menuOpenAttr: this.state.menuOpen ? 'true' : 'false',
+      menuChevron: this.state.menuOpen ? '\u25b4' : '\u25be',
+      toggleMenu: () => this.setState((s) => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => { if (this.state.menuOpen) this.setState({ menuOpen: false }); },
       onPlayerDobDay: (e) => this.setPlayerDobPart('dobDay', e.target.value),
       onPlayerDobMonth: (e) => this.setPlayerDobPart('dobMonth', e.target.value),
       onPlayerDobYear: (e) => this.setPlayerDobPart('dobYear', e.target.value),

@@ -20,7 +20,7 @@
 
      Age-group scoping (u14b, u16b, organiser fallback)      -> test-manager-dc.js, "Boot and age-group scoping"
      Live scoring rules loaded at boot                       -> test-manager-dc.js, "Parity gap-fills" (source check; componentDidMount does a dynamic import that cannot be driven in Node)
-     Today tab                                                -> test-manager-dc.js, "Today tab"
+     Today tab                                                -> REMOVED Aug 2026 (Jay's call) — it was a subset of Fixtures & scoring; the removal is asserted in "Tab bar"
      Fixtures tab groups by pool                              -> test-manager-dc.js, "Fixtures & scoring tab"
      Results tab shows only played matches                    -> test-manager-dc.js, "Results tab"
      Tables tab                                                -> test-manager-dc.js, "Tables tab"
@@ -236,21 +236,37 @@ section('Tab bar');
   const c = buildManager();
   await c.boot();
   const vals = c.renderVals();
-  check('all six tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
-    ['today', 'fixtures', 'results', 'tables', 'draw', 'registrations']));
-  check('their labels match the old dashboard', eq('tab labels', vals.tabs.map((t) => t.label),
-    ['Today', 'Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations']));
-  check('Today is the tab you land on', vals.isToday === true);
+  /* Five tabs since Aug 2026 — the Today tab (next match + recent results)
+     was a subset of Fixtures & scoring and was removed at Jay's call. */
+  check('all five tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
+    ['fixtures', 'results', 'tables', 'draw', 'registrations']));
+  check('their labels are the agreed ones', eq('tab labels', vals.tabs.map((t) => t.label),
+    ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations']));
+  check('Fixtures & scoring is the tab you land on', vals.isFixtures === true && c.state.tab === 'fixtures');
   check('the selected tab uses Organizer\'s red pill style',
     vals.tabs[0].style.includes('background:#E11B22;color:#fff;'));
   check('an unselected tab uses Organizer\'s transparent style',
     vals.tabs[1].style.includes('background:transparent;color:#454D58;'));
 
-  vals.tabs[3].onPick();
+  vals.tabs[2].onPick();
   const vals2 = c.renderVals();
   check('tapping a tab switches to it', c.state.tab === 'tables' && vals2.isTables === true);
-  check('…and only that tab is active', vals2.isToday === false && vals2.isFixtures === false
+  check('…and only that tab is active', vals2.isFixtures === false
     && vals2.isResults === false && vals2.isDraw === false && vals2.isRegistrations === false);
+}
+{
+  /* The removal has to be structural, not just a shorter tab list: a template
+     block gated on a binding renderVals() no longer returns would render
+     blank but LOOK like a bug, not a decision. Comments are stripped first —
+     the tombstone comments naming the old tab must not satisfy anything, and
+     an absence check is only trusted alongside the presence checks above. */
+  const src = readRepo('Manager.dc.html').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  check('no isToday block survives in the template', !/isToday/.test(src));
+  check('no today* binding survives in the script', !/todayHeading|todayNextRows|todayRecentRows|todayHasNext|todayHasRecent|todayLoading|todayAwaiting/.test(src));
+  check('no tab is still called today', !/'today'/.test(src));
+  check('…while the five real tabs are all still in the source',
+    /'fixtures'/.test(src) && /'results'/.test(src) && /'tables'/.test(src)
+    && /'draw'/.test(src) && /'registrations'/.test(src));
 }
 
 section('Sign out');
@@ -264,7 +280,7 @@ section('Sign out');
   check('sign out calls api.logout()', loggedOut === 1);
   check('…drops the session', c.state.session === null);
   check('…drops the loaded fixtures and standings', c.state.fixtures === null && c.state.standings === null);
-  check('…and returns to the Today tab for the next person on this device', c.state.tab === 'today');
+  check('…and returns to the landing tab for the next person on this device', c.state.tab === 'fixtures');
   /* No "Signed out" toast any more — sign-out hands straight over to
      /signin (asserted in the section above), and a toast on a page being
      left is a message nobody reads. */
@@ -301,54 +317,39 @@ section('In-app confirm/prompt modal (window.confirm is blocked in the DC previe
   check('a blank prompt answer does not call back at all', got2 === 'untouched');
 }
 
-section('Today tab');
+section('Header: an organiser can get back to the organizer area, and sees who they are viewing as');
 {
-  const c = buildManager();
-  await c.boot();
-  const vals = c.renderVals();
-  check('the next unplayed match is offered first', vals.todayHasNext === true && vals.todayNextRows.length === 1);
-  check('…and it is the unplayed one, not the scored one', vals.todayNextRows[0].id === 'u14b:A:1-2');
-  check('…named by team, time and pitch', vals.todayNextRows[0].teams === 'ADH1 v DE1'
-    && vals.todayNextRows[0].time === '09:00' && vals.todayNextRows[0].pitch === 'A1');
-  check('the scored match shows under recent results', vals.todayHasRecent === true
-    && vals.todayRecentRows.length === 1 && vals.todayRecentRows[0].id === 'u14b:A:3-4');
-  // FAULT-PROOF: `includes('15') && includes('10')` would pass with the sides
-  // swapped. The score string is ordered home-then-away.
-  check('…with the score home-then-away', vals.todayRecentRows[0].score === '15–10');
-  check('a row knows how to open the score sheet', typeof vals.todayNextRows[0].onOpen === 'function');
-  vals.todayNextRows[0].onOpen();
-  check('…and does open it on that match', c.state.sheetMatchId === 'u14b:A:1-2');
+  /* Structural: the link and the "Viewing as" label live INSIDE the one
+     organiser-gated sc-if in the template, so a manager never renders them.
+     The slice is safe because there is exactly one such block — asserted
+     first, or this test starts describing the wrong part of the file. */
+  const src = readRepo('Manager.dc.html');
+  const gateRe = /<sc-if value="\{\{ isOrganiser \}\}"/g;
+  check('there is exactly one organiser-gated block in the template', (src.match(gateRe) || []).length === 1);
+  const gateStart = src.indexOf('<sc-if value="{{ isOrganiser }}"');
+  const GATE = src.slice(gateStart, src.indexOf('</sc-if>', gateStart));
+  check('the organiser block links back to the organizer area', /href="\/organizer"/.test(GATE));
+  check('…named for where it goes', />View organizer area</.test(GATE));
+  check('…and labels the age switcher "Viewing as"', /Viewing as/.test(GATE));
+  check('the switcher itself is inside the same block', /onChange="\{\{ onSwitchAge \}\}"/.test(GATE));
+  // FAULT-PROOF companions for the structural slice: outside the gate the
+  // link must NOT exist, or a manager would see a door they cannot open.
+  const OUTSIDE = src.slice(0, gateStart) + src.slice(src.indexOf('</sc-if>', gateStart));
+  check('no organizer-area link leaks outside the organiser gate', !/href="\/organizer"/.test(OUTSIDE));
+  check('everyone still gets the main-site link', /href="Quins JRT\.dc\.html"[^>]*>← Main site</.test(src));
 }
 {
-  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false, pool: [
-    { id: `${agId}:A:1-2`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 5, awayScore: 0 } },
-  ], knockout: [] }) });
+  const c = buildManager({
+    currentSession: () => ({ isOrganizer: true, ageGroupId: '*', token: 't' }),
+    isOrganiserSession: (s) => !!(s && s.isOrganizer),
+  });
   await c.boot();
-  const vals = c.renderVals();
-  check('with everything played there is no "next up"', vals.todayHasNext === false && vals.todayNextRows.length === 0);
-  check('…and the recent list still has the played match', vals.todayHasRecent === true);
-}
-{
-  const c = buildManager({ getFixtures: async () => ({ awaitingPublication: true, pool: [], knockout: [] }) });
-  await c.boot();
-  const vals = c.renderVals();
-  check('an unpublished draw shows the coming-soon state, not an empty list', vals.todayAwaiting === true);
-  check('…naming the age group', /U14 Boys/.test(vals.comingSoonBlurb));
-  check('…and offers no rows at all', vals.todayHasNext === false && vals.todayHasRecent === false);
+  check('an organiser session sets the isOrganiser flag the gate reads', c.renderVals().isOrganiser === true);
 }
 {
   const c = buildManager();
-  c.setState({ ageId: 'u14b', ageGroups: [{ id: 'u14b', name: 'U14 Boys', hasStandings: true }], session: { ageGroupId: 'u14b', token: 't' } });
-  check('before the fetch lands, the tab says it is loading', c.renderVals().todayLoading === true);
-}
-{
-  // A knockout slot with neither team decided is not a fixture anybody can
-  // play, so it must not be offered as "next up".
-  const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
-    pool: [{ id: `${agId}:A:1`, home: 'ADH1', away: 'DE1', time: '09:00', pitch: 'A1', poolName: 'Pool A', result: { homeScore: 5, awayScore: 0 } }],
-    knockout: [{ id: `${agId}:CUP`, round: 'Cup Final', home: '', away: '', time: '13:00', pitch: 'A1', result: null }] }) });
   await c.boot();
-  check('an undecided knockout slot is not offered as the next match', c.renderVals().todayHasNext === false);
+  check('a manager session does not', c.renderVals().isOrganiser === false);
 }
 
 section('Fixtures & scoring tab');
@@ -366,8 +367,30 @@ section('Fixtures & scoring tab');
   check('a played match shows its score in the list', vals.poolGroups[0].rows[1].score === '15–10');
   check('there is no knockout section when there are no knockout matches', vals.hasKnockout === false);
 
+  /* The cards' bottom line (Aug 2026): an unscored match INVITES the tap, a
+     scored one shows what was saved. FAULT-PROOF: the two rows in this fixture
+     differ only in having a result, so a statusLine that ignored the result
+     would print the same thing on both. */
+  check('an unscored match says "Click to score"', vals.poolGroups[0].rows[0].statusLine === 'Click to score');
+  check('…in the green invitation style, not the score style', vals.poolGroups[0].rows[0].statusStyle.includes('#0E6B33')
+    && !vals.poolGroups[0].rows[0].statusStyle.includes('Anton'));
+  check('a scored match shows the score home-then-away instead', vals.poolGroups[0].rows[1].statusLine === '15–10');
+  check('…in the Anton score style', vals.poolGroups[0].rows[1].statusStyle.includes('Anton'));
+
   vals.poolGroups[0].rows[0].onOpen();
   check('tapping a fixture opens the score sheet on it', c.state.sheetMatchId === 'u14b:A:1-2');
+}
+{
+  /* The grid itself (Aug 2026): pool and knockout matches sit on compact
+     auto-fill cards, not full-width list rows — the row template's signature
+     grid-template-columns:64px 1fr auto stays ONLY on the Results tab, whose
+     list really is a list. Counted, not just matched: two card grids
+     (pools + knockout) and one surviving row list (Results). */
+  const src = readRepo('Manager.dc.html').replace(/<!--[\s\S]*?-->/g, '');
+  const grids = (src.match(/repeat\(auto-fill,minmax\(230px,1fr\)\)/g) || []).length;
+  const rowLists = (src.match(/grid-template-columns:64px 1fr auto/g) || []).length;
+  check('the fixtures tab renders two card grids (pools and knockout)', grids === 2, `found ${grids}`);
+  check('the full-width row template survives only on Results', rowLists === 1, `found ${rowLists}`);
 }
 {
   const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
@@ -404,6 +427,7 @@ section('Fixtures & scoring tab');
   await c.boot();
   c.go('fixtures');
   check('an unpublished draw shows coming-soon here too', c.renderVals().fixturesAwaiting === true);
+  check('…naming the age group', /U14 Boys/.test(c.renderVals().comingSoonBlurb));
 }
 {
   const c = buildManager({ getFixtures: async (agId) => ({ awaitingPublication: false,
@@ -637,7 +661,7 @@ section('Registrations tab');
   c.go('registrations');
   await new Promise((r) => setImmediate(r));
   check('opening the tab fetches once', calls === 1);
-  c.go('today');
+  c.go('tables');
   c.go('registrations');
   await new Promise((r) => setImmediate(r));
   check('returning to it does not refetch', calls === 1);

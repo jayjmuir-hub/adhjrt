@@ -2746,32 +2746,92 @@ const FAULTS = [
   /* ---- back-office links (test-back-office-links.js) -------------------- */
 
   {
-    name: 'the Organizer link creeps back into the top nav',
+    /* A VISIBLE back-office link in the bar — the thing the 3 Aug design
+       still forbids. The two sanctioned nav sign-ins are display:none. */
+    name: 'a visible Organizer link creeps back into the top nav bar',
     suite: 'test-back-office-links.js',
-    apply: () => patch(HOME, '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n',
-      '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n        <a href="/organizer" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n'),
-    expect: ['no /organizer link in the nav', 'exactly seven links'],
+    apply: () => patch(HOME, '          <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n',
+      '          <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n          <a href="/organizer" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n'),
+    expect: ['exactly nine links'],
   },
   {
-    name: 'the Organizer link comes back as a RAW FILENAME, which /organizer checks would miss',
+    name: 'the nav sign-ins lose display:none and appear on the desktop bar',
     suite: 'test-back-office-links.js',
-    apply: () => patch(HOME, '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n',
-      '        <a href="#sponsors" style="color:#EDEDED;font-weight:600;font-size:15px">Sponsors</a>\n        <a href="Organizer.dc.html" style="color:#8a8f99;font-weight:600;font-size:14px">Organizer</a>\n'),
-    expect: ['no raw Organizer.dc.html link in the nav', 'exactly seven links'],
+    apply: () => patch(HOME, '<a href="/organizer" style="display:none;color:#8a8f99',
+      '<a href="/organizer" style="color:#8a8f99'),
+    expect: ['hidden from the desktop bar'],
+  },
+  {
+    name: 'the nav sign-in comes back as a RAW FILENAME, which /organizer checks would miss',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '<a href="/organizer" style="display:none;color:#8a8f99',
+      '<a href="Organizer.dc.html" style="display:none;color:#8a8f99'),
+    expect: ['no raw Organizer.dc.html link anywhere'],
   },
   {
     /* The over-deletion the absence checks alone would not notice. */
     name: 'a public nav link is deleted along with the back-office ones',
     suite: 'test-back-office-links.js',
-    apply: () => patch(HOME, '        <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>\n', ''),
-    expect: ['still has Venue', 'exactly seven links'],
+    apply: () => patch(HOME, '          <a href="#venue" style="color:#EDEDED;font-weight:600;font-size:15px">Venue</a>\n', ''),
+    expect: ['still has Venue', 'exactly nine links'],
   },
   {
-    name: 'a back-office link is put half way up the page instead of the footer',
+    name: 'a back-office link is put half way up the page, outside header and footer',
     suite: 'test-back-office-links.js',
     apply: () => patch(HOME, '  <!-- ============ SPONSORS ============ -->',
       '  <div><a href="/manager">Manager</a></div>\n  <!-- ============ SPONSORS ============ -->'),
-    expect: ['above the footer'],
+    expect: ['between the header and the footer'],
+  },
+  {
+    /* Jay's words: "functional, not just jump to bottom". A dropdown entry
+       that scrolls to the footer instead of going to the sign-in page is the
+       exact regression this batch exists to prevent. */
+    name: 'the dropdown organiser entry becomes a jump to the footer instead of a real sign-in link',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME,
+      '<a href="/organizer" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px;white-space:nowrap"',
+      '<a href="#top" onclick="document.querySelector(\'footer\').scrollIntoView()" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px;white-space:nowrap"'),
+    expect: ['dropdown links straight to /organizer'],
+  },
+  {
+    name: 'the dropdown loses its menuOpen gate and becomes a permanent panel',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">',
+      '<sc-if value="{{ loggedInNever }}" hint-placeholder-val="{{ true }}">'),
+    expect: ['gated on menuOpen'],
+  },
+  {
+    name: 'a section link is dropped from the dropdown',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME,
+      '              <a href="#venue" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Venue</a>\n', ''),
+    expect: ['the dropdown offers Venue'],
+  },
+  {
+    name: 'the SIGN IN divider heading is dropped, mixing sign-ins in with the sections',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '>SIGN IN</div>', '></div>'),
+    expect: ['own SIGN IN heading'],
+  },
+  {
+    name: 'the phone panel rule stops forcing links visible, so the hidden sign-ins never appear',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME,
+      '.hdr-row[data-nav-open="true"] .hdr-nav a{font-size:16px!important;padding:11px 4px!important;display:block!important}',
+      '.hdr-row[data-nav-open="true"] .hdr-nav a{font-size:16px!important;padding:11px 4px!important}'),
+    expect: ['forces every nav link visible'],
+  },
+  {
+    name: 'the Menu dropdown stays visible on phones, doubling the hamburger',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '    .hdr-menu{display:none!important}\n', ''),
+    expect: ['Menu dropdown is hidden at phone width'],
+  },
+  {
+    name: 'the open phone panel loses the hdr-right width rule and renders as a narrow column',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '    .hdr-row[data-nav-open="true"] .hdr-right{width:100%!important}\n', ''),
+    expect: ['hdr-right wrapper full width'],
   },
   {
     name: 'the "Manager dashboard" duplicate returns to the Explore column',
@@ -2793,7 +2853,7 @@ const FAULTS = [
     name: 'the footer organiser link reverts to the raw filename',
     suite: 'test-back-office-links.js',
     apply: () => patch(HOME, '<a href="/organizer" style="color:#EDEDED;font-weight:700', '<a href="Organizer.dc.html" style="color:#EDEDED;font-weight:700'),
-    expect: ['exactly one /organizer link in the footer', 'raw Organizer.dc.html href survives'],
+    expect: ['exactly one /organizer link in the footer', 'no raw Organizer.dc.html link anywhere'],
   },
   {
     /* The rewrite is what makes the clean URL resolve at all. Delete it and
@@ -3051,6 +3111,141 @@ const FAULTS = [
       "      { wide: true }"),
     expect: ['its button says what it does'],
   },
+
+  /* ---- the Manager-area batch, 3 Aug 2026 (Jay's seven-item list) -------- */
+  {
+    name: 'the Today tab creeps back into MANAGER_TABS',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', "const MANAGER_TABS = [\n  { id: 'fixtures', label: 'Fixtures & scoring' },",
+      "const MANAGER_TABS = [\n  { id: 'today', label: 'Today' },\n  { id: 'fixtures', label: 'Fixtures & scoring' },"),
+    expect: ['all five tabs are offered'],
+  },
+  {
+    name: 'the landing tab drifts off Fixtures & scoring',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', "ageId: '', tab: 'fixtures',", "ageId: '', tab: 'tables',"),
+    expect: ['Fixtures & scoring is the tab you land on'],
+  },
+  {
+    name: 'sign-out stops resetting the tab for the next person',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', "      session: null, tab: 'fixtures', fixtures: null,",
+      "      session: null, fixtures: null,"),
+    expect: ['returns to the landing tab'],
+  },
+  {
+    /* The structural half of the removal: a leftover isToday reference is a
+       template block waiting to render blank. */
+    name: 'an isToday remnant survives in the script',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', 'class Component extends DCLogic {',
+      'const isTodayLegacy = false;\nclass Component extends DCLogic {'),
+    expect: ['no isToday block survives'],
+  },
+  {
+    name: 'the View organizer area link is dropped from the header',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      '            <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>\n', ''),
+    expect: ['links back to the organizer area'],
+  },
+  {
+    /* The gate is the privacy line: a manager must never see a door into the
+       organizer area. */
+    name: 'the organizer-area link is moved OUTSIDE the organiser gate, showing it to managers',
+    suite: 'test-manager-dc.js',
+    apply: () => {
+      patch('Manager.dc.html',
+        '            <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>\n          </sc-if>',
+        '          </sc-if>\n          <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>');
+    },
+    expect: ['leaks outside the organiser gate'],
+  },
+  {
+    name: 'the "Viewing as" label on the age switcher is dropped',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', '>Viewing as</span>', '></span>'),
+    expect: ['labels the age switcher "Viewing as"'],
+  },
+  {
+    /* The card's whole point: an unscored match invites the tap, a scored one
+       shows what landed. A statusLine that ignores the result prints the
+       invitation on top of a saved score. */
+    name: 'statusLine stops looking at the result and says "Click to score" on everything',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      "      statusLine: m.result ? `${m.result.homeScore}–${m.result.awayScore}` : 'Click to score',",
+      "      statusLine: 'Click to score',"),
+    expect: ['a scored match shows the score home-then-away instead'],
+  },
+  {
+    name: 'statusStyle stops distinguishing a score from the invitation',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      "      statusStyle: m.result\n        ? \"font-family:'Anton';font-size:19px;color:#1A1C1F;white-space:nowrap\"\n        : 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#0E6B33;white-space:nowrap',",
+      "      statusStyle: 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#0E6B33;white-space:nowrap',"),
+    expect: ['in the Anton score style'],
+  },
+  {
+    name: 'the pool card grid collapses back into a full-width stack',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      '            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">\n              <sc-for list="{{ g.rows }}"',
+      '            <div style="display:block">\n              <sc-for list="{{ g.rows }}"'),
+    expect: ['renders two card grids'],
+  },
+  {
+    name: 'the Results list is quietly rebuilt onto some other template',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html', 'grid-template-columns:64px 1fr auto', 'grid-template-columns:60px 1fr auto'),
+    expect: ['survives only on Results'],
+  },
+  {
+    /* Jay's item 5, in reverse: the home nominee input wanders out of the
+       home box. Rebinding it to the away draft moves the onSheetSpiritHome
+       anchor past the away Cards row. */
+    name: 'the home spirit input is swapped into the away box',
+    suite: 'test-manager-dc-score-sheet.js',
+    apply: () => {
+      patch('Manager.dc.html',
+        '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player"',
+        '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHomeMoved }}" placeholder="{{ sheetHomeName }} player"');
+      patch('Manager.dc.html',
+        '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player"',
+        '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" data-legacy="{{ onSheetSpiritHome }}" placeholder="{{ sheetAwayName }} player"');
+    },
+    expect: ['directly after the home Cards row'],
+  },
+  {
+    name: 'one team box loses its sheetShowSpirit gate',
+    suite: 'test-manager-dc-score-sheet.js',
+    apply: () => patch('Manager.dc.html', '>WALK-OVER</label>', '>WALK-OVER {{ sheetShowSpirit }}</label>'),
+    expect: ['its own sheetShowSpirit gate'],
+  },
+  {
+    name: 'the old bottom-of-sheet spirit block returns',
+    suite: 'test-manager-dc-score-sheet.js',
+    apply: () => patch('Manager.dc.html',
+      '<p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>',
+      '<p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p><label>SPIRIT OF RUGBY — ONE NOMINATION PER SIDE</label>'),
+    expect: ['old bottom block'],
+  },
+  {
+    name: 'the home nominee placeholder stops naming the home team',
+    suite: 'test-manager-dc-score-sheet.js',
+    apply: () => patch('Manager.dc.html', 'placeholder="{{ sheetHomeName }} player" style="width:100%',
+      'placeholder="Player name" style="width:100%'),
+    expect: ['home input is labelled with the home team'],
+  },
+  {
+    /* The wrapper is what keeps the header row at three children so
+       space-between pins the nav+menu pair hard right. */
+    name: 'the hdr-right wrapper is renamed away, orphaning the header structure checks',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<div class="hdr-right" style="display:flex;align-items:center;gap:20px;min-width:0">',
+      '<div class="hdr-wrap" style="display:flex;align-items:center;gap:20px;min-width:0">'),
+    expect: ['third child is the hdr-right wrapper'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */
@@ -3064,7 +3259,8 @@ seed();
  'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
  'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
  'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
- 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-organizer-manager-link.js',
+ 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-manager-dc.js',
+ 'test-manager-dc-score-sheet.js', 'test-organizer-manager-link.js',
  'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js',
  'test-signin-page.js', 'test-light-mode.js', 'test-design-polish.js'].forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;

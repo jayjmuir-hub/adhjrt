@@ -141,7 +141,7 @@ section('loadDraw(): fetching, loading state, and the empty state');
 }
 {
   const c = buildDraw();
-  c.setState({ tab: 'today', draw: undefined, drawLoadedFor: null });
+  c.setState({ tab: 'tables', draw: undefined, drawLoadedFor: null });
   c.go('draw');
   await new Promise((r) => setImmediate(r));
   check('switching to the Draw tab loads the draw', c.state.drawLoadedFor === 'u14b');
@@ -149,7 +149,7 @@ section('loadDraw(): fetching, loading state, and the empty state');
 {
   let fetches = 0;
   const c = buildDraw({ getDraw: async () => { fetches++; return freshDraw(); } });
-  c.setState({ tab: 'today' });
+  c.setState({ tab: 'tables' });
   c.go('draw');
   await new Promise((r) => setImmediate(r));
   check('an already-loaded draw is not refetched on every visit', fetches === 0);
@@ -439,7 +439,7 @@ section('Transient Draw state does not outlive what it referred to');
   const c = buildDraw();
   c.pickTeam('DS1', { kind: 'pool', poolId: 'A' });
   c.setState({ drawMsg: 'Saved as a draft. Use Publish to make it public.', clash: { clashes: [] }, importRows: [{ code: 'X' }] });
-  c.go('today');
+  c.go('tables');
   // FAULT-PROOF: a stale "Saved as a draft" banner or clash result reappearing
   // the next time the Draw tab is opened tells the manager something happened
   // that did not.

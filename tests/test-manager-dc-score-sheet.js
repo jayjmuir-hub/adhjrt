@@ -276,6 +276,38 @@ section('The payload sent to submitResult()');
   c.openMatch('u14b:A:1-2');
   check('the sheet DOES offer the spirit inputs for a supporting age group', c.renderVals().sheetShowSpirit === true);
 }
+
+section('Where the spirit inputs sit (Aug 2026: inside each team\'s box, right under Cards)');
+{
+  /* Jay's call: parked at the bottom of the sheet the nominee boxes were
+     routinely missed. Each one now lives INSIDE its team's bordered box,
+     directly below that team's Cards row. Structural, on comment-stripped
+     source: order is asserted by index, not by the inputs merely existing. */
+  const src = readRepo('Manager.dc.html').replace(/<!--[\s\S]*?-->/g, '');
+  const homeCards = src.indexOf('{{ onSheetHomeCards }}');
+  const homeSpirit = src.indexOf('{{ onSheetSpiritHome }}');
+  const awayCards = src.indexOf('{{ onSheetAwayCards }}');
+  const awaySpirit = src.indexOf('{{ onSheetSpiritAway }}');
+  const woBlock = src.indexOf('WALK-OVER');
+  check('all four inputs and the walkover block were found',
+    [homeCards, homeSpirit, awayCards, awaySpirit, woBlock].every((i) => i > -1));
+  check('the home nominee comes directly after the home Cards row, before the away box even starts',
+    homeCards < homeSpirit && homeSpirit < awayCards);
+  check('the away nominee comes after the away Cards row', awayCards < awaySpirit);
+  check('…and before the walkover block — i.e. inside the away box, not at the bottom of the sheet',
+    awaySpirit < woBlock);
+  /* Each input keeps its team's name as the placeholder, so the two boxes
+     cannot be filled in swapped. */
+  const homeTag = (src.match(/<input[^>]*\{\{ onSheetSpiritHome \}\}[^>]*>/) || [''])[0];
+  const awayTag = (src.match(/<input[^>]*\{\{ onSheetSpiritAway \}\}[^>]*>/) || [''])[0];
+  check('the home input is labelled with the home team', /\{\{ sheetHomeName \}\} player/.test(homeTag));
+  check('the away input is labelled with the away team', /\{\{ sheetAwayName \}\} player/.test(awayTag));
+  /* Two gated blocks now (one per box) — and the old single bottom block,
+     whose label read "SPIRIT OF RUGBY — ONE NOMINATION PER SIDE", is gone. */
+  check('each box carries its own sheetShowSpirit gate',
+    (src.match(/\{\{ sheetShowSpirit \}\}/g) || []).length === 2);
+  check('the old bottom block\'s label is gone', !src.includes('SPIRIT OF RUGBY — ONE NOMINATION PER SIDE'));
+}
 {
   let payload = null;
   const c = buildSheet({ submitResult: async (id, data) => { payload = data; return { ok: true, stored: { homeScore: 20, awayScore: 0 } }; } });

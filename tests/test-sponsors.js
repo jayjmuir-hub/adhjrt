@@ -183,7 +183,14 @@ check('the crest link and the partner mark share that wrapper',
   && innerOf(rowInner, rowInner.indexOf(kids[0])).includes('href="#top"')
   && innerOf(rowInner, rowInner.indexOf(kids[0])).includes('class="hdr-partner"'));
 check('the menu button is still a direct child', /class="hdr-toggle"/.test(kids[1] || ''));
-check('the nav is still a direct child', /class="hdr-nav"/.test(kids[2] || ''));
+/* Aug 2026: the nav gained a sibling — the Menu dropdown — and the two share
+   the .hdr-right wrapper, keeping the row's direct-child count at three so
+   space-between still pins the pair hard right rather than spreading four
+   children across the bar. */
+check('the third child is the hdr-right wrapper', /class="hdr-right"/.test(kids[2] || ''));
+const rightInner = innerOf(rowInner, rowInner.indexOf(kids[2]));
+check('…holding the nav', rightInner.includes('class="hdr-nav"'));
+check('…and the Menu dropdown beside it', rightInner.includes('class="hdr-menu"'));
 
 /* NOT A LINK, DELIBERATELY. The header is sticky, so a tap target that leaves
    the site would follow a visitor down every page — including a parent part

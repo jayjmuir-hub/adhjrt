@@ -2974,6 +2974,72 @@ const FAULTS = [
       'border-radius:12px;padding:5px;width:fit-content'),
     expect: ['tab bar wraps'],
   },
+
+  /* ---- the venue Reset clears assignments (test-venue-splits.js, 2 Aug) -- */
+  {
+    name: 'the venue Reset goes back to posting to the server',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      '  reallyResetVenue() {\n    this.setState((s) => {',
+      '  reallyResetVenue() {\n    this.state.api.resetVenue();\n    this.setState((s) => {'),
+    expect: ['NOTHING was posted to the server'],
+  },
+  {
+    name: 'the venue Reset starts wiping the splits and surfaces too, not just assignments',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "        if (day && day.groups) Object.keys(day.groups).forEach((g) => { day.groups[g] = []; });",
+      "        if (day && day.groups) Object.keys(day.groups).forEach((g) => { day.groups[g] = []; });\n        if (day) { day.splits = {}; day.pitches = []; }"),
+    expect: ['the splits are untouched'],
+  },
+  {
+    name: 'the venue Reset deletes group membership instead of emptying it, knocking groups off their day',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "Object.keys(day.groups).forEach((g) => { day.groups[g] = []; });",
+      "Object.keys(day.groups).forEach((g) => { delete day.groups[g]; });"),
+    expect: ['every group KEEPS its day'],
+  },
+  {
+    name: 'the venue Reset writes through to the saved copy, skipping Save entirely',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "      return { venue: v, vError: '', vSuccess: '' };",
+      "      return { venue: v, venueSaved: this.cloneVenue(v), vError: '', vSuccess: '' };"),
+    expect: ['Save is how it goes live'],
+  },
+  {
+    name: 'the 2025 running-order blurb creeps back into a day hint',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "A pitch left on Not used just is not part of today.'\n          :",
+      "A pitch left on Not used just is not part of today. 2025’s running order: D5, D4 and D3 in halves.'\n          :"),
+    expect: ['mentions 2025'],
+  },
+  {
+    name: 'the server-posting resetVenue export returns to the data layer',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('organizer-data.js',
+      "/* resetVenue() was deleted 2 Aug 2026",
+      "export async function resetVenue() { return { ok: false }; }\n/* resetVenue() was deleted 2 Aug 2026"),
+    expect: ['gone from the data layer'],
+  },
+  {
+    name: 'the Reset confirm collapses to a generic "Are you sure?"',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "      'Clear every age group’s pitch assignment, on both days?\\n\\nDays and pitch splits are kept, and each group stays on its day — only which pitches it gets is cleared. Nothing is saved until you press Save.',",
+      "      'Are you sure?',"),
+    expect: ['says what it clears and what it keeps'],
+  },
+  {
+    name: 'the Reset confirm button goes back to a label that does not say what it does',
+    suite: 'test-venue-splits.js',
+    apply: () => patch('Organizer.dc.html',
+      "      { okLabel: 'Clear assignments', wide: true }",
+      "      { wide: true }"),
+    expect: ['its button says what it does'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

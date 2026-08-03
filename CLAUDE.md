@@ -1333,7 +1333,11 @@ Managers are refused server-side with a 403 that explains why.
 - `POST /venue-layout` `{ venue }` validates then saves to the `config` store at
   key `venue`. `{ reset: true }` **deletes** the key rather than writing the
   defaults back, so a later change to `DEFAULT_VENUE` reaches a reset site
-  instead of being masked by a stale copy of the old defaults.
+  instead of being masked by a stale copy of the old defaults. ⚠️ **Since
+  2 Aug 2026 NO page calls it** — the panel's Reset button now clears the
+  working copy's pitch assignments instead (Jay's ask: days and splits kept,
+  saved with the normal Save button). The server branch is kept as a
+  deliberate escape hatch.
 - `mergeVenue()` **replaces a day wholesale rather than merging field by field.**
   Merging pitch lists would make removing a pitch impossible, because the default
   would keep putting it back.

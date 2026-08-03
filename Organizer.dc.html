@@ -348,7 +348,7 @@
                 <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">The pitches running on each day, and which day each age group plays. <b style="color:#454D58">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:11px 15px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset to 2025 layout</button>
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:11px 15px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset</button>
                 <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
               </div>
             </div>
@@ -1281,8 +1281,8 @@ class Component extends DCLogic {
         isCurrentDay: id === dayView,
         summary: `${surfaceCount} playing surface${surfaceCount === 1 ? '' : 's'} · ${groupCount} age group${groupCount === 1 ? '' : 's'} · ${day.date}`,
         hint: id === 'day1'
-          ? 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today. 2025’s running order: D5, D4 and D3 in halves, B1 and A1 in quarters, D2, D1, C4 and C5 whole.'
-          : 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today. 2025’s running order: C4, B1 and A1 in halves, everything else whole. D4 and D5 are not used on Sunday.',
+          ? 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today.'
+          : 'Choose how each main pitch (A, B, C or D) is used on this day — run it as one whole field, or split it into halves or quarters. This decides what smaller pitches exist (like A1–A4) — you hand those out to age groups in Age groups below. A pitch left on Not used just is not part of today.',
         mains,
         noPitches: surfaceCount === 0,
       };
@@ -2327,29 +2327,30 @@ class Component extends DCLogic {
 
   doResetVenue() {
     this.confirmModal(
-      'Put the pitch names, days and pitch assignments back to the 2025 layout?\n\nAny changes you have made here are discarded. Saved fixtures keep whatever pitch they were given.',
+      'Clear every age group’s pitch assignment, on both days?\n\nDays and pitch splits are kept, and each group stays on its day — only which pitches it gets is cleared. Nothing is saved until you press Save.',
       () => this.reallyResetVenue(),
-      { okLabel: 'Reset the layout', wide: true }
+      { okLabel: 'Clear assignments', wide: true }
     );
   }
 
-  async reallyResetVenue() {
-    this.setState({ vBusy: true, vError: '', vSuccess: '' });
-    const res = await this.state.api.resetVenue();
-    if (res.ok && res.venue) {
-      // Resetting the LAYOUT leaves the map placement alone; they are separate
-      // decisions with separate buttons. The server returns both regardless.
-      const pos = res.positions && typeof res.positions === 'object' ? { ...res.positions } : (this.state.venuePositions || {});
-      this.setState({
-        venue: this.cloneVenue(res.venue),
-        venueSaved: this.cloneVenue(res.venue),
-        venuePositions: pos,
-        venuePositionsSaved: { ...pos },
-        vBusy: false, vSuccess: 'Back to the built-in 2025 layout.',
+  /* Reset = clear every age group's pitch assignment, in the WORKING COPY
+     (Jay, 2 Aug 2026 — replaced a button that posted the built-in 2025
+     layout back to the server immediately). Days, splits and the map
+     placement are all kept: "which pitches does each group get" is the
+     thing being started over, not the venue itself. Nothing touches the
+     server here — like every other edit on this tab it goes live when
+     Save is pressed, and Save stays disabled if clearing ever produces a
+     layout the validator refuses. */
+  reallyResetVenue() {
+    this.setState((s) => {
+      if (!s.venue) return null;
+      const v = this.cloneVenue(s.venue);
+      ['day1', 'day2'].forEach((dayId) => {
+        const day = v[dayId];
+        if (day && day.groups) Object.keys(day.groups).forEach((g) => { day.groups[g] = []; });
       });
-    } else {
-      this.setState({ vBusy: false, vError: res.error || 'Could not reset the layout.' });
-    }
+      return { venue: v, vError: '', vSuccess: '' };
+    });
   }
 
   /* ---------------- Registration window ----------------

@@ -359,6 +359,44 @@ section('Changing a split in the panel');
     check('…and drops them all again', !c.state.venue.day1.groups.u9.some((p) => p.indexOf('B1') === 0));
     check('…still keeping the rest', c.state.venue.day1.groups.u9.includes('A1a'));
   }
+
+  /* Reset clears ASSIGNMENTS in the working copy — nothing else, and never
+     the server (Jay, 2 Aug 2026: this replaced a "Reset to 2025 layout"
+     button that posted the built-in layout back immediately). */
+  {
+    const c = fresh();
+    let posted = 0;
+    c.state.api = { ...c.state.api, resetVenue: async () => { posted += 1; return { ok: true }; } };
+    c.doResetVenue();
+    check('Reset opens a confirm first', !!c.state.modal);
+    const m = c.state.modal || {};
+    check('…that says what it clears and what it keeps',
+      /Clear every age group/.test(m.title) && /Days and pitch splits are kept/.test(m.title), m.title);
+    check('…and its button says what it does', (m.okLabel || '') === 'Clear assignments', m.okLabel);
+    check('…and nothing has changed yet', (c.state.venue.day1.groups.u10 || []).length > 0);
+    if (c.state.modal) c.submitModal();
+    check('confirming empties every group on day 1',
+      Object.values(c.state.venue.day1.groups).every((l) => Array.isArray(l) && l.length === 0));
+    check('…and every group on day 2',
+      Object.values(c.state.venue.day2.groups).every((l) => Array.isArray(l) && l.length === 0));
+    check('every group KEEPS its day (membership intact)',
+      'u10' in c.state.venue.day1.groups && 'u13' in c.state.venue.day2.groups);
+    eq('the splits are untouched', c.state.venue.day1.splits, clone(V.DEFAULT_VENUE.day1.splits));
+    eq('…and the surfaces with them', c.state.venue.day1.pitches, clone(V.DEFAULT_VENUE.day1.pitches));
+    check('the layout is dirty — Save is how it goes live', c.venueDirty() === true);
+    check('the saved copy is untouched until then',
+      (c.state.venueSaved.day1.groups.u10 || []).length > 0);
+    eq('NOTHING was posted to the server', posted, 0);
+  }
+
+  /* Cancelling the reset changes nothing. */
+  {
+    const c = fresh();
+    c.doResetVenue();
+    c.closeModal();
+    check('cancelling keeps every assignment', (c.state.venue.day1.groups.u10 || []).length > 0);
+    check('…and the layout is not dirty', c.venueDirty() === false);
+  }
 }
 
 /* ====================================================================== */
@@ -379,6 +417,17 @@ section('The free-text pitch box is gone');
 
   const data = readRepo('organizer-data.js');
   check('organizer-data.js forwards the pitch model', /MAIN_PITCHES/.test(data) && /remapGroupPitches/.test(data));
+
+  /* The old server-posting reset is gone from the callable code (comments
+     stripped first — a tombstone naming it must not satisfy this). The
+     driven checks above prove what Reset does INSTEAD. */
+  const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  check('the 2025-layout server reset is gone from the data layer',
+    !/export async function resetVenue\b/.test(stripJs(data)));
+  const pageCode = stripJs(readRepo('Organizer.dc.html').replace(/<!--[\s\S]*?-->/g, ''));
+  check('…and the page no longer calls it', !/api\.resetVenue\b/.test(pageCode));
+  check('…or mentions 2025 anywhere a user reads (only a code comment may)',
+    !/2025/.test(pageCode), (pageCode.match(/.{0,60}2025.{0,40}/) || [])[0]);
 }
 
 /* ====================================================================== */

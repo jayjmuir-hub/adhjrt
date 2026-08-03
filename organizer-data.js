@@ -247,9 +247,9 @@ export async function saveVenue(venue, positions) {
   return { ok: false, error: 'Saving the venue layout needs the deployed site (not available in local preview).' };
 }
 
-/* Puts every block back where the code guessed it was. Deliberately separate
-   from resetVenue(): the pitch layout and the map placement are different
-   decisions, and someone fixing one should not lose the other. */
+/* Puts every block back where the code guessed it was. Deliberately its own
+   call: the pitch layout and the map placement are different decisions, and
+   someone fixing one should not lose the other. */
 export async function resetVenuePositions() {
   const r = await tryFetchJson('/.netlify/functions/venue-layout', {
     method: 'POST',
@@ -260,15 +260,11 @@ export async function resetVenuePositions() {
   return { ok: false, error: 'Resetting the block positions needs the deployed site (not available in local preview).' };
 }
 
-export async function resetVenue() {
-  const r = await tryFetchJson('/.netlify/functions/venue-layout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ reset: true }),
-  });
-  if (r.real) return r.json;
-  return { ok: false, error: 'Resetting the venue layout needs the deployed site (not available in local preview).' };
-}
+/* resetVenue() was deleted 2 Aug 2026 — the panel's Reset button no longer
+   posts the built-in 2025 layout back to the server; it clears the working
+   copy's pitch assignments instead (see reallyResetVenue() in
+   Organizer.dc.html). The SERVER still honours `{ reset: true }` on
+   venue-layout.js as a deliberate escape hatch, but no page calls it. */
 
 /* -------- The registration window: when the entry forms are open --------
    Read is public (registration-window.js GET); writing is organiser-only and

@@ -331,9 +331,19 @@
         </nav>
         <!-- Menu dropdown (Jay, Aug 2026): every section plus BOTH sign-ins,
              reachable from the top of the page instead of only after scrolling
-             to the footer. Same bubble-up close trick as the nav. -->
+             to the footer. The button is the ☰ icon alone (Jay, 3 Aug — no
+             word), flipping to ✕ while open, same pair as the phone toggle so
+             it reads as "menu" everywhere; aria-label carries the words the
+             icon dropped. Same bubble-up close trick as the nav — plus a
+             full-viewport backdrop, because a dropdown that only closes from
+             its own button is a dropdown stuck to the screen. -->
         <div class="hdr-menu" style="position:relative;flex:none">
-          <button onClick="{{ toggleMenu }}" aria-haspopup="true" aria-expanded="{{ menuOpenAttr }}" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:9px;color:#fff;font-weight:700;font-size:14px;padding:8px 14px;cursor:pointer">Menu <span style="font-size:10px;line-height:1">{{ menuChevron }}</span></button>
+          <button onClick="{{ toggleMenu }}" aria-haspopup="true" aria-expanded="{{ menuOpenAttr }}" aria-label="{{ menuToggleLabel }}" style="display:inline-flex;align-items:center;background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:9px;color:#fff;font-size:18px;line-height:1;padding:8px 12px;cursor:pointer">{{ menuToggleIcon }}</button>
+          <!-- Click-away closing lives in componentDidMount as a document
+               listener, NOT as a fixed backdrop div here: the header's
+               backdrop-filter makes it a containing block, so a
+               position:fixed backdrop inside it would cover only the header
+               strip — measured, not guessed (a hero click sailed past it). -->
           <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
             <div onClick="{{ closeMenu }}" style="position:absolute;right:0;top:calc(100% + 12px);background:rgba(12,12,14,0.97);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:8px;min-width:240px;box-shadow:0 18px 40px rgba(0,0,0,0.55)">
               <a href="#about" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">About</a>
@@ -1614,6 +1624,18 @@ class Component extends DCLogic {
       else if (this.state.menuOpen) this.setState({ menuOpen: false });
     };
     document.addEventListener('keydown', this.escHandler);
+    /* Click-away for the header Menu dropdown. A document listener rather
+       than a backdrop div: the sticky header's backdrop-filter makes it a
+       containing block, so a position:fixed backdrop INSIDE it covers only
+       the header strip, not the viewport (hit for real, 3 Aug). Anything
+       inside .hdr-menu — the toggle button, the panel, its links — is left
+       to its own handlers; a click anywhere else closes the menu. */
+    this.menuAwayHandler = (e) => {
+      if (!this.state.menuOpen) return;
+      if (e.target && e.target.closest && e.target.closest('.hdr-menu')) return;
+      this.setState({ menuOpen: false });
+    };
+    document.addEventListener('click', this.menuAwayHandler);
   }
 
   async loadFixtureData() {
@@ -1689,6 +1711,7 @@ class Component extends DCLogic {
     if (this._io) this._io.disconnect();
     if (this._ioCount) this._ioCount.disconnect();
     if (this.escHandler) document.removeEventListener('keydown', this.escHandler);
+    if (this.menuAwayHandler) document.removeEventListener('click', this.menuAwayHandler);
   }
 
   animateStats() {
@@ -2416,10 +2439,12 @@ class Component extends DCLogic {
       toggleNav: () => this.setState((s) => ({ navOpen: !s.navOpen })),
       closeNav: () => { if (this.state.navOpen) this.setState({ navOpen: false }); },
       /* Desktop Menu dropdown. closeMenu sits on the panel itself so a click
-         on any link bubbles up and shuts it \u2014 same trick as closeNav. */
+         on any link bubbles up and shuts it \u2014 same trick as closeNav \u2014 and on
+         the click-away backdrop, so anywhere outside closes it too. */
       menuOpen: this.state.menuOpen,
       menuOpenAttr: this.state.menuOpen ? 'true' : 'false',
-      menuChevron: this.state.menuOpen ? '\u25b4' : '\u25be',
+      menuToggleIcon: this.state.menuOpen ? '\u2715' : '\u2630',
+      menuToggleLabel: this.state.menuOpen ? 'Close menu' : 'Open menu',
       toggleMenu: () => this.setState((s) => ({ menuOpen: !s.menuOpen })),
       closeMenu: () => { if (this.state.menuOpen) this.setState({ menuOpen: false }); },
       onPlayerDobDay: (e) => this.setPlayerDobPart('dobDay', e.target.value),

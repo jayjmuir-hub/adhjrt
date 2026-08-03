@@ -110,6 +110,33 @@ check('the dropdown is gated on menuOpen, so it is a dropdown and not a permanen
 check('its button toggles it', /\{\{ toggleMenu \}\}/.test(MENU));
 check('…and reports its state for assistive tech', /aria-expanded="\{\{ menuOpenAttr \}\}"/.test(MENU));
 
+/* Jay, 3 Aug: the icon alone, no word — ☰/✕ via the binding, with the words
+   moved into aria-label so a screen reader still gets them. The regex pins
+   the button's ENTIRE text content to the icon binding, so a stray "Menu"
+   creeping back in fails it. */
+check('the button is the menu icon alone, not a word',
+  /aria-label="\{\{ menuToggleLabel \}\}"[^>]*>\{\{ menuToggleIcon \}\}<\/button>/.test(MENU));
+
+/* A dropdown that only closes from its own button is stuck to the screen.
+   Click-away is a DOCUMENT listener, not a backdrop div — the sticky
+   header's backdrop-filter makes it a containing block, so a
+   position:fixed backdrop inside it covers only the header strip
+   (measured 3 Aug: a hero click sailed straight past one). The listener
+   must ignore clicks inside .hdr-menu, or the toggle button would close
+   the menu it just opened; comments are stripped so the explanation of
+   the trap cannot satisfy the checks that guard against it. */
+const SCRIPT = stripComments(PAGE).replace(/\/\*[\s\S]*?\*\//g, '');
+check('a document click listener closes the menu from anywhere on the page',
+  /document\.addEventListener\('click', this\.menuAwayHandler\)/.test(SCRIPT));
+check('…but leaves clicks inside .hdr-menu to their own handlers',
+  /menuAwayHandler[\s\S]{0,300}closest\('\.hdr-menu'\)\) return;/.test(SCRIPT));
+check('…only acts while the menu is open',
+  /menuAwayHandler = \(e\) => \{\s*\n\s*if \(!this\.state\.menuOpen\) return;/.test(SCRIPT));
+check('…and is removed on unmount like the other document listeners',
+  /document\.removeEventListener\('click', this\.menuAwayHandler\)/.test(SCRIPT));
+check('no position:fixed backdrop div sits inside the header (the containing-block trap)',
+  !/position:fixed;inset:0/.test(MENU));
+
 PUBLIC_NAV.forEach(([label, href]) => {
   check(`the dropdown offers ${label} -> ${href}`, MENU.includes(`href="${href}"`));
 });

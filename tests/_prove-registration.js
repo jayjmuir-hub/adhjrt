@@ -2801,6 +2801,30 @@ const FAULTS = [
     expect: ['gated on menuOpen'],
   },
   {
+    name: 'the click-away listener is never registered, so only the button closes the menu',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, "    document.addEventListener('click', this.menuAwayHandler);\n", ''),
+    expect: ['closes the menu from anywhere on the page'],
+  },
+  {
+    name: 'the click-away listener stops ignoring the dropdown itself, closing the menu it just opened',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, "      if (e.target && e.target.closest && e.target.closest('.hdr-menu')) return;\n", ''),
+    expect: ['leaves clicks inside .hdr-menu'],
+  },
+  {
+    name: 'the click-away listener leaks past unmount',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, "    if (this.menuAwayHandler) document.removeEventListener('click', this.menuAwayHandler);\n", ''),
+    expect: ['removed on unmount'],
+  },
+  {
+    name: 'the word "Menu" creeps back onto the icon button',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '>{{ menuToggleIcon }}</button>', '>Menu {{ menuToggleIcon }}</button>'),
+    expect: ['menu icon alone, not a word'],
+  },
+  {
     name: 'a section link is dropped from the dropdown',
     suite: 'test-back-office-links.js',
     apply: () => patch(HOME,

@@ -41,7 +41,8 @@
 // variables manager-signup.js/organizer-signup.js already use — nothing new
 // to configure there.
 
-const { loadAccounts, saveAccounts, sign } = require('./_auth');
+const { loadAccounts, saveAccounts, sign, blobStore } = require('./_auth');
+const { checkSignupRate, tooManyResponse } = require('./_ratelimit');
 const { verifyGoogleIdToken } = require('./_googleAuth');
 
 function managerCodesMap() {
@@ -89,6 +90,15 @@ exports.handler = async (event) => {
     if (!inviteCode) {
       return { statusCode: 200, body: JSON.stringify({ ok: true, needsSignup: true, name: identity.name }) };
     }
+
+    /* ⚠️ THE RATE LIMIT SITS HERE, NOT AT THE TOP OF THE HANDLER, AND THAT IS
+       DELIBERATE. Above this line the request is a SIGN-IN (or a first-time
+       "no account yet" probe), and rate-limiting those would lock managers out
+       of a venue where fifteen of them share one wifi address on tournament
+       morning. Past the `if (!inviteCode)` return, the caller is submitting an
+       invite code - that is a signup attempt, and it is the guessable thing. */
+    const rate = await checkSignupRate(blobStore('config'), event, Date.now());
+    if (!rate.ok) return tooManyResponse(rate);
 
     if (role !== 'organizer' && role !== 'manager') {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A login is either a manager or an organiser.' }) };

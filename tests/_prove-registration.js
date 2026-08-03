@@ -2515,6 +2515,79 @@ const FAULTS = [
     expect: ['manager session fields match login.js'],
   },
 
+  /* ---- the invite codes are rate limited now (3 Aug 2026) ---------------
+     Until this shipped, ORGANIZER_INVITE_CODE took unlimited guesses from an
+     anonymous POST, and an organiser account reads every registrant's DOB and
+     medical notes. Each of the three ways to guess gets its own fault, plus
+     the two mistakes that would leave the guard looking present while doing
+     nothing: a per-endpoint bucket (alternate and the budget triples) and a
+     caller-supplied address header (pick your own bucket). */
+  {
+    name: 'organizer-signup.js loses its rate limit, so ORGANIZER_INVITE_CODE takes unlimited guesses again',
+    suite: 'test-signup-ratelimit.js',
+    apply: () => patch(path.join('netlify', 'functions', 'organizer-signup.js'),
+      "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
+    expect: ['organizer-signup.js: the eleventh is refused'],
+  },
+  {
+    name: 'manager-signup.js loses its rate limit',
+    suite: 'test-signup-ratelimit.js',
+    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
+      "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
+    expect: ['manager-signup.js: the eleventh is refused'],
+  },
+  {
+    name: "google-auth.js's signup branch loses its rate limit",
+    suite: 'test-signup-ratelimit.js',
+    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
+      "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
+    expect: ['google-auth.js (signup branch): the eleventh is refused'],
+  },
+  {
+    /* The guard still reads as present at every call site — this is the shape
+       that looks fixed in review and is not. */
+    name: 'manager-signup.js takes its own rate bucket, so alternating endpoints buys a fresh budget',
+    suite: 'test-signup-ratelimit.js',
+    apply: () => {
+      const f = path.join('netlify', 'functions', 'manager-signup.js');
+      patch(f, "const { checkSignupRate, tooManyResponse } = require('./_ratelimit');",
+        "const { checkSignupRate, checkRate, tooManyResponse } = require('./_ratelimit');");
+      patch(f, "const rate = await checkSignupRate(blobStore('config'), event, Date.now());",
+        "const rate = await checkRate(blobStore('config'), ((event.headers || {})['x-nf-client-connection-ip'] || '') + ':signup-manager', Date.now(), { max: 10, windowMs: 900000 });");
+    },
+    expect: ['and at manager-signup.js, which never had ten of its own'],
+  },
+  {
+    /* The realistic tidy-up: "why is this halfway down the handler?" Because
+       above that line the request is a SIGN-IN, and fifteen managers on one
+       venue wifi share an address on tournament morning. */
+    name: "google-auth.js's rate limit is tidied up to the top of the handler, locking managers out of Google sign-in",
+    suite: 'test-signup-ratelimit.js',
+    apply: () => {
+      const f = path.join('netlify', 'functions', 'google-auth.js');
+      patch(f, "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", '');
+      patch(f, "    const body = JSON.parse(event.body || '{}');",
+        "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n    const body = JSON.parse(event.body || '{}');");
+    },
+    expect: ['but a SIGN-IN from the same address is still answered'],
+  },
+  {
+    name: 'the signup bucket starts trusting x-forwarded-for, so a caller can pick its own bucket',
+    suite: 'test-signup-ratelimit.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      "return `${(event && event.headers || {})['x-nf-client-connection-ip'] || ''}:signup`;",
+      "return `${(event && event.headers || {})['x-forwarded-for'] || (event && event.headers || {})['x-nf-client-connection-ip'] || ''}:signup`;"),
+    expect: ['x-forwarded-for is ignored'],
+  },
+  {
+    name: 'the signup budget is widened to a number no guessing script would ever reach',
+    suite: 'test-signup-ratelimit.js',
+    apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
+      'const SIGNUP_RATE_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };',
+      'const SIGNUP_RATE_OPTS = { max: 10000, windowMs: 15 * 60 * 1000 };'),
+    expect: ['ten per fifteen minutes'],
+  },
+
   /* ---- /scores is purely public now (test-scores-public.js) ------------- */
 
   {
@@ -3335,16 +3408,27 @@ const FAULTS = [
 let clean = 0, proven = 0;
 const problems = [];
 
+/* ⚠️ DERIVED FROM THE FAULTS, NOT WRITTEN OUT — changed 3 Aug 2026, after a
+   new suite silently skipped its own baseline.
+
+   This was a hardcoded list, a second explicit list beside runall.ps1's, and
+   a new test file did not join it by itself. That is not a tidiness problem.
+   The baseline is the thing that makes every "caught" below mean anything: a
+   suite that fails on an UNDAMAGED copy fails for every fault too, so all of
+   its faults report caught while proving nothing. test-signup-ratelimit.js
+   arrived with seven faults and no baseline entry, and the run said
+   381/381 — the count that was supposed to be reassuring.
+
+   Deriving it means the two lists cannot drift: every suite any fault names
+   is baselined, always. The floor below is the hardcoded half — a derived
+   list that quietly became empty would otherwise report zero problems and a
+   clean bill of health. */
+const BASELINE = [...new Set(FAULTS.map((f) => f.suite))].sort();
+
 console.log('Baseline — the suites must pass on an undamaged copy first.\n');
 seed();
-['test-registration.js', 'test-registration-panel.js', 'test-venue-map.js', 'test-accounts.js',
- 'test-venue-splits.js', 'test-agegroups.js', 'test-intake.js',
- 'test-functions-load.js', 'test-email.js', 'test-organizer-grouping.js', 'test-google-auth.js',
- 'test-fixtures-results-sync.js', 'test-simulate-tournament.js', 'test-sponsors.js', 'test-back-office-links.js',
- 'test-organizer-tournament.js', 'test-manager-dc-draw.js', 'test-manager-dc.js',
- 'test-manager-dc-score-sheet.js', 'test-organizer-manager-link.js',
- 'test-scores-public.js', 'test-unified-login.js', 'test-session-migration.js',
- 'test-signin-page.js', 'test-light-mode.js', 'test-design-polish.js'].forEach((f) => {
+if (BASELINE.length < 20) problems.push(`the baseline list collapsed to ${BASELINE.length} suite(s) — it should cover every suite the faults name`);
+BASELINE.forEach((f) => {
   if (!fs.existsSync(path.join(__dirname, f))) return;
   const r = run(f);
   if (r.code === 0) { clean++; console.log('  clean pass  ' + f); }

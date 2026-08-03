@@ -103,4 +103,51 @@ async function checkRate(store, address, now, opts) {
   return { ok: true };
 }
 
-module.exports = { checkRate, keyFor, MAX_PER_WINDOW, WINDOW_MS };
+/* ---------------------------------------------------------------------- *
+   SIGNUP ATTEMPTS (added 3 Aug 2026).
+
+   organizer-signup.js, manager-signup.js and google-auth.js's signup branch
+   all check an INVITE CODE with a plain string compare, and until now none of
+   them counted attempts at all — so the codes took unlimited guesses from
+   anyone, and an organiser account reads every registrant's name, date of
+   birth and medical notes. The site-wide Netlify password hid this, but that
+   comes off about 20 days before the tournament.
+
+   ⚠️ ONE BUCKET ACROSS ALL THREE, for the same reason login.js has one:
+   three endpoints guessing the same secrets with three budgets is one budget
+   three times over. `${ip}:signup`, kept apart from `:login` (a person
+   mistyping their password must not eat a new manager's signup budget) and
+   from the registration bucket.
+
+   Numbers match login.js — 10 per 15 minutes. A real person signs up once;
+   ten is far past a fumbled code and far short of useful to a script.
+
+   Fails OPEN, like every other use of this module: losing a genuine signup
+   to a hiccuping blob read is worse than the guessing it would have stopped.
+   Whoever gets in still lands as PENDING and needs an organiser's approval.  */
+const SIGNUP_RATE_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
+
+function signupBucket(event) {
+  /* Netlify's own header, never x-forwarded-for — that one is caller-supplied,
+     so an attacker could pick their own bucket and the limit would be theatre. */
+  return `${(event && event.headers || {})['x-nf-client-connection-ip'] || ''}:signup`;
+}
+
+function checkSignupRate(store, event, now) {
+  return checkRate(store, signupBucket(event), now, SIGNUP_RATE_OPTS);
+}
+
+/* One copy of the sentence. It was written out in login.js and would have been
+   written out three more times here; two copies of one rule drift, and the
+   drift is invisible until somebody reads both. */
+function tooManyResponse(rate) {
+  return {
+    statusCode: 429,
+    body: JSON.stringify({ ok: false, error: 'Too many attempts from this connection. Please try again shortly.', retryAfterSecs: rate.retryAfterSecs }),
+  };
+}
+
+module.exports = {
+  checkRate, keyFor, MAX_PER_WINDOW, WINDOW_MS,
+  checkSignupRate, signupBucket, tooManyResponse, SIGNUP_RATE_OPTS,
+};

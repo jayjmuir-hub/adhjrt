@@ -18,7 +18,8 @@
 // SESSION_SECRET must also be set (shared with the other auth functions).
 // Share each age group's code only with that group's manager(s).
 
-const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem, blobStore } = require('./_auth');
+const { checkSignupRate, tooManyResponse } = require('./_ratelimit');
 
 function codesMap() {
   try { return JSON.parse(process.env.MANAGER_INVITE_CODES || '{}'); } catch (e) { return {}; }
@@ -27,6 +28,9 @@ function codesMap() {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
+    // Same guard as organizer-signup.js, same bucket - see _ratelimit.js.
+    const rate = await checkSignupRate(blobStore('config'), event, Date.now());
+    if (!rate.ok) return tooManyResponse(rate);
     const { name, username, password, inviteCode } = JSON.parse(event.body || '{}');
     if (!name || !username || !password || !inviteCode) {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'All fields are required.' }) };

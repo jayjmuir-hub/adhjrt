@@ -26,7 +26,7 @@
 // out every account whose password predates the current floor.
 
 const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');
-const { checkRate } = require('./_ratelimit');
+const { checkRate, tooManyResponse } = require('./_ratelimit');
 
 const LOGIN_RATE_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
 const clientIp = (event) => (event.headers || {})['x-nf-client-connection-ip'] || '';
@@ -51,12 +51,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
     const rate = await checkRate(blobStore('config'), `${clientIp(event)}:login`, Date.now(), LOGIN_RATE_OPTS);
-    if (!rate.ok) {
-      return {
-        statusCode: 429,
-        body: JSON.stringify({ ok: false, error: 'Too many attempts from this connection. Please try again shortly.', retryAfterSecs: rate.retryAfterSecs }),
-      };
-    }
+    if (!rate.ok) return tooManyResponse(rate);
     const { username, password } = JSON.parse(event.body || '{}');
     const uname = (username || '').trim().toLowerCase();
     const accounts = await loadAccounts();

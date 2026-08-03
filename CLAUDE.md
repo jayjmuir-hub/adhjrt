@@ -912,6 +912,40 @@ and far short of anything useful to an abuser.
 - A window stamped in the **future** is treated as stale. Clock skew between
   instances must not lock somebody out for longer than the window.
 
+### Signup attempts are rate limited too (added 3 Aug 2026)
+
+`SIGNUP_RATE_OPTS` / `checkSignupRate()` / `tooManyResponse()` in
+`_ratelimit.js`. **Ten attempts per address per 15 minutes, in ONE
+`${ip}:signup` bucket shared by `organizer-signup.js`, `manager-signup.js` and
+`google-auth.js`'s signup branch.**
+
+**Why it exists:** all three check an invite code with a plain string compare
+and none of them counted attempts, so `ORGANIZER_INVITE_CODE` took unlimited
+guesses from an anonymous POST — and an organiser account reads every
+registrant's name, date of birth and medical notes. The site-wide Netlify
+password hid this; that comes off about 20 days before the tournament.
+
+- **ONE bucket across all three**, same argument as `:login` — three endpoints
+  guessing the same secrets with a budget each is one budget three times over.
+  Kept separate from `:login` (someone mistyping a password must not eat a new
+  manager's signup budget) and from the registration bucket.
+- ⚠️ **In `google-auth.js` the check sits on the SIGNUP branch, below the
+  `if (!inviteCode)` return — NOT at the top of the handler.** Above that line
+  the request is a Google SIGN-IN, and rate-limiting those would lock managers
+  out of a venue where fifteen of them share one wifi address on tournament
+  morning. Moving it up is the tidy-up that looks harmless; there is a fault
+  for exactly that.
+- Fails **OPEN**, like every other use of this module, and whoever does get
+  through still lands PENDING and needs an organiser's approval.
+- `tooManyResponse()` is the single copy of the 429 sentence — `login.js` uses
+  it too, so the four endpoints cannot drift apart on the wording.
+- `tests/test-signup-ratelimit.js` DRIVES all three handlers; seven faults.
+
+**The cheaper half of this is not code:** `organizer-signup.js` already refuses
+every signup when `ORGANIZER_INVITE_CODE` is absent, so deleting that variable
+in Netlify shuts organiser self-signup off entirely, with no deploy. See
+Accounts above.
+
 ⚠️ **Twenty hits at the same instant cannot tell a fixed window from a sliding
 one.** The first rollover test did exactly that and missed a fault that pushed
 the window start forward on every write. The check that catches it spreads the

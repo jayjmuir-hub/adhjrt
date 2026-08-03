@@ -17,11 +17,16 @@
 // Then privately share ORGANIZER_INVITE_CODE with whoever should be
 // able to create their own organizer login.
 
-const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, sign, passwordProblem, blobStore } = require('./_auth');
+const { checkSignupRate, tooManyResponse } = require('./_ratelimit');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
+    // Before anything is parsed or compared: the invite code below is checked
+    // with a plain string compare, so without this it took unlimited guesses.
+    const rate = await checkSignupRate(blobStore('config'), event, Date.now());
+    if (!rate.ok) return tooManyResponse(rate);
     const { name, title, username, password, inviteCode } = JSON.parse(event.body || '{}');
     if (!name || !username || !password || !inviteCode) {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'All fields are required.' }) };

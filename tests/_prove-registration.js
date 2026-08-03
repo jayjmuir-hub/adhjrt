@@ -48,6 +48,17 @@ const NEEDED = [
   'Manager.dc.html',
   /* test-signin-page.js reads the unified sign-in page. */
   'Signin.dc.html',
+  /* Aug 2026 — the unlisted club declaration page. test-intake.js reads it for
+     the form name, the age-group list and the silent-link assertions, so
+     without it here that whole file dies on ENOENT and its faults report
+     "failed, but not on the named check". Second time this trap has been hit
+     in one day; the first was _signins.js. */
+  'Club.dc.html',
+  /* …and the three files the silent-link assertions read to prove it stays
+     unlisted: the rewrite that serves it, the sitemap it must be absent from,
+     and robots.txt, which must not NAME it (a Disallow would advertise it). */
+  'sitemap.xml',
+  'robots.txt',
   /* test-design-polish.js (Aug 2026) reads every page including these two,
      plus the share-card asset — the PNG rides through the text-normalising
      copy as garbage bytes, which is fine because only its EXISTENCE is ever
@@ -2422,6 +2433,132 @@ const FAULTS = [
       "      signupCodeLabel: 'AGE GROUP INVITE CODE',",
       "      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',"),
     expect: ['the invite-code label no longer switches'],
+  },
+
+  /* ---- the silent club link (test-intake.js) ---------------------------- */
+  {
+    /* ⚠️ THE ONE THAT MATTERS. Without the gate the unlisted page is the only
+       thing standing between a public endpoint and anyone who read the repo —
+       and the repo is public. */
+    name: 'the club form key check is removed, so the unlisted page is the only guard',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "  if (form === 'club-registration' && !clubKeyOk(b.clubKey)) {",
+      '  if (false) {'),
+    expect: ['a wrong key is refused with 403'],
+  },
+  {
+    /* ⚠️ FAILING OPEN HERE IS THE OPPOSITE OF THE RATE LIMITER'S CORRECT
+       BEHAVIOUR, and looks like consistency. An absent variable must refuse,
+       or the form is wide open the moment somebody removes it in Netlify. */
+    name: 'the key check fails OPEN when CLUB_FORM_KEY is unset',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "  if (!expected) return false;",
+      '  if (!expected) return true;'),
+    expect: ['with the variable UNSET, even an empty key is refused'],
+  },
+  {
+    name: 'the key becomes a prefix match, so a partial key gets in',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "  return String(supplied || '') === expected;",
+      '  return expected.indexOf(String(supplied || "")) === 0;'),
+    expect: ['a prefix of the key is not'],
+  },
+  {
+    /* The tidy-up that looks like consistency and shuts registration for every
+       club in the tournament. */
+    name: 'the key gate is widened to every form, locking the public ones',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "  if (form === 'club-registration' && !clubKeyOk(b.clubKey)) {",
+      '  if (!clubKeyOk(b.clubKey)) {'),
+    expect: ['a TEAM registration needs no key'],
+  },
+  {
+    /* Moved BELOW validation and the window, so a caller without the key can
+       still make us read the registration settings and run every rule. */
+    name: 'the key is checked only after the row has already been written',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "  if (form === 'club-registration' && !clubKeyOk(b.clubKey)) {\n    /* Never log the supplied value, and do not say whether the variable is\n       unset or the key merely wrong — those are the same answer to a caller. */\n    log('refused: club form key');",
+      "  if (form === 'club-registration' && !clubKeyOk(b.clubKey) && false) {\n    log('refused: club form key');"),
+    expect: ['a wrong key is refused with 403', 'and writes nothing'],
+  },
+  {
+    name: 'the refusal starts logging the key that was tried',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "    log('refused: club form key');",
+      "    log('refused: club form key ' + b.clubKey);"),
+    expect: ['the refusal never logs the key that was tried'],
+  },
+  {
+    name: 'clubKey is added to the club form fields, so it can reach the sheet',
+    suite: 'test-intake.js',
+    apply: () => patch(INTAKE_F,
+      "    fields: CLUB_COLUMNS.filter((c) => c !== 'submittedAt'),",
+      "    fields: CLUB_COLUMNS.filter((c) => c !== 'submittedAt').concat('clubKey'),"),
+    expect: ['clubKey is not one of the club form fields'],
+  },
+  {
+    name: 'the club page is added to the sitemap, so it gets indexed',
+    suite: 'test-intake.js',
+    apply: () => patch('sitemap.xml',
+      '</urlset>',
+      '  <url><loc>https://adhjrt.com/register-club</loc></url>\n</urlset>'),
+    expect: ['it is NOT in the sitemap'],
+  },
+  {
+    name: 'the club page loses its noindex tag',
+    suite: 'test-intake.js',
+    apply: () => patch('Club.dc.html',
+      '<meta name="robots" content="noindex, nofollow">',
+      '<meta name="robots" content="index, follow">'),
+    expect: ['the page carries noindex'],
+  },
+  {
+    /* The obvious-looking way to hide a page, which advertises it instead —
+       robots.txt is public. */
+    name: 'robots.txt gets a Disallow that advertises the path',
+    suite: 'test-intake.js',
+    apply: () => patch('robots.txt',
+      'Allow: /',
+      'Allow: /\nDisallow: /register-club'),
+    expect: ['robots.txt does not name it'],
+  },
+  {
+    name: 'the club form creeps back onto the public homepage',
+    suite: 'test-intake.js',
+    apply: () => patch('Quins JRT.dc.html',
+      "  async postRegistration(form, data) {",
+      "  async submitClubAgain() { return this.postRegistration('club-registration', {}); }\n\n  async postRegistration(form, data) {"),
+    expect: ['the homepage does not carry the club form'],
+  },
+  {
+    name: 'the club page drops an age group, so one cannot be declared at all',
+    suite: 'test-intake.js',
+    apply: () => patch('Club.dc.html',
+      "  { id: 'u12g', name: 'U12G QR' },",
+      ''),
+    expect: ['every real age group has a box on the page'],
+  },
+  {
+    name: 'the club page reorders its groups alphabetically',
+    suite: 'test-intake.js',
+    apply: () => patch('Club.dc.html',
+      "const CLUB_GROUPS = [\n  { id: 'u6', name: 'U6 Tag' }, { id: 'u7', name: 'U7 Tag' }, { id: 'u8', name: 'U8 Tag' },",
+      "const CLUB_GROUPS = [\n  { id: 'u7', name: 'U7 Tag' }, { id: 'u6', name: 'U6 Tag' }, { id: 'u8', name: 'U8 Tag' },"),
+    expect: ['in the same real-age order, not alphabetical'],
+  },
+  {
+    name: 'the club page builds its count keys with a different prefix',
+    suite: 'test-intake.js',
+    apply: () => patch('Club.dc.html',
+      "for (const g of CLUB_GROUPS) data['teams-' + g.id] = String(s.counts[g.id] || '').trim();",
+      "for (const g of CLUB_GROUPS) data['team-' + g.id] = String(s.counts[g.id] || '').trim();"),
+    expect: ['the page builds its count keys the same way the server does'],
   },
 
   /* ---- last sign in (test-my-account.js) -------------------------------- */

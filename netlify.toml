@@ -36,6 +36,20 @@
   to = "/legal.html"
   status = 200
 
+# The club declaration form (Aug 2026) — the "silent link".
+# ⚠️ UNLISTED, NOT PROTECTED. Nothing on adhjrt.com links here, it is absent
+# from sitemap.xml and the page carries noindex — but this repo is PUBLIC and
+# its root is the deployed site, so this very rule tells anyone reading the
+# source that the path exists. What actually guards it is CLUB_FORM_KEY,
+# checked server-side in _intake.js; without the key the form cannot submit.
+# Deliberately NOT added to robots.txt as a Disallow: that file is public too,
+# so a Disallow would advertise the path to exactly the people it is hidden
+# from. noindex does the same job without naming it anywhere public.
+[[redirects]]
+  from = "/register-club"
+  to = "/Club.dc.html"
+  status = 200
+
 # The three page files reference /assets/icons/apple-touch-icon.png, but the
 # icons live directly in /assets/. This rewrite makes both paths work so the
 # pages did not need re-uploading. Safe to delete once those hrefs are

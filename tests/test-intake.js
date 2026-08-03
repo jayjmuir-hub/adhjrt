@@ -420,14 +420,23 @@ section('The allow-list and the columns cannot drift apart');
 
   check('the honeypot is not in either field list by accident',
     teamFields.indexOf('bot-field') < 0 && playerFields.indexOf('bot-field') < 0);
-  /* Two. The club declaration form was removed on 2 Aug 2026 at Jay's request —
-     the button, the modal, the columns, the row builder and the email template
-     all went with it. */
-  eq('the forms are exactly the two the site submits', Object.keys(I.FORMS).sort(),
-    ['player-registration', 'team-registration']);
-  check('club-registration is gone, not merely unused',
-    I.cleanSubmission('club-registration', { club: 'X' }) === null,
-    'an unknown form must be refused by the allow-list, not silently accepted');
+  /* Three since 1 Aug 2026 — club declarations joined the two registrations.
+     Hardcoded, so ADDING a form is a deliberate act with a test to update and
+     not something that arrives unnoticed alongside an unrelated change. */
+  eq('these three forms are the only ones there are', Object.keys(I.FORMS).sort(),
+    ['club-registration', 'player-registration', 'team-registration']);
+
+  /* Every club column except the generated stamp must be fillable, the same
+     way the team and player columns are checked above — a column with no field
+     behind it is permanently empty and nobody notices. */
+  const clubFields = I.FORMS['club-registration'].fields;
+  I.CLUB_COLUMNS.filter((c) => GENERATED.indexOf(c) < 0).forEach((c) => {
+    check(`club column "${c}" is a field somebody can fill in`, clubFields.indexOf(c) >= 0);
+  });
+  check('the honeypot is not in the club field list by accident',
+    clubFields.indexOf('bot-field') < 0);
+  check('a club submission cannot stamp its own submittedAt',
+    clubFields.indexOf('submittedAt') < 0);
 }
 
 /* The form names have to be the ones the page actually submits, or the gateway
@@ -441,12 +450,41 @@ section('The allow-list and the columns cannot drift apart');
      { form: '<name>', data: {…} } to our own function instead, so the old
      anchor stopped existing — and the baseline run caught it, which is what
      that baseline is for. */
-  const page = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
-  Object.keys(I.FORMS).forEach((name) => {
-    check(`the page really submits "${name}"`,
-      page.indexOf(`this.postRegistration('${name}'`) >= 0, name);
-  });
-  check('…and no longer addresses Netlify Forms at all', !/'form-name':/.test(page));
+  /* ⚠️ TWO PAGES NOW, Aug 2026. The team and player forms are on the public
+     homepage; club declarations moved to the unlisted /register-club page when
+     the silent link was built, so a single-page read would fail on
+     club-registration and pass on the other two — the shape of a check that
+     looks like it is guarding something and is not. Both files are read, and
+     the form must appear in ONE of them. */
+  const home = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+  const clubPage = readRepo('Club.dc.html').replace(/\r\n/g, '\n');
+
+  /* ⚠️ ASSERTED PER FORM, NOT BY A LOOSE SWEEP OVER BOTH PAGES. The two public
+     forms are on the homepage and post through postRegistration(form, data);
+     the club form is on the unlisted page and posts a BODY, because it has to
+     carry clubKey beside `data`. A single check widened to accept either shape
+     on either page would pass on a club form that had quietly moved back onto
+     the homepage, or on a homepage form that stopped sending its name — a
+     widened check is a check with less to say. */
+  check('the homepage really submits "team-registration"',
+    home.indexOf("this.postRegistration('team-registration'") >= 0);
+  check('the homepage really submits "player-registration"',
+    home.indexOf("this.postRegistration('player-registration'") >= 0);
+  check('the club page really submits "club-registration"',
+    /form:\s*'club-registration'/.test(clubPage));
+
+  /* Hardcoded, so a FOURTH form arriving cannot ride in unasserted — the
+     loop this replaced would simply not have checked it. */
+  eq('and those are the only three forms there are',
+    Object.keys(I.FORMS).sort(),
+    ['club-registration', 'player-registration', 'team-registration']);
+
+  /* The club form must NOT come back to the homepage: it is meant to be
+     reachable only by the silent link. */
+  check('the homepage does not carry the club form',
+    !/club-registration/.test(home));
+  check('…and neither page addresses Netlify Forms any more',
+    !/'form-name':/.test(home) && !/'form-name':/.test(clubPage));
 }
 
 /* Each form knows which sheet it belongs to, by env var NAME. Never a value. */
@@ -611,13 +649,111 @@ check('neither is silently dropped', !V('team-registration', goodTeam()).drop
   }
 }
 
-/* ---- the A1 ranges ----------------------------------------------------
-   Derived from the column counts, never typed. Lived inside the club section
-   until that was removed on 2 Aug 2026; kept, because the ceiling it guards
-   applies to every sheet. */
+/* ---- club declarations ------------------------------------------------
+   Added 1 Aug 2026. A declaration says how many teams a club is bringing in
+   each age group. It mints no team code and blocks nothing — see
+   claude/specs/spec-club-registration.md. */
 {
+  const goodClub = () => ({
+    club: 'Dubai Exiles', 'contact-name': 'A Person', 'contact-email': 'a@b.com',
+    'teams-u8': '2', 'teams-u16b': '3',
+  });
+  const C = (d) => V('club-registration', d);
+
+  check('a complete declaration is accepted', C(goodClub()).ok === true, JSON.stringify(C(goodClub())));
+
+  /* Required fields, one at a time — a single "everything missing" case passes
+     even when only one field is really being checked. */
+  ['club', 'contact-name', 'contact-email'].forEach((f) => {
+    const d = goodClub(); delete d[f];
+    const r = C(d);
+    check(`a declaration with no ${f} is refused`, r.ok === false, JSON.stringify(r));
+    eq('…and told which one', r.field, f);
+  });
+  check('a contact phone is OPTIONAL, like the team form manager fields',
+    C({ ...goodClub(), 'contact-phone': '' }).ok === true);
+
+  /* THE RULE THAT MAKES A DECLARATION MEAN SOMETHING. Nothing is wrong with
+     any single field here — the submission just does not say anything, and a
+     row of fifteen blanks in the sheet is worse than no row at all. */
+  const nothing = { club: 'X', 'contact-name': 'Y', 'contact-email': 'z@b.com' };
+  check('a declaration that declares no teams at all is refused', C(nothing).ok === false);
+  check('…with a sentence a club can act on',
+    /at least one age group/.test(C(nothing).error || ''), C(nothing).error);
+  check('every count explicitly zero is the SAME as declaring nothing',
+    C({ ...nothing, 'teams-u8': '0', 'teams-u16b': '0' }).ok === false);
+  check('…while a single team in one group is enough',
+    C({ ...nothing, 'teams-u18g': '1' }).ok === true);
+
+  /* A count that is not a whole number is a broken or edited client, and says
+     so differently from a club mistake. */
+  ['two', '1.5', '-1', '1e2', 'N', '2 teams'].forEach((v) => {
+    const r = C({ ...goodClub(), 'teams-u8': v });
+    check(`"${v}" is not accepted as a team count`, r.ok === false, JSON.stringify(r));
+  });
+  check('a blank count is skipped, not refused — blank means "not coming"',
+    C({ ...goodClub(), 'teams-u9': '' }).ok === true);
+  /* Whitespace is blank, NOT a broken client. It trims to '' and means "not
+     coming", the same way filled() treats whitespace everywhere else in
+     _intake.js. Refusing a stray space would be the page's fault charged to
+     the club. (This check started life in the rejected list above and was
+     wrong: the code was right and the test was not.) */
+  check('a whitespace-only count is treated as blank, not refused',
+    C({ ...goodClub(), 'teams-u9': '   ' }).ok === true);
+  check('…and whitespace alone is still not a declaration',
+    C({ ...nothing, 'teams-u9': '   ' }).ok === false);
+
+  /* The ceiling, at its exact boundary in both directions. */
+  eq('the cap is ten', I.MAX_TEAMS_PER_GROUP, 10);
+  check('exactly the cap is allowed',
+    C({ ...goodClub(), 'teams-u8': String(I.MAX_TEAMS_PER_GROUP) }).ok === true);
+  check('one over the cap is refused',
+    C({ ...goodClub(), 'teams-u8': String(I.MAX_TEAMS_PER_GROUP + 1) }).ok === false);
+  check('…and the refusal names the age group, not just the number',
+    /U8 Tag/.test(C({ ...goodClub(), 'teams-u8': '11' }).error || ''),
+    C({ ...goodClub(), 'teams-u8': '11' }).error);
+
+  /* EVERY age group is checked, not just the first — the loop must not stop
+     early or skip the tail of the list. */
+  AG.AGE_GROUPS.forEach((g) => {
+    const key = I.clubCountKey(g.id);
+    check(`${g.id}: a real count is accepted`, C({ ...nothing, [key]: '2' }).ok === true);
+    check(`${g.id}: an over-cap count is refused`, C({ ...nothing, [key]: '99' }).ok === false);
+  });
+
+  /* The columns and the age-group table, compared BOTH ways. Written out in
+     _intake.js on purpose (reordering AGE_GROUPS must not silently reshuffle a
+     sheet that has rows in it) — so this is what stops the two drifting. */
+  const countCols = I.CLUB_COLUMNS.filter((c) => c.indexOf(I.CLUB_COUNT_PREFIX) === 0);
+  eq('there is exactly one count column per age group', countCols.length, AG.AGE_GROUPS.length);
+  eq('…in the same order, and it is REAL AGE order, not alphabetical',
+    JSON.stringify(countCols.map((c) => c.slice(I.CLUB_COUNT_PREFIX.length))),
+    JSON.stringify(AG.AGE_GROUPS.map((g) => g.id)));
+  check('…and u12g sits between u12 and u13, where a plain sort would not put it',
+    countCols.indexOf('teams-u12g') > countCols.indexOf('teams-u12')
+    && countCols.indexOf('teams-u12g') < countCols.indexOf('teams-u13'));
+
+  /* The round trip: write a declaration, read it back, get the same thing. */
+  const stamp = '2026-08-01T09:00:00.000Z';
+  const cleanedClub = I.cleanSubmission('club-registration', { ...goodClub(), 'teams-u99': '4', submittedAt: 'mine', evil: 1 });
+  check('an unknown age group is dropped, not stored', cleanedClub.dropped.indexOf('teams-u99') >= 0);
+  check('a submitted submittedAt is dropped and REPORTED', cleanedClub.dropped.indexOf('submittedAt') >= 0);
+  const clubRowOut = I.clubRow(cleanedClub.clean, stamp);
+  eq('one row, twenty-one cells', clubRowOut.length, I.CLUB_COLUMNS.length);
+  eq('the stamp is ours, not the submission’s', clubRowOut[0], stamp);
+  const backClub = I.mapClubRow(clubRowOut);
+  eq('club survives the round trip', backClub.club, 'Dubai Exiles');
+  eq('the contact survives', backClub.contactName, 'A Person');
+  eq('a declared count survives', backClub.u8, '2');
+  eq('…and so does one further down the row', backClub.u16b, '3');
+  eq('a group nobody declared reads as blank, never undefined', backClub.u12g, '');
+  const shortClub = I.mapClubRow(['s', 'c']);
+  eq('a short row from Sheets still has every field', typeof shortClub.notes, 'string');
+  eq('…and the missing ones are blank', shortClub.notes, '');
+
   /* The A1 range is derived, and colLetter() only reaches Z. */
-  [I.TEAM_RANGE, I.PLAYER_RANGE].forEach((r) => {
+  eq('the club range is derived from the column count', I.CLUB_RANGE, 'A:U');
+  [I.TEAM_RANGE, I.PLAYER_RANGE, I.CLUB_RANGE].forEach((r) => {
     check(`range ${r} stays inside A-Z (colLetter breaks past 26 columns)`, /^A:[A-Z]$/.test(r));
   });
 
@@ -1665,6 +1801,169 @@ section('The Google client lives in one place now');
      * the range left at A:N with 15 columns   -> "exactly as wide as"
      * USER_ENTERED put back                   -> "still RAW"
    ====================================================================== */
+
+/* ======================================================================
+   THE SILENT LINK — CLUB_FORM_KEY (Aug 2026).
+
+   Jay wanted a link he could email to clubs that does not appear anywhere on
+   adhjrt.com. ⚠️ The unlisted page is NOT the protection: this repo is public
+   and its root is the deployed site, so the path is visible to anyone reading
+   the source, and the site-wide Netlify password is now OFF. The protection is
+   this key, checked server-side. */
+
+section('The club form key — the thing that actually guards the silent link');
+
+const CLUB_KEY = 'test-key-not-a-real-one';
+const goodClub = () => ({
+  club: 'Test Club', 'contact-name': 'Pat Tester', 'contact-email': 'pat@example.com',
+  'contact-phone': '', 'teams-u12': '2', 'teams-u14b': '1', notes: '',
+});
+
+{
+  const prev = process.env.CLUB_FORM_KEY;
+  process.env.CLUB_FORM_KEY = CLUB_KEY;
+
+  check('the right key is accepted', I.clubKeyOk(CLUB_KEY));
+  check('a wrong key is not', !I.clubKeyOk('wrong'));
+  check('no key at all is not', !I.clubKeyOk('') && !I.clubKeyOk(undefined) && !I.clubKeyOk(null));
+  /* An exact compare, so a prefix of the real key is not a way in. */
+  check('a prefix of the key is not', !I.clubKeyOk(CLUB_KEY.slice(0, -1)));
+  check('the key with something appended is not', !I.clubKeyOk(CLUB_KEY + 'x'));
+
+  /* ⚠️ FAILS CLOSED. An unset variable refuses everything — which is both the
+     safe default while the page is live and un-keyed, and Jay's off switch:
+     deleting the variable in Netlify closes the form with no deploy, exactly
+     as deleting ORGANIZER_INVITE_CODE closed organiser signup. */
+  delete process.env.CLUB_FORM_KEY;
+  check('with the variable UNSET, even an empty key is refused', !I.clubKeyOk(''));
+  check('…and so is any string at all', !I.clubKeyOk('anything') && !I.clubKeyOk(CLUB_KEY));
+
+  if (prev === undefined) delete process.env.CLUB_FORM_KEY; else process.env.CLUB_FORM_KEY = prev;
+}
+
+{
+  const prev = process.env.CLUB_FORM_KEY;
+  process.env.CLUB_FORM_KEY = CLUB_KEY;
+
+  const ok = await H({ form: 'club-registration', clubKey: CLUB_KEY, data: goodClub() });
+  eq('a club declaration with the key is accepted', ok.r.status, 200);
+  eq('…and lands one row in the clubs sheet', ok.calls.appended.length, 1);
+
+  const bad = await H({ form: 'club-registration', clubKey: 'wrong', data: goodClub() });
+  eq('a wrong key is refused with 403', bad.r.status, 403);
+  /* ⚠️ REFUSED BEFORE ANY WORK. Nothing is written, nothing is emailed, and
+     nothing is parked for replay — a caller without the key must not be able
+     to make us do I/O, and must learn nothing from the answer beyond "no". */
+  eq('…and writes nothing', bad.calls.appended.length, 0);
+  eq('…and sends nothing', bad.calls.mailed.length, 0);
+  eq('…and parks nothing', bad.calls.parked.length, 0);
+
+  const none = await H({ form: 'club-registration', data: goodClub() });
+  eq('a missing key is refused the same way', none.r.status, 403);
+  eq('…and the sentence does not say which it was',
+    none.r.body.error, bad.r.body.error);
+
+  /* The supplied key must never reach a log — it is a secret somebody typed,
+     and logs are read by more people than the sheet is. */
+  check('the refusal never logs the key that was tried',
+    !bad.calls.logs.some((l) => l.indexOf('wrong') >= 0));
+
+  delete process.env.CLUB_FORM_KEY;
+  const off = await H({ form: 'club-registration', clubKey: CLUB_KEY, data: goodClub() });
+  eq('with the variable unset the form is CLOSED, even with the right key', off.r.status, 403);
+  eq('…and still writes nothing', off.calls.appended.length, 0);
+
+  if (prev === undefined) delete process.env.CLUB_FORM_KEY; else process.env.CLUB_FORM_KEY = prev;
+}
+
+{
+  /* ⚠️ ONLY THE CLUB FORM IS GATED. Putting this in front of the public forms
+     would shut registration for every club in the tournament — the loudest
+     possible failure, and exactly the kind of "consistency" tidy-up that looks
+     harmless in a diff. Asserted with the variable UNSET, which is the state
+     that refuses club submissions, so a gate that had leaked onto these two
+     could not pass by having a key lying around. */
+  const prev = process.env.CLUB_FORM_KEY;
+  delete process.env.CLUB_FORM_KEY;
+
+  const team = await H({ form: 'team-registration', data: goodTeam() });
+  eq('a TEAM registration needs no key', team.r.status, 200);
+  const player = await H({ form: 'player-registration', data: goodPlayer() });
+  eq('a PLAYER registration needs no key', player.r.status, 200);
+
+  if (prev === undefined) delete process.env.CLUB_FORM_KEY; else process.env.CLUB_FORM_KEY = prev;
+}
+
+{
+  /* ⚠️ THE KEY MUST NEVER BECOME A SHEET COLUMN. It rides beside `data`, not
+     inside it, so it cannot be written even by accident — the same guarantee
+     `team-code` gets by being absent from the allow-list. Both halves are
+     asserted: a key smuggled INSIDE data is dropped and does not authorise
+     anything, and the real key never appears in the written row. */
+  const prev = process.env.CLUB_FORM_KEY;
+  process.env.CLUB_FORM_KEY = CLUB_KEY;
+
+  const ok = await H({ form: 'club-registration', clubKey: CLUB_KEY, data: goodClub() });
+  const row = (ok.calls.appended[0] || {}).row || [];
+  check('the key is nowhere in the row that reaches the sheet',
+    !row.some((cell) => String(cell).indexOf(CLUB_KEY) >= 0));
+  check('…and clubKey is not one of the club form fields',
+    I.FORMS['club-registration'].fields.indexOf('clubKey') < 0);
+  check('…nor one of its columns', I.CLUB_COLUMNS.indexOf('clubKey') < 0);
+
+  const smuggled = await H({ form: 'club-registration', data: { ...goodClub(), clubKey: CLUB_KEY } });
+  eq('a key smuggled INSIDE data does not authorise anything', smuggled.r.status, 403);
+
+  if (prev === undefined) delete process.env.CLUB_FORM_KEY; else process.env.CLUB_FORM_KEY = prev;
+}
+
+section('The silent link — unlisted, and staying that way');
+{
+  const toml = readRepo('netlify.toml');
+  const sitemap = readRepo('sitemap.xml');
+  const robots = readRepo('robots.txt');
+  const clubPage = readRepo('Club.dc.html');
+  const home = readRepo('Quins JRT.dc.html');
+
+  check('the page is served at /register-club',
+    /from = "\/register-club"\s*\n\s*to = "\/Club\.dc\.html"/.test(toml));
+
+  /* The four things that keep it out of sight. Each is asserted separately,
+     because they fail independently and three of four is not hidden. */
+  check('it is NOT in the sitemap', sitemap.indexOf('register-club') < 0);
+  check('the page carries noindex',
+    /<meta name="robots" content="noindex, nofollow">/.test(clubPage));
+  check('nothing on the homepage links to it',
+    home.indexOf('register-club') < 0 && !/club-registration/.test(home));
+
+  /* ⚠️ AND robots.txt MUST NOT NAME IT. A Disallow line would advertise the
+     path in a public file to exactly the people it is hidden from — the
+     opposite of the intent, and the obvious-looking way to do this. */
+  check('robots.txt does not name it — a Disallow would advertise it',
+    robots.indexOf('register-club') < 0 && robots.indexOf('Club.dc.html') < 0);
+}
+{
+  /* The page's own age-group list is a SECOND COPY of _agegroups.js's, for the
+     same no-build-step reason DEFAULT_VENUE is duplicated — this page imports
+     nothing. Compared BOTH ways, so a sixteenth group fails loudly rather than
+     quietly offering fifteen boxes. */
+  const clubPage = readRepo('Club.dc.html');
+  const block = clubPage.match(/const CLUB_GROUPS = \[([\s\S]*?)\];/);
+  check('the page carries its age-group list', !!block);
+  const pageIds = [...(block ? block[1] : '').matchAll(/id: '([^']+)'/g)].map((m) => m[1]);
+  const realIds = AG.AGE_GROUPS.map((g) => g.id);
+  eq('every real age group has a box on the page', realIds.filter((id) => pageIds.indexOf(id) < 0), []);
+  eq('and the page invents none', pageIds.filter((id) => realIds.indexOf(id) < 0), []);
+  eq('…in the same real-age order, not alphabetical', pageIds, realIds);
+
+  /* The count field names the page sends must be the ones the columns expect.
+     A drift here writes every count into the wrong column, or none. */
+  realIds.forEach((id) => {
+    check(`the sheet has a column for ${id}`, I.CLUB_COLUMNS.indexOf(I.clubCountKey(id)) >= 0);
+  });
+  check('the page builds its count keys the same way the server does',
+    /data\['teams-' \+ g\.id\]/.test(clubPage) && I.CLUB_COUNT_PREFIX === 'teams-');
+}
 
 }
 

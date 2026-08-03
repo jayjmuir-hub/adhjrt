@@ -26,6 +26,7 @@ first, every session.)
 | `/signin` | `Signin.dc.html` — THE sign-in page, both roles (added Aug 2026). Routes by role after sign-in; carries both signup flows and the Google button. |
 | `/app` | `app.html` — the match-day app (plain static file, not a DC component) |
 | `/legal` | `legal.html` — Legal & Privacy page (disclaimer, privacy, photography). Plain static file like `app.html`, not a DC component. Linked from the homepage footer. |
+| `/register-club` | `Club.dc.html` — the club declaration form. **UNLISTED: nothing links to it, it is out of the sitemap and carries noindex.** Guarded by `CLUB_FORM_KEY`, not by being unlisted — see the club section below. |
 
 Edit the `.dc.html` file, push, done. There is no bundling step to look for — an
 earlier version used an inliner that produced `index.html`; that's gone.
@@ -146,7 +147,8 @@ age group from the match id itself; preserve that pattern).
 
 `SESSION_SECRET`, `MANAGER_INVITE_CODES`,
 `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`,
-`GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`,
+`GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`, `GOOGLE_SHEET_ID_CLUBS`,
+`CLUB_FORM_KEY` (the silent club link — absent means the club form is CLOSED),
 `BLOBS_SITE_ID`, `BLOBS_TOKEN`,
 `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MAIL_FROM`
 
@@ -834,7 +836,74 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
-## Club-level registration is GONE (2 August 2026)
+## Club-level registration is BACK, behind a silent link (3 August 2026)
+
+**Jay, 3 Aug: a link he can email to clubs that does not appear anywhere on
+adhjrt.com.** The feature he had removed on 2 Aug is restored — recovered by
+reverse-applying `91080a2`'s `_intake.js`/`_email.js` half rather than rewritten,
+so the columns, row builder, mappers, validation and email are byte-identical to
+what shipped on 1 Aug. The tombstone section below is kept for the reasoning; it
+describes the removal, not the current state.
+
+**The page is `Club.dc.html`, served at `/register-club`.** It is NOT the old
+homepage modal: that stayed deleted, and a test asserts the club form has not
+crept back onto the public page.
+
+### ⚠️ UNLISTED IS NOT PROTECTED — this is the whole design
+
+Four things keep the page out of sight, each asserted separately because they
+fail independently and three of four is not hidden: nothing on adhjrt.com links
+to it, it is absent from `sitemap.xml`, the page carries `noindex, nofollow`,
+and **`robots.txt` deliberately does NOT name it** — a `Disallow` line would
+advertise the path in a public file to exactly the people it is hidden from,
+which is the obvious-looking way to do this and the wrong one.
+
+**None of that is protection.** This repo is PUBLIC and its root is the deployed
+site, so `netlify.toml`'s rewrite and the filename are visible to anyone reading
+the source — and the site-wide Netlify password is now OFF, so there is no
+second layer. What actually guards it is a secret that is not in the repo:
+
+**`CLUB_FORM_KEY`, an environment variable, checked SERVER-SIDE** in
+`_intake.js`'s `clubKeyOk()`. The page carries it in the query string
+(`/register-club?k=…`) and hands it back with the submission. A page that hid
+itself in JavaScript would be fully visible in view-source; a client-side
+restriction is not a restriction.
+
+- **Checked at step 2b of `handleSubmission`** — after the allow-list has said
+  which form this is, and BEFORE validation, the window, the numbering, the
+  sheet and the email. A caller without the key must not be able to make us do
+  that work. Faults cover removing it and moving it below the write.
+- ⚠️ **FAILS CLOSED.** An absent variable refuses every club submission. That is
+  the safe default while the page is live and un-keyed, and it is Jay's off
+  switch — deleting the variable closes the form with no deploy, exactly as
+  deleting `ORGANIZER_INVITE_CODE` closed organiser signup. **Contrast the rate
+  limiter, which fails OPEN**; making these consistent would be a mistake, and
+  has its own fault.
+- ⚠️ **ONLY the club form is gated.** Widening it to every form would shut
+  registration for every club in the tournament — the loudest possible failure
+  and exactly the kind of consistency tidy-up that looks harmless in a diff.
+  Asserted with the variable UNSET, so a leaked gate cannot pass by having a key
+  lying around.
+- ⚠️ **The key rides BESIDE `data`, never inside it** — a top-level property of
+  the request body next to `form`. So it can never become a sheet column, the
+  same guarantee `team-code` gets by being absent from the allow-list. A key
+  smuggled *inside* `data` authorises nothing.
+- **Never logged**, and a wrong key and an unset variable return the identical
+  sentence — those are the same answer to whoever is asking.
+- Guessing is bounded by the rate limit at step 1: twenty attempts per address
+  per hour against a random key.
+
+**The page's fifteen age groups are a second copy** of `_agegroups.js`'s list,
+for the same no-build-step reason `DEFAULT_VENUE` is duplicated — the page
+imports nothing. `test-intake.js` compares them both ways and asserts the order,
+so a sixteenth group fails loudly rather than quietly offering fifteen boxes.
+
+**What is still NOT built: the `/organizer` Clubs tab.** Declarations are
+readable in the Google Sheet only. Deferred deliberately on 3 Aug — with no real
+registrations until October it would show "declared 3, registered 0" for every
+club — and recorded in `claude/parked-requests.md` with the reasoning.
+
+## Club-level registration was REMOVED (2 August 2026) — superseded, kept for the reasoning
 
 **Jay asked for the "Register your club" feature to be removed entirely**, and
 it was — the button, the modal, the whole `club-registration` form. It had

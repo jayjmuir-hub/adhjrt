@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- ⚠️ noindex is the ONLY thing keeping this out of search results, and it
+     has to be the mechanism rather than a robots.txt Disallow: robots.txt is
+     a public file, so listing the path there would ADVERTISE it to exactly
+     the people it is hidden from. sitemap.xml omits it too, and nothing on
+     adhjrt.com links to it. -->
+<meta name="robots" content="noindex, nofollow">
+<title>Register your club — ADH JRT</title>
+<link rel="icon" type="image/png" href="/assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0C0C0E">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased}
+  input,select,button,textarea{font-family:inherit}
+  button{transition:filter .15s ease,transform .08s ease}
+  button:hover:not(:disabled){filter:brightness(0.94)}
+  button:active:not(:disabled){transform:scale(.98)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  .fld{width:100%;margin-top:6px;background:#151517;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px}
+  .lbl{font-size:11px;font-weight:800;letter-spacing:.6px;color:#9AA3AF;text-transform:uppercase;display:block}
+</style>
+</helmet>
+
+<!-- ===================================================================
+     CLUB DECLARATIONS — the silent link (Jay, 3 Aug 2026).
+
+     A club says ONCE which age groups it is sending teams to and how many
+     in each, weeks before individual teams register. Planning information
+     only: it mints no team codes and blocks nothing, and declared-vs-actual
+     is SHOWN, never enforced — a club that says three and sends two is a
+     phone call, not an error. Design:
+     claude/specs/spec-club-registration.md.
+
+     ⚠️ THIS PAGE IS UNLISTED, NOT PROTECTED. Nothing on adhjrt.com links to
+     it, it is absent from sitemap.xml and it carries noindex — but the repo
+     is PUBLIC and its root is the deployed site, so the path is visible to
+     anyone who reads the source. What actually guards it is the key in the
+     query string, checked SERVER-SIDE in _intake.js against the
+     CLUB_FORM_KEY environment variable. A page that hid itself in
+     JavaScript would be fully visible in view-source; a client-side
+     restriction is not a restriction.
+
+     The key is carried through to the submission as a top-level property of
+     the request body, beside `form` — never inside `data`, so it can never
+     reach a sheet column.
+     =================================================================== -->
+<div style="min-height:100vh;padding:32px 20px 80px">
+  <div style="max-width:760px;margin:0 auto">
+
+    <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;color:#fff;text-decoration:none">
+      <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+      </div>
+      <div style="line-height:1">
+        <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
+        <div style="font-size:11px;letter-spacing:2px;color:#17A34A;font-weight:700;margin-top:3px">7&ndash;8 NOVEMBER 2026</div>
+      </div>
+    </a>
+
+    <!-- No key, or the wrong one. The page says the link is wrong and stops;
+         it deliberately does NOT hint at whether a key was missing, wrong, or
+         switched off, because those are the same answer to whoever is asking. -->
+    <sc-if value="{{ noKey }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:48px;background:#151517;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:32px">
+        <div style="font-family:'Anton';font-size:26px;text-transform:uppercase;letter-spacing:.5px">This link isn&rsquo;t complete</div>
+        <p style="color:#B9C0C9;font-size:15px;line-height:1.65;margin-top:12px">Club entry is by invitation. Please use the full link you were sent by the tournament organisers &mdash; it ends in a code.</p>
+        <p style="color:#B9C0C9;font-size:15px;line-height:1.65;margin-top:12px">If you have lost it, email <a href="mailto:admin@adhjrt.com" style="color:#fff;font-weight:700">admin@adhjrt.com</a> and we will send it again.</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:36px">
+        <div style="font-family:'Anton';font-size:34px;text-transform:uppercase;letter-spacing:.5px;line-height:1.05">Register your club</div>
+        <p style="color:#B9C0C9;font-size:15px;line-height:1.65;margin-top:14px;max-width:70ch">Tell us which age groups you are bringing and roughly how many teams in each. This helps us plan pools and pitches early &mdash; it is <b style="color:#fff">not</b> a team entry, and every team still registers separately nearer the time.</p>
+      </div>
+
+      <div style="margin-top:28px;background:#151517;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:26px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+          <div>
+            <label class="lbl">Club name</label>
+            <input class="fld" value="{{ club }}" onInput="{{ onClub }}">
+          </div>
+          <div>
+            <label class="lbl">Contact name</label>
+            <input class="fld" value="{{ contactName }}" onInput="{{ onContactName }}">
+          </div>
+          <div>
+            <label class="lbl">Contact email</label>
+            <input class="fld" type="email" value="{{ contactEmail }}" onInput="{{ onContactEmail }}">
+          </div>
+          <div>
+            <label class="lbl">Contact phone (optional)</label>
+            <input class="fld" value="{{ contactPhone }}" onInput="{{ onContactPhone }}">
+          </div>
+        </div>
+
+        <div style="margin-top:26px;border-top:1px solid rgba(255,255,255,0.1);padding-top:22px">
+          <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px">How many teams?</div>
+          <p style="color:#9AA3AF;font-size:13px;line-height:1.6;margin-top:6px">Leave a group blank if you are not entering it. An estimate is fine &mdash; nothing here is binding.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px">
+            <sc-for list="{{ groupBoxes }}" as="g" hint-placeholder-count="15">
+              <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px">
+                <label class="lbl" style="font-size:10px">{{ g.name }}</label>
+                <input class="fld" style="margin-top:4px;padding:8px 10px;font-size:15px" inputmode="numeric" value="{{ g.value }}" onInput="{{ g.onInput }}">
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:14px;font-size:14px;color:#B9C0C9">Total teams declared: <b style="color:#fff;font-size:17px">{{ totalTeams }}</b></div>
+        </div>
+
+        <div style="margin-top:22px">
+          <label class="lbl">Anything we should know? (optional)</label>
+          <textarea class="fld" rows="3" value="{{ notes }}" onInput="{{ onNotes }}"></textarea>
+        </div>
+
+        <!-- The honeypot. Hidden from people, irresistible to bots, and the
+             server answers a filled one with a reply byte-identical to a real
+             success so nothing can be learned from it. -->
+        <div style="position:absolute;left:-9999px" aria-hidden="true">
+          <label>Do not fill this in <input name="bot-field" value="{{ botField }}" onInput="{{ onBotField }}" tabindex="-1" autocomplete="off"></label>
+        </div>
+
+        <sc-if value="{{ error }}" hint-placeholder-val=""><div style="margin-top:18px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:10px;padding:12px 14px;color:#ff9a9a;font-size:14px;font-weight:600;line-height:1.5">{{ error }}</div></sc-if>
+
+        <button onClick="{{ onSubmit }}" disabled="{{ busy }}" style="margin-top:22px;width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:14px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ submitLabel }}</button>
+      </div>
+    </sc-if>
+
+    <!-- ⚠️ The closing paragraph is the POINT of this screen, not a footnote.
+         The single most likely way this feature fails in practice is a club
+         secretary declaring five teams, seeing a friendly confirmation, and
+         believing the job is done. -->
+    <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:48px;background:#151517;border:1px solid rgba(23,163,74,0.4);border-radius:16px;padding:32px">
+        <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;letter-spacing:.5px;color:#3bd070">Thank you</div>
+        <p style="color:#B9C0C9;font-size:15px;line-height:1.65;margin-top:12px">We have your declaration for <b style="color:#fff">{{ doneClub }}</b> &mdash; {{ doneTotal }} team(s) across {{ doneGroups }} age group(s).</p>
+        <div style="margin-top:18px;background:rgba(225,27,34,0.1);border:1px solid rgba(225,27,34,0.45);border-radius:10px;padding:14px 16px">
+          <div style="font-weight:800;font-size:14px;letter-spacing:.4px;text-transform:uppercase;color:#ff9a9a">This is not a team entry</div>
+          <p style="color:#E7EAEE;font-size:14px;line-height:1.6;margin-top:6px">Each team still has to register separately when entries open. We will email you the link.</p>
+        </div>
+        <p style="color:#9AA3AF;font-size:14px;line-height:1.6;margin-top:16px">Numbers changed? Just fill the form in again &mdash; we will use your most recent declaration.</p>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
+/* The fifteen age groups, id and display name. A SECOND COPY of the same list
+   _agegroups.js holds server-side, for the same no-build-step reason
+   DEFAULT_VENUE and AGE_GROUP_INFO are duplicated — this page imports nothing.
+   test-intake.js compares the two both ways, so adding a sixteenth group fails
+   loudly here rather than quietly offering fourteen boxes. Real age order, not
+   alphabetical: u12g sits between u12 and u13. */
+const CLUB_GROUPS = [
+  { id: 'u6', name: 'U6 Tag' }, { id: 'u7', name: 'U7 Tag' }, { id: 'u8', name: 'U8 Tag' },
+  { id: 'u9', name: 'U9 Mixed Contact' }, { id: 'u10', name: 'U10 Mixed Contact' },
+  { id: 'u11', name: 'U11 Mixed Contact' }, { id: 'u12', name: 'U12 Mixed Contact' },
+  { id: 'u12g', name: 'U12G QR' }, { id: 'u13', name: 'U13 Mixed Contact' },
+  { id: 'u14b', name: 'U14B Contact' }, { id: 'u14g', name: 'U14G QR' },
+  { id: 'u16b', name: 'U16B Contact' }, { id: 'u16g', name: 'U16G Contact' },
+  { id: 'u18b', name: 'U18B Contact' }, { id: 'u18g', name: 'U18G Contact' },
+];
+
+/* Mirrors MAX_TEAMS_PER_GROUP in _intake.js, which is the authority. This copy
+   only decides when the form complains before sending. */
+const MAX_TEAMS_PER_GROUP = 10;
+
+/* Kept character-for-character with the homepage's copy of the same sentence:
+   a refusal and a network failure are different and must stay different.
+   Telling a club to check their connection when the real answer is "that link
+   is not valid" sends them round in circles for ever. */
+const NETWORK_MESSAGE = 'We could not send your declaration — nothing has been saved. Check your connection and press Submit again. If it keeps failing, email admin@adhjrt.com and we will enter it for you.';
+
+class SubmitError extends Error {
+  constructor(message, isNetwork) {
+    super(message);
+    this.isNetwork = !!isNetwork;
+  }
+}
+
+class Component extends DCLogic {
+  state = {
+    /* The key from the query string. Never validated here — this page cannot
+       know whether it is right, and must not pretend to. It is carried to the
+       server, which is the only thing that decides. An ABSENT key is the one
+       thing worth answering locally, because that is a link somebody has
+       truncated rather than a wrong code. */
+    clubKey: '',
+    club: '', contactName: '', contactEmail: '', contactPhone: '',
+    counts: {}, notes: '', botField: '',
+    busy: false, error: '', done: false,
+    doneClub: '', doneTotal: 0, doneGroups: 0,
+  };
+
+  componentDidMount() {
+    let k = '';
+    try { k = new URLSearchParams(window.location.search).get('k') || ''; } catch (e) { k = ''; }
+    this.setState({ clubKey: k });
+  }
+
+  setCount(id, raw) {
+    /* Digits only, and capped as you type. The server applies the real rule;
+       this just stops a box reading "12e9". */
+    const digits = String(raw || '').replace(/[^0-9]/g, '').slice(0, 2);
+    this.setState((s) => ({ counts: { ...s.counts, [id]: digits } }));
+  }
+
+  totals() {
+    const c = this.state.counts || {};
+    let total = 0, groups = 0;
+    for (const g of CLUB_GROUPS) {
+      const n = parseInt(c[g.id], 10);
+      if (Number.isFinite(n) && n > 0) { total += n; groups += 1; }
+    }
+    return { total, groups };
+  }
+
+  async post(body) {
+    let res;
+    try {
+      res = await fetch('/.netlify/functions/submit-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      throw new SubmitError(NETWORK_MESSAGE, true);
+    }
+    /* A body that will not parse means something between us and the function
+       answered instead of the function — a proxy, a captive portal. That is a
+       network problem, not a refusal. */
+    let payload = null;
+    try { payload = await res.json(); } catch (e) { payload = null; }
+    if (!payload) throw new SubmitError(NETWORK_MESSAGE, true);
+    if (!res.ok || !payload.ok) throw new SubmitError(payload.error || NETWORK_MESSAGE, false);
+    return payload;
+  }
+
+  async onSubmit() {
+    const s = this.state;
+    if (!s.club.trim() || !s.contactName.trim() || !s.contactEmail.trim()) {
+      this.setState({ error: 'Please fill in your club, a contact name and a contact email.' });
+      return;
+    }
+    const { total, groups } = this.totals();
+    /* The rule that makes a declaration mean something. Nothing is wrong with
+       any single field — the submission just does not say anything, and
+       storing it would put a row of fifteen blanks in the sheet. */
+    if (groups === 0) {
+      this.setState({ error: 'Please enter how many teams you are bringing in at least one age group.' });
+      return;
+    }
+    if (CLUB_GROUPS.some((g) => (parseInt(s.counts[g.id], 10) || 0) > MAX_TEAMS_PER_GROUP)) {
+      this.setState({ error: `Please enter no more than ${MAX_TEAMS_PER_GROUP} teams in any one age group. If you are bringing more, email admin@adhjrt.com.` });
+      return;
+    }
+
+    const data = {
+      club: s.club.trim(),
+      'contact-name': s.contactName.trim(),
+      'contact-email': s.contactEmail.trim(),
+      'contact-phone': s.contactPhone.trim(),
+      notes: s.notes.trim(),
+      'bot-field': s.botField,
+    };
+    for (const g of CLUB_GROUPS) data['teams-' + g.id] = String(s.counts[g.id] || '').trim();
+
+    this.setState({ busy: true, error: '' });
+    try {
+      /* ⚠️ clubKey rides BESIDE `data`, never inside it. Inside, it would be
+         an ordinary submitted field — droppable by the allow-list at best, and
+         writable to a sheet column at worst. */
+      await this.post({ form: 'club-registration', clubKey: s.clubKey, data });
+      this.setState({ busy: false, done: true, doneClub: data.club, doneTotal: total, doneGroups: groups });
+    } catch (e) {
+      /* The form is left filled in either way, so Submit retries it. */
+      this.setState({ busy: false, error: e.message || NETWORK_MESSAGE });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const { total } = this.totals();
+    return {
+      noKey: !s.clubKey && !s.done,
+      showForm: !!s.clubKey && !s.done,
+      done: s.done,
+      doneClub: s.doneClub, doneTotal: s.doneTotal, doneGroups: s.doneGroups,
+      club: s.club, contactName: s.contactName, contactEmail: s.contactEmail,
+      contactPhone: s.contactPhone, notes: s.notes, botField: s.botField,
+      onClub: (e) => this.setState({ club: e.target.value }),
+      onContactName: (e) => this.setState({ contactName: e.target.value }),
+      onContactEmail: (e) => this.setState({ contactEmail: e.target.value }),
+      onContactPhone: (e) => this.setState({ contactPhone: e.target.value }),
+      onNotes: (e) => this.setState({ notes: e.target.value }),
+      onBotField: (e) => this.setState({ botField: e.target.value }),
+      groupBoxes: CLUB_GROUPS.map((g) => ({
+        id: g.id,
+        name: g.name,
+        value: (s.counts || {})[g.id] || '',
+        onInput: (e) => this.setCount(g.id, e.target.value),
+      })),
+      totalTeams: total,
+      error: s.error,
+      busy: s.busy,
+      submitLabel: s.busy ? 'Sending…' : 'Send declaration',
+      onSubmit: () => this.onSubmit(),
+    };
+  }
+}
+</script>
+</body>
+</html>

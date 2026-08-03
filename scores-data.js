@@ -1912,6 +1912,56 @@ export async function googleAuth({ idToken, role = 'manager', inviteCode, userna
   return { ok: false, error: json.error || 'Could not sign in with Google.' };
 }
 
+/* ---- Your own account (my-account.js, added 3 Aug 2026) -------------------
+   BOTH ROLES. The endpoint's door is any valid session, not an organiser one,
+   which is why these live here in the shared layer rather than in
+   organizer-data.js — /manager needs them just as much as /organizer, and a
+   manager could not previously even change their own password.
+   Design: claude/specs/spec-my-account.md */
+
+async function myAccountPost(body, failMsg) {
+  const session = currentSession();
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/my-account', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+    body: JSON.stringify(body),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: failMsg };
+}
+
+// Your own account's safe fields. Never carries passwordHash or googleSub —
+// the server strips both; signInMethod is the derived answer the card needs.
+export async function myAccount() {
+  const session = currentSession();
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson('/.netlify/functions/my-account', {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${session.token}` },
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Your account details need the deployed site (not available in local preview).' };
+}
+
+/* Change your OWN password. The current one is required and checked against the
+   stored hash server-side — a stolen session must not be enough to lock the
+   real owner out. */
+export async function changeMyPassword(currentPassword, password) {
+  return myAccountPost({ action: 'password', currentPassword, password },
+    'Changing your password needs the deployed site (not available in local preview).');
+}
+
+/* Attach a Google identity to the account you are signed in as, so the Google
+   button works next time. You prove both halves: the account by holding a
+   session for it, the identity by producing a valid token for it. The server
+   refuses an identity already on another login, and refuses to REPLACE one
+   rather than silently moving it — see the spec for why. */
+export async function linkGoogle(idToken) {
+  return myAccountPost({ action: 'linkGoogle', idToken },
+    'Linking a Google account needs the deployed site (not available in local preview).');
+}
+
 // The Client ID the page needs to render the Google button — see
 // netlify/functions/google-config.js. null means Google sign-in isn't
 // configured (local preview, or GOOGLE_CLIENT_ID not set yet in Netlify).

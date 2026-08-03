@@ -90,6 +90,7 @@ const NEEDED = [
   path.join('netlify', 'functions', 'organizer-signup.js'),
   path.join('netlify', 'functions', 'manager-signup.js'),
   path.join('netlify', 'functions', 'login.js'),
+  path.join('netlify', 'functions', 'my-account.js'),
   /* organizer-login.js and manager-login.js were here until they were retired
      on 3 Aug 2026. Do not add them back to satisfy a check — the check that
      asserts they are GONE is satisfied by their absence from this list too,
@@ -451,7 +452,14 @@ const FAULTS = [
   {
     name: 'changeMyPassword disappears from the data layer again',
     suite: 'test-accounts.js',
-    apply: () => patch('organizer-data.js', 'export async function changeMyPassword(', 'async function changeMyPassword('),
+    /* Repointed 3 Aug 2026. organizer-data.js used to DEFINE changeMyPassword;
+       it re-exports it from scores-data.js now that my-account.js serves both
+       roles. Same guarantee, new shape: drop it from the re-export list and the
+       page calls an api.* that does not exist, which is exactly the silent
+       failure test-accounts.js was written for. */
+    apply: () => patch('organizer-data.js',
+      "export { myAccount, changeMyPassword, linkGoogle } from './scores-data.js';",
+      "export { myAccount, linkGoogle } from './scores-data.js';"),
     expect: ['provides api.changeMyPassword()', 'changeMyPassword exists'],
   },
   {
@@ -460,14 +468,13 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'), "if (action === 'password') {", 'if (false) {'),
     expect: ["handles action 'password'", "'password' is handled"],
   },
-  {
-    name: 'changing your own password stops checking the current one',
-    suite: 'test-accounts.js',
-    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      '        if (!(await verifyPassword(current, all[me].passwordHash))) {',
-      '        if (false) {'),
-    expect: ['verifies it against the stored hash'],
-  },
+  /* "changing your own password stops checking the current one" was HERE until
+     3 Aug 2026, injecting into accounts-admin.js. Its subject moved to
+     my-account.js with the changeMine action, so the fault moved with it —
+     see "my-account.js stops verifying the current password", which injects
+     the same mistake where the code now lives and is caught by
+     test-my-account.js DRIVING it rather than reading the source. A fault left
+     pointing at a file its subject has left is a failed run, not a pass. */
   {
     name: 'the password floor drops back to 6',
     suite: 'test-accounts.js',
@@ -2476,6 +2483,81 @@ const FAULTS = [
       "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
       "session: { username: account.username, name: account.name, role: account.title || 'Organizer' },"),
     expect: ['with the organizer session shape', 'the organizer session literal is exactly the shape downstream reads'],
+  },
+
+  /* ---- my-account.js: self-service for BOTH roles (3 Aug 2026) ----------
+     Design: claude/specs/spec-my-account.md. The endpoint exists separately
+     from accounts-admin.js precisely so a manager can reach it, and it writes
+     to an account chosen by the TOKEN. Both of those are one edit away from
+     being silently undone. */
+  {
+    name: 'my-account.js grows an organiser-only door, so a manager cannot reach their own account again',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "  const session = verify(getBearerToken(event));\n  if (!session) return fail(401, 'Not signed in.');",
+      "  const session = verify(getBearerToken(event));\n  if (!session || session.role !== 'organizer') return fail(401, 'Not signed in.');"),
+    expect: ['a MANAGER can read their own account'],
+  },
+  {
+    /* The takeover. A username in the body must never choose the account. */
+    name: 'my-account.js takes the account from the request body instead of the signed token',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "    const me = all.findIndex((a) => a.username === session.username);",
+      "    const bodyName = (() => { try { return (JSON.parse(event.body || '{}').username || '').trim().toLowerCase(); } catch (e) { return ''; } })();\n    const me = all.findIndex((a) => a.username === (bodyName || session.username));"),
+    expect: ['the named account was untouched'],
+  },
+  {
+    /* Two logins resolving to one Google identity: google-auth.js uses find(),
+       so one person silently lands in the other's account. */
+    name: 'my-account.js stops checking whether the Google identity is already on another login',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "      if (clash !== -1 && clash !== me) {\n        return fail(409, 'That Google account is already linked to a different login.');\n      }\n",
+      ""),
+    expect: ['an identity already on another account is refused'],
+  },
+  {
+    /* Replace-instead-of-refuse: a stolen session becomes permanent, surviving
+       the real owner changing their password. */
+    name: 'my-account.js REPLACES an existing Google identity instead of refusing',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "      if (all[me].googleSub) {\n        return fail(409, 'This login already has a different Google account linked. Ask a tournament organizer.');\n      }\n",
+      ""),
+    expect: ['linking a DIFFERENT identity over an existing one is refused'],
+  },
+  {
+    name: 'my-account.js stops verifying the current password, so a borrowed laptop is a takeover',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "      if (!all[me].passwordHash || !(await verifyPassword(current, all[me].passwordHash))) {",
+      "      if (false) {"),
+    expect: ['a WRONG current password is refused'],
+  },
+  {
+    name: 'my-account.js leaks the password hash and the Google id back to the browser',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "function publicView(a) {\n  return {",
+      "function publicView(a) {\n  return {\n    passwordHash: a.passwordHash,\n    googleSub: a.googleSub,"),
+    expect: ['the response carries NO passwordHash'],
+  },
+  {
+    name: 'the shared password floor stops applying when you change your own password',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
+      "      const pwErr = passwordProblem(next);\n      if (pwErr) return fail(400, pwErr);",
+      "      const pwErr = null;\n      if (pwErr) return fail(400, pwErr);"),
+    expect: ['the shared password floor applies'],
+  },
+  {
+    name: 'accounts-admin.js grows changeMine back, so two rules can drift apart',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "      const username = payload.username;",
+      "      if (action === 'changeMine') { return { statusCode: 200, body: JSON.stringify({ ok: true }) }; }\n      const username = payload.username;"),
+    expect: ['changeMine is gone from accounts-admin.js'],
   },
 
   /* ---- the retired per-role endpoints stay retired (3 Aug 2026) ---------

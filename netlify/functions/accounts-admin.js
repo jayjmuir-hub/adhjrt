@@ -124,23 +124,13 @@ exports.handler = async (event) => {
       /* Change your OWN password. The current one has to be given and is
          checked against the stored hash — a stolen session should not be enough
          to lock the real owner out of their own account. */
-      if (action === 'changeMine') {
-        const all = await loadAccounts();
-        const me = all.findIndex((a) => a.username === session.username);
-        if (me === -1) return { statusCode: 404, body: JSON.stringify({ ok: false, error: 'Your account no longer exists.' }) };
-        const current = payload.currentPassword || '';
-        const next = payload.password || '';
-        if (!current) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Enter your current password.' }) };
-        const pwErr = passwordProblem(next);
-        if (pwErr) return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
-        if (!(await verifyPassword(current, all[me].passwordHash))) {
-          return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'That is not your current password.' }) };
-        }
-        all[me].passwordHash = await hashPassword(next);
-        all[me].passwordChangedAt = new Date().toISOString();
-        await saveAccounts(all);
-        return { statusCode: 200, body: JSON.stringify({ ok: true }) };
-      }
+      /* 'changeMine' MOVED OUT on 3 Aug 2026, to my-account.js. Changing your
+         OWN password is not an administrative act, and behind this file's
+         requireOrganizer door a manager could never reach it — they had no way
+         to change their own password at all. Two ways to do it would be two
+         rules that drift, so this one went rather than being kept. Everything
+         below stays: acting on SOMEONE ELSE'S account is genuinely an organiser
+         power and belongs behind that door. */
 
       const username = payload.username;
       const uname = (username || '').trim().toLowerCase();

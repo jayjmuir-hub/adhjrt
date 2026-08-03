@@ -78,7 +78,9 @@ section('The backend has an action behind each of those calls');
     check(`accounts-admin.js handles action '${a}'`, new RegExp(`action === '${a}'`).test(admin) || new RegExp(`'${a}'`).test(admin),
       `sent by organizer-data.js, not handled`));
 
-  ['create', 'password', 'changeMine', 'approve', 'reject', 'revoke'].forEach((a) =>
+  /* changeMine left this list on 3 Aug 2026 when it moved to my-account.js —
+     see test-my-account.js, which drives it. */
+  ['create', 'password', 'approve', 'reject', 'revoke'].forEach((a) =>
     check(`'${a}' is handled`, new RegExp(`action === '${a}'`).test(admin)));
 }
 
@@ -172,13 +174,22 @@ section('Resetting a password, and changing your own');
   check('…and refuses a short one', /if \(action === 'password'\) \{[\s\S]{0,200}passwordProblem/.test(admin));
   check('…on an account that must exist', /Account not found/.test(admin));
 
-  /* Your own: the CURRENT password is required and checked. A stolen session
-     must not be enough to lock the real owner out of their own account. */
-  check("'changeMine' requires the current password", /Enter your current password/.test(admin));
-  check('…and verifies it against the stored hash', /await verifyPassword\(current, all\[me\]\.passwordHash\)/.test(admin));
-  check('…refusing if it is wrong', /That is not your current password/.test(admin));
-  check('…and only ever changes your OWN account', /a\.username === session\.username/.test(admin));
-  check('…refusing a short new one', /if \(action === 'changeMine'\) \{[\s\S]{0,700}passwordProblem\(next\)/.test(admin));
+  /* ⚠️ CHANGING YOUR OWN PASSWORD LEFT THIS FILE ON 3 AUG 2026, with its
+     subject. The whole 'changeMine' action moved to my-account.js so a MANAGER
+     could reach it — behind this file's requireOrganizer door they never
+     could, and had no way to change their own password at all. Six assertions
+     went with it and are now DRIVEN against the real handler in
+     test-my-account.js rather than read out of the source: the current
+     password required, verified against the stored hash, refused when wrong,
+     the shared floor applied to the new one, and the account taken from the
+     token rather than the body. Stronger there than they were here.
+
+     What remains in this section is resetting SOMEONE ELSE'S password, which
+     is genuinely an organiser power and stays behind that door. */
+  check('changing your own password is NOT still handled here',
+    !/changeMine/.test(admin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')),
+    'two ways to change your own password is two rules that drift');
+
 
   /* Nothing is emailed, and the organiser is told to say so. */
   const page = readRepo('Organizer.dc.html');
@@ -220,7 +231,7 @@ section('Self-signup can be switched off without a code change');
      * the 'password' action removed from accounts-admin.js
          -> "accounts-admin.js handles action 'password'"
      * changeMine no longer verifying the current password
-         -> "verifies it against the stored hash"
+         -> moved to test-my-account.js with the action itself, 3 Aug 2026
      * the password floor dropped back to 6
          -> "it is at least 10"
      * the page's copy of the floor left behind at 6

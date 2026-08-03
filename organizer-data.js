@@ -204,18 +204,13 @@ export async function resetAccountPassword(username, password) {
   return { ok: false, error: 'Resetting a password needs the deployed site (not available in local preview).' };
 }
 
-/* Change your OWN password. The current one is required and checked against the
-   stored hash server-side — a stolen session must not be enough to lock the
-   real owner out. Was missing in exactly the same way as the function above. */
-export async function changeMyPassword(currentPassword, password) {
-  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'changeMine', currentPassword, password }),
-  });
-  if (r.real) return r.json;
-  return { ok: false, error: 'Changing your password needs the deployed site (not available in local preview).' };
-}
+/* Your own account — details, password, Google linking. RE-EXPORTED from
+   scores-data.js rather than reimplemented: the my-account.js endpoint takes
+   any valid session, so /manager uses exactly the same three calls, and a
+   second copy here would be a second copy of the rules. changeMyPassword used
+   to POST accounts-admin's 'changeMine'; that action moved to my-account.js on
+   3 Aug 2026 so a manager could reach it too. */
+export { myAccount, changeMyPassword, linkGoogle } from './scores-data.js';
 
 /* -------- The venue: pitches per day, and which day each age group plays --------
    Read is public (venue-layout.js GET); adding ?usage=1 with an organiser token

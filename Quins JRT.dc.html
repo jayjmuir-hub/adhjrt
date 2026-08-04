@@ -179,7 +179,18 @@
      under the hero, a few hundred pixels down, at three times the size.
      !important for the same reason as everything else here - the span is styled
      inline with display:flex and an ordinary rule would silently lose. */
-  @media(max-width:800px){ .hdr-partner{display:none!important} }
+  /* ⚠️ 900, NOT 800, and the number was MEASURED — twice, because the first
+     measurement was taken on a header that was ALREADY overflowing.
+     Rendered in headless Chromium with the real Anton and Barlow faces, the
+     header row overflows the viewport horizontally from about 875px down while
+     this mark is still showing — and it did so with the OLD, shorter
+     "AD HARLEQUINS" wordmark too (identical 874px scrollWidth at 870px wide),
+     so this is a PRE-EXISTING bug that the longer "ABU DHABI HARLEQUINS"
+     wordmark merely made impossible to keep ignoring. 900 is 875 with margin.
+     A sticky header that scrolls sideways follows a visitor down every page.
+     !important because the span is styled inline with display:flex and an
+     ordinary rule would silently lose. */
+  @media(max-width:900px){ .hdr-partner{display:none!important} }
 
   /* The hero lockup keeps its divider only while it SHARES a line with the two
      Register buttons. Once the row wraps (measured: it drops to its own line at
@@ -298,7 +309,7 @@
             <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
           </div>
           <div style="display:flex;flex-direction:column;line-height:1">
-            <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px">AD HARLEQUINS</span>
+            <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px;white-space:nowrap">ABU DHABI HARLEQUINS</span>
             <span style="font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
           </div>
         </a>
@@ -453,9 +464,9 @@
              The label sits ABOVE the mark, matching the #partner band below,
              so the whole thing stays narrow enough to share a line with two
              buttons. The divider is what stops it reading as a third button. -->
-        <div class="hero-partner" style="display:flex;flex-direction:column;gap:9px;margin-left:10px;padding-left:26px;border-left:1px solid rgba(255,255,255,0.16)">
-          <span style="font-size:10px;letter-spacing:2.2px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>
-          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:46px;width:auto;display:block">
+        <div class="hero-partner" style="display:flex;flex-direction:column;gap:10px;margin-left:auto;padding-left:34px;border-left:1px solid rgba(255,255,255,0.16)">
+          <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;display:block">
         </div>
       </div>
       <!-- The same toast the #register section shows. These two buttons now open
@@ -945,7 +956,7 @@
           <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center">
             <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
           </div>
-          <span style="font-family:'Anton';font-size:20px">AD HARLEQUINS</span>
+          <span style="font-family:'Anton';font-size:20px">ABU DHABI HARLEQUINS</span>
         </div>
         <p style="max-width:340px;font-size:15px">A community youth rugby festival run by volunteers. All proceeds support grass-roots rugby at the Abu Dhabi Harlequins.</p>
         <div style="display:flex;gap:12px;margin-top:20px">

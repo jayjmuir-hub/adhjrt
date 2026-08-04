@@ -147,6 +147,45 @@ section('Organizer: order and overflow');
     /border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%/.test(src));
 }
 
+/* ⚠️ THE WORDMARK IS THE CLUB'S NAME, AND IT HAD NO COVERAGE AT ALL.
+   Jay, 3 Aug 2026: "lets change AD Harlequins at the top left to Abu Dhabi
+   Harlequins". It appeared in FOUR places — the homepage header and footer,
+   and legal.html's topbar and footer — and nothing asserted any of them, so
+   three of the four could have been missed and no test would have said a
+   word. All four moved together; a half-renamed brand reads as a bug.
+
+   ⚠️ NOT to be confused with `teamLabel()`'s deliberate "Abu Dhabi …" → "AD …"
+   shortening in scores-data.js. That one is for TEAM names in standings tables
+   where the column is narrow, it is documented and tested there, and it must
+   NOT be dragged into line with this. Two different things that look the same
+   in a grep. */
+section('The club wordmark says the club\'s name');
+{
+  const home = readRepo('Quins JRT.dc.html');
+  const legal = readRepo('legal.html');
+  for (const [name, src] of [['Quins JRT.dc.html', home], ['legal.html', legal]]) {
+    /* Comments stripped BOTH ways: the 900px hide rule's comment quotes the
+       old wordmark by name to explain why the number moved, and a comment
+       about a wordmark is not a wordmark. House rule, hit immediately. */
+    const body = stripJs(stripHtml(src));
+    check(`${name}: the wordmark reads ABU DHABI HARLEQUINS`, body.includes('ABU DHABI HARLEQUINS'));
+    check(`${name}: no shortened AD HARLEQUINS wordmark is left behind`,
+      !body.includes('AD HARLEQUINS'));
+  }
+  /* Both pages carry it twice — header and footer. Counted, so renaming one
+     and forgetting the other fails here rather than on Jay's screen. */
+  const count = (s) => (stripJs(stripHtml(s)).match(/ABU DHABI HARLEQUINS/g) || []).length;
+  check('the homepage carries it in both the header and the footer', count(home) === 2);
+  check('legal.html carries it in both the topbar and the footer', count(legal) === 2);
+
+  /* ⚠️ Seven characters became twenty. Without `white-space:nowrap` the longer
+     wordmark can break across two lines inside a STICKY header — and the
+     header's whole layout budget is one line. The 900px partner-mark hide in
+     test-sponsors.js is the other half of this; both were measured together. */
+  const wmSpan = (home.match(/<span style="font-family:'Anton';font-size:19px[^"]*">ABU DHABI HARLEQUINS<\/span>/) || [])[0];
+  check('the header wordmark cannot wrap to a second line', !!wmSpan && /white-space:nowrap/.test(wmSpan));
+}
+
 summary('test-design-polish.js');
 }
 

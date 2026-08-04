@@ -213,8 +213,8 @@ const BAND_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="he
 /* The hero lockup, added 3 Aug 2026. Carried verbatim for the same reason as
    everything else in this section: a fault that deletes or moves it must refuse
    to inject if the markup is edited, rather than quietly doing nothing. */
-const HERO_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:46px;width:auto;display:block">';
-const HERO_LABEL = '<span style="font-size:10px;letter-spacing:2.2px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>';
+const HERO_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;display:block">';
+const HERO_LABEL = '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>';
 const BAND_BLOCK = [
   '  <!-- ============ PRINCIPAL PARTNER BAND ============ -->',
   "  <!-- HSBC are the tournament's principal partner, so the mark gets the first",
@@ -3204,7 +3204,7 @@ const FAULTS = [
   {
     name: 'the narrow-screen hide is deleted entirely',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '  @media(max-width:800px){ .hdr-partner{display:none!important} }', ''),
+    apply: () => patch(HOME, '  @media(max-width:900px){ .hdr-partner{display:none!important} }', ''),
     expect: ['own hide rule'],
   },
   {
@@ -3214,10 +3214,10 @@ const FAULTS = [
     name: 'the hide is "tidied" into the 760px nav breakpoint',
     suite: 'test-sponsors.js',
     apply: () => {
-      patch(HOME, '  @media(max-width:800px){ .hdr-partner{display:none!important} }\n\n', '');
+      patch(HOME, '  @media(max-width:900px){ .hdr-partner{display:none!important} }\n\n', '');
       patch(HOME, '    .hdr-nav{display:none!important}', '    .hdr-nav{display:none!important}\n    .hdr-partner{display:none!important}');
     },
-    expect: ['hides at 800px', 'does not repeat the hide'],
+    expect: ['hides at 900px', 'does not repeat the hide'],
   },
   {
     name: 'the partner band is moved BELOW the stat strip',
@@ -3275,7 +3275,7 @@ const FAULTS = [
   {
     name: 'the hero lockup is shrunk to the header mark\'s size',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('height:46px', 'height:19px')),
+    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('height:64px', 'height:19px')),
     expect: ['semi-large size'],
   },
   {
@@ -3287,8 +3287,8 @@ const FAULTS = [
   {
     name: 'the hero lockup loses the class that its wrap rule targets',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '<div class="hero-partner" style="display:flex;flex-direction:column;gap:9px',
-      '<div style="display:flex;flex-direction:column;gap:9px'),
+    apply: () => patch(HOME, '<div class="hero-partner" style="display:flex;flex-direction:column;gap:10px',
+      '<div style="display:flex;flex-direction:column;gap:10px'),
     expect: ['addressable by class'],
   },
   {
@@ -3306,6 +3306,25 @@ const FAULTS = [
     apply: () => patch(HOME, '.hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}',
       '.hero-partner{border-left:0!important}'),
     expect: ['along with the indent'],
+  },
+  {
+    /* Jay asked for it "more to the right". A fixed margin looks equivalent in
+       a diff and is not: it drifts with the button labels and stops being the
+       right-hand end of the row. */
+    name: 'the right-hand push is turned back into a fixed margin',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'gap:10px;margin-left:auto;padding-left:34px', 'gap:10px;margin-left:40px;padding-left:34px'),
+    expect: ['pushed to the right-hand end'],
+  },
+  {
+    /* The measured value. 800 was the OLD number and it was already wrong —
+       the header overflowed horizontally from ~875px down with the mark
+       showing, on the short wordmark too. */
+    name: 'the partner-mark hide is put back to the 800px that was already too low',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '@media(max-width:900px){ .hdr-partner{display:none!important} }',
+      '@media(max-width:800px){ .hdr-partner{display:none!important} }'),
+    expect: ['hides at 900px'],
   },
   {
     name: 'the hero label is reworded away from what Jay chose',
@@ -3724,6 +3743,36 @@ const FAULTS = [
     apply: () => patch(HOME, 'color:#3bd070">SAT 7', 'color:#22c55e">SAT 7'),
     expect: ['one light green tint'],
   },
+  /* ---- the wordmark (test-design-polish.js, 3 Aug 2026) ----------------- */
+
+  {
+    name: 'the homepage header reverts to the shortened AD HARLEQUINS',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, ';white-space:nowrap">ABU DHABI HARLEQUINS</span>', '">AD HARLEQUINS</span>'),
+    expect: ['no shortened AD HARLEQUINS wordmark is left behind'],
+  },
+  {
+    /* The likely half-job: rename the one Jay pointed at and miss the other. */
+    name: 'the homepage FOOTER is left on the old wordmark',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, "font-size:20px\">ABU DHABI HARLEQUINS</span>", "font-size:20px\">AD HARLEQUINS</span>"),
+    expect: ['no shortened AD HARLEQUINS wordmark is left behind', 'both the header and the footer'],
+  },
+  {
+    name: 'legal.html is left behind on the old wordmark',
+    suite: 'test-design-polish.js',
+    apply: () => patch('legal.html', '<b>ABU DHABI HARLEQUINS</b>', '<b>AD HARLEQUINS</b>'),
+    expect: ['no shortened AD HARLEQUINS wordmark is left behind'],
+  },
+  {
+    /* Twenty characters in a STICKY header. Without nowrap it breaks to two
+       lines and a quarter of a phone screen goes to the header. */
+    name: 'the header wordmark loses its nowrap',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, "letter-spacing:.5px;white-space:nowrap\">ABU DHABI HARLEQUINS", "letter-spacing:.5px\">ABU DHABI HARLEQUINS"),
+    expect: ['cannot wrap to a second line'],
+  },
+
   {
     name: 'the age-card band labels shrink back to 7.5px',
     suite: 'test-design-polish.js',

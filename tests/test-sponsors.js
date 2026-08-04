@@ -175,7 +175,18 @@ imgTags.forEach((tag, i) => {
     'anchored on the button it was asked to sit beside');
   check('…and carries the "In partnership with" label', /In partnership with/.test(block));
   check('…and uses the white lockup', block.includes(WHITE));
-  check('…at a semi-large size, not the header\'s 19px', /height:4\d px|height:4\dpx/.test(block));
+  /* 64px — Jay asked for it bigger than the first 46px attempt. The range is
+     deliberately not exact: what matters is that it is unmistakably larger
+     than the header's 19px and in the band's league, not the specific number.
+     A shrink back to header size is the regression this catches. */
+  const heroH = (block.match(/height:(\d+)px/) || [])[1];
+  check('…at a semi-large size, not the header\'s 19px', Number(heroH) >= 46 && Number(heroH) <= 80,
+    `hero lockup is ${heroH}px`);
+
+  /* ⚠️ It sits at the RIGHT-HAND END of the row, which is what Jay asked for
+     ("more to the right"): `margin-left:auto` on a flex child eats all the
+     free space. A fixed margin would drift with the button labels. */
+  check('…pushed to the right-hand end of the row', /margin-left:auto/.test(block));
 
   /* ⚠️ The row it joined had only two children and no wrap rule. A third item
      overflows a phone without one, and an overflowing hero is the first thing
@@ -268,10 +279,26 @@ section('The header mark is hidden on a narrow screen');
 
    THE NUMBER MOVES WHEN THE NAV DOES. It was 1000 while the nav carried nine
    links; taking the two back-office links out on 2 Aug freed about 150px and
-   it came down to 800. Re-measure, do not guess, if a nav link is added. */
+   it came down to 800.
+
+   ⚠️ AND ON 3 AUG 2026 IT WENT BACK UP TO 900, BECAUSE 800 WAS WRONG. The
+   wordmark was lengthened to "ABU DHABI HARLEQUINS", which forced a
+   re-measurement — and the re-measurement found the header was ALREADY
+   overflowing the viewport HORIZONTALLY from about 875px down with the mark
+   still showing. Proven not to be the new wordmark's doing by measuring the
+   old one in the same harness: identical 874px scrollWidth at a 870px
+   viewport. A sticky header that scrolls sideways follows a visitor down
+   every page. 900 is 875 with margin, and the sweep from 1440px to 360px is
+   now clean at every width.
+
+   The earlier measurement checked for WRAPPING and never checked for
+   OVERFLOW, so it reported a healthy header that was already broken. That is
+   the lesson worth keeping: a measurement answers the question you asked it.
+
+   Re-measure, do not guess, if a nav link is added OR the wordmark changes. */
 const hideRule = PAGE.match(/@media\(max-width:(\d+)px\)\{\s*\.hdr-partner\{([^}]*)\}\s*\}/);
 check('the partner mark has its own hide rule', !!hideRule);
-eq('it hides at 800px, not at the 760px nav breakpoint', hideRule && hideRule[1], '800');
+eq('it hides at 900px, not at the 760px nav breakpoint', hideRule && hideRule[1], '900');
 check('the rule hides it', !!hideRule && /display:\s*none/.test(hideRule[2]));
 /* !important is load-bearing: the span is styled inline (`display:flex`) and
    inline wins over a stylesheet rule without it. Same trap as style-hover,

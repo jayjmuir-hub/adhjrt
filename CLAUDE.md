@@ -212,6 +212,22 @@ white-background version. As of 25 Jul 2026 nothing references it: the homepage,
 Check what a page actually uses before changing a reference — a broken crest reference once killed every social
 share preview.
 
+**The wordmark is "ABU DHABI HARLEQUINS"** (changed 3 Aug 2026 at Jay's
+request, from the shortened "AD HARLEQUINS"). It appears in **four** places, all
+renamed together: the homepage header and footer, and `legal.html`'s topbar and
+footer. `test-design-polish.js` asserts all four and counts them, because a
+half-renamed brand reads as a bug and nothing had covered any of them before.
+
+⚠️ **NOT the same thing as `teamLabel()`'s "Abu Dhabi …" → "AD …" shortening in
+`scores-data.js`.** That one is deliberate, it is for TEAM names in narrow
+standings columns, and it must not be dragged into line with the wordmark. Two
+different rules that look identical in a grep.
+
+⚠️ The header wordmark carries `white-space:nowrap`: seven characters became
+twenty inside a **sticky** header whose whole layout budget is one line. It also
+forced the HSBC header hide up to 900px — see the HSBC section below, and note
+that the re-measurement found a **pre-existing** horizontal overflow.
+
 **Social share images are `assets/share-card.png`** (added Aug 2026, design
 audit) — a rendered 1200×630 dark-brand card (crest + wordmark + dates), used
 by the `og:image`/`twitter:image` tags on the homepage, `/scores` and `/legal`.
@@ -229,7 +245,7 @@ The mark appears in **four** places on the homepage, all on `#0C0C0E`:
 | Where | Size | Notes |
 |---|---|---|
 | sticky header, beside the crest | 19px | not a link; hidden below 1000px |
-| hero, beside the two Register buttons | 46px | added 3 Aug 2026; "In partnership with" above it, divider to its left |
+| hero, right-hand end of the Register button row | 64px | added 3 Aug 2026; `margin-left:auto`, "In partnership with" above it, divider to its left |
 | `<section id="partner">`, between the hero and the stat strip | 54px | "In partnership with" above it |
 | `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
 
@@ -256,13 +272,23 @@ into the background — a failure that renders no error anywhere, the same shape
 as the crest reference that once killed every social share preview.
 `test-sponsors.js` asserts the black one is not referenced.
 
-⚠️ **The header hide is at 1000px, NOT at the 760px nav breakpoint, and the
-number was measured.** Rendered in headless Chromium with the real Anton and
-Barlow faces (fallback fonts are wider and give a different, wrong answer), the
-header holds one line down to **850px** without the mark and only to **950px**
-with it. Folding the rule into the 760 block — which looks like tidying — puts
-a second line back into a *sticky* header between 850 and 950, and nobody sees
-it on a 1440px screen. 1000 is 950 with margin. There is a fault for exactly
+⚠️ **The header hide is at 900px, NOT at the 760px nav breakpoint, and the
+number was measured — twice.** Rendered in headless Chromium with the real Anton
+and Barlow faces (fallback fonts are wider and give a different, wrong answer).
+
+The first measurement checked for WRAPPING only, and reported a healthy header
+that was already broken: on 3 Aug 2026, re-measuring for the longer
+"ABU DHABI HARLEQUINS" wordmark found the bar **overflowing the viewport
+horizontally from about 875px down** with the mark still showing — and doing it
+with the OLD short wordmark too (identical 874px scrollWidth at a 870px
+viewport). So it was a pre-existing bug, not the rename's doing. A sticky header
+that scrolls sideways follows a visitor down every page. **900 is 875 with
+margin**, and a sweep from 1440px to 360px is now clean at every width.
+**A measurement only answers the question you asked it.**
+
+Folding the rule into the 760 block — which looks like tidying — puts
+a second line back into a *sticky* header, and nobody sees
+it on a 1440px screen. There is a fault for exactly
 this tidy-up.
 
 The header mark is deliberately **not a link**. The header is sticky, so a tap

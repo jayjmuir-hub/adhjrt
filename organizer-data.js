@@ -103,7 +103,7 @@ export function logout() {
 
 export async function getRegistrations() {
   const session = currentSession();
-  if (!session || !session.token) return { teams: [], players: [] };
+  if (!session || !session.token) return { teams: [], players: [], clubs: [], clubsUnavailable: false };
   const r = await tryFetchJson('/.netlify/functions/get-registrations', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${session.token}` },
@@ -112,8 +112,24 @@ export async function getRegistrations() {
   // indistinguishable from "nobody's registered yet." `error` is new and
   // additive — every existing caller destructuring {teams, players} is
   // unaffected; loadData() is the one that now checks it.
-  if (r.real) return r.json.ok ? { teams: r.json.teams, players: r.json.players } : { teams: [], players: [], error: r.json.error || 'Could not load teams and players.' };
-  return (await local()).sampleRegistrations();
+  // `clubs` and `clubsUnavailable` are additive (Aug 2026, the Clubs tab).
+  // Defaulted here rather than left undefined so a deployed page that is newer
+  // than the deployed function still renders an empty tab instead of throwing
+  // on `.map` of undefined — the two halves do not deploy atomically in a
+  // rollback.
+  if (r.real) {
+    return r.json.ok
+      ? {
+        teams: r.json.teams, players: r.json.players,
+        clubs: r.json.clubs || [], clubsUnavailable: !!r.json.clubsUnavailable,
+      }
+      : {
+        teams: [], players: [], clubs: [], clubsUnavailable: false,
+        error: r.json.error || 'Could not load teams and players.',
+      };
+  }
+  const sample = (await local()).sampleRegistrations();
+  return { clubs: [], clubsUnavailable: false, ...sample };
 }
 
 // -------- Account approvals (Accounts tab) --------

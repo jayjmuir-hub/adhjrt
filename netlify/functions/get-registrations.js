@@ -18,7 +18,7 @@ const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
 /* The sheet column order, the field names /organizer expects, and the two row
    mappers. All three used to be written out by hand in this file AND in the
    other reader AND in submission-created.js — see _intake.js. */
-const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
+const { mapTeamRow, mapPlayerRow, mapClubRow, TEAM_RANGE, PLAYER_RANGE, CLUB_RANGE } = require('./_intake');
 
 
 async function readRows(auth, spreadsheetId, columns) {
@@ -38,9 +38,29 @@ exports.handler = async (event) => {
     }
 
     const auth = getReadAuth();
-    const [teamRows, playerRows] = await Promise.all([
+
+    /* ⚠️ THE CLUBS SHEET IS READ SEPARATELY AND FAILS SOFT, unlike the other
+       two. Club declarations are a planning nicety; teams and players are the
+       tournament. GOOGLE_SHEET_ID_CLUBS is the newest of the three variables
+       and the club feature has already been added, removed and restored once —
+       if that sheet is missing, renamed or unshared, an organiser must still
+       get their Teams and Players tables rather than an empty dashboard and a
+       500. Everything else here stays fail-hard on purpose. */
+    const readClubs = async () => {
+      try {
+        if (!process.env.GOOGLE_SHEET_ID_CLUBS) return [];
+        return await readRows(auth, process.env.GOOGLE_SHEET_ID_CLUBS, CLUB_RANGE);
+      } catch (err) {
+        /* The message only, and never a row — this sheet holds contact details. */
+        console.error('get-registrations: clubs sheet unreadable -', err && err.message);
+        return null;                                     // null = could not read
+      }
+    };
+
+    const [teamRows, playerRows, clubRows] = await Promise.all([
       readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
       readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),
+      readClubs(),
     ]);
 
     return {
@@ -49,6 +69,13 @@ exports.handler = async (event) => {
         ok: true,
         teams: teamRows.map(mapTeamRow),
         players: playerRows.map(mapPlayerRow),
+        clubs: (clubRows || []).map(mapClubRow),
+        /* ⚠️ Told apart from "no club has declared yet". An empty list and a
+           broken sheet look identical on screen, and the Clubs tab would
+           cheerfully report "0 declared" for a tournament where twenty clubs
+           had declared — the loading-vs-empty trap the dataError banner exists
+           for, one level down. */
+        clubsUnavailable: clubRows === null,
       }),
     };
   } catch (err) {

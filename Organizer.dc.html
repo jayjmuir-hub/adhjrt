@@ -114,6 +114,7 @@
         <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
         <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
         <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
+        <button onClick="{{ showClubs }}" style="{{ tabClubsStyle }}">Clubs<sc-if value="{{ hasFlaggedClubs }}" hint-placeholder-val="{{ false }}"> ({{ flaggedClubCount }} to chase)</sc-if></button>
         <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
         <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
       </div>
@@ -693,6 +694,115 @@
            screen, effectively unreachable. Capping the height and scrolling
            BOTH axes inside a bounded box keeps the horizontal scrollbar (and
            the sticky header below) always within reach. -->
+      <!-- ===== CLUBS: declared vs actually registered ===== -->
+      <sc-if value="{{ isClubs }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Clubs &mdash; declared vs registered</div>
+            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:0;line-height:1.5">Clubs declare how many teams they expect to bring, months before teams register one by one. This compares the two. <b style="color:#454D58">Anything marked Short or Over is a club worth a phone call</b> &mdash; a plan that has changed still changes pools, pitches and the draw. Declarations are estimates, not commitments.</p>
+          </div>
+
+          <sc-if value="{{ clubsUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="background:rgba(166,38,38,0.08);border:1px solid rgba(166,38,38,0.35);border-radius:12px;padding:16px 18px;color:#A62626;font-size:14px;font-weight:700;line-height:1.5">
+              The club declarations sheet could not be read, so this tab is showing nothing rather than guessing. Teams and Players are unaffected. Check <b>GOOGLE_SHEET_ID_CLUBS</b> in Netlify and that the sheet is still shared with the service account.
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ clubsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:28px 20px;text-align:center;color:#5A626E;font-size:14px">
+              No club has sent a declaration yet. They arrive through the link you email clubs &mdash; nothing on the site links to that form.
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ clubsHaveRows }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px">
+              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredCount }}</b> clubs declared</div>
+              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredTeams }}</b> teams declared</div>
+              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsRegisteredTeams }}</b> teams registered</div>
+              <button onClick="{{ onToggleClubsFlagged }}" style="{{ clubsFilterStyle }}">{{ clubsFilterLabel }}</button>
+            </div>
+
+            <div style="overflow:auto;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
+              <table style="width:100%;min-width:760px">
+                <thead>
+                  <tr>
+                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Club</th>
+                    <th style="background:#F3F2EF;text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap">Declared</th>
+                    <th style="background:#F3F2EF;text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap">Registered</th>
+                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
+                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Contact</th>
+                    <th style="background:#F3F2EF;padding:12px 14px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ clubRows }}" as="c" hint-placeholder-count="3">
+                    <tr style="border-top:1px solid rgba(0,0,0,0.08)">
+                      <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ c.club }}</td>
+                      <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.declaredTotal }}</td>
+                      <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.registeredTotal }}</td>
+                      <td style="padding:12px 14px"><span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span></td>
+                      <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ c.contactName }}<br>{{ c.contactEmail }}<br>{{ c.contactPhone }}</td>
+                      <td style="padding:12px 14px;text-align:right">
+                        <button onClick="{{ c.onToggle }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:700;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">{{ c.toggleLabel }}</button>
+                      </td>
+                    </tr>
+                    <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
+                      <tr>
+                        <td colspan="6" style="padding:0 14px 16px;background:#FBFAF8">
+                          <sc-if value="{{ c.hasNotes }}" hint-placeholder-val="{{ false }}">
+                            <p style="margin:12px 0 0;font-size:13px;color:#5A626E;line-height:1.5"><b style="color:#454D58">They said:</b> {{ c.notes }}</p>
+                          </sc-if>
+                          <table style="width:100%;margin-top:12px">
+                            <thead>
+                              <tr>
+                                <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Age group</th>
+                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Declared</th>
+                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Registered</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <sc-for list="{{ c.groups }}" as="g" hint-placeholder-count="3">
+                                <tr style="{{ g.rowStyle }}">
+                                  <td style="padding:8px 10px;font-size:13px">{{ g.name }}</td>
+                                  <td style="padding:8px 10px;font-size:14px;text-align:center;font-weight:700">{{ g.declared }}</td>
+                                  <td style="padding:8px 10px;font-size:14px;text-align:center;font-weight:700">{{ g.registered }}</td>
+                                </tr>
+                              </sc-for>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </sc-if>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ clubsNoneFlagged }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:28px 20px;text-align:center;color:#0E6B33;font-size:14px;font-weight:700">
+              Every club that declared has registered exactly what it said. Nothing to chase.
+            </div>
+          </sc-if>
+
+          <!-- Registered but never declared. Half the answer, not a leftover:
+               this is also where a club whose name did not match its own
+               declaration lands, so a bad match reads as an odd row rather
+               than as a club that silently under-registered. -->
+          <sc-if value="{{ hasClubsUnmatched }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-top:20px">
+              <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:4px">Registered, but never declared</div>
+              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:12px;line-height:1.5">These clubs have teams in the tournament and no declaration on file. Either they skipped the declaration, or they typed their club name differently on the two forms &mdash; worth a look before you chase them.</p>
+              <sc-for list="{{ clubsUnmatched }}" as="u" hint-placeholder-count="2">
+                <div style="border-top:1px solid rgba(0,0,0,0.06);padding:10px 0;font-size:14px"><b>{{ u.club }}</b> &mdash; {{ u.registeredTotal }} registered</div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
         <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
           <table style="width:100%;min-width:1100px">
@@ -1010,6 +1120,150 @@ function groupRowsByClub(rows) {
   return groups;
 }
 
+/* =========================================================================
+   CLUB DECLARATIONS vs ACTUAL REGISTRATIONS  (the Clubs tab, Aug 2026)
+   =========================================================================
+
+   A club declares "we expect to bring three U12 teams" weeks before
+   registration opens. Later, teams register one at a time. The only question
+   this tab exists to answer is the one the sheets cannot:
+
+       WHO SAID THEY WOULD SEND THREE AND HAS ONLY SENT TWO?
+
+   Everything else here is in service of that. Reading it out of the two sheets
+   by eye is 20+ clubs x 15 age groups, which is a job you do once and then
+   avoid.
+
+   ⚠️ BOTH SIDES OF THE JOIN ARE FREE TEXT TYPED BY DIFFERENT PEOPLE. The club
+   contact types the club name on the declaration; a coach types it again,
+   separately, on every team registration. "Dubai Exiles", "dubai exiles" and
+   "Dubai Exiles RFC" are one club to a human and three to a computer. There is
+   no club id anywhere in the system to join on, and inventing one now would
+   mean changing a form clubs are already being sent a link to.
+
+   So the join is on a NORMALISED name, and the normalisation is deliberately
+   conservative. */
+
+/* Trailing club-type suffixes only. "RFC", "RUFC", "Rugby Club", "Rugby
+   Football Club", "RC", "FC" — the things people add or drop at the end
+   without meaning a different club.
+
+   ⚠️ ANCHORED TO THE END, and stripped at most once. Not a blanket
+   find-and-replace: a club genuinely called "RC Sharks" must not become
+   "Sharks", and "Al Ain FC Juniors" must keep its FC because it is not
+   trailing. This is the difference between normalising and mangling. */
+const CLUB_SUFFIX_RE = /\s+(rugby football club|rugby club|rufc|rfc|rc|fc)$/;
+
+function normaliseClubName(raw) {
+  let v = String(raw == null ? '' : raw).toLowerCase();
+  /* Accents folded so "Genève" and "Geneve" meet. Harmless where there are
+     none, and this is a Gulf tournament that takes entries from Europe. */
+  try { v = v.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { /* older engine: skip */ }
+  /* ⚠️ APOSTROPHES ARE REMOVED; EVERYTHING ELSE BECOMES A SPACE. Both halves
+     were found by the test, not by inspection.
+       - A dot or a hyphen must become a SPACE, or "St.Georges" collapses to one
+         word while "St Georges" stays two and they stop matching.
+       - An apostrophe must become NOTHING, or "St George's" becomes
+         "st george s" and stops matching "St Georges" — the same club, written
+         the two ways people actually write it. */
+  v = v.replace(/['\u2019]/g, '');
+  v = v.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+  v = v.replace(CLUB_SUFFIX_RE, '').trim();
+  return v;
+}
+
+/* Reconciles declarations against registrations.
+
+   Returns { rows, unmatched, totals }:
+     rows       one per DECLARED club, youngest-to-oldest age groups inside
+     unmatched  clubs that registered teams but never declared — see below
+     totals     the three headline numbers
+
+   ⚠️ `unmatched` IS NOT A LEFTOVER, IT IS HALF THE ANSWER. A club that
+   registers without declaring is invisible to a declared-clubs-only view, and
+   it is exactly the case the normalisation might have got wrong. Surfacing it
+   means a failed match shows up as "registered but never declared" rather than
+   as a club that silently under-registered — a wrong number that looks right
+   is worse here than an obviously odd row.
+
+   Deliberate: a declaration of 0 for an age group is NOT the same as no
+   declaration at all for reporting, but both mean "expecting none", so both
+   flag if teams turn up. Jay, 4 Aug: over-registering flags too — more teams
+   than planned still changes pools, pitches and the draw. */
+function reconcileClubs(clubs, teams) {
+  const declared = Array.isArray(clubs) ? clubs : [];
+  const registered = Array.isArray(teams) ? teams : [];
+
+  /* Registered team counts, per normalised club, per age-group ID.
+     ⚠️ The teams sheet stores the age group by its DISPLAY NAME ("U16B
+     Contact"); a declaration stores counts under the ID ("u16b"). They are
+     joined through MANAGER_AGE_GROUPS, the one list, rather than by a second
+     hardcoded mapping. An unrecognised name is counted against the club but
+     against no age group, so it still shows in the club's registered total and
+     cannot vanish. */
+  const idByName = Object.fromEntries(MANAGER_AGE_GROUPS.map((g) => [g.name, g.id]));
+  const counts = new Map();
+  const seenNames = new Map();
+  registered.forEach((t) => {
+    const key = normaliseClubName(t.club);
+    if (!counts.has(key)) { counts.set(key, { total: 0, byGroup: {} }); seenNames.set(key, t.club); }
+    const c = counts.get(key);
+    c.total += 1;
+    const id = idByName[t.ageGroup];
+    if (id) c.byGroup[id] = (c.byGroup[id] || 0) + 1;
+  });
+
+  const matched = new Set();
+  const rows = declared.map((c) => {
+    const key = normaliseClubName(c.club);
+    matched.add(key);
+    const got = counts.get(key) || { total: 0, byGroup: {} };
+    let declaredTotal = 0;
+    let flaggedGroups = 0;
+    const groups = MANAGER_AGE_GROUPS.map((g) => {
+      /* A blank box means "not entering this group" — the club form says so in
+         as many words. Blank and "0" are the same declaration. */
+      const d = parseInt(c[g.id], 10);
+      const dec = Number.isFinite(d) && d > 0 ? d : 0;
+      const reg = got.byGroup[g.id] || 0;
+      declaredTotal += dec;
+      const flagged = dec !== reg;
+      if (flagged) flaggedGroups += 1;
+      return { id: g.id, name: g.name, declared: dec, registered: reg, flagged };
+    });
+    return {
+      club: c.club,
+      contactName: c.contactName, contactEmail: c.contactEmail, contactPhone: c.contactPhone,
+      submittedAt: c.submittedAt, notes: c.notes,
+      declaredTotal,
+      registeredTotal: got.total,
+      flagged: declaredTotal !== got.total || flaggedGroups > 0,
+      flaggedGroups,
+      /* Only the age groups either side has anything in. Fifteen rows per club
+         of "0 / 0" is noise, and the whole point of the expandable row is that
+         what it opens is short enough to read. */
+      groups: groups.filter((g) => g.declared > 0 || g.registered > 0),
+    };
+  });
+
+  const unmatched = [];
+  counts.forEach((v, key) => {
+    if (matched.has(key)) return;
+    unmatched.push({ club: seenNames.get(key) || key, registeredTotal: v.total });
+  });
+
+  return {
+    rows,
+    unmatched,
+    totals: {
+      clubsDeclared: rows.length,
+      declared: rows.reduce((n, r) => n + r.declaredTotal, 0),
+      registered: registered.length,
+      flagged: rows.filter((r) => r.flagged).length + unmatched.length,
+    },
+  };
+}
+
 /* ---------------- The pitch schematic ----------------
    A drawing of where each age group plays, on the Venue & days tab.
 
@@ -1130,6 +1384,12 @@ class Component extends DCLogic {
     api: null, session: null,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
     teams: [], players: [], accounts: [], dataError: '', dataLoading: false,
+    /* The Clubs tab (Aug 2026). `clubs` are the declarations;
+       `clubsUnavailable` is the clubs sheet being unreadable, told apart from
+       "nobody has declared yet" — see get-registrations.js. `clubsOnlyFlagged`
+       is the chase-list filter, off by default so the tab opens showing
+       everything and narrows on request rather than hiding rows by surprise. */
+    clubs: [], clubsUnavailable: false, expandedClub: '', clubsOnlyFlagged: false,
     /* The Tournament tab's bulk publish — moved from the old /scores Manager
        area. bulkMsg is the outcome sentence ("Published 15 age groups.") and
        is set LAST, after any refresh, so nothing can blank it on the way in
@@ -1285,7 +1545,14 @@ class Component extends DCLogic {
     // the Teams/Players/Accounts tables silently empty. See getRegistrations()/
     // listAccounts() in organizer-data.js for where `error` comes from.
     const dataError = data.error || acctResult.error || '';
-    this.setState({ teams: data.teams, players: data.players, accounts: acctResult.accounts, dataError, dataLoading: false });
+    this.setState({
+      teams: data.teams, players: data.players, accounts: acctResult.accounts,
+      /* Defaulted, not assumed: a deployed page can be newer than the deployed
+         function, and `undefined.map` on the Clubs tab would take the whole
+         dashboard down rather than showing one empty tab. */
+      clubs: data.clubs || [], clubsUnavailable: !!data.clubsUnavailable,
+      dataError, dataLoading: false,
+    });
   }
 
   async refreshAccounts() {
@@ -1301,6 +1568,81 @@ class Component extends DCLogic {
   onRetryLoad() {
     const { api } = this.state;
     if (api) this.loadData(api);
+  }
+
+  /* Everything the Clubs tab binds to. Kept out of renderVals() for the same
+     reason venueVals()/regVals() are: that method is already long, and the
+     binding trap in CLAUDE.md bites hardest where a reader cannot see the whole
+     set at once. Anything the markup writes as {{ x }} must be returned HERE or
+     it resolves silently to empty. */
+  clubVals(s) {
+    const rec = reconcileClubs(s.clubs, s.teams);
+    const shown = s.clubsOnlyFlagged ? rec.rows.filter((r) => r.flagged) : rec.rows;
+    return {
+      isClubs: s.tab === 'clubs',
+      /* On the tab BUTTON, so the chase list is visible without opening the
+         tab — the same reason Accounts carries its pending count. Counted from
+         the reconciliation, never stored, so it cannot go stale. */
+      flaggedClubCount: rec.totals.flagged,
+      hasFlaggedClubs: rec.totals.flagged > 0,
+
+      clubsUnavailable: !!s.clubsUnavailable,
+      /* ⚠️ THREE STATES, NOT TWO. "Still loading", "the sheet is unreadable"
+         and "nobody has declared yet" are different sentences, and showing the
+         last one for either of the first two is the loading-vs-empty bug this
+         codebase has now been bitten by three times. */
+      clubsEmpty: !s.clubsUnavailable && !s.dataLoading && rec.rows.length === 0 && rec.unmatched.length === 0,
+      clubsHaveRows: !s.clubsUnavailable && shown.length > 0,
+
+      clubsDeclaredCount: rec.totals.clubsDeclared,
+      clubsDeclaredTeams: rec.totals.declared,
+      clubsRegisteredTeams: rec.totals.registered,
+
+      clubsOnlyFlagged: s.clubsOnlyFlagged,
+      onToggleClubsFlagged: () => this.setState((p) => ({ clubsOnlyFlagged: !p.clubsOnlyFlagged })),
+      clubsFilterLabel: s.clubsOnlyFlagged ? 'Showing only clubs to chase' : 'Show only clubs to chase',
+      clubsFilterStyle: s.clubsOnlyFlagged
+        ? 'background:#A62626;border:1px solid #A62626;color:#fff;font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer'
+        : 'background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer',
+      /* Only reachable while the filter is ON, so it cannot be confused with
+         "no declarations at all". */
+      clubsNoneFlagged: s.clubsOnlyFlagged && rec.rows.length > 0 && shown.length === 0,
+
+      clubRows: shown.map((r) => ({
+        club: r.club,
+        contactName: r.contactName,
+        contactEmail: r.contactEmail,
+        contactPhone: r.contactPhone,
+        declaredTotal: r.declaredTotal,
+        registeredTotal: r.registeredTotal,
+        /* The whole point of the tab, in one cell. */
+        statusLabel: r.flagged ? (r.registeredTotal < r.declaredTotal ? 'Short' : 'Over') : 'On track',
+        statusStyle: r.flagged
+          ? 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(166,38,38,0.12);color:#A62626;white-space:nowrap'
+          : 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(14,107,51,0.12);color:#0E6B33;white-space:nowrap',
+        notes: r.notes,
+        hasNotes: !!String(r.notes || '').trim(),
+        expanded: s.expandedClub === r.club,
+        toggleLabel: s.expandedClub === r.club ? 'Hide age groups' : 'Age groups',
+        /* Keyed by club NAME because that is what the row carries and it is
+           unique per declaration row. Toggling the open one closes it. */
+        onToggle: () => this.setState((p) => ({ expandedClub: p.expandedClub === r.club ? '' : r.club })),
+        groups: r.groups.map((g) => ({
+          name: g.name,
+          declared: g.declared,
+          registered: g.registered,
+          rowStyle: g.flagged
+            ? 'border-top:1px solid rgba(0,0,0,0.06);background:rgba(166,38,38,0.05)'
+            : 'border-top:1px solid rgba(0,0,0,0.06)',
+        })),
+      })),
+
+      /* ⚠️ Registered but never declared. This is where a club whose name did
+         not normalise to a declaration lands, so a failed match reads as an
+         odd row rather than as a club that silently under-registered. */
+      clubsUnmatched: rec.unmatched,
+      hasClubsUnmatched: rec.unmatched.length > 0,
+    };
   }
 
   /* Everything the Venue tab binds to, kept out of renderVals() so that method
@@ -3054,6 +3396,7 @@ class Component extends DCLogic {
       onAcctRevoke: () => { this.doRevoke(s.acctSubject); this.closeAccount(); },
 
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
+      ...this.clubVals(s),
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
       isTournament: s.tab === 'tournament',
       bulkBusy: s.bulkBusy, bulkMsg: s.bulkMsg,
@@ -3088,12 +3431,14 @@ class Component extends DCLogic {
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),
       showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
+      showClubs: () => this.setState({ tab: 'clubs' }),
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       showTournament: () => this.openTournament(),
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
       tabVenueStyle: s.tab === 'venue' ? tabOn : tabOff,
+      tabClubsStyle: s.tab === 'clubs' ? tabOn : tabOff,
       tabRegistrationStyle: s.tab === 'registration' ? tabOn : tabOff,
       tabTournamentStyle: s.tab === 'tournament' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',

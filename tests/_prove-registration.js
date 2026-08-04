@@ -198,6 +198,8 @@ const SD = 'scores-data.js';
    the block exactly, so that if the markup is edited the injection refuses
    rather than quietly doing nothing. */
 const HOME = 'Quins JRT.dc.html';
+/* The organiser dashboard, patched by the Clubs-tab faults below. */
+const ORG = 'Organizer.dc.html';
 /* The scores page's header partner mark, verbatim, so the fault that MOVES it
    carries the block exactly - if the markup is edited the injection refuses
    rather than quietly doing nothing. */
@@ -1504,6 +1506,120 @@ const FAULTS = [
       "  if (form !== 'club-registration') {\n    let open = false;\n    try {\n      open = !!d.registrationState(await d.loadRegistration(), now).open;",
       "  {\n    let open = false;\n    try {\n      open = !!d.registrationState(await d.loadRegistration(), now).open;\n      if (form === 'club-registration') open = true;"),
     expect: ['the window is not read at all for a club declaration'],
+  },
+  /* ---- the Clubs tab (test-organizer-clubs.js, Aug 2026) ---------------- */
+
+  {
+    /* ⚠️ THE EAGER-NORMALISER. Un-anchoring the suffix strip turns "RC Sharks"
+       into "Sharks" and merges two real clubs into one — a wrong number that
+       looks entirely plausible, which is worse than a failed match. */
+    name: 'the club-name suffix strip is un-anchored, merging different clubs',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, "const CLUB_SUFFIX_RE = /\\s+(rugby football club|rugby club|rufc|rfc|rc|fc)$/;",
+      "const CLUB_SUFFIX_RE = /\\s*(rugby football club|rugby club|rufc|rfc|rc|fc)\\s*/;"),
+    expect: ['stay different clubs'],
+  },
+  {
+    /* The opposite failure: no normalisation at all, so "Dubai Exiles RFC"
+       stops being "Dubai Exiles" and every club looks short. */
+    name: 'club names stop being normalised, so every name variant misses',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, "  v = v.replace(CLUB_SUFFIX_RE, '').trim();\n  return v;",
+      '  return v;'),
+    expect: ['are the same club'],
+  },
+  {
+    /* Apostrophes back to spaces — "St George's" becomes "st george s". Found
+       by the test on the first run, not by inspection. */
+    name: 'apostrophes become spaces again, splitting a club from itself',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, "  v = v.replace(/['\\u2019]/g, '');\n", ''),
+    expect: ['are the same club'],
+  },
+  {
+    name: 'the declared total stops summing across age groups',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '      declaredTotal += dec;', '      declaredTotal = dec;'),
+    expect: ['declared total is the sum of the boxes'],
+  },
+  {
+    /* Over-registration silently unflagged — Jay asked for it flagged, and a
+       club sending MORE than it planned still changes pools and pitches. */
+    name: 'only under-registration is flagged, so extra teams go unnoticed',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '      flagged: declaredTotal !== got.total || flaggedGroups > 0,',
+      '      flagged: declaredTotal > got.total,'),
+    expect: ['reads Over'],
+  },
+  {
+    /* The half of the answer that is easiest to drop, because the tab still
+       looks complete without it — and it is where a failed name match lands. */
+    name: 'clubs that registered without declaring are dropped',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '    if (matched.has(key)) return;', '    return;'),
+    expect: ['the undeclared club is surfaced'],
+  },
+  {
+    /* An unrecognised age-group name dropped from the club total: the club
+       looks short for a reason nobody can see on the screen. */
+    name: 'a team in an unrecognised age group stops counting at all',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '    c.total += 1;\n    const id = idByName[t.ageGroup];',
+      '    const id = idByName[t.ageGroup];\n    if (!id) return;\n    c.total += 1;'),
+    expect: ['an unknown age group still counts in the club total'],
+  },
+  {
+    /* ⚠️ The loading-vs-empty trap, one level down. An unreadable sheet reading
+       as "nobody has declared yet" is a confident lie in a tab whose entire job
+       is to be trusted about numbers. */
+    name: 'an unreadable clubs sheet reads as "nobody has declared yet"',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '      clubsEmpty: !s.clubsUnavailable && !s.dataLoading && rec.rows.length === 0 && rec.unmatched.length === 0,',
+      '      clubsEmpty: rec.rows.length === 0 && rec.unmatched.length === 0,'),
+    expect: ['does not also claim nobody has declared'],
+  },
+  {
+    /* The chase-list filter hiding everything, then the empty message claiming
+       nothing was ever declared. */
+    name: 'a filter that hides every row claims nothing was declared',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '      clubsNoneFlagged: s.clubsOnlyFlagged && rec.rows.length > 0 && shown.length === 0,',
+      '      clubsNoneFlagged: false,'),
+    expect: ['a filter that hides everything says so in its own words'],
+  },
+  {
+    name: 'the chase-list filter stops filtering',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '    const shown = s.clubsOnlyFlagged ? rec.rows.filter((r) => r.flagged) : rec.rows;',
+      '    const shown = rec.rows;'),
+    expect: ['only the clubs to chase show'],
+  },
+  {
+    /* Expanding one club expanding all of them — the "keyed by nothing" bug. */
+    name: 'expanding one club expands every club',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '        expanded: s.expandedClub === r.club,', '        expanded: !!s.expandedClub,'),
+    expect: ['and only that club'],
+  },
+  {
+    /* ⚠️ The clubs sheet made fail-HARD like the other two, so a missing
+       GOOGLE_SHEET_ID_CLUBS costs an organiser their Teams and Players tables
+       as well. The "why is this one different?" tidy-up. */
+    name: 'the clubs sheet is made fail-hard, taking Teams and Players with it',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
+      '        console.error(\'get-registrations: clubs sheet unreadable -\', err && err.message);\n        return null;                                     // null = could not read',
+      '        throw err;'),
+    expect: ['does not take Teams and Players with it'],
+  },
+  {
+    /* The reconciliation growing its own age-group list. It would drift, and
+       drift here means a club's teams landing under no age group at all. */
+    name: 'the reconciliation grows its own age-group id list',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, '  const idByName = Object.fromEntries(MANAGER_AGE_GROUPS.map((g) => [g.name, g.id]));',
+      "  const idByName = { 'U12 Mixed Contact': 'u12', 'U16B Contact': 'u16b' };"),
+    expect: ['reconciles to itself'],
   },
   {
     name: 'the rate limit is checked but its answer is ignored',

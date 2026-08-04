@@ -904,6 +904,59 @@ describes the removal, not the current state.
 homepage modal: that stayed deleted, and a test asserts the club form has not
 crept back onto the public page.
 
+### The `/organizer` Clubs tab — declared vs registered (4 Aug 2026)
+
+The seventh tab, and the reason declarations exist at all. One row per club:
+declared total, registered total, a **Short / Over / On track** badge, and the
+contact. Expand a row for the per-age-group breakdown, mismatching rows tinted.
+A "Show only clubs to chase" filter, and the flagged count on the tab button
+itself so it is visible without opening the tab.
+
+⚠️ **THE JOIN IS FREE TEXT TYPED BY TWO DIFFERENT PEOPLE, MONTHS APART.** The
+club contact types the club name once on the declaration; a coach types it again
+on every team registration. **There is no club id anywhere in the system.** So
+`normaliseClubName()` in `Organizer.dc.html` lowercases, folds accents, removes
+apostrophes, turns other punctuation into spaces, collapses whitespace, and
+strips ONE trailing club-type suffix.
+
+**Each of those rules exists because of a specific pair of names, and two were
+found by the test rather than by inspection:**
+
+- Apostrophes are **removed**, not spaced — or `St George's` becomes
+  `st george s` and stops matching `St Georges`.
+- Other punctuation becomes a **space** — or `St.Georges` collapses to one word
+  while `St Georges` stays two.
+- The suffix strip is **anchored to the end** and runs once. A blanket strip
+  would turn `RC Sharks` into `Sharks` and merge two real clubs. ⚠️ **An eager
+  normaliser is worse than a lazy one**: a wrong match produces a plausible
+  number nobody questions, where a missed match shows up in the
+  "registered but never declared" panel and is visible.
+
+⚠️ **That panel is half the answer, not a leftover.** A club that registers
+without declaring is invisible to a declared-clubs-only view — and it is also
+where a failed name match lands, so a bad match reads as an odd row rather than
+as a club that silently under-registered.
+
+**Other decisions worth not re-litigating:**
+
+- Over-registration flags too (Jay, 4 Aug). More teams than planned still
+  changes pools, pitches and the draw.
+- Blank, `0` and rubbish in a declaration box all mean "none declared". The club
+  form says "leave a group blank if you are not entering it".
+- Only age groups with something on either side are listed under a club —
+  fifteen rows of `0 / 0` is noise.
+- The age-group join goes through `MANAGER_AGE_GROUPS` (the teams sheet stores
+  the display NAME, a declaration stores the ID), never a second mapping. An
+  unrecognised name still counts towards the club total so a team cannot vanish.
+- ⚠️ **`get-registrations.js` reads the clubs sheet FAIL-SOFT**, alone among the
+  three. Declarations are a planning nicety; teams and players are the
+  tournament. A missing `GOOGLE_SHEET_ID_CLUBS` must not cost an organiser their
+  Teams table. `clubsUnavailable` tells that apart from "nobody has declared
+  yet" — the loading-vs-empty trap, one level down.
+
+`tests/test-organizer-clubs.js` drives the real component (113 checks), sweeps
+the name pairs BOTH ways, and sweeps all fifteen age groups. Thirteen faults.
+
 ### ⚠️ THE CLUB FORM IS EXEMPT FROM THE REGISTRATION WINDOW (4 Aug 2026)
 
 **A declaration is not an entry.** It is *"we expect to bring three U12 teams"*,

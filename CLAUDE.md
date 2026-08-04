@@ -240,14 +240,28 @@ dates ever change, this image carries them and must be re-rendered.
 ## HSBC — the principal partner (added 2 Aug 2026)
 
 HSBC are the tournament's **principal partner** and the only confirmed sponsor.
-The mark appears in **four** places on the homepage, all on `#0C0C0E`:
+The mark appears in **three** places on the homepage, all on `#0C0C0E`:
 
 | Where | Size | Notes |
 |---|---|---|
-| sticky header, beside the crest | 19px | not a link; hidden below 1000px |
-| hero, centred in the space after the Register buttons | 64px | added 3 Aug 2026; `margin-left:auto` AND `margin-right:auto` — auto on BOTH sides is what makes it halfway rather than hard right, which Jay rejected. "In partnership with" above it, divider to its left |
-| `<section id="partner">`, between the hero and the stat strip | 54px | "In partnership with" above it |
+| sticky header, beside the crest | 19px | not a link; hidden below 900px |
+| hero, centred in the space after the Register buttons | **128px** | added 3 Aug 2026; `margin-left:auto` AND `margin-right:auto` — auto on BOTH sides is what makes it halfway rather than hard right, which Jay rejected. `max-width:100%` because at 128px it is ~510px wide, wider than a phone. "In partnership with" above it, divider to its left |
 | `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
+
+⚠️ **There WAS a fourth — `<section id="partner">`, a 54px band between the hero
+and the stat strip — and it was removed on 3 Aug 2026**, the same day the hero
+lockup went to 128px. Jay: *"lets remove the HSBC section between the hero and
+the stat numbers area, and lets make the HSBC in the hero section double in
+size."* The two said the same thing a few hundred pixels apart.
+
+**The band's own argument is still a good one and somebody will make it again:**
+HSBC deserved "the first slot after the fold, with nothing else competing for
+the eye". The 128px hero lockup is the answer to that now, and **the two must
+not both exist** — that was the whole complaint. A tombstone comment sits where
+the band was, `test-sponsors.js` asserts the section is gone, that no 54px
+lockup survives, that "In partnership with" appears exactly ONCE, and that the
+tombstone itself is still there. Four faults, including one that simply puts
+the band back.
 
 ⚠️ **The hero placement cannot be moved to the other Register pair.** Those two
 buttons appear again in `<section id="register">` ("Sign up now"), whose
@@ -2149,7 +2163,7 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
   not a bug.
 - Footer email is `admin@adhjrt.com` (previously mangled Cloudflare
   obfuscation markup rendered as "[email protected]" — fixed).
-- Sponsors: **HSBC is the principal partner and is live in four places** — see
+- Sponsors: **HSBC is the principal partner and is live in three places** — see
   the HSBC section below. Everyone else is unconfirmed; the section says so.
 - Pool fixtures/results/standings show full team NAMES; knockout and the
   bracket stay CODES (team key). `teamLabel()` in scores-data.js maps

@@ -209,11 +209,16 @@ const SC_MARK = [
   '',
 ].join('\n');
 const HDR_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">';
+/* ⚠️ THE BAND WAS REMOVED ON 3 AUG 2026 and these two constants are kept for
+   the OPPOSITE reason they were written: no fault deletes the band any more —
+   one PUTS IT BACK, which is the regression that matters now. Carried verbatim
+   so that if the surrounding markup is edited the injection refuses rather than
+   quietly doing nothing. */
 const BAND_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">';
 /* The hero lockup, added 3 Aug 2026. Carried verbatim for the same reason as
    everything else in this section: a fault that deletes or moves it must refuse
    to inject if the markup is edited, rather than quietly doing nothing. */
-const HERO_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;display:block">';
+const HERO_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:128px;width:auto;max-width:100%;display:block">';
 const HERO_LABEL = '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>';
 const BAND_BLOCK = [
   '  <!-- ============ PRINCIPAL PARTNER BAND ============ -->',
@@ -3170,15 +3175,15 @@ const FAULTS = [
   {
     name: 'the band is switched to the black-wordmark logo (invisible on the dark page)',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px',
-      'src="assets/sponsor-hsbc.webp" alt="HSBC" style="height:54px'),
+    apply: () => patch(HOME, 'src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px',
+      'src="assets/sponsor-hsbc.webp" alt="HSBC" style="height:64px'),
     expect: ['uses the white lockup, not the black one'],
   },
   {
-    name: 'one of the four placements loses its logo',
+    name: 'the sponsors-section placement loses its logo',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, BAND_IMG, ''),
-    expect: ['four HSBC images on the page'],
+    apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;max-width:100%;display:block;margin:0 auto">', ''),
+    expect: ['three HSBC images on the page'],
   },
   {
     name: 'the header mark is unwrapped, so space-between spreads it into the bar',
@@ -3220,24 +3225,41 @@ const FAULTS = [
     expect: ['hides at 900px', 'does not repeat the hide'],
   },
   {
-    name: 'the partner band is moved BELOW the stat strip',
+    /* ⚠️ THE REGRESSION THAT MATTERS NOW: the band COMES BACK. Its own comment
+       argued HSBC deserved "the first slot after the fold, with nothing else
+       competing for the eye" — a good argument that somebody will make again,
+       not knowing the 128px hero lockup is the answer to it. Two of them a few
+       hundred pixels apart is exactly what Jay removed. */
+    name: 'the partner band is put back between the hero and the stat strip',
     suite: 'test-sponsors.js',
-    apply: () => {
-      patch(HOME, BAND_BLOCK, '');
-      patch(HOME, '  <!-- ============ ABOUT ============ -->', BAND_BLOCK + '  <!-- ============ ABOUT ============ -->');
-    },
-    expect: ['band sits ABOVE the stat strip'],
+    apply: () => patch(HOME, '  <!-- ============ STAT STRIP', BAND_BLOCK + '  <!-- ============ STAT STRIP'),
+    expect: ['the partner band is gone'],
   },
   {
-    /* ⚠️ Patches the BAND's label span exactly, not the bare text. Since the
-       hero lockup landed there are two "In partnership with" labels on this
-       page, and `patch` replaces every occurrence — a bare-text find would
-       damage both and stop saying anything about the band specifically. */
-    name: 'the band label is reworded away from what Jay chose',
+    /* Sneakier: the band comes back somewhere else on the page, so a check
+       that only asked about its POSITION would have passed. This one asserts
+       the section does not exist at all, anywhere. */
+    name: 'the band creeps back in lower down the page instead',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>',
-      '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">Our sponsors</span>'),
-    expect: ['In partnership with'],
+    apply: () => patch(HOME, '  <!-- ============ ABOUT ============ -->', BAND_BLOCK + '  <!-- ============ ABOUT ============ -->'),
+    expect: ['the partner band is gone'],
+  },
+  {
+    /* The band's 54px lockup on its own, with no <section> wrapper — the
+       "I'll just keep the logo" version of putting it back. */
+    name: 'the band\'s 54px lockup is re-added without its section',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '  <!-- ============ STAT STRIP',
+      '  <div>' + BAND_IMG + '</div>\n  <!-- ============ STAT STRIP'),
+    expect: ['no 54px lockup survives'],
+  },
+  {
+    /* The tombstone is what stops the band being re-added out of ignorance.
+       Deleting it looks like tidying a comment. */
+    name: 'the tombstone explaining the removal is tidied away',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '  <!-- ============ PRINCIPAL PARTNER BAND — REMOVED 3 Aug 2026 ============ -->\n', ''),
+    expect: ['left a tombstone'],
   },
 
   /* ---- the hero lockup, added 3 Aug 2026 (test-sponsors.js) -------------- */
@@ -3246,7 +3268,7 @@ const FAULTS = [
     name: 'the hero lockup is dropped',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, HERO_IMG, ''),
-    expect: ['four HSBC images on the page'],
+    expect: ['three HSBC images on the page'],
   },
   {
     /* The obvious "tidy-up": the two Register buttons appear twice on this
@@ -3275,8 +3297,8 @@ const FAULTS = [
   {
     name: 'the hero lockup is shrunk to the header mark\'s size',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('height:64px', 'height:19px')),
-    expect: ['semi-large size'],
+    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('height:128px', 'height:19px')),
+    expect: ['the size Jay asked for'],
   },
   {
     name: 'the hero lockup is switched to the black-wordmark logo',
@@ -3342,10 +3364,13 @@ const FAULTS = [
     expect: ['In partnership with'],
   },
   {
-    name: 'the band logo loses its narrow-screen bound',
+    /* ⚠️ At 128px the lockup is ~510px wide — wider than a phone. This rule
+       used to live on the band's logo; the band is gone, so it lives here, and
+       without it a narrow screen CROPS the mark instead of shrinking it. */
+    name: 'the hero lockup loses its narrow-screen bound',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'style="height:54px;width:auto;max-width:100%;display:block"',
-      'style="height:54px;width:auto;display:block"'),
+    apply: () => patch(HOME, 'style="height:128px;width:auto;max-width:100%;display:block"',
+      'style="height:128px;width:auto;display:block"'),
     expect: ['bounded on a narrow screen'],
   },
   {

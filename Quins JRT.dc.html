@@ -461,12 +461,14 @@
              that hexagon would sit red on red and disappear. Do not move this
              block down there without solving that first.
 
-             The label sits ABOVE the mark, matching the #partner band below,
-             so the whole thing stays narrow enough to share a line with two
-             buttons. The divider is what stops it reading as a third button. -->
+             The label sits ABOVE the mark. That shape was borrowed from the
+             #partner band that used to sit below the hero; the band was removed
+             on 3 Aug 2026 and this is now the only place on the page that says
+             "In partnership with". The divider is what stops it reading as a
+             third button. -->
         <div class="hero-partner" style="display:flex;flex-direction:column;gap:10px;margin-left:auto;margin-right:auto;padding-left:34px;border-left:1px solid rgba(255,255,255,0.16)">
           <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>
-          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;display:block">
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:128px;width:auto;max-width:100%;display:block">
         </div>
       </div>
       <!-- The same toast the #register section shows. These two buttons now open
@@ -491,20 +493,25 @@
   </div>
   </section>
 
-  <!-- ============ PRINCIPAL PARTNER BAND ============ -->
-  <!-- HSBC are the tournament's principal partner, so the mark gets the first
-       slot after the fold - its own band, with nothing else competing for the
-       eye. It sits BETWEEN the hero and the stat strip deliberately: inside the
-       hero it would fight the headline and the two Register buttons, and below
-       the stat strip it would be just another row on a long page.
-       Same #0C0C0E as the hero above it, so the two read as one block and the
-       stat strip's colour is still the first break on the page. -->
-  <section id="partner" style="background:#0C0C0E;color:#fff;padding:34px 32px 40px">
-    <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px" data-reveal>
-      <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>
-      <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">
-    </div>
-  </section>
+  <!-- ============ PRINCIPAL PARTNER BAND — REMOVED 3 Aug 2026 ============ -->
+  <!-- There WAS a <section id="partner"> here: a full-width band between the
+       hero and the stat strip carrying "In partnership with" above a 54px HSBC
+       lockup. Jay removed it the same day the hero lockup was doubled to 128px
+       ("lets remove the HSBC section between the hero and the stat numbers
+       area"), because the two said the same thing a few hundred pixels apart
+       and the hero one now says it much louder.
+
+       Recorded rather than silently deleted, because the ARGUMENT for the band
+       is still on file and someone will make it again: the mark got "the first
+       slot after the fold, with nothing else competing for the eye". The hero
+       placement is the answer to that now. If it ever comes back, note it was
+       #0C0C0E to match the hero above it so the stat strip stayed the first
+       colour break on the page, and its logo carried max-width:100% for narrow
+       screens — the hero one does not need that because its row wraps.
+
+       Nothing linked to #partner; the nav's Sponsors link goes to #sponsors.
+       test-sponsors.js asserts the band is GONE and that the placement count
+       is three, so it cannot creep back unnoticed. -->
 
   <!-- ============ STAT STRIP (red->green signature) ============ -->
   <section id="stats" data-count style="position:relative;background:linear-gradient(90deg,#E11B22,#E11B22 40%,#17A34A);overflow:hidden">

@@ -1,9 +1,16 @@
 /* tests/test-sponsors.js
    ------------------------------------------------------------------------
-   HSBC — the tournament's one confirmed partner — and the FOUR places the
+   HSBC — the tournament's one confirmed partner — and the THREE places the
    mark appears on the homepage: the sticky header (19px), the hero lockup
-   beside the Register buttons (64px, added 3 Aug 2026), the #partner band
-   under the hero (54px), and the sponsors section (64px).
+   beside the Register buttons (128px, added 3 Aug 2026), and the sponsors
+   section (64px).
+
+   ⚠️ IT WAS FOUR FOR ABOUT AN HOUR. A `<section id="partner">` band sat
+   between the hero and the stat strip carrying a 54px lockup; Jay removed it
+   on 3 Aug 2026 in the same breath as doubling the hero one to 128px, because
+   the two said the same thing a few hundred pixels apart. The band's ABSENCE
+   is asserted below — it is not enough for it to be gone, it has to stay
+   gone, and the argument that put it there is on file and will be made again.
 
    TWO THINGS HERE ARE NOT COSMETIC, AND THEY ARE WHY THIS FILE EXISTS.
 
@@ -147,11 +154,13 @@ section('Every placement uses the white lockup');
    Register buttons ("the gap area in the hero"). The count is written out on
    purpose: it is what makes a placement appearing or vanishing UNNOTICED
    impossible, and it is why this check had to be changed deliberately in the
-   same commit rather than quietly widened to `>= 3`. The four are the sticky
-   header (19px), the hero lockup (64px), the #partner band (54px) and the
-   sponsors section (64px). */
+   same commit rather than quietly widened to `>= 3`. It has moved twice in one
+   day — 3 up to 4 when the hero lockup arrived, and back down to 3 when Jay
+   removed the band. Both times by hand, which is the point. The three are the
+   sticky header (19px), the hero lockup (128px) and the sponsors section
+   (64px). */
 const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
-eq('four HSBC images on the page', imgTags.length, 4);
+eq('three HSBC images on the page', imgTags.length, 3);
 imgTags.forEach((tag, i) => {
   check(`HSBC image ${i + 1} uses the white lockup, not the black one`, tag.includes(WHITE));
   /* Every one of these sits on #0C0C0E. If a light-background placement is
@@ -175,13 +184,22 @@ imgTags.forEach((tag, i) => {
     'anchored on the button it was asked to sit beside');
   check('…and carries the "In partnership with" label', /In partnership with/.test(block));
   check('…and uses the white lockup', block.includes(WHITE));
-  /* 64px — Jay asked for it bigger than the first 46px attempt. The range is
-     deliberately not exact: what matters is that it is unmistakably larger
-     than the header's 19px and in the band's league, not the specific number.
-     A shrink back to header size is the regression this catches. */
+  /* 128px. It went 46 → 64 → 128 across three of Jay's messages, the last one
+     being "make the HSBC in the hero section double in size" — sent together
+     with the removal of the band, which is what makes the size defensible:
+     this is now the ONLY prominent placement on the page, not one of two.
+     The bound is a range rather than an exact number because the point is that
+     it is unmistakably a feature rather than a footnote; a shrink back toward
+     header size is the regression this catches. */
   const heroH = (block.match(/height:(\d+)px/) || [])[1];
-  check('…at a semi-large size, not the header\'s 19px', Number(heroH) >= 46 && Number(heroH) <= 80,
+  check('…at the size Jay asked for, not the header\'s 19px', Number(heroH) >= 100 && Number(heroH) <= 160,
     `hero lockup is ${heroH}px`);
+
+  /* ⚠️ At 128px the lockup is ~510px wide — wider than a phone. Without
+     max-width:100% a narrow screen CROPS it rather than shrinking it. The band
+     that used to carry this rule is gone, so the rule has to live here now. */
+  check('…and bounded on a narrow screen, or a phone crops it',
+    /max-width:100%/.test(block));
 
   /* ⚠️ IT IS CENTRED IN THE SPACE LEFT OVER, NOT PUSHED TO THE FAR RIGHT.
      Jay asked for it "more to the right" and then, once it was hard against
@@ -334,25 +352,36 @@ check('the 760px block does not repeat the hide', !mq760.includes('.hdr-partner'
    4. The partner band
    ========================================================================= */
 
-section('The partner band under the hero');
+section('The partner band under the hero is GONE and stays gone');
 
-const bandAt = PAGE.indexOf('<section id="partner"');
-const statsAt = PAGE.indexOf('<section id="stats"');
-const heroAt = PAGE.indexOf('id="top"', PAGE.indexOf('<section'));
+/* ⚠️ THIS IS AN ABSENCE CHECK, AND ABSENCE CHECKS ARE THE EASY ONES TO GET
+   WRONG. It reads the page with comments STRIPPED, because the tombstone left
+   in the markup explains the band at length and mentions `id="partner"` — a
+   comment about a band is not a band. That is the same house rule the wordmark
+   checks hit an hour earlier.
 
-check('the partner band exists', bandAt >= 0);
+   Why assert it at all rather than just deleting it: the band's own comment
+   argued that HSBC deserved "the first slot after the fold, with nothing else
+   competing for the eye", and that argument is still a good one in the
+   abstract. Somebody will make it again. The answer now is the 128px hero
+   lockup, and the two must not both exist — that was Jay's whole complaint. */
+const NO_COMMENTS = stripComments(PAGE);
+const bandAt = NO_COMMENTS.indexOf('<section id="partner"');
+const statsAt = NO_COMMENTS.indexOf('<section id="stats"');
+
+check('the partner band is gone', bandAt < 0);
 check('the stat strip is still there', statsAt >= 0);
-/* ORDER IS THE DESIGN. Above the stat strip the band is the first thing after
-   the fold and reads as the tournament's partner; below it, it is one more row
-   on a long page. */
-check('the band sits ABOVE the stat strip', bandAt >= 0 && statsAt >= 0 && bandAt < statsAt);
-check('the band sits below the hero', heroAt >= 0 && bandAt > heroAt);
-
-const bandInner = bandAt >= 0 ? stripComments(innerOf(PAGE, bandAt)) : '';
-check('the band says "In partnership with"', /In partnership with/i.test(bandInner));
-check('the band shows the white lockup', bandInner.includes(WHITE));
-/* max-width:100% or a narrow phone crops the logo rather than shrinking it. */
-check('the band logo is bounded on a narrow screen', /max-width:100%/.test(bandInner));
+/* The 54px lockup was the band's, and nothing else on the page uses that size.
+   If it reappears, the band came with it. */
+check('no 54px lockup survives anywhere on the page', !/sponsor-hsbc-white\.webp[^>]*height:54px/.test(NO_COMMENTS));
+/* One "In partnership with" on the page now, not two. The band had the other,
+   and two of them a few hundred pixels apart is what Jay objected to. */
+check('"In partnership with" appears exactly once',
+  (NO_COMMENTS.match(/In partnership with/g) || []).length === 1);
+/* The tombstone is not decoration: it carries why the band existed, so the
+   next person meets the reasoning before re-adding it. */
+check('the removal left a tombstone explaining what was there and why it went',
+  /PRINCIPAL PARTNER BAND — REMOVED/.test(PAGE));
 
 /* =========================================================================
    5. The sponsors section

@@ -32,7 +32,43 @@ identical wherever it appears, so drift shows up in a diff.
    after deploying. A green suite is not a working site.
 
 (The longer version — how to talk to Jay, diagnosis habits, docs discipline —
-is in `claude-rules/rules.md`. Everything below this line is ADH JRT truth.)
+is in `claude-rules/rules.md`, which is also pasted into each Claude project's
+Instructions box. That text is deliberately project-NEUTRAL, so everything
+specific to ADH JRT lives here instead. The rest of this section is that.)
+
+## What is specific to THIS project
+
+**A production deploy costs 15 credits**, whatever its size. `[skip ci]` on a
+docs-only commit costs nothing — verify by the deploy id not moving. ⚠️ Do NOT
+assume branch previews are free; that was claimed for months and is probably
+wrong. Confirm in Netlify before relying on it to save money.
+
+**The repo root IS the deployed site.** There is no build step — `netlify.toml`
+rewrites URLs straight onto the `.dc.html` source files. Anything committed to
+the root is published, including scratch scripts. This is why rule 1 above is
+rule 1.
+
+**The `claude/` docs folder is organised — keep it that way.** Specs in
+`claude/specs/`, build plans in `claude/plans/`, procedures in
+`claude/runbooks/`, superseded material in `claude/archive/`.
+`state-of-play.md`, `changelog.md`, `parked-requests.md` and
+`writing-to-github-from-claude.md` stay at the top level.
+
+**Read `claude/state-of-play.md` and `git fetch origin` before believing
+anything about what is merged or deployed.** That page has been wrong about
+merge status three times.
+
+**How to write to GitHub from a cloud session:**
+`claude/writing-to-github-from-claude.md`. The sandbox can read `origin` but
+never write to it.
+
+**Standing instructions, so they are not buried:**
+
+- ⚠️ **The dead GitHub MCP token is the INTENDED state — do not "fix" it.** It
+  was removed deliberately on 25 Jul 2026 because it parked a live write token
+  in a plain-text config file. `Bad credentials` is correct. Ignore those tools.
+- Do not raise the `club-manager-page` branch — parked at Jay's request.
+- Do not raise the registration-window decision; Candice's account is dropped.
 
 ---
 

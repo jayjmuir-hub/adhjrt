@@ -217,6 +217,35 @@ code, it doesn't — fix the variable in Netlify instead. All should read *"All
 scopes · Same value in all deploy contexts"*; several values across contexts is
 almost certainly a mistake.
 
+### ⚠️ CHANGING A VARIABLE NEEDS A DEPLOY. IT DOES NOT TAKE EFFECT ON ITS OWN.
+
+**Proven twice on 4 Aug 2026, in both directions, on `CLUB_FORM_KEY`:**
+
+1. The variable was CREATED at 06:29. The club form went on refusing every
+   submission until a deploy was triggered — the running function could not see
+   a variable that did not exist when it was deployed.
+2. The variable was later ROTATED. The OLD key went on being accepted — proven
+   by posting it and getting past the key gate — until another deploy. After
+   that deploy the old key returned 403, the same as a made-up one.
+
+⚠️ **This page and `state-of-play.md` said the opposite for a week** — "read per
+request, no redeploy needed". That claim came from the `ORGANIZER_INVITE_CODE`
+deletion on 3 Aug, where **nobody ever tested that signup had actually closed**.
+It was written down as verified and was not. It then cost an hour of diagnosis
+and one wasted deploy.
+
+**So: after changing ANY variable here, trigger a deploy and re-test the
+behaviour, not the config.** Netlify → Deploys → Trigger deploy → Deploy site.
+Reading the value back in the Netlify UI proves nothing about what the running
+function sees.
+
+**And test the behaviour with a payload that CANNOT write.** For the club form
+that means the right key with every age-group box empty: it passes the key gate
+and then trips the "declares nothing" rule, so a 400 means accepted and a 403
+means refused, and neither puts a row in the sheet. A verification whose failure
+mode writes production data is not a verification — it wrote a junk row into the
+Club Registrations sheet once before that lesson was learned.
+
 ---
 
 ## Age groups
@@ -1036,7 +1065,10 @@ link on 4 Aug. **The feature could never have worked as intended.**
 ⚠️ **This is not a hole, because the club form has a STRONGER gate and it has
 already been passed by the time the window check is skipped:** `CLUB_FORM_KEY`,
 at step 2b. Only somebody sent the link can reach that line, and deleting the
-variable shuts the form instantly with no deploy. **The team and player forms
+variable shuts the form — ⚠️ but NOT instantly: an env-var change needs a
+deploy before the running function sees it (see Environment variables above,
+proven twice on 4 Aug). Budget a deploy for switching it off, or test that it
+actually refused before believing it did. **The team and player forms
 are public and stay gated** — widening the exemption to them would quietly open
 registration for the whole tournament months early, and there is an injected
 fault for exactly that, plus one for inverting it and one for folding the key

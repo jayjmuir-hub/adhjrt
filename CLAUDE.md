@@ -224,13 +224,28 @@ dates ever change, this image carries them and must be re-rendered.
 ## HSBC — the principal partner (added 2 Aug 2026)
 
 HSBC are the tournament's **principal partner** and the only confirmed sponsor.
-The mark appears in three places on the homepage, all on `#0C0C0E`:
+The mark appears in **four** places on the homepage, all on `#0C0C0E`:
 
 | Where | Size | Notes |
 |---|---|---|
 | sticky header, beside the crest | 19px | not a link; hidden below 1000px |
+| hero, beside the two Register buttons | 46px | added 3 Aug 2026; "In partnership with" above it, divider to its left |
 | `<section id="partner">`, between the hero and the stat strip | 54px | "In partnership with" above it |
 | `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
+
+⚠️ **The hero placement cannot be moved to the other Register pair.** Those two
+buttons appear again in `<section id="register">` ("Sign up now"), whose
+background is `{{ accent }}` — **our** red, `#E11B22` by default. The reverse
+lockup's hexagon is HSBC red, so it would sit red on red and disappear, with no
+error reported anywhere. The hero's `#0C0C0E` is why it works there. There is a
+fault for exactly this move.
+
+The hero row was two buttons and carried no `flex-wrap`. A third item overflows
+a phone without one, so the rule was added in the same commit; below 800px the
+row wraps and `.hero-partner` drops its divider and indent (`!important` — the
+block is styled inline, same trap as `.hdr-partner`). Measured in headless
+Chromium with the real faces at 1440 / 1180 / 390px: one line down to 1180,
+own line at 390, nothing overflowing.
 
 **Two assets ship and only one is used.** `assets/sponsor-hsbc-white.webp` is
 the reverse lockup (white wordmark, red hexagon, transparent) and is what every
@@ -2108,7 +2123,7 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
   not a bug.
 - Footer email is `admin@adhjrt.com` (previously mangled Cloudflare
   obfuscation markup rendered as "[email protected]" — fixed).
-- Sponsors: **HSBC is the principal partner and is live in three places** — see
+- Sponsors: **HSBC is the principal partner and is live in four places** — see
   the HSBC section below. Everyone else is unconfirmed; the section says so.
 - Pool fixtures/results/standings show full team NAMES; knockout and the
   bracket stay CODES (team key). `teamLabel()` in scores-data.js maps

@@ -1,8 +1,9 @@
 /* tests/test-sponsors.js
    ------------------------------------------------------------------------
-   HSBC — the tournament's one confirmed partner — and the three places the
-   mark appears on the homepage: the sticky header, the band under the hero,
-   and the sponsors section.
+   HSBC — the tournament's one confirmed partner — and the FOUR places the
+   mark appears on the homepage: the sticky header (19px), the hero lockup
+   beside the Register buttons (46px, added 3 Aug 2026), the #partner band
+   under the hero (54px), and the sponsors section (64px).
 
    TWO THINGS HERE ARE NOT COSMETIC, AND THEY ARE WHY THIS FILE EXISTS.
 
@@ -20,8 +21,10 @@
    2. THE MARK MUST BE THE WHITE (REVERSE) LOCKUP ON EVERY DARK PLACEMENT.
       Two assets ship: `assets/sponsor-hsbc-white.webp` (white wordmark, used)
       and `assets/sponsor-hsbc.webp` (black wordmark, kept only as the master
-      for any future light-background use). All three placements are on
-      #0C0C0E. Swap the black one in and the wordmark disappears into the
+      for any future light-background use). All four placements are on
+      #0C0C0E — and the hero one is pinned there on purpose: the "Sign up now"
+      section's background is OUR red, where the lockup's red hexagon would
+      vanish. Swap the black one in and the wordmark disappears into the
       page — a failure that looks like a broken image but reports no error
       anywhere, exactly the shape of the crest reference that once killed
       every social share preview (see CLAUDE.md, Brand).
@@ -140,8 +143,15 @@ if (hasAssets) {
 
 section('Every placement uses the white lockup');
 
+/* ⚠️ FOUR since 3 Aug 2026, not three — Jay asked for the mark beside the hero
+   Register buttons ("the gap area in the hero"). The count is written out on
+   purpose: it is what makes a placement appearing or vanishing UNNOTICED
+   impossible, and it is why this check had to be changed deliberately in the
+   same commit rather than quietly widened to `>= 3`. The four are the sticky
+   header (19px), the hero lockup (46px), the #partner band (54px) and the
+   sponsors section (64px). */
 const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
-eq('three HSBC images on the page', imgTags.length, 3);
+eq('four HSBC images on the page', imgTags.length, 4);
 imgTags.forEach((tag, i) => {
   check(`HSBC image ${i + 1} uses the white lockup, not the black one`, tag.includes(WHITE));
   /* Every one of these sits on #0C0C0E. If a light-background placement is
@@ -149,6 +159,52 @@ imgTags.forEach((tag, i) => {
      not simply be deleted. */
   check(`HSBC image ${i + 1} has an alt attribute`, /alt="HSBC"/.test(tag));
 });
+
+/* ⚠️ THE HERO PLACEMENT, AND THE REASON IT IS ALLOWED TO BE THERE.
+   The hero sits on #0C0C0E, and the reverse lockup's hexagon is HSBC red. The
+   "Sign up now" section's background is OUR red (#E11B22, the accentColor
+   default), where that hexagon would sit red on red and disappear. So the
+   placement is pinned to the hero's button row specifically — a later "move it
+   next to the other Register buttons" would be the mistake this asserts
+   against. */
+{
+  const heroRow = PAGE.split('<!-- HSBC beside the call to action')[1] || '';
+  const block = heroRow.split('</div>')[0] || '';
+  check('the hero lockup sits inside the hero Register button row',
+    /onClickRegisterPlayer/.test(PAGE.split('<!-- HSBC beside the call to action')[0].slice(-2000)),
+    'anchored on the button it was asked to sit beside');
+  check('…and carries the "In partnership with" label', /In partnership with/.test(block));
+  check('…and uses the white lockup', block.includes(WHITE));
+  check('…at a semi-large size, not the header\'s 19px', /height:4\d px|height:4\dpx/.test(block));
+
+  /* ⚠️ The row it joined had only two children and no wrap rule. A third item
+     overflows a phone without one, and an overflowing hero is the first thing
+     anybody sees. */
+  const rowStart = PAGE.indexOf('<div style="display:flex;gap:16px;margin-top:38px');
+  check('the hero button row wraps, now that a third item shares it',
+    rowStart >= 0 && PAGE.slice(rowStart, rowStart + 260).includes('flex-wrap:wrap'));
+
+  /* ⚠️ THE DIVIDER ONLY MAKES SENSE ON ONE LINE. Rendered at 390px the row
+     wraps and the lockup lands on its own line, where a 1px vertical bar has
+     nothing on the other side of it and the 36px of indent leaves the mark out
+     of line with the buttons above. The rule that undoes it needs !important
+     because the block is styled INLINE — an ordinary rule loses silently, which
+     is the same trap already documented for .hdr-partner. */
+  check('the hero lockup block is addressable by class, not just inline style',
+    /class="hero-partner"/.test(PAGE));
+  const dividerRule = (PAGE.match(/\.hero-partner\{[^}]*\}/) || [''])[0];
+  check('…and its divider is dropped once the row wraps', /border-left:0/.test(dividerRule));
+  check('…along with the indent that goes with it',
+    /padding-left:0/.test(dividerRule) && /margin-left:0/.test(dividerRule));
+  check('…and the rule carries !important, or the inline style silently wins',
+    (dividerRule.match(/!important/g) || []).length === 3);
+
+  /* The red section must NOT grow one. */
+  const regSection = PAGE.split('<section id="register"')[1] || '';
+  const regBody = regSection.split('</section>')[0] || '';
+  check('the RED Sign up now section has no HSBC lockup — the hexagon would vanish',
+    !/sponsor-hsbc/.test(regBody));
+}
 
 /* The master is shipped but must not be REFERENCED, or the wordmark vanishes
    into the page wherever it is used. `\bassets/sponsor-hsbc.webp` would also

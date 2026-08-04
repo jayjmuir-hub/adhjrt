@@ -181,6 +181,16 @@
      inline with display:flex and an ordinary rule would silently lose. */
   @media(max-width:800px){ .hdr-partner{display:none!important} }
 
+  /* The hero lockup keeps its divider only while it SHARES a line with the two
+     Register buttons. Once the row wraps (measured: it drops to its own line at
+     phone widths) the divider is a vertical bar with nothing on the other side
+     of it, and the indent leaves the mark out of line with the buttons above.
+     !important for the same reason as the rule above - the block is styled
+     inline and an ordinary rule silently loses. */
+  @media(max-width:800px){
+    .hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}
+  }
+
   @media(max-width:760px){
     /* Header stays ONE line. Wrapping the links made everything reachable but
        took three lines, and the header is sticky - so a quarter of the screen
@@ -420,7 +430,10 @@
       <p style="font-size:21px;max-width:600px;margin-top:26px;color:#C9CDD6;font-weight:500;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .16s both">
         The UAE's friendliest festival of junior rugby. Clubs from across the Gulf, thousands of young players, two unforgettable days of sport, sun and team spirit at Zayed Sports City.
       </p>
-      <div style="display:flex;gap:16px;margin-top:38px;align-items:center;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
+      <!-- ⚠️ flex-wrap added with the partner lockup (Aug 2026). The row was two
+           buttons and never needed it; a third item makes it overflow a phone
+           without it, and an overflowing hero is the first thing anybody sees. -->
+      <div style="display:flex;gap:16px;margin-top:38px;align-items:center;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
         <div style="position:relative;display:inline-block">
           <button onClick="{{ onClickRegisterTeam }}" class="reg-btn" style="--glow:#E11B22"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register a team</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
@@ -428,6 +441,21 @@
         <div style="position:relative;display:inline-block">
           <button onClick="{{ onClickRegisterPlayer }}" class="reg-btn" style="--glow:#17A34A"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register player</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
+        </div>
+        <!-- HSBC beside the call to action (Jay, 3 Aug 2026 — "the gap area in
+             the hero"). Fourth placement of the mark on this page, and the
+             reason it works HERE and not beside the lower Register pair: this
+             ground is #0C0C0E, and the reverse lockup's hexagon is HSBC red.
+             On the "Sign up now" section — background #E11B22, our own red —
+             that hexagon would sit red on red and disappear. Do not move this
+             block down there without solving that first.
+
+             The label sits ABOVE the mark, matching the #partner band below,
+             so the whole thing stays narrow enough to share a line with two
+             buttons. The divider is what stops it reading as a third button. -->
+        <div class="hero-partner" style="display:flex;flex-direction:column;gap:9px;margin-left:10px;padding-left:26px;border-left:1px solid rgba(255,255,255,0.16)">
+          <span style="font-size:10px;letter-spacing:2.2px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:46px;width:auto;display:block">
         </div>
       </div>
       <!-- The same toast the #register section shows. These two buttons now open

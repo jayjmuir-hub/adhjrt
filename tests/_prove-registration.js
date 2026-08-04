@@ -210,6 +210,11 @@ const SC_MARK = [
 ].join('\n');
 const HDR_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">';
 const BAND_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:54px;width:auto;max-width:100%;display:block">';
+/* The hero lockup, added 3 Aug 2026. Carried verbatim for the same reason as
+   everything else in this section: a fault that deletes or moves it must refuse
+   to inject if the markup is edited, rather than quietly doing nothing. */
+const HERO_IMG = '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:46px;width:auto;display:block">';
+const HERO_LABEL = '<span style="font-size:10px;letter-spacing:2.2px;color:#3bd070;font-weight:800;text-transform:uppercase;white-space:nowrap">In partnership with</span>';
 const BAND_BLOCK = [
   '  <!-- ============ PRINCIPAL PARTNER BAND ============ -->',
   "  <!-- HSBC are the tournament's principal partner, so the mark gets the first",
@@ -3170,10 +3175,10 @@ const FAULTS = [
     expect: ['uses the white lockup, not the black one'],
   },
   {
-    name: 'one of the three placements loses its logo',
+    name: 'one of the four placements loses its logo',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, BAND_IMG, ''),
-    expect: ['three HSBC images on the page'],
+    expect: ['four HSBC images on the page'],
   },
   {
     name: 'the header mark is unwrapped, so space-between spreads it into the bar',
@@ -3224,9 +3229,88 @@ const FAULTS = [
     expect: ['band sits ABOVE the stat strip'],
   },
   {
+    /* ⚠️ Patches the BAND's label span exactly, not the bare text. Since the
+       hero lockup landed there are two "In partnership with" labels on this
+       page, and `patch` replaces every occurrence — a bare-text find would
+       damage both and stop saying anything about the band specifically. */
     name: 'the band label is reworded away from what Jay chose',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '>In partnership with<', '>Our sponsors<'),
+    apply: () => patch(HOME, '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>',
+      '<span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">Our sponsors</span>'),
+    expect: ['In partnership with'],
+  },
+
+  /* ---- the hero lockup, added 3 Aug 2026 (test-sponsors.js) -------------- */
+
+  {
+    name: 'the hero lockup is dropped',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, HERO_IMG, ''),
+    expect: ['four HSBC images on the page'],
+  },
+  {
+    /* The obvious "tidy-up": the two Register buttons appear twice on this
+       page, so a later editor moves the mark down beside the other pair. That
+       section's background is OUR red and the lockup's hexagon is HSBC red —
+       it would vanish, and nothing would report an error. */
+    name: 'the lockup is moved to the RED Sign up now section, where the hexagon vanishes',
+    suite: 'test-sponsors.js',
+    apply: () => {
+      patch(HOME, HERO_IMG, '');
+      patch(HOME, '      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.22)',
+        '      ' + HERO_IMG + '\n      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.22)');
+    },
+    expect: ['RED Sign up now section has no HSBC lockup'],
+  },
+  {
+    /* The row was two buttons and never needed a wrap rule. With a third item
+       on it, dropping the rule overflows a phone — and an overflowing hero is
+       the first thing anybody sees. */
+    name: 'the hero button row loses its wrap rule',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'margin-top:38px;align-items:center;flex-wrap:wrap;animation',
+      'margin-top:38px;align-items:center;animation'),
+    expect: ['hero button row wraps'],
+  },
+  {
+    name: 'the hero lockup is shrunk to the header mark\'s size',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('height:46px', 'height:19px')),
+    expect: ['semi-large size'],
+  },
+  {
+    name: 'the hero lockup is switched to the black-wordmark logo',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, HERO_IMG, HERO_IMG.replace('sponsor-hsbc-white.webp', 'sponsor-hsbc.webp')),
+    expect: ['uses the white lockup'],
+  },
+  {
+    name: 'the hero lockup loses the class that its wrap rule targets',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<div class="hero-partner" style="display:flex;flex-direction:column;gap:9px',
+      '<div style="display:flex;flex-direction:column;gap:9px'),
+    expect: ['addressable by class'],
+  },
+  {
+    /* The tempting tidy-up, and the same trap as .hdr-partner: the block is
+       styled inline, so a rule without !important loses and does nothing. */
+    name: 'the wrapped-line divider rule loses its !important',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '.hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}',
+      '.hero-partner{border-left:0;padding-left:0;margin-left:0}'),
+    expect: ['carries !important'],
+  },
+  {
+    name: 'the divider is dropped on a wrapped line but the indent is left behind',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '.hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}',
+      '.hero-partner{border-left:0!important}'),
+    expect: ['along with the indent'],
+  },
+  {
+    name: 'the hero label is reworded away from what Jay chose',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, HERO_LABEL, HERO_LABEL.replace('In partnership with', 'Our sponsors')),
     expect: ['In partnership with'],
   },
   {

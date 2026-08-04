@@ -245,7 +245,7 @@ The mark appears in **four** places on the homepage, all on `#0C0C0E`:
 | Where | Size | Notes |
 |---|---|---|
 | sticky header, beside the crest | 19px | not a link; hidden below 1000px |
-| hero, right-hand end of the Register button row | 64px | added 3 Aug 2026; `margin-left:auto`, "In partnership with" above it, divider to its left |
+| hero, centred in the space after the Register buttons | 64px | added 3 Aug 2026; `margin-left:auto` AND `margin-right:auto` — auto on BOTH sides is what makes it halfway rather than hard right, which Jay rejected. "In partnership with" above it, divider to its left |
 | `<section id="partner">`, between the hero and the stat strip | 54px | "In partnership with" above it |
 | `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
 

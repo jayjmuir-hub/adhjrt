@@ -2,7 +2,7 @@
    ------------------------------------------------------------------------
    HSBC — the tournament's one confirmed partner — and the FOUR places the
    mark appears on the homepage: the sticky header (19px), the hero lockup
-   beside the Register buttons (46px, added 3 Aug 2026), the #partner band
+   beside the Register buttons (64px, added 3 Aug 2026), the #partner band
    under the hero (54px), and the sponsors section (64px).
 
    TWO THINGS HERE ARE NOT COSMETIC, AND THEY ARE WHY THIS FILE EXISTS.
@@ -148,7 +148,7 @@ section('Every placement uses the white lockup');
    purpose: it is what makes a placement appearing or vanishing UNNOTICED
    impossible, and it is why this check had to be changed deliberately in the
    same commit rather than quietly widened to `>= 3`. The four are the sticky
-   header (19px), the hero lockup (46px), the #partner band (54px) and the
+   header (19px), the hero lockup (64px), the #partner band (54px) and the
    sponsors section (64px). */
 const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
 eq('four HSBC images on the page', imgTags.length, 4);
@@ -183,10 +183,18 @@ imgTags.forEach((tag, i) => {
   check('…at a semi-large size, not the header\'s 19px', Number(heroH) >= 46 && Number(heroH) <= 80,
     `hero lockup is ${heroH}px`);
 
-  /* ⚠️ It sits at the RIGHT-HAND END of the row, which is what Jay asked for
-     ("more to the right"): `margin-left:auto` on a flex child eats all the
-     free space. A fixed margin would drift with the button labels. */
-  check('…pushed to the right-hand end of the row', /margin-left:auto/.test(block));
+  /* ⚠️ IT IS CENTRED IN THE SPACE LEFT OVER, NOT PUSHED TO THE FAR RIGHT.
+     Jay asked for it "more to the right" and then, once it was hard against
+     the edge, for "about half way between register player and the side of the
+     page". `margin-left:auto` ALONE pins it right; auto on BOTH sides splits
+     the free space evenly, which is that halfway point — and it stays halfway
+     at any width, where a fixed margin would drift with the button labels and
+     stop being halfway the moment a label changed.
+
+     Both are asserted. Losing the right auto is a silent regression back to
+     the version Jay rejected, and it is one character. */
+  check('…horizontally centred in the space left after the buttons',
+    /margin-left:auto/.test(block) && /margin-right:auto/.test(block));
 
   /* ⚠️ The row it joined had only two children and no wrap rule. A third item
      overflows a phone without one, and an overflowing hero is the first thing

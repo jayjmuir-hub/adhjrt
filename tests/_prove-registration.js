@@ -3308,13 +3308,22 @@ const FAULTS = [
     expect: ['along with the indent'],
   },
   {
-    /* Jay asked for it "more to the right". A fixed margin looks equivalent in
-       a diff and is not: it drifts with the button labels and stops being the
-       right-hand end of the row. */
-    name: 'the right-hand push is turned back into a fixed margin',
+    /* A fixed margin looks equivalent in a diff and is not: it drifts with the
+       button labels and stops being the halfway point Jay asked for. */
+    name: 'the centring is turned back into a fixed margin',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'gap:10px;margin-left:auto;padding-left:34px', 'gap:10px;margin-left:40px;padding-left:34px'),
-    expect: ['pushed to the right-hand end'],
+    apply: () => patch(HOME, 'gap:10px;margin-left:auto;margin-right:auto;padding-left:34px',
+      'gap:10px;margin-left:40px;padding-left:34px'),
+    expect: ['horizontally centred in the space left'],
+  },
+  {
+    /* ONE CHARACTER, and it silently reverts to the version Jay rejected:
+       margin-left:auto alone pins the block hard against the right edge. */
+    name: 'the right-hand auto margin is dropped, pinning it to the far right again',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'margin-left:auto;margin-right:auto;padding-left:34px',
+      'margin-left:auto;padding-left:34px'),
+    expect: ['horizontally centred in the space left'],
   },
   {
     /* The measured value. 800 was the OLD number and it was already wrong —

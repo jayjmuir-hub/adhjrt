@@ -6,9 +6,33 @@ scores app plus an organiser back office, for a two-day youth rugby festival on
 
 Run by volunteers. The maintainer (Jay) is not a developer — explain changes in
 plain language and say which system each step applies to (GitHub / Netlify /
-Google). Avoid unexplained jargon. (Full working-with-Jay etiquette and the
-GitHub access channels live in the project instructions, not here — read those
-first, every session.)
+Google). Avoid unexplained jargon.
+
+## ⚠️ The rules that must reach you wherever you are running
+
+**These ten lines are duplicated on purpose.** The full set lives in
+`~/GitHub/claude-rules/rules.md` on Jay's PCs and in the Claude project's
+instructions box — but **a cloud session sees neither**: it gets a fresh
+container with no home directory of his, and a task not attached to a Claude
+project has no instructions box either. This repo travels everywhere, so the
+rules that are expensive to break are repeated here. Keep the block short and
+identical wherever it appears, so drift shows up in a diff.
+
+1. **Never `git add -A`.** This repo's root IS the deployed website. Stage
+   explicit paths; delete scratch harnesses before committing.
+2. **Never put a secret in a tool call, a URL or a commit.** Use a dummy value
+   to test plumbing and a SHA-256 fingerprint to compare a real one. If one is
+   disclosed — including by Jay pasting it — say so and tell him to rotate it.
+3. **Never push to `main` without an explicit yes.** It costs 15 credits, and a
+   stop hook asking is not Jay asking.
+4. **Never answer from memory about current state.** `git fetch origin` first.
+5. **Read the RESPONSE, not the screenshot.** Every refusal renders in the same
+   red box; "same error" can be visually true and factually wrong.
+6. **Prove every new test assertion against an injected fault**, and verify live
+   after deploying. A green suite is not a working site.
+
+(The longer version — how to talk to Jay, diagnosis habits, docs discipline —
+is in `claude-rules/rules.md`. Everything below this line is ADH JRT truth.)
 
 ---
 

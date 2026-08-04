@@ -1439,16 +1439,71 @@ const FAULTS = [
     name: 'the registration window stops being checked at all',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
-      '  if (!open) {', '  if (false) {'),
+      '    if (!open) {', '    if (false) {'),
     expect: ['a submission outside the window is refused'],
   },
   {
     name: 'an unreadable registration window FAILS OPEN, taking late entries',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
-      "    log(`registration window unreadable, refusing - ${err && err.message}`);\n    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };",
-      '    open = true;'),
+      "      log(`registration window unreadable, refusing - ${err && err.message}`);\n      return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };",
+      '      open = true;'),
     expect: ['an unreadable window refuses rather than guessing'],
+  },
+  /* ---- the club form's window exemption (4 Aug 2026) -------------------- */
+
+  {
+    /* The exemption removed: the silent link goes back to being unusable until
+       the day it stops being useful. This is the bug that shipped on 1 Aug and
+       survived a removal and a restoration before anyone tried the link. */
+    name: 'the club declaration is dragged back under the registration window',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form !== 'club-registration') {", '  if (true) {'),
+    expect: ['a club declaration is accepted with a closed window'],
+  },
+  {
+    /* ⚠️ THE ONE THAT MATTERS. "Why is one form special-cased?" is a reasonable
+       question and this is the wrong answer to it: exempting all three opens
+       registration for the entire tournament months early, silently, and every
+       other check still passes. */
+    name: 'the exemption is widened to every form, opening registration months early',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form !== 'club-registration') {", '  if (false) {'),
+    expect: ['a TEAM registration is still refused with a closed window'],
+  },
+  {
+    /* Inverted rather than removed — the club form gated and the public ones
+       exempt. Reads as a plausible typo and is the worst of both. */
+    name: 'the exemption is inverted, gating the club form and freeing the public ones',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form !== 'club-registration') {", "  if (form === 'club-registration') {"),
+    expect: ['a club declaration is accepted with a closed window'],
+  },
+  {
+    /* The exemption made to swallow the key check too — "the club form does not
+       need the gates" taken one step too far. That would make the unlisted form
+       fully public. The key check sits EARLIER, so this fault moves it inside
+       the exempted branch to prove the two are independent. */
+    name: 'the club key check is folded into the window exemption, making the form public',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form === 'club-registration' && !clubKeyOk(b.clubKey)) {",
+      "  if (false && form === 'club-registration' && !clubKeyOk(b.clubKey)) {"),
+    expect: ['a club declaration with no key is still refused'],
+  },
+  {
+    /* The window READ left in place on a path that has already decided it does
+       not care — a blob round trip bought for nothing, on the one endpoint
+       where latency is a public-facing cost. */
+    name: 'the window is still read for a club declaration, then ignored',
+    suite: 'test-intake.js',
+    apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
+      "  if (form !== 'club-registration') {\n    let open = false;\n    try {\n      open = !!d.registrationState(await d.loadRegistration(), now).open;",
+      "  {\n    let open = false;\n    try {\n      open = !!d.registrationState(await d.loadRegistration(), now).open;\n      if (form === 'club-registration') open = true;"),
+    expect: ['the window is not read at all for a club declaration'],
   },
   {
     name: 'the rate limit is checked but its answer is ignored',

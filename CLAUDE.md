@@ -904,6 +904,40 @@ describes the removal, not the current state.
 homepage modal: that stayed deleted, and a test asserts the club form has not
 crept back onto the public page.
 
+### ⚠️ THE CLUB FORM IS EXEMPT FROM THE REGISTRATION WINDOW (4 Aug 2026)
+
+**A declaration is not an entry.** It is *"we expect to bring three U12 teams"*,
+collected WEEKS BEFORE registration opens so pools, the draw and pitch
+allocation can be planned. Registration opens **8 October**. Gated behind the
+window, the silent link could not be used until the exact moment it stopped
+being useful — by October the teams themselves are registering and the planning
+numbers are moot.
+
+**It rode in by accident, not by decision.** The club form was deliberately
+routed through the same gateway with no adapter change, which was right for the
+rate limit, the honeypot, the length caps and the no-values-in-logs rule — and
+the window came along with them. Nobody asked. It shipped on 1 Aug, survived a
+removal and a restoration, and was found the first time Jay actually tried the
+link on 4 Aug. **The feature could never have worked as intended.**
+
+⚠️ **This is not a hole, because the club form has a STRONGER gate and it has
+already been passed by the time the window check is skipped:** `CLUB_FORM_KEY`,
+at step 2b. Only somebody sent the link can reach that line, and deleting the
+variable shuts the form instantly with no deploy. **The team and player forms
+are public and stay gated** — widening the exemption to them would quietly open
+registration for the whole tournament months early, and there is an injected
+fault for exactly that, plus one for inverting it and one for folding the key
+check into the exemption.
+
+**Declarations are NOT stopped when the window closes at the far end either** —
+Jay's explicit choice, 4 Aug. The key is the switch.
+
+`test-intake.js` asserts the exemption through **every** shut state (closed
+window, unreadable window, throwing `registrationState`), not just "closed" —
+the window has three ways of saying no and an exemption covering one of them
+would fail on the day it mattered. It also asserts the window is **not read at
+all** for a declaration.
+
 ### ⚠️ UNLISTED IS NOT PROTECTED — this is the whole design
 
 Four things keep the page out of sight, each asserted separately because they

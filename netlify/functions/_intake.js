@@ -730,17 +730,49 @@ async function handleSubmission(body, deps) {
 
         FAILS CLOSED, unlike the rate limiter. There, allowing costs nothing;
         here, allowing means taking registrations after the squads were supposed
-        to be fixed and the draw was built. */
-  let open = false;
-  try {
-    open = !!d.registrationState(await d.loadRegistration(), now).open;
-  } catch (err) {
-    log(`registration window unreadable, refusing - ${err && err.message}`);
-    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
-  }
-  if (!open) {
-    log('refused: registration is not open');
-    return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
+        to be fixed and the draw was built.
+
+        ⚠️ THE CLUB DECLARATION IS EXEMPT, AND THAT IS THE WHOLE POINT OF IT.
+        Added 4 Aug 2026, after the silent link was found to be unusable.
+
+        A club declaration is not an entry. It is "we expect to bring three U12
+        teams", collected WEEKS BEFORE registration opens so pools, the draw and
+        pitch allocation can be planned. Registration opens 8 October. Gated
+        behind the window, the declaration form could not be used until the
+        exact moment it stopped being useful — by October the teams themselves
+        are registering and the planning numbers are moot.
+
+        It rode in by accident, not by decision: the club form was deliberately
+        routed through this same gateway with no adapter change, which was right
+        for the rate limit, the honeypot, the length caps and the no-values-in-
+        logs rule — and the window came along with them. Nobody asked. Jay hit
+        it the first time he tried the link, and it had been sitting there since
+        1 Aug through a removal and a restoration.
+
+        ⚠️ THIS IS NOT A HOLE, because the club form has a STRONGER gate than
+        the window and it has already been passed by the time we get here:
+        CLUB_FORM_KEY, checked at step 2b. Only somebody Jay emailed the link to
+        can reach this line at all, and deleting that variable shuts the form
+        instantly with no deploy. The team and player forms are PUBLIC and stay
+        gated — widening this exemption to them would quietly open registration
+        for the entire tournament, months early, and there is an injected fault
+        for exactly that.
+
+        Deliberate, and Jay's explicit choice on 4 Aug: declarations are NOT
+        stopped when the window closes at the far end either. The key is the
+        switch. */
+  if (form !== 'club-registration') {
+    let open = false;
+    try {
+      open = !!d.registrationState(await d.loadRegistration(), now).open;
+    } catch (err) {
+      log(`registration window unreadable, refusing - ${err && err.message}`);
+      return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
+    }
+    if (!open) {
+      log('refused: registration is not open');
+      return { status: 403, body: { ok: false, error: 'Registration is not open at the moment. Please email admin@adhjrt.com.' } };
+    }
   }
 
   /* 5. THE TEAM CODE, teams only. A failed numbering read costs the tidy number,

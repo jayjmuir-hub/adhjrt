@@ -1895,6 +1895,70 @@ const goodClub = () => ({
 }
 
 {
+  /* ⚠️ THE CLUB DECLARATION IGNORES THE REGISTRATION WINDOW, AND MUST.
+     Added 4 Aug 2026 after the silent link was found to be unusable.
+
+     A declaration is not an entry — it is "we expect to bring three U12 teams",
+     collected WEEKS BEFORE registration opens so the draw can be planned.
+     Registration opens 8 October. Gated behind the window, the form could not
+     be used until the exact moment it stopped being useful. It rode in by
+     accident: the club form was routed through this same gateway with no
+     adapter change, which was right for the rate limit, the honeypot and the
+     length caps — and the window came with them. Nobody asked, and it sat there
+     from 1 Aug through a removal and a restoration until Jay tried the link.
+
+     Asserted through EVERY state of the window, not just "closed", because the
+     window has three ways of saying no and an exemption that only covered one
+     of them would fail on the day it mattered. */
+  const prev = process.env.CLUB_FORM_KEY;
+  process.env.CLUB_FORM_KEY = CLUB_KEY;
+
+  const shutStates = [
+    ['a closed window', { loadRegistration: async () => ({ mode: 'closed' }) }],
+    ['an unreadable window', { loadRegistration: async () => { throw new Error('blobs down'); } }],
+    ['a throwing registrationState', { registrationState: () => { throw new Error('boom'); } }],
+  ];
+  for (const [name, over] of shutStates) {
+    const { r, calls } = await H({ form: 'club-registration', clubKey: CLUB_KEY, data: goodClub() }, over);
+    eq(`a club declaration is accepted with ${name}`, r.status, 200);
+    eq(`…and really is written with ${name}`, calls.appended.length, 1);
+  }
+
+  /* ⚠️ THE OTHER HALF, AND THE ONE THAT MATTERS. Widening this exemption to the
+     public forms would open registration for the whole tournament months early
+     — the loudest possible failure, and the exact shape of a "why is this
+     special-cased?" tidy-up. Both public forms, both shut states. */
+  for (const [name, over] of shutStates.slice(0, 2)) {
+    const t = await H({ form: 'team-registration', data: goodTeam() }, over);
+    eq(`a TEAM registration is still refused with ${name}`, t.r.status, 403);
+    eq(`…and writes nothing with ${name}`, t.calls.appended.length, 0);
+    const pl = await H({ form: 'player-registration', data: goodPlayer() }, over);
+    eq(`a PLAYER registration is still refused with ${name}`, pl.r.status, 403);
+    eq(`…and writes nothing with ${name}`, pl.calls.appended.length, 0);
+  }
+
+  /* ⚠️ THE EXEMPTION IS NOT A WAY ROUND THE KEY. The window gate is skipped;
+     the key gate is not, and it sits EARLIER. A club submission with a closed
+     window and no key must still be refused — otherwise the exemption would
+     have turned the club form public. */
+  delete process.env.CLUB_FORM_KEY;
+  const noKeyShut = await H({ form: 'club-registration', data: goodClub() },
+    { loadRegistration: async () => ({ mode: 'closed' }) });
+  eq('a club declaration with no key is still refused, window or not', noKeyShut.r.status, 403);
+  eq('…and writes nothing', noKeyShut.calls.appended.length, 0);
+
+  /* And the window is not even READ for a club declaration — a read costs a
+     blob round trip on a path that has already decided it does not care. */
+  process.env.CLUB_FORM_KEY = CLUB_KEY;
+  let reads = 0;
+  await H({ form: 'club-registration', clubKey: CLUB_KEY, data: goodClub() },
+    { loadRegistration: async () => { reads += 1; return { mode: 'open' }; } });
+  eq('the window is not read at all for a club declaration', reads, 0);
+
+  if (prev === undefined) delete process.env.CLUB_FORM_KEY; else process.env.CLUB_FORM_KEY = prev;
+}
+
+{
   /* ⚠️ THE KEY MUST NEVER BECOME A SHEET COLUMN. It rides beside `data`, not
      inside it, so it cannot be written even by accident — the same guarantee
      `team-code` gets by being absent from the allow-list. Both halves are

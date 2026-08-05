@@ -293,9 +293,9 @@
    into a flat horizontal squash. Clipping lives on the wrapper div, which is
    safe. (Panels themselves may have overflow - they have no 3D children.) */
 /* The box the ring sits in.
-   ⚠️ It is TALLER than the panels on purpose — 40px of clear space above and
+   ⚠️ It is TALLER than the panels on purpose — 24px of clear space above and
    below. That is what stops the photos butting into the edge of the box and
-   lets you read their shape. It comes from the +80px in the height calc below.
+   lets you read their shape. It comes from the +48px in the height calc below.
 
    ⚠️ It is also the SAME COLOUR as the section behind it (#F3F1ED), with no
    card shadow, so the box itself is invisible and the photos appear to float
@@ -320,15 +320,19 @@
      width --pw. If you change PANELS in the script you must change this
      number too; tools/make-board-photo.py --geometry prints it.
 
-     1.25 is the panel's own 600/480 aspect. The +80px is the clear space
-     above and below the photos - 40px each - that stops them butting into
-     the edge of the box. */
+     1.25 is the panel's own 600/480 aspect. The +48px is the clear space
+     above and below the photos - 24px each - that stops them butting into
+     the edge of the box. It was 40px each; trimmed on 5 Aug 2026 because the
+     section is already carrying 100px of its own padding top and bottom (the
+     site's rhythm, shared with #schedule and #venue), so 40 on top of that
+     read as dead space. 24 is still clearly clear. Do not take it to 0 - that
+     is the crop-to-the-edge look this was added to get rid of. */
   --pw: clamp(190px, 44.4vw - 55px, 480px);
   --ph: calc(var(--pw) * 1.25);
   --r:  calc(var(--pw) * 1.20711);
   --turn:1400ms;
 
-  height: calc(var(--ph) + 80px);
+  height: calc(var(--ph) + 48px);
 }
 /* ⚠️ 760px, NOT 700px. That is the breakpoint where .m-stack collapses this
    section to one column — see the @media(max-width:760px) block above. Getting

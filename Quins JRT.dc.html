@@ -898,17 +898,26 @@
        a phone, so none of it applies there. -->
   <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">
     <div data-reveal>
-      <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>
-      <!-- The crest sits beside the heading (5 Aug 2026). It used to be pinned
-           over the top-left corner of the photo box, which stopped working once
-           the photos started moving underneath it. `flex:none` matters: without
-           it the crest is squashed by the heading rather than the other way
-           round. m-crestrow drops it above the heading on a phone, where there
-           is not room for both side by side. -->
-      <div class="m-crestrow" style="display:flex;align-items:center;gap:20px">
+      <!-- The crest sits to the left of the WHOLE text block - eyebrow and
+           heading together - so those two share one left edge (5 Aug 2026).
+           It was briefly to the left of the heading only, which pushed the
+           heading right and left it out of line with "About the festival"
+           above it.
+
+           Before that it was pinned over the top-left corner of the photo box,
+           which stopped working once the photos underneath started moving.
+
+           `flex:none` on the image matters: without it the crest is squashed by
+           the heading rather than the other way round. `min-width:0` on the
+           text side lets the heading wrap instead of forcing the row wider.
+           m-crestrow stacks the crest above on a phone. -->
+      <div class="m-crestrow" style="display:flex;align-items:center;gap:22px">
         <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest"
              style="width:96px;height:96px;flex:none;object-fit:contain">
-        <h2 style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0">Rugby the way it should be</h2>
+        <div style="min-width:0">
+          <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:10px">About the festival</div>
+          <h2 style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0">Rugby the way it should be</h2>
+        </div>
       </div>
       <p style="font-size:18px;margin-top:24px;color:#3a3f48;max-width:520px">
         The Abu Dhabi Harlequins Junior Rugby Tournament brings clubs from across the UAE and the Gulf together across two brilliant days of mini, midi and youth rugby &mdash; great games, new friends and a proper festival atmosphere.

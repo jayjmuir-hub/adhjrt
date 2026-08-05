@@ -247,4 +247,49 @@ section('Self-signup can be switched off without a code change');
    anything failing, which is the whole argument for the mechanical check.
    ====================================================================== */
 
+/* ------------------------------------------------------------------------
+   THE MASTER MANAGER CODE'S KEY NAME (added 5 Aug 2026)
+
+   ⚠️ This is a DOCUMENTATION bug that nothing could have caught, which is why
+   there is now a check for it. `manager-signup.js` stores whichever KEY NAME in
+   MANAGER_INVITE_CODES matched the code as the account's ageGroupId, and the
+   all-groups test in `_auth.js` is `session.ageGroupId === '*'`. Both files'
+   setup instructions said to call the master key "admin" — which mints a
+   manager scoped to an age group that does not exist, an account that signs in
+   and can see nothing.
+
+   It fails CLOSED, so it was never a hole. It is the quieter kind of wrong: the
+   docs and the code disagreed, following the docs produced a broken account,
+   and no error appeared anywhere. Two copies of one rule drift, and the drift
+   is invisible until you look for it — so the check is that the SENTINEL and
+   the INSTRUCTION agree, not that either one alone has a particular value. */
+section('the all-groups sentinel and the instruction that names it');
+
+/* Named MGR_SIGNUP / AUTH_SRC because this file already binds AUTH to the
+   REQUIRED _password.js module near the top. */
+const MGR_SIGNUP = readRepo(path.join('netlify', 'functions', 'manager-signup.js')).replace(/\r\n/g, '\n');
+const AUTH_SRC = readRepo(path.join('netlify', 'functions', '_auth.js')).replace(/\r\n/g, '\n');
+
+/* The sentinel, read out of the code that actually decides. */
+const sentinel = (AUTH_SRC.match(/session\.ageGroupId === '([^']+)'/) || [])[1];
+eq('the all-groups sentinel in _auth.js is a literal asterisk', sentinel, '*');
+
+/* The account's group IS the matched key name — which is what makes the key
+   name load-bearing rather than cosmetic. */
+check('manager-signup derives the age group from the matched KEY NAME',
+  /const ageGroupId = Object\.keys\(codes\)\.find\(\(id\) => codes\[id\] === inviteCode\);/.test(MGR_SIGNUP),
+  'if this stops being true, the key-name checks below are describing nothing');
+check('…and writes it onto the account unchanged',
+  /ageGroupId, approved: false/.test(MGR_SIGNUP));
+
+/* And the setup instruction must name that same sentinel, not a friendly word.
+   Comments only — the instruction IS a comment, so this is one of the few
+   places a check on prose is the point rather than a mistake. */
+const setup = (MGR_SIGNUP.match(/MANAGER_INVITE_CODES = [\s\S]*?SESSION_SECRET/) || [''])[0];
+check('the setup comment was located', setup.length > 100);
+check('the setup example uses the sentinel as the master key',
+  setup.includes('"' + sentinel + '":'), setup.slice(0, 200));
+check('the setup comment no longer offers "admin" as the master key',
+  !/"admin"\s*:/.test(setup), 'an "admin" key scopes a manager to a group that does not exist');
+
 summary('test-accounts.js');

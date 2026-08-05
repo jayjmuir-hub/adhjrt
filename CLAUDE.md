@@ -910,6 +910,18 @@ moment it exists, where an invite code yields only a PENDING account somebody
 still has to approve. The manager codes are also scoped one per age group,
 where the organiser code was one secret for total access.
 
+⚠️ **A MASTER CODE'S KEY MUST BE `"*"`, A LITERAL ASTERISK — NOT `"admin"`.**
+`manager-signup.js` stores whichever KEY NAME matched the code as the account's
+`ageGroupId`, and the all-groups test in `_auth.js` is
+`session.ageGroupId === '*'`. A key called `"admin"` mints a manager scoped to
+an age group that does not exist: the account signs in perfectly well and can
+see nothing. **It fails CLOSED, so this was never a hole** — it is worse in a
+quieter way, because both this file and `manager-signup.js`'s setup comment gave
+the wrong instruction until 5 Aug 2026, so anyone setting up a master code by
+following the docs would have got a broken account and no error message
+anywhere. Nothing validates these key names against the real age-group ids
+either, so an ordinary typo fails the same silent way.
+
 ### One sign-in for everything (Aug 2026)
 
 **Sign-in lives at `/signin`, and only there.** `Signin.dc.html` carries
@@ -2966,7 +2978,7 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring — **35 files** — plus `_prove-registration.js`, the fault-injection
-script (**514 faults** as of 5 Aug 2026, all of which must be caught by the
+script (**517 faults** as of 5 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

@@ -4709,6 +4709,37 @@ const FAULTS = [
       '  from = "/tools/*"\n  to = "/404.html"\n  status = 200'),
     expect: ['it returns 404'],
   },
+
+  /* ---- the master manager code's key name (test-accounts.js, 5 Aug 2026) ----
+
+     A documentation bug that failed CLOSED and so could never announce itself:
+     both setup instructions said to call the master key "admin", while the
+     all-groups test in _auth.js is `ageGroupId === '*'`. Following the docs
+     minted a manager scoped to a group that does not exist. */
+  {
+    name: 'the setup comment goes back to offering "admin" as the master key',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
+      '..., "*":"quins-master-2026"}', '..., "admin":"quins-master-2026"}'),
+    expect: ['no longer offers "admin"'],
+  },
+  {
+    /* The other direction: the sentinel moves and the instruction does not. */
+    name: 'the all-groups sentinel in _auth.js stops being an asterisk',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "session.ageGroupId === '*'", "session.ageGroupId === 'admin'"),
+    expect: ['sentinel in _auth.js is a literal asterisk'],
+  },
+  {
+    /* And the anchor that makes the two above mean anything. */
+    name: 'the age group stops being derived from the matched key name',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
+      'const ageGroupId = Object.keys(codes).find((id) => codes[id] === inviteCode);',
+      'const ageGroupId = (event.headers && event.headers["x-age-group"]) || null;'),
+    expect: ['derives the age group from the matched KEY NAME'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

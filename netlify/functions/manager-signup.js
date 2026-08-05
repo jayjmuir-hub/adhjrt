@@ -10,11 +10,23 @@
 // ONE-TIME SETUP: in Netlify -> Site configuration -> Environment
 // variables, add:
 //   MANAGER_INVITE_CODES = a JSON map of age-group id -> its own code, e.g.
-//     {"u8":"quins-u8-2026","u9":"quins-u9-2026", ..., "admin":"quins-master-2026"}
+//     {"u8":"quins-u8-2026","u9":"quins-u9-2026", ..., "*":"quins-master-2026"}
 //   (age-group ids must match the `id` fields in AGE_GROUPS in scores-data.js:
 //    u6,u7,u8,u9,u10,u11,u12,u12g,u13,u14b,u14g,u16b,u16g,u18b,u18g)
-//   The special "admin" key's code grants access to every age group at once —
-//   share it only with the tournament admin(s).
+//
+//   ⚠️ THE MASTER KEY MUST BE NAMED "*" — A LITERAL ASTERISK. THIS COMMENT
+//   SAID "admin" UNTIL 5 AUG 2026 AND THAT DOES NOT WORK.
+//   The handler below stores whichever KEY NAME matched the code as the
+//   account's ageGroupId, and the all-groups test in _auth.js is
+//   `session.ageGroupId === '*'`. A key called "admin" therefore mints a
+//   manager scoped to an age group that does not exist — an account with
+//   access to NOTHING, which signs in fine and then shows an empty dashboard.
+//   It fails CLOSED, so it was never a security hole; it is worse in a
+//   quieter way, because setting up a master code by following the old
+//   instruction produced a broken account and no error message anywhere.
+//   Nothing validates that these key names are real age-group ids either, so
+//   an ordinary typo fails the same silent way.
+//   Share the "*" code only with the tournament admin(s).
 // SESSION_SECRET must also be set (shared with the other auth functions).
 // Share each age group's code only with that group's manager(s).
 

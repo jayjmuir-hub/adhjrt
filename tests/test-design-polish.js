@@ -182,7 +182,18 @@ section('The club wordmark says the club\'s name');
      wordmark can break across two lines inside a STICKY header — and the
      header's whole layout budget is one line. The 900px partner-mark hide in
      test-sponsors.js is the other half of this; both were measured together. */
-  const wmSpan = (home.match(/<span style="font-family:'Anton';font-size:19px[^"]*">ABU DHABI HARLEQUINS<\/span>/) || [])[0];
+  /* ⚠️ REPOINTED 5 Aug 2026 (evening). This anchored on `<span style=` with the
+     style attribute FIRST, and the header wordmark gained a class in front of it
+     when the bar learned to condense — so the regex matched nothing and the
+     check failed on an undamaged copy, taking the whole suite's baseline with
+     it. The RULE is unchanged and still load-bearing: a wrapped wordmark inside
+     a sticky header is what the 900px measurement was about. It is anchored on
+     the span's CONTENT now, which is what it was always really about, rather
+     than on the order of its attributes. */
+  const wmSpan = (home.match(/<span [^>]*ABU DHABI HARLEQUINS<\/span>/) || [])[0]
+    || (home.match(/<span[^>]*>ABU DHABI HARLEQUINS<\/span>/) || [])[0];
+  check('the header wordmark span was located', !!wmSpan,
+    'if this fails the check below is asserting nothing');
   check('the header wordmark cannot wrap to a second line', !!wmSpan && /white-space:nowrap/.test(wmSpan));
 }
 

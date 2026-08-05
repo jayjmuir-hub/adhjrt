@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  Tournament rules page for adhjrt.com. Plain static file, the same shape as
+  legal.html and app.html — NOT a DC component. Served at /rules via a
+  netlify.toml rewrite. Linked from the About section of the homepage.
+
+  ⚠️ THE RULES THEMSELVES DO NOT EXIST YET (Jay, 5 Aug 2026). He asked for the
+  page and the button now, with "coming soon" standing in, so the link can go
+  out and the address stops changing later. When the real rules arrive they
+  replace the placeholder card below and NOTHING ELSE on this page has to move:
+  the topbar, hero, footer and styling are already the finished article.
+
+  ⚠️ IT IS DELIBERATELY INDEXABLE and in sitemap.xml, unlike /register-club.
+  Parents and coaches should be able to find the rules by searching. If that
+  ever changes, robots.txt is NOT the way to hide it — see the club-form
+  section in CLAUDE.md for why a Disallow line advertises a path.
+
+  ⚠️ WHEN THE REAL RULES LAND, put a "Last updated" date on them and keep it
+  current. A rules page with no date is one nobody can trust mid-tournament.
+  The markup for it is left in place below, commented, so it is not rebuilt
+  from scratch.
+-->
+<title>Tournament Rules | Abu Dhabi Harlequins Junior Rugby Tournament</title>
+<meta name="description" content="Playing rules, age-grade format and competition regulations for the Abu Dhabi Harlequins Junior Rugby Tournament (ADH JRT), Zayed Sports City, 7-8 November 2026.">
+<meta name="robots" content="all">
+<link rel="canonical" href="https://adhjrt.com/rules">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">
+<meta property="og:title" content="Tournament Rules — ADH JRT 2026">
+<meta property="og:description" content="Playing rules, age-grade format and competition regulations for the ADH Junior Rugby Tournament.">
+<meta property="og:url" content="https://adhjrt.com/rules">
+<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
+<link rel="icon" type="image/png" href="assets/crest.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0C0C0E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Lifted wholesale from legal.html so the two read as one pair of pages.
+     If you restyle one, restyle the other in the same commit — two copies of a
+     look drift, and the drift is invisible until somebody opens both. */
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Barlow',system-ui,sans-serif;color:#1b1c22;background:#F3F1ED;-webkit-font-smoothing:antialiased;line-height:1.62}
+  a{color:#c8161d;text-decoration:none}
+  a:hover{color:#9c1015;text-decoration:underline}
+  ::selection{background:#E11B22;color:#fff}
+
+  .topbar{background:#0C0C0E;color:#fff;padding:16px 24px}
+  .topbar-in{max-width:860px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;color:#fff}
+  .brand img{width:34px;height:34px;object-fit:contain}
+  .brand .wm{display:flex;flex-direction:column;line-height:1}
+  .brand .wm b{font-family:'Anton';font-size:19px;letter-spacing:.5px}
+  .brand .wm span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#9aa0ab;margin-top:3px}
+  .back{color:#EDEDED;font-weight:700;font-size:13px;background:rgba(255,255,255,0.08);padding:8px 15px;border-radius:100px;white-space:nowrap;transition:background .2s ease}
+  .back:hover{background:rgba(255,255,255,0.18);text-decoration:none}
+
+  .hero{background:#0C0C0E;color:#fff;padding:26px 24px 52px}
+  .hero-in{max-width:860px;margin:0 auto}
+  .eyebrow{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.22em;font-size:13px;color:#ff5b60;display:flex;align-items:center}
+  .eyebrow .rule{display:inline-block;height:4px;width:48px;background:#17A34A;margin-right:14px;border-radius:2px}
+  .hero h1{font-family:'Anton';font-size:clamp(38px,7vw,64px);line-height:.96;text-transform:uppercase;margin:16px 0 0}
+  .hero p.sub{color:#aeb4bf;font-size:17px;margin-top:16px;max-width:640px}
+
+  main{max-width:860px;margin:0 auto;padding:8px 24px 20px}
+  .card{background:#fff;border:1px solid #e4e0d8;border-radius:16px;padding:clamp(24px,4vw,48px);margin-top:-26px;box-shadow:0 24px 60px -30px rgba(0,0,0,.45)}
+
+  /* The placeholder. Deliberately not a shrug: it says what is coming, when it
+     is coming, and what to do in the meantime. A bare "coming soon" makes a
+     coach wonder whether the tournament is organised. */
+  .soon{text-align:center;padding:18px 0 8px}
+  .soon .badge{display:inline-block;font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;
+               text-transform:uppercase;letter-spacing:.16em;font-size:13px;color:#8a6400;
+               background:#fdf3d9;border:1px solid #f0dfae;border-radius:100px;padding:7px 18px}
+  .soon h2{font-family:'Anton';font-size:clamp(28px,4.6vw,44px);line-height:1.02;text-transform:uppercase;margin:20px 0 0;color:#14151A}
+  .soon p{font-size:17px;color:#3c3e46;margin:14px auto 0;max-width:560px}
+  .soon .cta{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:26px}
+  .soon .cta a{font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;text-transform:uppercase;
+               letter-spacing:.06em;font-size:14px;padding:12px 22px;border-radius:100px;
+               border:1px solid #d9d4ca;color:#14151A;transition:background .2s ease,border-color .2s ease}
+  .soon .cta a:hover{background:#f3f1ed;border-color:#b9b3a6;text-decoration:none}
+  .soon .cta a.solid{background:#E11B22;border-color:#E11B22;color:#fff}
+  .soon .cta a.solid:hover{background:#c8161d;border-color:#c8161d}
+
+  /* What IS already settled, so the page is not empty of fact. Everything here
+     is stated elsewhere on the site and in CLAUDE.md; nothing is invented. */
+  .known{margin-top:38px;border-top:1px solid #ece8e0;padding-top:26px}
+  .known h3{font-family:'Anton';font-size:20px;text-transform:uppercase;color:#14151A}
+  .known ul{margin:14px 0 0 4px;padding-left:22px}
+  .known li{margin:8px 0;color:#2c2e35}
+  .known b{color:#14151A}
+  .note{background:#e9f7ee;border-left:4px solid #17A34A;border-radius:6px;padding:13px 17px;margin-top:22px;font-size:15.5px}
+
+  footer{background:#060606;color:#8a8f99;padding:40px 24px 38px;margin-top:42px}
+  .foot-in{max-width:860px;margin:0 auto}
+  .foot-top{display:flex;align-items:center;gap:12px;color:#fff;margin-bottom:12px}
+  .foot-top img{width:32px;height:32px;object-fit:contain}
+  .foot-top b{font-family:'Anton';font-size:18px}
+  .foot-links{display:flex;flex-wrap:wrap;gap:8px 20px;margin:14px 0 18px}
+  .foot-links a{color:#b9bdc6;font-size:14px}
+  .foot-bar{border-top:1px solid rgba(255,255,255,.08);padding-top:16px;font-size:13px;display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;align-items:center}
+
+  @media (max-width:560px){.topbar-in .brand .wm span{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="top">
+  <div class="topbar-in">
+    <a class="brand" href="/">
+      <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
+      <span class="wm"><b>ABU DHABI HARLEQUINS</b><span>Junior Rugby Tournament</span></span>
+    </a>
+    <a class="back" href="/">&larr; Back to site</a>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="eyebrow"><span class="rule"></span>How the rugby is played</div>
+    <h1>Tournament Rules</h1>
+    <p class="sub">Playing rules, age-grade format and competition regulations for the 2026 tournament.</p>
+  </div>
+</div>
+
+<main>
+  <div class="card">
+
+    <!-- ⚠️ REPLACE THIS BLOCK when the real rules arrive. Everything above and
+         below it is finished and does not need touching. Add a "Last updated"
+         line under the h1 in the hero at the same time:
+           <div class="updated">Last updated: 1 October 2026</div>
+         with .updated{margin-top:18px;font-size:13px;color:#7f8590} — the rule
+         is already in legal.html, copy it across. -->
+    <div class="soon">
+      <span class="badge">Coming soon</span>
+      <h2>The rules are being finalised</h2>
+      <p>
+        The full playing rules and competition regulations for the 2026 tournament
+        will be published on this page before registration opens in October, and
+        every registered club will be told when they are up.
+      </p>
+      <div class="cta">
+        <a class="solid" href="/">Back to the tournament</a>
+        <a href="mailto:admin@adhjrt.com">Ask a question</a>
+      </div>
+    </div>
+
+    <!-- Not padding: these four are settled, they are already stated elsewhere
+         on the site, and a coach reading this page should not leave with
+         nothing. Anything NOT on this list is genuinely undecided. -->
+    <div class="known">
+      <h3>What is already settled</h3>
+      <ul>
+        <li><b>Age-grade format under UAERF rules.</b> Mini, midi and youth, from U6 through to U18.</li>
+        <li><b>Two days.</b> Saturday 7 and Sunday 8 November 2026, at Zayed Sports City, Abu Dhabi.</li>
+        <li><b>Everyone plays through.</b> A pool stage followed by a Cup, Bowl, Plate and Shield bracket, so every team that turns up plays a full day of rugby rather than going home after one loss.</li>
+        <li><b>Spirit of Rugby.</b> Sides nominate an opposition player in the older age groups; it is judged on the day.</li>
+      </ul>
+      <div class="note">
+        <b>Playing regulations come from the UAE Rugby Federation age-grade framework.</b>
+        Anything the tournament decides on top of that &mdash; squad sizes, match
+        length, the play-up allowance &mdash; will be set out here rather than
+        left to be asked about on the morning.
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-top">
+      <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
+      <b>ABU DHABI HARLEQUINS</b>
+    </div>
+    <p style="max-width:420px;font-size:14px">A community youth rugby festival run by volunteers.</p>
+    <div class="foot-links">
+      <a href="/">Home</a>
+      <a href="/scores">Live scores</a>
+      <a href="/app">Match-day app</a>
+      <a href="/rules">Tournament rules</a>
+      <a href="/legal">Legal &amp; Privacy</a>
+    </div>
+    <div class="foot-bar">
+      <span>&copy; 2026 Abu Dhabi Harlequins.</span>
+      <span>Zayed Sports City &middot; Abu Dhabi, UAE</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

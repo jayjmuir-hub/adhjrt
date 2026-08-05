@@ -65,6 +65,9 @@ const NEEDED = [
      asserted, never its content. */
   'legal.html',
   '404.html',
+  /* The tournament rules page (5 Aug 2026). test-about-board.js reads it for
+     the placeholder, the indexability and the pair-with-/legal checks. */
+  'rules.html',
   path.join('assets', 'share-card.png'),
   path.join('assets', 'apple-touch-icon.png'),
   /* test-sponsors.js gates its asset-on-disk checks on assets/ EXISTING —
@@ -4707,6 +4710,202 @@ const FAULTS = [
       "      }\n",
       "      var s=pic.getElementsByTagName('source'), avif=s[0], webp=s[1];\n"),
     expect: ['finds the sources by TYPE'],
+  },
+  /* ---- the header nav: hover, current section, condensed bar (5 Aug 2026) -- */
+  {
+    /* The header would go back to inventing its own effect instead of reusing
+       the one the cards and buttons already share. */
+    name: 'the nav hover stops using the shared holo recipe',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, ".hdr-nav a:hover::before{opacity:.85;animation:holoShift 2.2s ease-in-out infinite}",
+      ".hdr-nav a:hover::before{opacity:.85}"),
+    expect: ['same holoShift drift'],
+  },
+  {
+    name: 'the underline runs edge to edge instead of matching the pill',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, ".hdr-nav a::after{content:\"\";position:absolute;left:11px;right:11px;bottom:4px;",
+      ".hdr-nav a::after{content:\"\";position:absolute;left:0px;right:0px;bottom:4px;"),
+    expect: ['inset to the pill padding'],
+  },
+  {
+    /* One section dropped from the current-section rules is one nav link that
+       never marks - and nothing about the page looks wrong. */
+    name: 'a section is dropped from the current-section underline',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  html[data-sec="venue"]    .hdr-nav a[href="#venue"]::after,\n', ''),
+    expect: ['underline covers #venue'],
+  },
+  {
+    /* ⚠️ The one that matters most. A class on the link is destroyed the next
+       time the engine re-renders the body, and the underline silently stops
+       following you down the page. */
+    name: 'the current section is written onto the link instead of <html>',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "          if(found) document.documentElement.setAttribute('data-sec', found);",
+      "          if(found) document.querySelector('.hdr-nav a').classList.add('current');"),
+    expect: ['writes the section to <html>'],
+  },
+  {
+    name: 'the condensed class is written onto the header instead of <html>',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "          document.documentElement.classList.toggle('hdr-tight', wanttight);",
+      "          document.querySelector('header').classList.toggle('hdr-tight', wanttight);"),
+    expect: ['same for the condensed class'],
+  },
+  {
+    /* ⚠️ THE BUG THIS BLOCK SHIPPED WITH FIRST TIME. Without !important the
+       class goes on, the DOM reads correctly, and the bar does not move one
+       pixel, because every property it overrides is set inline. */
+    name: 'a condensed rule loses its !important and is beaten by the inline style',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'html.hdr-tight .hdr-row{padding:7px 32px!important}',
+      'html.hdr-tight .hdr-row{padding:7px 32px}'),
+    expect: ['beats the inline style'],
+  },
+  {
+    /* A partner mark quietly shrinking is the same class of failure as one
+       quietly vanishing, and test-sponsors.js pins it at 19px. */
+    name: 'the condensed bar shrinks the HSBC mark along with everything else',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '    html.hdr-tight .hdr-partner-div{height:24px!important}',
+      '    html.hdr-tight .hdr-partner-div{height:24px!important}\n    html.hdr-tight .hdr-partner img{height:15px!important}'),
+    expect: ['no condensed rule touches the HSBC mark'],
+  },
+  {
+    name: 'the condensed rules escape their 761px floor and hit the phone bar',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  @media (min-width:761px){\n    html.hdr-tight .hdr-row',
+      '  @media (min-width:1px){\n    html.hdr-tight .hdr-row'),
+    expect: ['scoped to 761px and up'],
+  },
+  {
+    name: 'the scroll handler loses its frame throttle',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "      if(ticking) return;\n      ticking = true;\n      window.requestAnimationFrame(measure);",
+      "      measure();"),
+    expect: ['throttled to one frame'],
+  },
+  {
+    name: 'the scroll handler writes to the DOM on every single event',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '        if(wanttight !== tight){', '        if(true){'),
+    expect: ['only writes when the answer changes'],
+  },
+  {
+    name: 'the scroll listener stops being passive',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "    window.addEventListener('scroll', onscroll, {passive:true});",
+      "    window.addEventListener('scroll', onscroll);"),
+    expect: ['registered passive'],
+  },
+  {
+    /* The sections do not exist on the first pass - the engine renders the body
+       after first paint - so a one-shot measure marks nothing, for ever. */
+    name: 'the header stops re-measuring after the engine re-renders',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "    var n=0, iv=setInterval(function(){ measure(); if(++n>40) clearInterval(iv); },500);\n  })();\n\n  /* Registers the service worker", "  })();\n\n  /* Registers the service worker"),
+    expect: ['re-measures after the engine re-renders'],
+  },
+  {
+    name: 'the pill and underline are left on inside the phone panel',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  .hdr-row[data-nav-open="true"] .hdr-nav a::before,\n  .hdr-row[data-nav-open="true"] .hdr-nav a::after{display:none}', ''),
+    expect: ['decorations come off inside the open phone panel'],
+  },
+
+  {
+    /* ⚠️ REPOINTED, in the same commit that broke it. The wordmark check in
+       test-design-polish.js anchored on `<span style=` with the style attribute
+       FIRST; the header wordmark gained a class in front of it when the bar
+       learned to condense, so the anchor matched nothing and the suite failed on
+       an UNDAMAGED copy - which drops the clean-baseline count and makes every
+       one of that suite's faults meaningless. The rule is unchanged and still
+       load-bearing, so this fault follows it to the content anchor. */
+    name: 'the header wordmark can wrap to a second line inside the sticky bar',
+    suite: 'test-design-polish.js',
+    apply: () => patch(HOME, 'class="hdr-wordmark" style="font-family:\'Anton\';font-size:19px;letter-spacing:.5px;white-space:nowrap"',
+      'class="hdr-wordmark" style="font-family:\'Anton\';font-size:19px;letter-spacing:.5px"'),
+    expect: ['cannot wrap to a second line'],
+  },
+
+  {
+    /* The nav gap going back to 24px puts 154px of pill padding on top of the
+       old spacing and the sticky header scrolls sideways from ~1015px down. */
+    name: 'the nav gap goes back to its pre-pill value and the header overflows',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  .hdr-nav{gap:2px!important}', '  .hdr-nav{gap:24px!important}'),
+    expect: ['nav gap came down'],
+  },
+  {
+    name: 'the tight 761-900px band is dropped, restoring a live overflow',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '    .hdr-nav a{padding:7px 6px 9px}', '    .hdr-nav a{padding:7px 11px 9px}'),
+    expect: ['band tightens the pill further'],
+  },
+  {
+    /* ⚠️ The band rule moved above the base rule loses silently - same
+       specificity, earlier in the file. It looks completely correct. */
+    name: 'the band rule is moved above the base rule, where it does nothing',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME,
+      '  .hdr-nav a{position:relative;display:inline-block;padding:7px 11px 9px;',
+      '  @media (min-width:761px) and (max-width:900px){\n    .hdr-nav a{padding:7px 6px 9px}\n  }\n  .hdr-nav a{position:relative;display:inline-block;padding:7px 11px 9px;'),
+    expect: ['sits BELOW the base'],
+  },
+
+  {
+    /* Proves the nav-count check reads the CODE and not the prose. Without the
+       CSS-comment strip this fault is indistinguishable from a real second nav,
+       and the suite reports a failure that nobody can act on. */
+    name: 'a second real <nav> appears on the homepage',
+    suite: 'test-back-office-links.js',
+    apply: () => patch(HOME, '      <div class="hdr-menu" style="position:relative;flex:none">',
+      '      <nav class="hdr-extra"></nav>\n      <div class="hdr-menu" style="position:relative;flex:none">'),
+    expect: ['exactly one nav element'],
+  },
+
+  /* ---- the tournament rules page ---------------------------------------- */
+  {
+    name: 'the /rules rewrite is removed, so the button 404s',
+    suite: 'test-about-board.js',
+    apply: () => patch('netlify.toml', '  from = "/rules"\n  to = "/rules.html"\n  status = 200',
+      '  from = "/rules-old"\n  to = "/rules.html"\n  status = 200'),
+    expect: ['served at /rules'],
+  },
+  {
+    name: 'the About section loses its rules button',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<a href="/rules" class="rules-btn"', '<a href="#about" class="rules-btn"'),
+    expect: ['About section links to it'],
+  },
+  {
+    /* Indexable ON PURPOSE - it is the opposite of the club form. */
+    name: 'the rules page is made noindex, so nobody can find it by searching',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', '<meta name="robots" content="all">',
+      '<meta name="robots" content="noindex, nofollow">'),
+    expect: ['rules page is indexable'],
+  },
+  {
+    name: 'the rules page drops out of the sitemap',
+    suite: 'test-about-board.js',
+    apply: () => patch('sitemap.xml', '    <loc>https://adhjrt.com/rules</loc>', '    <loc>https://adhjrt.com/rules-x</loc>'),
+    expect: ['is in the sitemap'],
+  },
+  {
+    /* A placeholder that does not say WHEN is a shrug, and a coach reading it
+       wonders whether the tournament is organised. */
+    name: 'the coming-soon copy stops saying when the rules will arrive',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', 'before registration opens in October', 'in due course'),
+    expect: ['says when the rules will be there'],
+  },
+  {
+    name: 'the instruction telling the next person what to replace is tidied away',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', 'REPLACE THIS BLOCK when the real rules arrive', 'Placeholder'),
+    expect: ['replace-this-block instruction'],
   },
   {
     name: 'the resize re-scan is dropped, stranding a rotated phone',

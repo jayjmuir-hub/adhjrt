@@ -36,6 +36,14 @@
   to = "/legal.html"
   status = 200
 
+# The tournament rules page (5 Aug 2026). Same shape as /legal: a plain static
+# file, not a DC component. Deliberately INDEXABLE and in sitemap.xml, unlike
+# /register-club - parents and coaches should be able to find the rules.
+[[redirects]]
+  from = "/rules"
+  to = "/rules.html"
+  status = 200
+
 # The club declaration form (Aug 2026) — the "silent link".
 # ⚠️ UNLISTED, NOT PROTECTED. Nothing on adhjrt.com links here, it is absent
 # from sitemap.xml and the page carries noindex — but this repo is PUBLIC and

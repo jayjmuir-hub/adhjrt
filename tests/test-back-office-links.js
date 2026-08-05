@@ -36,13 +36,25 @@ const { readRepo, section, check, eq, summary } = require('./_lib');
    of this that silently passed by looking at nothing at all. */
 const PAGE = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
 
-function stripComments(s) { return s.replace(/<!--[\s\S]*?-->/g, ''); }
+/* ⚠️ CSS AND JS COMMENTS ARE STRIPPED TOO, added 5 Aug 2026. This removed only
+   HTML comments, and the nav-count check below matches `<nav` anywhere in the
+   file — so the moment somebody wrote "the gap is set inline on the <nav>"
+   inside a CSS comment, the count came back 2 and this suite failed on an
+   UNDAMAGED copy. That is not a near miss: a suite that fails undamaged makes
+   every one of its injected faults meaningless, and the fault run reported
+   exactly that.
+   It is the house rule in its usual disguise — a comment about a nav is not a
+   nav — and the fix belongs in the check, because the next person will write
+   the same sentence again. */
+function stripComments(s) {
+  return s.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
 
 /* The regions this file cares about, sliced by their own markers. There is
    exactly one <nav>, one hdr-menu and one <footer> in the page — asserted,
    because if a second ever appears these slices quietly start describing the
    wrong part of the document. */
-eq('there is exactly one nav element', (PAGE.match(/<nav[\s>]/g) || []).length, 1);
+eq('there is exactly one nav element', (stripComments(PAGE).match(/<nav[\s>]/g) || []).length, 1);
 eq('there is exactly one footer element', (PAGE.match(/<footer[\s>]/g) || []).length, 1);
 eq('there is exactly one header Menu dropdown', (PAGE.match(/class="hdr-menu"/g) || []).length, 1);
 

@@ -21,6 +21,84 @@
 <meta name="apple-mobile-web-app-title" content="ADH JRT">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <script>
+  /* ==================================================================
+     THE HEADER: condensed past the hero, and which section you are in.
+     ==================================================================
+     Two jobs, one scroll handler, because they answer the same question and
+     splitting them would mean two listeners doing the same arithmetic.
+
+     ⚠️ IT WRITES TO <html>, NOT TO THE HEADER OR THE LINKS. The component
+     engine renders the page body after first paint and does it MORE THAN
+     ONCE, so anything written onto a header element or a nav link is thrown
+     away with the element that carried it - the exact bug the About board hit
+     twice on 5 Aug 2026. <html> is outside everything the engine touches, so
+     a class and an attribute set here survive, and the CSS does the rest with
+     no DOM mutation at all.
+
+     ⚠️ NO camelCase NAME IS FOLLOWED BY "=" ANYWHERE IN HERE. encodeCase()
+     rewrites that pattern into a kebab-case attribute name throughout the
+     file, script bodies included, and the copy of this script the engine
+     mounts into <head> would stop parsing. See the Gotchas section of
+     CLAUDE.md; it shipped live once already. Locals are lowercase.
+
+     Fails safe: if any of it throws, the header stays at its resting size and
+     no section is marked current. Nothing else on the page depends on it. */
+  (function(){
+    var TIGHT_AT = 90;    // px scrolled before the bar condenses
+    var SPY_LINE = 130;   // a section counts as "current" once its top passes this
+    var SECTIONS = ['about','format','schedule','results','venue','sponsors'];
+    var ticking = false, tight = null, cursec = null;
+
+    function measure(){
+      ticking = false;
+      try{
+        var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+
+        /* Only touch the DOM when the answer actually changes. A scroll fires
+           this continuously and classList.toggle on every frame is how a
+           smooth page starts to feel expensive. */
+        var wanttight = y > TIGHT_AT;
+        if(wanttight !== tight){
+          tight = wanttight;
+          document.documentElement.classList.toggle('hdr-tight', wanttight);
+        }
+
+        /* The LAST section whose top has passed the line is the one you are
+           looking at. Sections are re-queried every time rather than cached,
+           because the engine may have replaced them since the last scroll. */
+        var found = null, i, el;
+        for(i=0;i<SECTIONS.length;i++){
+          el = document.getElementById(SECTIONS[i]);
+          if(el && el.getBoundingClientRect().top <= SPY_LINE) found = SECTIONS[i];
+        }
+        if(found !== cursec){
+          cursec = found;
+          if(found) document.documentElement.setAttribute('data-sec', found);
+          else document.documentElement.removeAttribute('data-sec');
+        }
+      }catch(e){ /* leave the header alone */ }
+    }
+
+    function onscroll(){
+      if(ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(measure);
+    }
+
+    /* passive: this handler never calls preventDefault, and saying so lets the
+       browser scroll without waiting to find out. */
+    window.addEventListener('scroll', onscroll, {passive:true});
+    window.addEventListener('resize', onscroll, {passive:true});
+    /* Run once on arrival: a reload part-way down the page, or a link straight
+       to #venue, must not start with the bar full-size and nothing underlined. */
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', measure);
+    else measure();
+    /* The engine renders the body after first paint, so the sections this
+       measures may not exist yet on the first pass. Same re-scanning answer as
+       the photo board, and it stops after 20 seconds. */
+    var n=0, iv=setInterval(function(){ measure(); if(++n>40) clearInterval(iv); },500);
+  })();
+
   /* Registers the service worker that makes this installable as an app.
      Wrapped in a guard so an unsupported browser (or a file:// preview)
      simply carries on as a normal website. */
@@ -114,6 +192,158 @@
   .fmt-day.sun .fmt-daytag{background:#17A34A;color:#fff}
   .fmt-day h3{font-family:'Anton';font-size:clamp(26px,3.2vw,38px);text-transform:uppercase;margin:16px 0 6px;color:#fff}
   .fmt-sub{color:#8c8c93;font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+  /* =======================================================================
+     THE HEADER NAV — hover treatment and the condensed bar (Jay, 5 Aug 2026)
+     =======================================================================
+     Three things Jay picked, combined:
+
+       A  a faint pill lights up and the club HOLO drifts across it. The
+          gradient, the 115deg angle and the 2.2s drift are COPIED FROM
+          .fmt-grp / .reg-btn rather than invented, so the header finally
+          speaks the same language as the age-group cards and the Register
+          buttons instead of its own.
+       B  a red->green underline wipes in from the left and the link lifts 1px.
+       B2 the section you are actually IN keeps its underline permanently. That
+          is the only part of this that adds information rather than polish.
+       D  past the hero the bar condenses, giving back ~18px of height.
+
+     ⚠️ THE UNDERLINE IS INSET TO THE PILL'S PADDING (left/right 11px) so the
+     rule and the tint line up. Left at 0 it runs wider than the thing behind
+     it and reads as a mistake.
+
+     ⚠️ COLOUR NEEDS !important AND NOTHING ELSE DOES. The links are styled
+     INLINE (color/font-weight/font-size), and an inline style beats a
+     stylesheet rule without it — the same trap already documented for
+     .hdr-partner and .hero-partner. Padding, radius and the pseudo-elements
+     are not in the inline style, so they win normally. */
+  /* ⚠️ THE GAP COMES DOWN BECAUSE THE PADDING WENT UP, and that is a fix for a
+     real overflow, not tidiness. The links used to be bare text with a 24px
+     gap: seven links, six gaps, 144px of spacing. Giving each one an 11px pill
+     padding adds 154px on top of that, and the measured result was the sticky
+     header scrolling sideways from about 1015px down - 23px at 1000, 101px at
+     800 - which is precisely the bug the 900px partner-mark hide was introduced
+     to fix on 3 Aug. Found by sweeping widths, not by looking at it.
+     The pills provide their own separation, so 2px between them is enough:
+     14x11 + 6x2 = 166 against the old 144. ⚠️ 4px was tried first and still
+     left 10px of overflow at 800px - a band only 60px wide, which is exactly
+     the kind of gap that gets called "close enough" and ships. Swept
+     1440 / 1200 / 1100 / 1000 / 900 / 860 / 800 / 700 / 600 / 500 / 390 / 360:
+     clean at every one.
+     !important because the gap is set inline on the <nav>. */
+  .hdr-nav{gap:2px!important}
+  .hdr-nav a{position:relative;display:inline-block;padding:7px 11px 9px;
+    border-radius:8px;overflow:hidden;
+    transition:background .25s ease,color .2s ease,transform .18s ease}
+  .hdr-nav a::before{content:"";position:absolute;inset:0;
+    background:linear-gradient(115deg,transparent 25%,rgba(225,27,34,.4) 38%,rgba(255,255,255,.55) 48%,rgba(23,163,74,.4) 58%,transparent 72%);
+    background-size:250% 250%;mix-blend-mode:screen;opacity:0;
+    transition:opacity .3s ease;pointer-events:none}
+  .hdr-nav a::after{content:"";position:absolute;left:11px;right:11px;bottom:4px;
+    height:2px;background:linear-gradient(90deg,#E11B22,#17A34A);border-radius:2px;
+    transform:scaleX(0);transform-origin:left;
+    transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+  .hdr-nav a:hover{background:rgba(255,255,255,.07);color:#fff!important;transform:translateY(-1px)}
+  /* The App link keeps its green on hover: it is the one nav item that leaves
+     the page rather than jumping down it, and that distinction is deliberate. */
+  .hdr-nav a[href="/app"]:hover{color:#3bd070!important}
+  .hdr-nav a:hover::before{opacity:.85;animation:holoShift 2.2s ease-in-out infinite}
+  .hdr-nav a:hover::after{transform:scaleX(1)}
+  .hdr-nav a:focus-visible{outline:2px solid #3bd070;outline-offset:2px}
+
+  /* ⚠️ THE TIGHT BAND, 761-900px, AND IT FIXES A BUG THAT WAS ALREADY LIVE.
+     Between the 760px panel collapse and the 900px partner-mark hide, seven
+     full-size links share the bar with the wordmark and the menu button. The
+     DEPLOYED page - before any of this - was already scrolling sideways there:
+     measured 6px at 770 and 12px at 762. Widening each link by an 11px pill
+     pushed that band up to 800px and made it worse.
+     6px padding through the band puts the nav at ~418px against the 466px it
+     was live, so this is now NARROWER than before and the pre-existing overflow
+     goes with it. Swept every 20px from 1440 to 360, plus 770 and 762 by hand.
+
+     ⚠️ THIS BLOCK MUST STAY BELOW THE BASE .hdr-nav a RULE. It was written
+     above it first, where - same specificity, earlier in the file - the base
+     padding simply won and the band did not change by a pixel while the media
+     query sat there looking correct. Same shape as the inline-style trap two
+     rules down: a rule that loses silently is worse than one that is missing. */
+  @media (min-width:761px) and (max-width:900px){
+    .hdr-nav a{padding:7px 6px 9px}
+    .hdr-nav a::after{left:6px;right:6px}
+  }
+
+  /* ⚠️ THE CURRENT SECTION IS DRIVEN BY ONE ATTRIBUTE ON <html>, NOT BY A
+     CLASS ON THE LINK. The component engine re-renders the page body after
+     first paint and does it more than once, so a class written onto a nav
+     link is thrown away with the element that carried it — the exact bug the
+     About-section board hit twice on 5 Aug. <html> is outside everything the
+     engine touches, so `data-sec` survives, and the CSS below does the rest
+     with no DOM mutation at all. */
+  html[data-sec="about"]    .hdr-nav a[href="#about"]::after,
+  html[data-sec="format"]   .hdr-nav a[href="#format"]::after,
+  html[data-sec="schedule"] .hdr-nav a[href="#schedule"]::after,
+  html[data-sec="results"]  .hdr-nav a[href="#results"]::after,
+  html[data-sec="venue"]    .hdr-nav a[href="#venue"]::after,
+  html[data-sec="sponsors"] .hdr-nav a[href="#sponsors"]::after{transform:scaleX(1)}
+  html[data-sec="about"]    .hdr-nav a[href="#about"],
+  html[data-sec="format"]   .hdr-nav a[href="#format"],
+  html[data-sec="schedule"] .hdr-nav a[href="#schedule"],
+  html[data-sec="results"]  .hdr-nav a[href="#results"],
+  html[data-sec="venue"]    .hdr-nav a[href="#venue"],
+  html[data-sec="sponsors"] .hdr-nav a[href="#sponsors"]{color:#fff!important}
+
+  /* The phone panel is a stack of full-width rows, where a centred pill and an
+     inset underline both read as damage. The decorations come off there; the
+     panel's own styling is untouched. */
+  .hdr-row[data-nav-open="true"] .hdr-nav a::before,
+  .hdr-row[data-nav-open="true"] .hdr-nav a::after{display:none}
+
+  /* ---- D: the condensed bar -------------------------------------------
+     ⚠️ SCOPED TO 761px AND UP. Below that the nav is a ☰ panel and the bar is
+     already compact; condensing there would shrink the wordmark for no gain.
+     ⚠️ AND THE HSBC MARK DOES NOT MOVE. Its height is asserted at exactly
+     19px by test-sponsors.js, and a partner mark quietly shrinking is the same
+     class of failure as one quietly vanishing — the mark is still there, so
+     nothing looks broken, and the tournament's only confirmed partner is
+     smaller than it was with nobody the wiser. Only OUR OWN furniture gives up
+     room: the crest, the wordmark, the signature rule and the padding. The
+     divider beside the mark drops 30 -> 24px so it does not tower over
+     something that stayed put. Net: 73px -> 55px. */
+  /* ⚠️ !important ON EVERY ONE OF THESE, and it is not laziness. Every property
+     being overridden here - the row's padding, the crest box, the wordmark and
+     strapline sizes, the signature rule's height, the divider - is set INLINE on
+     the element, and an inline style beats a stylesheet rule without it. The
+     first version of this block had none, the class went on, and the bar did not
+     move by a single pixel while `hdr-tight` sat there in the DOM looking
+     correct. Third time this file has been bitten by inline-wins; the other two
+     are documented on .hdr-partner and .hero-partner.
+     The pseudo-element offsets need no !important - nothing sets them inline. */
+  @media (min-width:761px){
+    html.hdr-tight .hdr-row{padding:7px 32px!important}
+    html.hdr-tight .hdr-crest{width:32px!important;height:32px!important}
+    html.hdr-tight .hdr-wordmark{font-size:16px!important}
+    html.hdr-tight .hdr-strap{font-size:9px!important;letter-spacing:1.4px!important}
+    html.hdr-tight .hdr-rule{height:2px!important}
+    html.hdr-tight .hdr-partner-div{height:24px!important}
+    html.hdr-tight .hdr-nav a{font-size:14px!important;padding:5px 10px 7px}
+    html.hdr-tight .hdr-nav a::after{left:10px;right:10px;bottom:3px}
+  }
+  /* The things that move are told how to move. Everything here is also covered
+     by the page-wide prefers-reduced-motion rule further up, which flattens
+     every transition to 0.01ms. */
+  .hdr-row,.hdr-crest,.hdr-wordmark,.hdr-strap,.hdr-rule,.hdr-partner-div{
+    transition:padding .22s ease,width .22s ease,height .22s ease,
+               font-size .22s ease,letter-spacing .22s ease}
+
+  /* The About section's rules button. Deliberately quiet - an outline that
+     fills on hover, not another red button. The arrow nudges right, which is
+     the cheapest possible way to say "this leaves the page you are on".
+     !important on the colour because the anchor is styled inline and an
+     ordinary rule loses to that (the same trap as .hdr-partner). */
+  .rules-btn{transition:background .22s ease,border-color .22s ease,color .22s ease}
+  .rules-btn span{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+  .rules-btn:hover{background:#0C0C0E;border-color:#0C0C0E;color:#fff!important;text-decoration:none}
+  .rules-btn:hover span{transform:translateX(4px)}
+  .rules-btn:focus-visible{outline:3px solid #17A34A;outline-offset:3px}
+
   /* Age-group trading cards (design handoff: design_handoff_age_group_cards).
      --glow is set per-card from the group's own AGE_GROUP_CARDS.tint (red for
      Saturday groups, green for Sunday), so one hover rule drives both colors.
@@ -743,7 +973,7 @@
   <!-- ============ HEADER ============ -->
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">
     <!-- red->green signature line -->
-    <div style="height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
+    <div class="hdr-rule" style="height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
     <div class="hdr-row" data-nav-open="{{ navOpenAttr }}" style="max-width:1200px;margin:0 auto;padding:13px 32px;display:flex;align-items:center;justify-content:space-between">
       <!-- The crest link and the partner mark are wrapped in ONE flex child, so
            the row's space-between still puts the nav hard right. Three direct
@@ -751,12 +981,12 @@
            bar, where it reads as a nav item rather than a partner. -->
       <div style="display:flex;align-items:center;gap:16px;min-width:0">
         <a href="#top" style="display:flex;align-items:center;gap:14px;color:#fff">
-          <div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
+          <div class="hdr-crest" style="width:42px;height:42px;display:flex;align-items:center;justify-content:center">
             <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%;height:100%;object-fit:contain">
           </div>
           <div style="display:flex;flex-direction:column;line-height:1">
-            <span style="font-family:'Anton';font-size:19px;letter-spacing:.5px;white-space:nowrap">ABU DHABI HARLEQUINS</span>
-            <span style="font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
+            <span class="hdr-wordmark" style="font-family:'Anton';font-size:19px;letter-spacing:.5px;white-space:nowrap">ABU DHABI HARLEQUINS</span>
+            <span class="hdr-strap" style="font-size:10px;letter-spacing:2px;color:#3bd070;font-weight:700;margin-top:3px">JUNIOR RUGBY TOURNAMENT</span>
           </div>
         </a>
         <!-- Deliberately NOT a link. The header is sticky, so a tap target that
@@ -769,7 +999,7 @@
              here — that one has a black wordmark and would need a white plate
              behind it, which reads as a sticker stuck on the page. -->
         <span class="hdr-partner" style="display:flex;align-items:center;gap:16px;flex:none">
-          <span style="width:1px;height:30px;background:rgba(255,255,255,0.18)"></span>
+          <span class="hdr-partner-div" style="width:1px;height:30px;background:rgba(255,255,255,0.18)"></span>
           <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">
         </span>
       </div>
@@ -1054,6 +1284,31 @@
           <div style="color:#7c786f;font-weight:600">age-grade format</div>
         </div>
       </div>
+
+      <!-- Tournament rules (Jay, 5 Aug 2026). A REAL PAGE at /rules, the same
+           shape as /legal - not a modal and not an in-page jump, because a coach
+           wants to send it to a parent, and a link to a section that opens a
+           dialog is not something you can send.
+
+           ⚠️ The page says "coming soon" on purpose: the rules do not exist yet.
+           Publishing the ADDRESS now means the link in an email sent in October
+           still works when the content lands, instead of every club being sent
+           a second link. If the rules slip, the page is honest about it rather
+           than the button being missing.
+
+           Styled as an outline button rather than a .reg-btn: the two Register
+           buttons are the page's calls to action and this must not compete with
+           them. It sits under the two stat blocks above, which is where somebody
+           reading about the format is already looking. -->
+      <a href="/rules" class="rules-btn"
+         style="display:inline-flex;align-items:center;gap:10px;margin-top:30px;
+                padding:13px 22px;border:1px solid #cfcabf;border-radius:100px;
+                font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;
+                text-transform:uppercase;letter-spacing:.06em;font-size:14px;
+                color:#14151A;background:transparent">
+        Tournament rules
+        <span aria-hidden="true" style="font-size:16px;line-height:1">&rarr;</span>
+      </a>
     </div>
     <div class="about-media" style="position:relative" data-reveal>
       <!-- ⚠️ THE CREST USED TO BE HERE, pinned over the top-left corner of the
@@ -1628,7 +1883,7 @@
          reach it. The old shorter labels happened to fit and hid the fault.
          Wrapping means the pills drop onto their own line instead. -->
     <div style="max-width:1200px;margin:40px auto 0;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);font-size:13px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center">
-      <span>&copy; 2026 Abu Dhabi Harlequins Rugby Football Club. &nbsp;&middot;&nbsp; <a href="/legal" style="color:#8a8f99">Legal &amp; Privacy</a></span>
+      <span>&copy; 2026 Abu Dhabi Harlequins Rugby Football Club. &nbsp;&middot;&nbsp; <a href="/rules" style="color:#8a8f99">Tournament rules</a> &nbsp;&middot;&nbsp; <a href="/legal" style="color:#8a8f99">Legal &amp; Privacy</a></span>
       <span style="display:flex;flex-wrap:wrap;gap:18px;align-items:center">
         <span>Affiliated with Harlequin F.C. London · Est. 1970</span>
         <!-- THE ONLY TWO SIGN-IN LINKS ON THE PAGE. They were also in the top

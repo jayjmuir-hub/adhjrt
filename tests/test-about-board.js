@@ -497,4 +497,166 @@ for (const folder of ['tests', 'tools']) {
     fs.existsSync(path.join(repoRoot(), '404.html')), rule.slice(0, 120));
 }
 
+/* ------------------------------------------------------------------------ */
+section('the header nav — hover, current section, and the condensed bar');
+
+/* Three treatments Jay picked, combined (5 Aug 2026). What is asserted here is
+   the machinery that makes them work, not how they look — a source read cannot
+   see a shimmer. The look was measured by rendering: bar 73px -> 53px, HSBC
+   19.0px in both states, strapline 10px -> 9px. */
+
+const HDRCSS = stripCssComments(PAGE);
+
+/* A — the holo. Copied from .fmt-grp / .reg-btn rather than invented, so all
+   three places drift together or not at all. */
+check('the nav hover uses the SAME holo gradient as the cards and buttons',
+  (HDRCSS.match(/linear-gradient\(115deg,transparent 25%,rgba\(225,27,34,\.4\) 38%/g) || []).length >= 3,
+  'header, age-group cards and Register buttons must all read from the same recipe');
+check('…and the same holoShift drift', /\.hdr-nav a:hover::before\{opacity:\.85;animation:holoShift/.test(HDRCSS));
+
+/* B — the underline, inset to the pill so the two line up. */
+check('the underline wipes from the left', /\.hdr-nav a::after\{[^}]*transform:scaleX\(0\);transform-origin:left/.test(HDRCSS));
+check('…and is inset to the pill padding, not run edge to edge',
+  /\.hdr-nav a::after\{[^}]*left:11px;right:11px/.test(HDRCSS),
+  'a rule wider than the tint behind it reads as a mistake');
+
+/* B2 — the current section. ⚠️ The mechanism matters more than the effect: a
+   class written onto a nav link is destroyed when the engine re-renders the
+   body, which it does more than once after first paint. Driving it from one
+   attribute on <html> is what makes it survive. */
+const SECS = ['about','format','schedule','results','venue','sponsors'];
+/* Whitespace collapsed first: the selectors are hand-aligned in the stylesheet
+   so the column of section names reads down the page, and counting the spaces
+   in a check is how you write a test that fails on a tidy-up. */
+const HDR_FLAT = HDRCSS.replace(/\s+/g, ' ');
+SECS.forEach((sec) => {
+  check(`the current-section underline covers #${sec}`,
+    HDR_FLAT.includes(`html[data-sec="${sec}"] .hdr-nav a[href="#${sec}"]::after`),
+    'every nav section needs its own rule - one missing is one link that never marks');
+  check(`…and #${sec} goes full white while it is current`,
+    HDR_FLAT.includes(`html[data-sec="${sec}"] .hdr-nav a[href="#${sec}"]`),
+    '');
+});
+check('the script writes the section to <html>, not to a link',
+  /document\.documentElement\.setAttribute\('data-sec'/.test(PAGE) &&
+  !/querySelector[^\n]*hdr-nav[^\n]*classList/.test(PAGE),
+  'a class on a link dies with the element when the engine re-renders');
+check('…and the same for the condensed class',
+  /document\.documentElement\.classList\.toggle\('hdr-tight'/.test(PAGE));
+
+/* D — the condensed bar. */
+check('the condensed rules are scoped to 761px and up',
+  /@media \(min-width:761px\)\{\s*html\.hdr-tight/.test(HDRCSS.replace(/\n\s*/g, ' ')),
+  'below that the nav is a panel and the bar is already compact');
+
+/* ⚠️ EVERY CONDENSED RULE NEEDS !important, because every property it
+   overrides is set INLINE on the element. Without it the class goes on, the
+   DOM looks correct, and the bar does not move by a single pixel — which is
+   exactly what the first version did. */
+['padding:7px 32px', 'width:32px', 'font-size:16px', 'height:2px', 'height:24px'].forEach((decl) => {
+  const rule = (HDRCSS.match(new RegExp('html\\.hdr-tight [^{]*\\{[^}]*' + decl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^}]*\\}')) || [''])[0];
+  check(`the condensed "${decl}" beats the inline style`, /!important/.test(rule), rule.slice(0, 90));
+});
+
+/* ⚠️ AND THE PARTNER MARK DOES NOT CONDENSE. Asserted as an ABSENCE with the
+   reason attached: a placement quietly shrinking is the same class of failure
+   as one quietly vanishing, and test-sponsors.js pins the header mark at 19px.
+   Its DIVIDER is allowed to shrink - that is our furniture, not theirs. */
+check('no condensed rule touches the HSBC mark itself',
+  !/html\.hdr-tight[^{]*\.hdr-partner img/.test(HDRCSS) &&
+  !/html\.hdr-tight[^{]*\.hdr-partner\{/.test(HDRCSS),
+  'the mark is 19px in both states, and test-sponsors.js asserts that number');
+check('…while its divider IS allowed to give room back',
+  /html\.hdr-tight \.hdr-partner-div\{height:24px!important\}/.test(HDRCSS));
+
+/* The scroll handler itself: throttled, passive, fails safe, and re-scans. */
+check('the scroll handler is throttled to one frame',
+  /if\(ticking\) return;[\s\S]{0,80}requestAnimationFrame\(measure\)/.test(PAGE),
+  'a scroll fires continuously; touching the DOM every event is how a page gets heavy');
+check('…and only writes when the answer changes',
+  /if\(wanttight !== tight\)/.test(PAGE) && /if\(found !== cursec\)/.test(PAGE));
+check('…and is registered passive', /addEventListener\('scroll', onscroll, \{passive:true\}\)/.test(PAGE));
+check('…and re-measures after the engine re-renders the body',
+  /setInterval\(function\(\)\{ measure\(\); if\(\+\+n>40\)/.test(PAGE),
+  'the sections it measures do not exist on the first pass');
+check('…and swallows its own errors, leaving the header at rest',
+  /\}catch\(e\)\{ \/\* leave the header alone \*\/ \}/.test(PAGE));
+
+/* The phone panel is a stack of full-width rows; the pill and underline are
+   removed there rather than left to look like damage. */
+check('the decorations come off inside the open phone panel',
+  /\.hdr-row\[data-nav-open="true"\] \.hdr-nav a::before,\s*\.hdr-row\[data-nav-open="true"\] \.hdr-nav a::after\{display:none\}/.test(HDRCSS.replace(/\n\s*/g, '\n')),
+  '');
+
+/* ⚠️ THE NAV GOT WIDER AND THE HEADER OVERFLOWED — twice, and the second time
+   it turned out to have been live already.
+
+   The links were bare text with a 24px gap: seven links, six gaps, 144px of
+   spacing. An 11px pill padding adds 154px on top, and the sticky header
+   scrolled sideways from ~1015px down. The gap came to 2px, and a tighter pill
+   through the 761-900px band brought the nav to ~418px against the 466px it was
+   on the DEPLOYED page — so a pre-existing 6-12px overflow at 762-770px went
+   with it. Measured every 20px from 1440 to 360, plus 770 and 762 by hand.
+
+   Numbers, not adjectives: 14 x padding + 6 x gap must stay under the 144px the
+   bar used to spend, at every width where seven links are on screen. */
+const navGap = (HDRCSS.match(/\.hdr-nav\{gap:(\d+)px!important\}/) || [])[1];
+eq('the nav gap came down when the pills went in', navGap, '2');
+check('…and it is !important, because the gap is set inline on the <nav>',
+  /\.hdr-nav\{gap:2px!important\}/.test(HDRCSS));
+
+const band = (HDRCSS.match(/@media \(min-width:761px\) and \(max-width:900px\)\{[\s\S]*?\n  \}/) || [''])[0];
+check('the 761-900px band tightens the pill further', /padding:7px 6px 9px/.test(band),
+  'that band was overflowing on the live site before this change, by 6-12px');
+check('…and its underline inset follows the padding', /left:6px;right:6px/.test(band));
+
+/* ⚠️ ORDER IS LOAD-BEARING HERE. Same specificity as the base rule, so the one
+   later in the file wins. Written above it, the band rule changed nothing at
+   all while looking perfectly correct. */
+check('the band rule sits BELOW the base .hdr-nav a rule',
+  HDRCSS.indexOf('@media (min-width:761px) and (max-width:900px)') >
+  HDRCSS.indexOf('.hdr-nav a{position:relative'),
+  'above it, the base padding wins and the band silently does nothing');
+
+/* ------------------------------------------------------------------------ */
+section('the tournament rules page');
+
+const RULES = readRepo('rules.html').replace(/\r\n/g, '\n');
+const TOML_R = TOML;
+
+check('rules.html exists and is a full page', RULES.includes('<!DOCTYPE html>') && RULES.length > 3000);
+check('it is served at /rules', /from = "\/rules"\n  to = "\/rules\.html"\n  status = 200/.test(TOML_R));
+check('the About section links to it',
+  /<a href="\/rules" class="rules-btn"/.test(PAGE),
+  'Jay asked for a button in the About section');
+check('…and the footer does too', /<a href="\/rules" style="color:#8a8f99">Tournament rules<\/a>/.test(PAGE));
+
+/* ⚠️ INDEXABLE ON PURPOSE, unlike /register-club. Parents and coaches should be
+   able to find the rules by searching, so it is in the sitemap and carries
+   robots "all". If that is ever reversed, robots.txt is NOT the way — a
+   Disallow line advertises the path. */
+check('the rules page is indexable', /<meta name="robots" content="all">/.test(RULES));
+check('…and is in the sitemap', /<loc>https:\/\/adhjrt\.com\/rules<\/loc>/.test(readRepo('sitemap.xml')));
+check('…and robots.txt does not name it', !/rules/i.test(readRepo('robots.txt')));
+
+/* The placeholder is honest about being a placeholder, and says WHEN. A bare
+   "coming soon" makes a coach wonder whether the tournament is organised. */
+check('the page says coming soon', /class="badge">Coming soon<\/span>/.test(RULES));
+check('…and says when the rules will be there',
+  /before registration opens in October/.test(RULES),
+  'a placeholder with no date is a shrug');
+check('…and still tells a coach four things that ARE settled',
+  (RULES.match(/<li><b>/g) || []).length >= 4);
+check('the replace-this-block instruction is in the file',
+  /REPLACE THIS BLOCK when the real rules arrive/.test(RULES),
+  'so the next person does not rebuild the page around it');
+
+/* It shares legal.html's styling deliberately; the two are a pair. */
+check('it carries the same topbar and footer shape as /legal',
+  /class="topbar"/.test(RULES) && /class="foot-bar"/.test(RULES));
+check('…and links back to the site and to /legal',
+  /class="back" href="\/">/.test(RULES) && /href="\/legal"/.test(RULES));
+check('the og:image is the branded share card',
+  /<meta property="og:image" content="https:\/\/adhjrt\.com\/assets\/share-card\.png">/.test(RULES));
+
 summary('test-about-board.js');

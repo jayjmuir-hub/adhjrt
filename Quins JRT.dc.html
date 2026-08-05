@@ -497,16 +497,27 @@
     }
 
     function build(host){
-      if(host.__built)return; host.__built=1;
+      /* ⚠️ __built IS SET AT THE END, NOT THE TOP, AND THAT MATTERS.
+         It used to be set on entry, before anything had been checked. If this
+         ran while the component engine was midway through re-rendering the page
+         - so the element existed but its inner .jrtb-ring did not yet - the
+         early `return` left the host flagged as built when it was not. The
+         re-scanning loop then skipped it for ever and the board sat there as a
+         single static photo, `built:true, ready:false, panelCount:1`.
+
+         That is the same shape of mistake as the original find-it-once bug: a
+         flag claiming success before success happened. Bailing out WITHOUT
+         setting the flag means the next scan simply tries again. */
+      if(host.__built)return;
       try{
         var ring=host.querySelector('.jrtb-ring');
-        if(!ring)return;
+        if(!ring)return;                       // not there yet - retry next scan
 
         // Panel 0 already exists in the markup (the fail-safe photo). Make up
         // the rest to PANELS.
         var panels=[].slice.call(ring.querySelectorAll('.jrtb-p'));
         while(panels.length<PANELS){ var p=makePanel(); ring.appendChild(p); panels.push(p); }
-        if(panels.length!==PANELS) return;
+        if(panels.length!==PANELS) return;      // ditto
 
         // Seat each panel on the ring. We only set the ANGLE here; the CSS does
         // the translateZ, so the radius can be a calc() that scales with the
@@ -541,6 +552,8 @@
           }
         });
 
+        // Only NOW is it genuinely built. See the note at the top of build().
+        host.__built=1;
         host.classList.add('ready');   // switches the CSS from fail-safe to ring
 
         var at=0, turning=false, timer=null, onScreen=true;

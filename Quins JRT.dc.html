@@ -363,6 +363,9 @@
         faces[1].src=file(1);
 
         function turn(){
+          // If the engine re-rendered the page, this element is orphaned and a
+          // newer one is now on screen. Stop, and let the new one get on with it.
+          if(!host.isConnected){ clearTimeout(timer); return; }
           if(turning)return; turning=true;
           rot+=180;
           card.style.setProperty('--jrtb-rot',rot+'deg');
@@ -393,14 +396,26 @@
       }catch(e){ /* leave the static first photo showing */ }
     }
 
-    /* Same boot pattern as the crest animation above: the page body is
-       rendered by the component engine, so the element may not exist yet. */
-    function scan(){ var h=document.querySelector('.jrtb'); if(h){build(h);return true;} return false; }
+    /* ⚠️ DO NOT "simplify" this back to find-it-once-then-stop.
+       The component engine renders the page body AFTER first paint, and it
+       does it more than once. A one-shot scan finds the first .jrtb, builds
+       it, stops looking - and then the engine throws that element away and
+       puts a fresh one in its place, which nobody ever builds. The board then
+       sits there showing photo 1 for ever.
+
+       That is exactly what happened on 5 Aug 2026: it worked perfectly from a
+       local file and did nothing at all on the deployed site, because the
+       timing differs. Local green is not deployed green.
+
+       So: keep looking for 20 seconds and build any .jrtb that isn't built
+       yet. build() is idempotent per element, so re-scanning is free. */
+    function scan(){
+      var list=document.querySelectorAll('.jrtb');
+      for(var i=0;i<list.length;i++){ if(!list[i].__built) build(list[i]); }
+    }
     function boot(){
-      if(scan())return;
-      var mo=new MutationObserver(function(){ if(scan()) mo.disconnect(); });
-      try{ mo.observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
-      setTimeout(function(){ try{mo.disconnect();}catch(e){} scan(); },10000);
+      scan();
+      var n=0, iv=setInterval(function(){ scan(); if(++n>40) clearInterval(iv); },500);
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
   })();

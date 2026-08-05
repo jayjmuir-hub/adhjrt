@@ -69,9 +69,22 @@
 # This is tidiness, NOT security: the repo is public, so nothing in tests/
 # should ever be secret in the first place. See tests/README.md step 1 — the
 # data check that has to happen before the older test files move in.
+#
+# ⚠️ FIXED 5 Aug 2026 — THIS RULE HAD NEVER WORKED. It used to say
+#     to = "/tests/:splat"
+# i.e. it pointed at itself. Netlify drops a self-referential redirect rather
+# than applying it, so /tests/runall.ps1 was being served with a plain 200 for
+# as long as the rule had existed, while this comment claimed otherwise.
+# Caught by actually requesting the URL on the deployed site instead of
+# trusting the config. The target has to be a DIFFERENT path — 404.html — for
+# the status to be applied.
+#
+# If you touch this, re-test it by fetching /tests/runall.ps1 on a deploy and
+# checking for 404. Reading the toml proves nothing; that is how it went
+# unnoticed in the first place.
 [[redirects]]
   from = "/tests/*"
-  to = "/tests/:splat"
+  to = "/404.html"
   status = 404
   force = true
 
@@ -82,9 +95,14 @@
 # public — but a local build script is not part of the site and should not be
 # served as if it were. force = true for the same reason: it is a real file on
 # disk and would be served before this rule was consulted.
+#
+# Note `to = "/404.html"`, NOT "/tools/:splat". Pointing a redirect at itself
+# makes Netlify drop it silently — see the tests/ block above, where exactly
+# that mistake sat unnoticed. I made the same mistake here first and caught it
+# by fetching the URL on the deploy.
 [[redirects]]
   from = "/tools/*"
-  to = "/tools/:splat"
+  to = "/404.html"
   status = 404
   force = true
 

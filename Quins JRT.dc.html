@@ -929,7 +929,13 @@
       <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:52px 40px;overflow:hidden">
         <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
         <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:24px">Principal partner</div>
-        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">
+        <!-- ⚠️ THIS one links; the header and hero marks deliberately do NOT.
+             That rule is about the STICKY header — a tap target that leaves the
+             site follows a visitor down every page, including a parent part way
+             through the registration form. Nothing here is sticky. -->
+        <a href="https://www.hsbc.ae/" target="_blank" rel="noopener noreferrer" aria-label="HSBC — opens in a new tab" style="display:block;text-decoration:none">
+          <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">
+        </a>
         <p style="margin:26px auto 0;max-width:560px;color:#aeb4bf;font-size:17px;line-height:1.6">HSBC are the principal partner of the 2026 Abu Dhabi Harlequins Junior Rugby Tournament, and a large part of the reason thousands of young players get two full days of rugby.</p>
       </div>
 
@@ -982,7 +988,20 @@
                        read as postage stamps next to a 5:1 wordmark.
                    s.h is per-logo and normalises optical AREA. See
                    claude/specs/spec-sponsors-grid.md. -->
-              <img src="{{ s.file }}" alt="{{ s.name }}" loading="lazy" style="max-height:{{ s.h }}px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block">
+              <!-- ⚠️ target="_blank" REQUIRES rel="noopener". Without it the page
+                   we open gets a live `window.opener` handle back to this tab and
+                   can navigate it anywhere — reverse tabnabbing, and the tab it
+                   would redirect is the one a parent is registering a child in.
+                   `noreferrer` rides along so a sponsor's analytics cannot see
+                   which page sent the visitor.
+                   The anchor wraps the image and carries the sizing, so the tile
+                   and the click target are the same shape — a link smaller than
+                   the logo reads as a broken tile on a phone. -->
+              <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer"
+                 aria-label="{{ s.name }} — opens in a new tab"
+                 style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;text-decoration:none">
+                <img src="{{ s.file }}" alt="{{ s.name }}" loading="lazy" style="max-height:{{ s.h }}px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block">
+              </a>
             </div>
           </sc-for>
         </div>
@@ -1553,30 +1572,39 @@ const SPONSORS = [
      its half, and accept one repeat where the halves no longer interleave.
 
      Crompton Partners leads it at Jay's request, 5 Aug, which is why the run
-     starts WHITE and ends dark rather than the other way round. */
-  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },
-  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },
-  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },
-  { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44 },
-  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44, light: true },
-  { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68 },
-  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, light: true },
-  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
-  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36, light: true },
-  { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40 },
-  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 43, light: true },
-  { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68 },
-  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true },
-  { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
-  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true },
-  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36 },
-  { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 39, light: true },
+     starts WHITE and ends dark rather than the other way round.
+
+     ⚠️ EVERY ROW CARRIES A `url`, AND EVERY ONE WAS CHECKED FOR A 200 BEFORE IT
+     WENT IN. A sponsor's own logo pointing at a dead domain — or worse, at a
+     competitor who bought the name — is a commercial problem, not a broken
+     link. Four of them Jay supplied because they could not be found by search
+     (V&P, Recover, Arabian Swim Academy) or were genuinely ambiguous
+     (McCafferty's has a group site AND a Yas Island site; the sponsor is Yas).
+     Sedbergh is the UK school, confirmed by Jay — not an Abu Dhabi entity.
+     ⚠️ Do NOT guess a URL. An unlinked logo is fine; a wrong one is not. */
+  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true, url: 'https://cromptonpartners.com/' },
+  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },
+  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },
+  { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44, url: 'https://www.valueandperformance.com/' },
+  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44, light: true, url: 'https://flybeond.com/' },
+  { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68, url: 'https://www.ashurstperkinscoie.com/' },
+  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, light: true, url: 'https://www.westminsterci.com/' },
+  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37, url: 'https://www.sedberghschool.org/' },
+  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36, light: true, url: 'https://www.broadwaymalyan.com/' },
+  { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40, url: 'https://mccaffertysyas.com/' },
+  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 43, light: true, url: 'https://www.thebottlestore.ae/' },
+  { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68, url: 'https://sportsmanszsc.com/' },
+  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true, url: 'https://alignhealth.ae/' },
+  { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65, url: 'https://yascycles.com/' },
+  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true, url: 'https://anderson.ae/' },
+  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36, url: 'https://www.arabianswimacademy.com/' },
+  { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 39, light: true, url: 'https://recover.ae/' },
   /* Bili Boys is a badge with its own opaque cream ground, so it is already a
      box and belongs in the DARK half — it is also the one logo the contrast
      measurement gets wrong, reading the ground as ink, so it is pinned by hand.
      154x90 is all the artwork there is, so it is stored at native size and h
      sits below the formula on purpose. */
-  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },
+  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52, url: 'https://www.biliboys.ae/' },
 ];
 
 const AGE_GROUP_INFO = [

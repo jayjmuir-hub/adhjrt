@@ -1482,7 +1482,7 @@ const FAULTS = [
   {
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true, url: 'https://alignhealth.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters'],
   },
   {
@@ -1524,7 +1524,7 @@ const FAULTS = [
     name: 'HSBC is folded into the supporters grid, losing the hierarchy',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Oak View Group',",
-      "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44 },\n  { name: 'Oak View Group',"),
+      "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44, url: 'https://www.hsbc.ae/' },\n  { name: 'Oak View Group',"),
     expect: ['eighteen confirmed supporters'],
   },
   {
@@ -1584,7 +1584,7 @@ const FAULTS = [
        the row grows unevenly. 68 is the ceiling for a reason. */
     name: 'a logo is given a height that does not fit the tile',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "h: 51 },", "h: 96 },"),
+    apply: () => patch(HOME, "h: 51, url:", "h: 96, url:"),
     expect: ['height inside the tile'],
   },
   {
@@ -1594,8 +1594,61 @@ const FAULTS = [
        coming straight back. */
     name: 'the widest mark is levelled up to match the others',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35, light: true }", "sponsor-brighton-college.webp',       h: 55, light: true }"),
+    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35,", "sponsor-brighton-college.webp',       h: 55,"),
     expect: ['widest mark'],
+  },
+  {
+    /* ⚠️ rel="noopener" dropped from a target="_blank" link. REVERSE TABNABBING:
+       the opened page gets a live window.opener handle and can navigate THIS
+       tab anywhere — and the tab it would redirect is the one a parent is
+       registering a child in. It looks like tidying an attribute nobody reads. */
+    name: 'a new-tab sponsor link loses rel="noopener"',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'target="_blank" rel="noopener noreferrer"\n                 aria-label',
+      'target="_blank"\n                 aria-label'),
+    expect: ['carries rel="noopener"'],
+  },
+  {
+    /* A sponsor left with a placeholder link — the tile looks finished and goes
+       nowhere. */
+    name: 'a sponsor URL is left as a placeholder',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "url: 'https://yascycles.com/'", "url: '#'"),
+    expect: ['links somewhere'],
+  },
+  {
+    /* ⚠️ The copy-paste slip: the row is complete, the link works, and it opens
+       the wrong company. Nothing about it looks broken. */
+    name: 'two sponsors end up pointing at the same website',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "url: 'https://recover.ae/'", "url: 'https://alignhealth.ae/'"),
+    expect: ['every sponsor URL is distinct'],
+  },
+  {
+    /* http, not https — a mixed-content warning on a page parents register on. */
+    name: 'a sponsor link drops to http',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "url: 'https://anderson.ae/'", "url: 'http://anderson.ae/'"),
+    expect: ['over https'],
+  },
+  {
+    /* ⚠️ The header mark made a link — the rule it breaks is about the STICKY
+       header: a tap target that leaves the site follows a visitor down every
+       page, including a parent part way through the registration form. */
+    name: 'the sticky header HSBC mark is turned into a link',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block">',
+      '<a href="https://www.hsbc.ae/"><img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:19px;width:auto;display:block"></a>'),
+    expect: ['header HSBC mark is still NOT a link'],
+  },
+  {
+    /* The click target shrunk back to the logo — on a phone a tile that only
+       responds in its middle reads as broken. */
+    name: 'the sponsor link stops filling its tile',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'justify-content:center;width:100%;height:100%;text-decoration:none',
+      'justify-content:center;text-decoration:none'),
+    expect: ['whole tile'],
   },
   {
     /* ⚠️ The sponsors-section lockup quietly shrunk back. The mark is still
@@ -1612,7 +1665,7 @@ const FAULTS = [
     name: 'Crompton is moved out of the first slot',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME,
-      "  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },\n  { name: 'Oak View Group',",
+      "  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true, url: 'https://cromptonpartners.com/' },\n  { name: 'Oak View Group',",
       "  { name: 'Oak View Group',"),
     expect: ['Crompton leads the list'],
   },
@@ -1622,8 +1675,8 @@ const FAULTS = [
     name: 'the list is regrouped so the tiles stop alternating',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME,
-      "  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },\n  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },",
-      "  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },\n  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },"),
+      "  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },\n  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },",
+      "  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },\n  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },"),
     expect: ['the tiles alternate'],
   },
   {
@@ -1642,7 +1695,7 @@ const FAULTS = [
        it by: 11.5:1 needed 26, the wordmark is 5.4:1 at 36. */
     name: 'Broadway Malyan goes back to the tagline lockup',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36, light: true }", "sponsor-broadway-malyan.webp',        h: 26, light: true }"),
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36,", "sponsor-broadway-malyan.webp',        h: 26,"),
     expect: ['sized for the wordmark'],
   },
   {
@@ -1651,7 +1704,7 @@ const FAULTS = [
        the artwork there is, so 64 is a blurrier logo, not a bigger one. */
     name: 'the small-source Bili Boys logo is scaled up to the formula height',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-bili-boys.webp',              h: 52 }", "sponsor-bili-boys.webp',              h: 64 }"),
+    apply: () => patch(HOME, "sponsor-bili-boys.webp',              h: 52,", "sponsor-bili-boys.webp',              h: 64,"),
     expect: ['90px source is not stretched'],
   },
   {
@@ -1670,7 +1723,7 @@ const FAULTS = [
        a day and the thing Jay noticed. */
     name: 'Bili Boys is dropped from the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52, url: 'https://www.biliboys.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
@@ -1687,7 +1740,7 @@ const FAULTS = [
   {
     name: 'Anderson is dropped from the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true, url: 'https://anderson.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters', 'Anderson is on the page'],
   },
   {
@@ -1697,7 +1750,7 @@ const FAULTS = [
        file, so a white box would erase it outright. */
     name: 'a white box spreads to a logo that only exists as a white file',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-yas-cycles.webp',             h: 65 }", "sponsor-yas-cycles.webp',             h: 65, light: true }"),
+    apply: () => patch(HOME, "sponsor-yas-cycles.webp',             h: 65,", "sponsor-yas-cycles.webp',             h: 65, light: true,"),
     expect: ['nine sponsors get a white box', 'yas-cycles stays on the dark tile'],
   },
   {
@@ -1705,7 +1758,7 @@ const FAULTS = [
        on #151517, reporting no error anywhere. */
     name: 'a white box is dropped, hiding a dark-ink logo',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "h: 54, light: true }", "h: 54 }"),
+    apply: () => patch(HOME, "h: 54, light: true, url:", "h: 54, url:"),
     expect: ['nine sponsors get a white box'],
   },
   {
@@ -1730,7 +1783,7 @@ const FAULTS = [
        stamp bug, and it is invisible to every check that only counts rows. */
     name: "the near-square marks are shrunk back to the pack",
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-sportsmans-arms.webp',        h: 68 }", "sponsor-sportsmans-arms.webp',        h: 35 }"),
+    apply: () => patch(HOME, "sponsor-sportsmans-arms.webp',        h: 68,", "sponsor-sportsmans-arms.webp',        h: 35,"),
     expect: ['squarest marks'],
   },
 

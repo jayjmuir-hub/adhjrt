@@ -488,6 +488,38 @@ HSBC card above it is legitimately `background:#151517`, so a section-wide
 negative check fails on the principal-partner card. The slice asserts it is
 non-empty first — *"no hardcoded colour in nothing"* would pass for ever.
 
+### ⚠️ EVERY LOGO LINKS TO ITS SPONSOR (5 Aug 2026)
+
+Each `SPONSORS` row carries a `url`, and **every one was checked for a 200
+before it went in.** A sponsor's own mark pointing at a dead domain — or at
+whoever bought the name next — is a commercial problem, not a broken link.
+**Do NOT guess a URL.** Four came from Jay because they could not be found by
+search (V&P, Recover, Arabian Swim Academy) or were genuinely ambiguous
+(McCafferty's has a group site AND a Yas Island site; the sponsor is Yas).
+Sedbergh is the UK school, confirmed by Jay.
+
+**The row pattern in `test-sponsors.js` REQUIRES the url**, so a sponsor added
+without one falls out of the list entirely and trips the COUNT check rather
+than shipping a tile that goes nowhere. Also asserted: https only, every URL
+distinct (a copy-paste slip produces a working link to the wrong company, and
+nothing about it looks broken), and no bare `#`.
+
+⚠️ **`target="_blank"` REQUIRES `rel="noopener"`, and that is a SECURITY rule.**
+Without it the opened page gets a live `window.opener` handle and can navigate
+THIS tab anywhere — reverse tabnabbing — and the tab it would redirect is the
+one a parent is registering a child in. There is a fault for dropping it.
+
+**The anchor wraps the image and fills the tile** (`width:100%;height:100%`), so
+the click target and the tile are the same shape; a link smaller than its tile
+reads as broken on a phone. It carries an `aria-label` saying it opens in a new
+tab.
+
+⚠️ **HSBC's CARD links to hsbc.ae; the HEADER and HERO marks deliberately do
+NOT.** That rule is about the STICKY header — a tap target that leaves the site
+follows a visitor down every page, including a parent part way through the
+registration form. **Asserted from both ends**, with a fault that links the
+header mark.
+
 ### Artwork rules
 
 Transparent background, trimmed to the ink, **never upscaled** — a file smaller

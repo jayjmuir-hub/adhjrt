@@ -448,7 +448,7 @@ section('The supporters grid');
      `.webp`, so a raw .png dropped in fell OUT of the list entirely and tripped
      the COUNT check instead of the format check — the fault run caught that.
      A pattern that only matches the healthy case cannot report the sick one. */
-  const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+)(, light: true)? \}/g)];
+  const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+)(, light: true)?, url: '([^']*)' \}/g)];
   eq('eighteen confirmed supporters', rows.length, 18);
 
   /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
@@ -556,6 +556,58 @@ section('The supporters grid');
      coverage. This is what it was really guarding. */
   check('no sponsor is named without a file behind it',
     rows.every((r) => r[2] && r[2].startsWith('assets/sponsor-')));
+
+  /* ⚠️ EVERY LOGO LINKS TO ITS SPONSOR, and every URL was checked for a 200
+     before it went in. A sponsor's own mark pointing at a dead domain — or at
+     whoever bought the name next — is a commercial problem, not a broken link.
+     The row pattern REQUIRES the url, so a sponsor added without one falls out
+     of the list entirely and trips the count check rather than shipping a tile
+     that goes nowhere. */
+  rows.forEach(([, name, , , , url]) => {
+    const n = name.replace(/['"]/g, '');
+    check(`${n} links somewhere`, !!url && url !== '#');
+    check(`…over https, not http or a bare path`, /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}\//i.test(url), url);
+  });
+  /* ⚠️ NO TWO SPONSORS SHARE A URL. That is what a copy-paste slip looks like:
+     the row is complete, the link works, and it opens the wrong company. */
+  check('every sponsor URL is distinct',
+    new Set(rows.map((r) => r[5])).size === rows.length);
+
+  /* ⚠️ target="_blank" REQUIRES rel="noopener", and this is a security check,
+     not a tidiness one. Without it the opened page gets a live `window.opener`
+     handle and can navigate THIS tab anywhere — reverse tabnabbing — and the
+     tab it would redirect is the one a parent registers a child in. */
+  const anchors = sponsorsInner.match(/<a [^>]*target="_blank"[^>]*>/g) || [];
+  check('the supporter logos are links', /<a href="\{\{ s\.url \}\}"/.test(sponsorsInner));
+  eq('every new-tab link in the section is accounted for', anchors.length, 2);
+  anchors.forEach((a, i) => {
+    check(`new-tab link ${i + 1} carries rel="noopener"`, /rel="noopener noreferrer"/.test(a), a);
+  });
+  check('…and the link is the whole tile, not a logo-sized target',
+    /href="\{\{ s\.url \}\}"[\s\S]{0,320}width:100%;height:100%/.test(sponsorsInner));
+  check('…and it says it opens in a new tab, for anyone not looking at it',
+    /aria-label="\{\{ s\.name \}\} — opens in a new tab"/.test(sponsorsInner));
+
+  /* ⚠️ HSBC's card links; the HEADER and HERO marks deliberately do not. That
+     rule is about the STICKY header — a tap target that leaves the site follows
+     a visitor down every page, including a parent part way through the
+     registration form. Asserted from both ends so neither drifts. */
+  check('the HSBC card links to hsbc.ae', /<a href="https:\/\/www\.hsbc\.ae\/"/.test(sponsorsInner));
+  /* ⚠️ Sliced to the block's own closing tag, not to a character count. The
+     header mark carries a style attribute, so `<span class="hdr-partner">` does
+     not match it — the first version of this check looked for that and found
+     -1, which is a check reading nothing rather than a check passing. And a
+     fixed-length slice would run past the block into markup that legitimately
+     contains links. */
+  const hdrStart = PAGE.indexOf('class="hdr-partner"');
+  const hdrBlock = hdrStart >= 0 ? PAGE.slice(hdrStart, PAGE.indexOf('</span>', PAGE.indexOf('<img', hdrStart))) : '';
+  check('the header block was located', hdrBlock.length > 80, String(hdrBlock.length));
+  check('the header HSBC mark is still NOT a link', !/<a[\s>]/.test(hdrBlock));
+
+  const heroStart = PAGE.indexOf('class="hero-partner"');
+  const heroBlock = heroStart >= 0 ? PAGE.slice(heroStart, PAGE.indexOf('</div>', heroStart)) : '';
+  check('the hero block was located', heroBlock.length > 200, String(heroBlock.length));
+  check('the hero HSBC lockup is still NOT a link', !/<a[\s>]/.test(heroBlock));
 
   /* ⚠️ NOTHING IN THIS GRID IS RECOLOURED. Jay's call, 5 Aug: "put them on the
      black background, anything that was changed can just go in a white box."

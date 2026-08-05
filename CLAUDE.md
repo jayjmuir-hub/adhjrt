@@ -724,6 +724,28 @@ list under a different one.
 
 ## Gotchas found the hard way
 
+- ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`
+  IN A `.dc.html`. The engine rewrites it and the script stops parsing.**
+  `support.js` runs `encodeCase()` over the whole component before it is
+  parsed, and its regex — `/(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g` — exists so
+  that camelCase *attributes* survive HTML's case-insensitive attribute names.
+  **It does not stop at `<script>` boundaries.** Whitespace + camelCase + `=`
+  becomes a kebab-cased `sc-camel-…` name wherever it appears, code included.
+
+  Hit for real on 5 Aug 2026: the About board's `onScreen` flag became
+  `sc-camel-on-screen=`, and the copy of the script the engine mounts into
+  `<head>` threw `SyntaxError: … Unexpected token '-'` **on every load of
+  adhjrt.com**. The section still worked, because a second unmangled copy of
+  the same script runs in place — so the only symptom was a console error, and
+  it shipped. Renaming to `onscreen` fixed it.
+
+  **Use all-lowercase or snake_case for locals in these scripts.** Spacing does
+  not help: `onScreen = true` matches the same regex. Property access
+  (`el.onScreen`) is safe — the regex needs whitespace before the name. Note
+  the class of failure: if the engine's mount order ever changes so the head
+  copy is the only one, the whole feature dies with no other warning.
+  `tests/test-about-board.js` sweeps every inline script in every component for
+  this, and a fault re-introduces it.
 - **The homepage's outer wrapper must carry NO width bound.** It has now been
   wrong in both directions. It started as `min-width:1200px`, which forced a
   1200px canvas onto phones — the site rendered zoomed out and the registration
@@ -2670,12 +2692,22 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
 
 A visual pass, now live. To preview a branch before merging, **open a PR** — that
 triggers a free, password-protected Netlify **deploy-preview** at
-`deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` (only merging to
+`deploy-preview-<N>--adhquins-jrt.netlify.app` (only merging to
 `main` spends the 15 credits). **There is also a permanent branch URL —
-`https://dev--serene-gingersnap-1d0eb6.netlify.app` — which always serves the
+`https://dev--adhquins-jrt.netlify.app` — which always serves the
 latest `dev` build and never changes.** Use that in preference to a PR
-preview; see "Three kinds of preview URL" below. The whole site is
-also behind a site-wide Netlify password, so previews prompt for it too.
+preview; see "Three kinds of preview URL" below.
+
+⚠️ **THIS PARAGRAPH USED TO END "the whole site is also behind a site-wide
+Netlify password, so previews prompt for it too." THAT IS NO LONGER TRUE and
+was corrected on 5 Aug 2026.** The password was verified OFF on the live
+project on 3 Aug (`projectAccessControls.requiresPassword: false`) and again on
+5 Aug, and the correction reached `state-of-play.md` at the time but not this
+file — so the claim went on giving instructions here for two more days, in two
+separate places (see §6 Traps, corrected in the same pass). **adhjrt.com and
+every preview URL are publicly reachable.** When you reason about whether
+something is safe, check what is actually protecting it; this gate is not
+there.
 
 - **Logo** is now transparent `assets/crest.png` (white background + the white
   badge circles behind the nav/about/organiser crests removed), from a high-def
@@ -2754,9 +2786,12 @@ also behind a site-wide Netlify password, so previews prompt for it too.
    `href="#results"` (an in-page jump). Change to `/scores` and swap the
    coming-soon standings preview for "View live scores" — only once the
    draw is real, or placeholder pools go public.
-3. **The rest of the sponsor line-up.** HSBC is confirmed and live (see below).
-   Nobody else is. When another signs, add a card to the second block in the
-   sponsors section — do not demote HSBC into a row of equals without asking.
+3. ~~**The rest of the sponsor line-up.**~~ **DONE 5 Aug 2026** — eighteen
+   supporters ship in the grid below the HSBC card, every logo linking to its
+   sponsor. HSBC is still the principal partner and is NOT in that grid; do not
+   demote it into a row of equals without asking. See "The supporters grid"
+   above for the artwork rules before adding a nineteenth — the alternating
+   tiles only work because the light/dark split is exactly even.
 4. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
    on a branch/preview (free), merge to `main` once. (Full deploy-credit and
@@ -2859,7 +2894,7 @@ Working shape:
    lands the code and quietly does not deploy.
 3. To show Jay a change before it goes live, **open a PR from `dev`** — that
    builds a free password-protected preview at
-   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app`. Note an agent
+   `deploy-preview-<N>--adhquins-jrt.netlify.app`. Note an agent
    **cannot** create the PR: there is no `gh` CLI on either machine and the
    GitHub connector is read-only. Jay has to click the green **Create pull
    request** button. `.../pull/new/<branch>` is the FORM, not a PR — never hand
@@ -2881,8 +2916,8 @@ Working shape:
    to `main` takes `[skip ci]` so no deploy runs; on `dev` it is never needed.
 3. Branches are free. To preview one, **open a PR** — that gives a
    password-protected deploy-preview at
-   `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` — but prefer the
-   permanent branch URL, `https://dev--serene-gingersnap-1d0eb6.netlify.app`.
+   `deploy-preview-<N>--adhquins-jrt.netlify.app` — but prefer the
+   permanent branch URL, `https://dev--adhquins-jrt.netlify.app`.
 
 ### Three kinds of preview URL, and only one of them is stable (2 Aug 2026)
 
@@ -2892,16 +2927,27 @@ exists. Netlify hands out three different URLs and they are easy to confuse:
 
 | URL | Changes when | Use it for |
 |---|---|---|
-| `<deploy-id>--serene-gingersnap-1d0eb6.netlify.app` | **every single build** | nothing, day to day — it is an archive link to one frozen build |
-| `deploy-preview-<N>--serene-gingersnap-1d0eb6.netlify.app` | every new PR | reviewing one specific PR |
-| **`dev--serene-gingersnap-1d0eb6.netlify.app`** | **never** | **everything. Bookmark it.** It always serves the latest `dev` build. |
+| `<deploy-id>--adhquins-jrt.netlify.app` | **every single build** | nothing, day to day — it is an archive link to one frozen build |
+| `deploy-preview-<N>--adhquins-jrt.netlify.app` | every new PR | reviewing one specific PR |
+| **`dev--adhquins-jrt.netlify.app`** | **never** | **everything. Bookmark it.** It always serves the latest `dev` build. |
 
-⚠️ **THIS FILE SAID THE OPPOSITE UNTIL 2 AUG 2026** — that the site had no
-per-branch URL and `<branch>--….netlify.app` 404s. It does not. Verified by
-fetching all three: an invented branch name returns **404**, while both
-`main--…` and `dev--…` return **401**, which is the site-wide password gate
-answering — and a password prompt only appears for a deploy that exists. That
-is the test to use: **401 means it is there, 404 means it is not.**
+⚠️ **THE HOST NAME IN THIS TABLE WAS WRONG UNTIL 5 AUG 2026, AND EVERY URL IT
+GAVE WAS DEAD.** It said `serene-gingersnap-1d0eb6.netlify.app` in seven
+places; the project's Netlify subdomain is **`adhquins-jrt`**. Measured, not
+guessed: `dev--serene-gingersnap-1d0eb6.netlify.app` answers **404** and so
+does `main--…`, while `dev--adhquins-jrt.netlify.app` answers **200**. Anyone
+following this file to preview a branch got a 404 and would reasonably have
+concluded branch deploys were broken. The old name presumably worked once and
+the site was renamed; nothing recorded it.
+
+⚠️ **AND THE 401 TEST IS DEAD TOO.** This section used to say an existing
+deploy answers **401** (the site-wide password prompt) and a missing one
+**404**, so 401 meant it was there. The password is OFF — **an existing deploy
+now answers 200.** Both live checks, 5 Aug 2026:
+`dev--adhquins-jrt.netlify.app` → 200, `nosuchbranch--adhquins-jrt.netlify.app`
+→ 404. **200 means it is there, 404 means it is not.** For anything that
+matters, read the deploy id from the Netlify MCP rather than inferring
+existence from a status code.
 
 Consequence worth knowing: branch deploys are **enabled**, so every push to
 `dev` triggers a build. That is what makes the stable URL work. If Netlify
@@ -2918,12 +2964,19 @@ file finds the clone itself, so any checkout on any machine can run them.
 
 It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
-pages, sponsors, light mode and the design-audit fixes — **31 files,
-~3,000 checks** — plus `_prove-registration.js`, the fault-injection script
-(**370 faults** as of 3 Aug 2026, all of which must be caught by the check that claims to
-guard them, and none of which may be "caught" by the suite throwing). The
-counts drift upward with every feature; trust `runall.ps1`'s own output
-over this sentence.
+pages, sponsors, light mode, the design-audit fixes and the About-section
+photo ring — **35 files** — plus `_prove-registration.js`, the fault-injection
+script (**514 faults** as of 5 Aug 2026, all of which must be caught by the
+check that claims to guard them, and none of which may be "caught" by the suite
+throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
+output over this sentence — it has been written down here as 17, 171, 333 and
+370 while being something else, because nothing asserts a number in prose.
+
+⚠️ **The prover's second number is the one to read.** It ends
+`N/N faults caught by the named check; M suite(s) clean on an undamaged copy`.
+**When you add a test file, M must go UP.** A suite that fails undamaged fails
+for every fault too, so all of its faults report "caught" while proving
+nothing. M was 29 before `test-about-board.js` and is 30 with it.
 
 **A test file must not fall over on a fault.** Reaching blind into a lookup that
 a fault makes `undefined` throws, kills the process, and every check after that
@@ -2965,5 +3018,10 @@ that were simply wrong about what the code should do.
   (`design/meet-organisers` PR #4, `fix/single-pool-width` PR #5 are both done).
 - **`raw.githubusercontent.com` serves stale copies for minutes** and ignores
   cache-busting params. Verify with plain `git`.
-- **The whole Netlify site sits behind a site-wide password**, so previews prompt
-  for it too. That is Jay's setting, not a fault.
+- ⚠️ **THE SITE-WIDE PASSWORD IS OFF — corrected 5 Aug 2026.** This bullet used
+  to say the whole site sat behind one and that previews prompted for it. It
+  was verified off on the live project on 3 Aug and again on 5 Aug. Nothing
+  prompts, and nothing may be left resting on it. The 401-means-it-exists trick
+  above is therefore also dead: **a branch deploy that exists now answers 200,
+  not 401** — use the deploy id from the Netlify MCP to tell a real deploy from
+  a missing one.

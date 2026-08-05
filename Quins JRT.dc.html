@@ -560,7 +560,18 @@
         host.__built=1;
         host.classList.add('ready');   // switches the CSS from fail-safe to ring
 
-        var at=0, turning=false, timer=null, onScreen=true;
+        // NOTE: onscreen is deliberately all lower case, and must stay that way.
+        // The component engine runs encodeCase() over this whole file BEFORE it
+        // is parsed, and its regex - /(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g - does
+        // not stop at <script> boundaries. A camelCase name followed by "=" is
+        // rewritten to a kebab-case "sc-camel-" attribute name wherever it appears,
+        // so the old name (onScreen, then an equals sign) was rewritten to
+        // "sc-camel-on-screen" and the copy of this script
+        // the engine mounts into <head> threw SyntaxError on every page load. The
+        // in-place copy still ran, so the ring worked and only the console showed
+        // it. Any local variable in an inline script here must avoid a capital
+        // letter before its "=". tests/test-about-board.js pins this.
+        var at=0, turning=false, timer=null, onscreen=true;
 
         // Darken every panel in proportion to how far it is turned away.
         // Without this the ring reads as flat rectangles, not a lit object.
@@ -589,14 +600,14 @@
 
         function schedule(){
           clearTimeout(timer);
-          if(!onScreen||document.hidden)return;
+          if(!onscreen||document.hidden)return;
           timer=setTimeout(function(){ step(); schedule(); },EVERY);
         }
 
         document.addEventListener('visibilitychange',schedule);
         if('IntersectionObserver' in window){
           new IntersectionObserver(function(es){
-            onScreen=es[0].isIntersecting; schedule();
+            onscreen=es[0].isIntersecting; schedule();
           },{threshold:0.2}).observe(host);
         }
         schedule();

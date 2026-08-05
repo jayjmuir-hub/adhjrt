@@ -141,6 +141,26 @@ const NEEDED = [
   path.join('netlify', 'functions', 'google-config.js'),
 ];
 
+/* ⚠️ THE ABOUT-SECTION PHOTO BOARD (5 Aug 2026). test-about-board.js asserts
+   that all four files of every photo set PHOTOS names exist on disk, so without
+   them here the suite fails on an UNDAMAGED copy — and a suite that fails
+   undamaged reports every one of its faults as "caught" while proving nothing.
+   That exact trap has now been hit by _signins.js, Club.dc.html and the
+   sponsor logos; the rule is: whenever a test starts reading new files, they
+   join this list in the SAME commit.
+
+   Generated rather than written out because it is 44 filenames of pure
+   boilerplate, and a hand-typed list would drift from PHOTOS the first time a
+   photo is added. Existence is all that is ever asserted, so riding through the
+   text-normalising copy as garbage bytes is fine — same caveat as the PNGs
+   above. If a check on their CONTENT is ever added, this stops being safe. */
+for (let i = 1; i <= 11; i++) {
+  const n = (i < 10 ? '0' : '') + i;
+  for (const suffix of ['.avif', '-sm.avif', '.webp', '-sm.webp']) {
+    NEEDED.push(path.join('assets', 'board', `board-${n}${suffix}`));
+  }
+}
+
 /* Copies with the line endings NORMALISED to LF.
 
    Found the hard way: several faults below are multi-line patches, and on
@@ -156,6 +176,9 @@ function seed() {
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(path.join(TMP, 'netlify', 'functions'), { recursive: true });
   fs.mkdirSync(path.join(TMP, 'assets'), { recursive: true });
+  /* assets/board holds the About-section photos — the folder has to exist
+     before NEEDED's entries for it can be written. */
+  fs.mkdirSync(path.join(TMP, 'assets', 'board'), { recursive: true });
   NEEDED.forEach((rel) => {
     const from = path.join(SRC, rel);
     if (!fs.existsSync(from)) return;
@@ -4559,6 +4582,132 @@ const FAULTS = [
     apply: () => patch(HOME, '<div class="hdr-right" style="display:flex;align-items:center;gap:20px;min-width:0">',
       '<div class="hdr-wrap" style="display:flex;align-items:center;gap:20px;min-width:0">'),
     expect: ['third child is the hdr-right wrapper'],
+  },
+
+  /* ---- the About-section photo ring (test-about-board.js, 5 Aug 2026) ----
+
+     The first fault here is the real bug this suite was written for: the
+     component engine's encodeCase() rewrites " camelCase=" into a kebab-case
+     attribute name ANYWHERE in the file, <script> bodies included, and the
+     copy of the script it mounts into <head> then fails to parse. It shipped
+     live and the page still looked right, which is the whole problem. */
+  {
+    name: 'a camelCase assignment goes back into an inline script (encodeCase mangles it, head copy throws)',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var at=0, turning=false, timer=null, onscreen=true;',
+      'var at=0, turning=false, timer=null, onScreen=true;'),
+    expect: ['no inline script assigns to a camelCase name'],
+  },
+  {
+    /* Renaming the flag without renaming its readers: the sweep stays clean,
+       so only the positive checks can catch this. That is why they exist. */
+    name: 'the screen-visibility flag is renamed and the timer gate is orphaned',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'if(!onscreen||document.hidden)return;', 'if(!document.hidden)return;'),
+    expect: ['it gates the timer'],
+  },
+  {
+    name: 'PANELS changes without the CSS ring radius moving with it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var PANELS = 8;', 'var PANELS = 10;'),
+    expect: ['CSS ring radius agrees with PANELS'],
+  },
+  {
+    name: 'the CSS glide length drifts away from the script TURN',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '--turn:1400ms;', '--turn:900ms;'),
+    expect: ['--turn and the script TURN are the same number'],
+  },
+  {
+    name: 'PHOTOS is raised without the photo files being added',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var PHOTOS = 11;', 'var PHOTOS = 12;'),
+    expect: ['board files named by PHOTOS exist on disk'],
+  },
+  {
+    /* Without sizes the browser assumes the image fills the viewport and always
+       takes the 960px file. Nothing errors; the section just costs double. */
+    name: 'the sizes attribute is dropped from the panel builder',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME,
+      "a.sizes=w.sizes='(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)';",
+      "a.sizes=w.sizes='100vw';"),
+    expect: ['sizes string appears three times'],
+  },
+  {
+    name: 'the sizes breakpoint drifts off the layout breakpoint',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@media (max-width:760px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px)',
+      '@media (max-width:700px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px)'),
+    expect: ['stacked-layout override uses the same 760px'],
+  },
+  {
+    /* box-shadow inside a backface-visibility:hidden element in a preserve-3d
+       scene stops the panels painting their photos at all. No error anywhere. */
+    name: 'a box-shadow creeps back onto the ring panels',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.jrtb-p img{width:100%',
+      '.jrtb-p{box-shadow:0 10px 30px rgba(0,0,0,.4)}\n.jrtb-p img{width:100%'),
+    expect: ['no box-shadow on .jrtb-p'],
+  },
+  {
+    /* overflow / opacity / filter on the ring flattens preserve-3d and the
+       cylinder collapses into a flat horizontal squash. */
+    name: 'overflow is put on .jrtb-ring, flattening preserve-3d',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;',
+      '.jrtb-ring{position:absolute;inset:0;overflow:hidden;transform-style:preserve-3d;'),
+    expect: ['no overflow / opacity / filter on .jrtb-ring'],
+  },
+  {
+    /* Chrome treats rotateY past 180deg as back-facing, so the whole left-hand
+       side of the ring silently stops painting. */
+    name: 'panel angles go back to 0..360 and the left half of the ring stops painting',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '          if (a > 180) a -= 360;\n', ''),
+    expect: ['angles are normalised'],
+  },
+  {
+    /* The flag on entry is what left the host marked built when it was not, so
+       the re-scanning loop skipped it for ever. */
+    name: 'build() goes back to flagging success on entry',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '      if(host.__built)return;\n      try{',
+      '      if(host.__built)return;\n      host.__built=1;\n      try{'),
+    expect: ['flags success only AFTER seating the panels'],
+  },
+  {
+    /* Find-it-once worked from a local file and did nothing deployed, because
+       the engine re-renders the body after first paint. */
+    name: 'the boot loop goes back to find-it-once',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '      var n=0, iv=setInterval(function(){ scan(); if(++n>40) clearInterval(iv); },500);', ''),
+    expect: ['boot loop keeps re-scanning'],
+  },
+  {
+    /* crest-shield.png is the crest with a bat-shaped HOLE in it. It went live
+       as the About badge once already. */
+    name: 'the About badge is swapped back to the holed crest-shield',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'class="m-crestrow"', 'class="m-crestrow" data-badge="assets/crest-shield.png"'),
+    expect: ['crest-shield.png is not referenced'],
+  },
+  {
+    /* The rule that pointed at itself. Netlify DROPS a self-referential
+       redirect, so the 404 was never applied and the file was served with a
+       plain 200 for months while the comment above it said otherwise. */
+    name: 'the /tests/* 404 rule points at itself again, so Netlify drops it',
+    suite: 'test-about-board.js',
+    apply: () => patch('netlify.toml', '  from = "/tests/*"\n  to = "/404.html"',
+      '  from = "/tests/*"\n  to = "/tests/:splat"'),
+    expect: ['target is NOT itself'],
+  },
+  {
+    name: 'the /tools/* 404 rule loses its 404 status',
+    suite: 'test-about-board.js',
+    apply: () => patch('netlify.toml', '  from = "/tools/*"\n  to = "/404.html"\n  status = 404',
+      '  from = "/tools/*"\n  to = "/404.html"\n  status = 200'),
+    expect: ['it returns 404'],
   },
 ];
 

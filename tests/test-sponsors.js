@@ -438,8 +438,8 @@ section('The supporters grid');
      `.webp`, so a raw .png dropped in fell OUT of the list entirely and tripped
      the COUNT check instead of the format check — the fault run caught that.
      A pattern that only matches the healthy case cannot report the sick one. */
-  const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+) \}/g)];
-  eq('sixteen confirmed supporters', rows.length, 16);
+  const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+)(, light: true)? \}/g)];
+  eq('eighteen confirmed supporters', rows.length, 18);
 
   /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
      MAXIMUM. The first version rendered every logo at a fixed height:44px with
@@ -524,10 +524,41 @@ section('The supporters grid');
      ⚠️ Bili Boys Biltong came OFF this list on 5 Aug — see below. It is the
      one sponsor shipped on artwork this suite would otherwise call unusable,
      and that was a deliberate decision, not a slip. */
-  ['recover', 'crompton'].forEach((slug) => {
-    check(`${slug} is not half-added while its artwork is pending`,
-      !new RegExp(`file: 'assets/sponsor-${slug}`).test(PAGE));
-  });
+  /* ⚠️ THE PENDING LIST IS EMPTY AS OF 5 AUG and the sweep is kept anyway, in
+     the only form that still means something: every sponsor on the page has a
+     FILE. The old list-of-slugs check emptied itself out as each one arrived,
+     and an empty forEach is a check that asserts nothing while looking like
+     coverage. This is what it was really guarding. */
+  check('no sponsor is named without a file behind it',
+    rows.every((r) => r[2] && r[2].startsWith('assets/sponsor-')));
+
+  /* ⚠️ A WHITE TILE IS AN EXCEPTION, NOT A DEFAULT. Two marks exist only as
+     dark ink on white and cannot be recoloured — Crompton's navy keyhole,
+     Recover's hairline type — so they get a light tile (Jay's call, 5 Aug).
+     Every white box is a bright rectangle in a dark band, so the count is
+     written out: a third one appearing unnoticed must be impossible, and
+     `light: true` spreading to a logo that HAS a white version is the lazy fix
+     this guards against. */
+  const lit = rows.filter((r) => r[4]);
+  eq('exactly two sponsors get a white tile', lit.length, 2);
+  check('…and they are the two whose artwork cannot be recoloured',
+    lit.every((r) => /crompton|recover/.test(r[2])), lit.map((r) => r[2]).join(', '));
+  check('the tile colour is DERIVED from that flag, not written into the data',
+    /bg:\s*s\.light \? '#ffffff' : '#151517'/.test(PAGE));
+  /* ⚠️ SCOPED TO THE LOOP, not to the whole section. The HSBC card above it is
+     LEGITIMATELY background:#151517 — a negative check across the section would
+     fail on the principal-partner card, which is not what this is about. Prove
+     the slice is the slice you meant: this asserts the block is non-empty
+     first, or "no hardcoded colour in nothing" passes for ever. */
+  const gridStart = sponsorsInner.indexOf('<sc-for list="{{ sponsors }}"');
+  const tile = gridStart >= 0
+    ? sponsorsInner.slice(gridStart, sponsorsInner.indexOf('</sc-for>', gridStart))
+    : '';
+  check('the supporters loop was located', tile.length > 100, String(tile.length));
+  check('…and the tile binds the colour rather than hardcoding one',
+    /background:\{\{ s\.bg \}\}/.test(tile) && !/background:#[0-9a-f]{6}/i.test(tile));
+  check('…and its border follows, or white-on-white loses its edge',
+    /border:1px solid \{\{ s\.edge \}\}/.test(sponsorsInner));
   /* ⚠️ BILI BOYS IS THE ONE DOCUMENTED EXCEPTION TO BOTH ARTWORK RULES, and
      the exception is pinned so it cannot spread by imitation.
      It is a BADGE — dark type on an opaque cream ground with a printed border

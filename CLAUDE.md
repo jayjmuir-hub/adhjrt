@@ -406,7 +406,7 @@ just above the mobile breakpoint.
 
 ## The supporters grid (added 5 Aug 2026)
 
-Sixteen sponsors under **With the support of**, below the HSBC card in
+Eighteen sponsors under **With the support of**, below the HSBC card in
 `<section id="sponsors">`. Spec: `claude/specs/spec-sponsors-grid.md`.
 
 **The list is DATA** — `SPONSORS` near the top of the homepage script block,
@@ -488,11 +488,40 @@ The supplied file was a flat 810x189 logo on white. It was keyed out by
 `alpha = 255 - min(r,g,b)`, then each pixel classified red (`r - max(g,b) > 40`)
 or ink. That is the recipe for any future logo that arrives on a white ground.
 
-### Two confirmed sponsors are deliberately ABSENT
+### ⚠️ `light: true` — a WHITE TILE is an exception, not a default
 
-**Recover** and **Crompton Partners** have signed but their artwork is not
-usable — Recover's file is far too small at any size, and what Crompton supplied
-is a photograph rather than a logo. They are NOT in the `UNCONFIRMED` sweep — that list
+Two marks exist **only** as dark ink on white and cannot be recoloured without
+destroying them: **Crompton Partners** (the navy keyhole lives inside the O) and
+**Recover** (hairline letterspaced type). Jay's call, 5 Aug: *"you can use a
+white box around logos that won't work on the dark background, that is fine."*
+
+So a sponsor row may carry `light: true`, and the tile's background and border
+are **derived** from it in `renderVals()` — the data says what the ARTWORK is,
+not what colour to paint a box, so the two greys live in one place.
+
+⚠️ **Do NOT add the flag to a logo that has a white version.** Every white box
+is a bright rectangle in an otherwise dark band. The count is written out —
+exactly two — so a third appearing unnoticed is impossible, and there are faults
+for a third being added, for the flag being removed (which hides both logos with
+no error), for the tile hardcoding one colour again, and for the border not
+following the background.
+
+⚠️ **Lightening the WHOLE section was considered and rejected.** Oak View Group,
+V&P and Yas Mena Cycles exist only as white-on-transparent files and would have
+vanished on a light ground — this exact failure, inverted. Per-tile is the
+version that cannot break anything that already works.
+
+### No confirmed sponsor is missing any more (5 Aug)
+
+Every 2026/27 sponsor is on the page. The pending-artwork sweep in
+`test-sponsors.js` was rewritten rather than left as an empty loop over an empty
+list — **an empty `forEach` is a check that asserts nothing while looking like
+coverage.** It now asserts every sponsor on the page has a file behind it, which
+is what it was really guarding.
+
+Still worth chasing better files: **Recover** is the smallest asset on the page
+(143x32 native) and **Bili Boys** the second (154x90); **Broadway Malyan**
+supplied their tagline lockup rather than their wordmark. They are NOT in the `UNCONFIRMED` sweep — that list
 is for companies who have not signed — so they get their own assertion that they
 are not **half-added**, with a name on the page and no file behind it. Chase the
 artwork; do not improvise it.

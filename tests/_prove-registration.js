@@ -96,6 +96,8 @@ const NEEDED = [
   path.join('assets', 'sponsor-align-health.webp'),
   path.join('assets', 'sponsor-bili-boys.webp'),
   path.join('assets', 'sponsor-anderson-education.webp'),
+  path.join('assets', 'sponsor-crompton-partners.webp'),
+  path.join('assets', 'sponsor-recover.webp'),
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1481,7 +1483,7 @@ const FAULTS = [
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },\n", ''),
-    expect: ['sixteen confirmed supporters'],
+    expect: ['eighteen confirmed supporters'],
   },
   {
     /* A mistyped filename is a broken image on the live site that reports
@@ -1523,16 +1525,18 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Oak View Group',",
       "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44 },\n  { name: 'Oak View Group',"),
-    expect: ['sixteen confirmed supporters'],
+    expect: ['eighteen confirmed supporters'],
   },
   {
-    /* Half-adding a sponsor whose artwork is still pending: a name on the page
-       with no usable file behind it. */
-    name: 'a sponsor with unusable artwork is half-added anyway',
+    /* ⚠️ REPOINTED 5 Aug. This used to inject a half-added Recover — a name
+       with no file behind it — while Recover's artwork was still pending. It
+       has since arrived, so the fault's subject stopped existing. The RULE is
+       alive, so the fault follows it: a sponsor named on the page whose file
+       reference has been lost. */
+    name: 'a sponsor is named with no file behind it',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Align Health',",
-      "  { name: 'Recover', file: 'assets/sponsor-recover.webp', h: 44 },\n  { name: 'Align Health',"),
-    expect: ['not half-added while its artwork is pending'],
+    apply: () => patch(HOME, "file: 'assets/sponsor-align-health.webp'", "file: ''"),
+    expect: ['eighteen confirmed supporters'],
   },
   {
     name: 'the grid label is changed so it reads as one flat wall with HSBC',
@@ -1616,7 +1620,7 @@ const FAULTS = [
     name: 'Bili Boys is dropped from the supporters list',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },\n", ''),
-    expect: ['sixteen confirmed supporters', 'Bili Boys is on the page'],
+    expect: ['eighteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
     /* ⚠️ Anderson flattened to white by a "make the grid consistent" pass. The
@@ -1631,7 +1635,40 @@ const FAULTS = [
     name: 'Anderson is dropped from the supporters list',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41 },\n", ''),
-    expect: ['sixteen confirmed supporters', 'Anderson is on the page'],
+    expect: ['eighteen confirmed supporters', 'Anderson is on the page'],
+  },
+  {
+    /* ⚠️ A white tile spreading to a logo that HAS a white version — the lazy
+       fix, and it puts a bright rectangle in the dark band for no reason. */
+    name: 'a third sponsor is given a white tile',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "sponsor-align-health.webp',           h: 40 }", "sponsor-align-health.webp',           h: 40, light: true }"),
+    expect: ['exactly two sponsors get a white tile'],
+  },
+  {
+    /* The white tiles removed: Crompton's navy and Recover's hairline type go
+       back to being invisible on #151517, reporting no error anywhere. */
+    name: 'the white tiles are dropped, hiding the two dark-ink logos',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "h: 53, light: true }", "h: 53 }"),
+    expect: ['exactly two sponsors get a white tile'],
+  },
+  {
+    /* The tile goes back to one hardcoded colour — which looks like a tidy-up
+       and silently un-does the exception. */
+    name: 'the tile hardcodes one background colour again',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'background:{{ s.bg }};border:1px solid {{ s.edge }}',
+      'background:#151517;border:1px solid rgba(255,255,255,0.08)'),
+    expect: ['tile binds the colour rather than hardcoding one'],
+  },
+  {
+    /* The border left dark on a white tile: a white box with a black hairline
+       reads as a broken image rather than a card. */
+    name: 'the tile border stops following the tile colour',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'border:1px solid {{ s.edge }}', 'border:1px solid rgba(255,255,255,0.08)'),
+    expect: ['border follows'],
   },
   {
     /* The squarest marks pushed back down to the crowd. This is the postage
@@ -3533,7 +3570,7 @@ const FAULTS = [
        check cannot see. */
     name: 'the sponsors list is inlined, escaping the SPONSORS constant',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '      sponsors: SPONSORS,', '      sponsors: [],'),
+    apply: () => patch(HOME, '      sponsors: SPONSORS.map((s) => ({', '      sponsors: [].map((s) => ({'),
     expect: ['returns the confirmed sponsors list'],
   },
   {

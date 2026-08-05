@@ -439,7 +439,7 @@ section('The supporters grid');
      the COUNT check instead of the format check — the fault run caught that.
      A pattern that only matches the healthy case cannot report the sick one. */
   const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+) \}/g)];
-  eq('fourteen confirmed supporters', rows.length, 14);
+  eq('fifteen confirmed supporters', rows.length, 15);
 
   /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
      MAXIMUM. The first version rendered every logo at a fixed height:44px with
@@ -515,15 +515,35 @@ section('The supporters grid');
   check('HSBC is not repeated inside the supporters grid',
     !sponsorsInner.slice(gridAt).includes('sponsor-hsbc'));
 
-  /* ⚠️ FOUR CONFIRMED SPONSORS ARE DELIBERATELY ABSENT because their artwork
-     could not be made legible — Anderson Education, Recover, Bili Boys Biltong
-     and Crompton Partners. They are NOT in the UNCONFIRMED sweep above, because
-     they HAVE signed; this asserts they are not half-added either, with a name
-     on the page and no file behind it. */
-  ['anderson-education', 'recover', 'bili-boys', 'crompton'].forEach((slug) => {
+  /* ⚠️ THREE CONFIRMED SPONSORS ARE DELIBERATELY ABSENT because their artwork
+     could not be made legible — Anderson Education, Recover and Crompton
+     Partners. They are NOT in the UNCONFIRMED sweep above, because they HAVE
+     signed; this asserts they are not half-added either, with a name on the
+     page and no file behind it.
+     ⚠️ Bili Boys Biltong came OFF this list on 5 Aug — see below. It is the
+     one sponsor shipped on artwork this suite would otherwise call unusable,
+     and that was a deliberate decision, not a slip. */
+  ['anderson-education', 'recover', 'crompton'].forEach((slug) => {
     check(`${slug} is not half-added while its artwork is pending`,
       !new RegExp(`file: 'assets/sponsor-${slug}`).test(PAGE));
   });
+  /* ⚠️ BILI BOYS IS THE ONE DOCUMENTED EXCEPTION TO BOTH ARTWORK RULES, and
+     the exception is pinned so it cannot spread by imitation.
+     It is a BADGE — dark type on an opaque cream ground with a printed border
+     — so the white-on-transparent treatment every other file gets would mean
+     deleting the logo rather than recolouring it. And the only artwork
+     supplied is 154x90, well under the house 160px tall, so it is stored at
+     NATIVE size: padding it up to 160 would bake a 1.78x stretch into the file
+     permanently, where storing it small and rendering it at h:52 costs 1.16x
+     on a 2x screen and can be replaced by a better file with no other change.
+     h:52 is therefore DELIBERATELY below the 64 the formula gives for its
+     1.7:1 ratio. If somebody "corrects" it to 64 they are choosing a blurrier
+     logo, so the number is asserted and the reasoning has to stay next to it. */
+  const bili = rows.find((r) => r[2].includes('bili-boys'));
+  check('Bili Boys is on the page', !!bili);
+  eq('…rendered small enough that its 90px source is not stretched far', Number(bili && bili[3]), 52);
+  check('…and the reason it breaks both artwork rules is written down',
+    /badge[\s\S]{0,400}opaque cream/i.test(PAGE) && /154x90/.test(PAGE));
 }
 /* THE INVITATION STAYS. It is the only route by which another sponsor reaches
    Jay, and the section is the page a prospective one lands on. */

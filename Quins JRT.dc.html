@@ -1521,6 +1521,15 @@ const SPONSORS = [
   { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
   { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 35 },
   { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },
+  /* ⚠️ THE ONE EXCEPTION TO BOTH HOUSE RULES, deliberately. Bili Boys is a
+     badge - dark type on an OPAQUE cream ground with a printed border - so
+     white-on-transparent would mean deleting the logo rather than recolouring
+     it. And the only artwork supplied is 154x90, so it is stored at native
+     size instead of the house 160px tall: h is 52 rather than the 64 the
+     formula gives, which keeps a 2x screen at a 1.16x stretch rather than the
+     1.78x that padding it up would have baked in permanently.
+     Replace this the moment they send vector or something ≥800px. */
+  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },
 ];
 
 const AGE_GROUP_INFO = [

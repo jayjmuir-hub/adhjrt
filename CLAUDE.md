@@ -404,6 +404,94 @@ have been spread into the middle of the bar. As a side effect the wrapper's
 `min-width:0` also fixed a pre-existing ~42px horizontal overflow of the header
 just above the mobile breakpoint.
 
+## The supporters grid (added 5 Aug 2026)
+
+Fifteen sponsors under **With the support of**, below the HSBC card in
+`<section id="sponsors">`. Spec: `claude/specs/spec-sponsors-grid.md`.
+
+**The list is DATA** — `SPONSORS` near the top of the homepage script block,
+bound through `renderVals()`. Adding a sponsor is one line and one file, never
+a markup edit.
+
+⚠️ **HSBC STAYS ABOVE AND SEPARATE.** They are the principal partner; these are
+supporters. Folding the two into one wall is the obvious visual tidy-up and it
+demotes the tournament's only confirmed partner. Asserted three ways, with a
+fault that injects exactly that merge.
+
+### Artwork rules
+
+White-on-transparent, trimmed to 160px tall, saved as `.webp`. **The `.webp`
+conversion is WHERE the white treatment happened** — a `.png` in the list means
+somebody dropped a raw download in and skipped it, and a dark logo on `#0C0C0E`
+vanishes while reporting no error anywhere. That is the HSBC lesson one section
+up. Asserted, with a fault.
+
+Dark was chosen by rendering all nineteen candidates on dark AND on light before
+deciding. The prediction — that a light band would be safer — was **wrong**;
+recolouring six single-colour marks to white is what made dark win.
+
+### ⚠️ `h` — why there is not one height
+
+Each row carries its own MAX height. The markup uses `max-height` plus
+`object-fit:contain`, never a fixed `height`:
+
+    h = round(83.5 / sqrt(width / height)), clamped 26..68
+
+68 is what fits the 104px tile with 16px of padding; 26 is the legibility floor
+on a phone. **Recompute `h` when a file is replaced** — a new crop changes the
+ratio.
+
+**The first draft used one fixed `height:44px` and the tests were GREEN against
+it.** It is wrong twice:
+
+1. **A fixed height with a clamped width SQUASHES a wide mark.** Broadway
+   Malyan is 11.5:1 — at 44px tall it wants 506px of width, gets ~246, and
+   renders distorted rather than smaller. Nothing reports it.
+2. **Equal height is not equal presence.** The near-square marks (Ashurst, The
+   Sportsman's Arms, ~1.1:1) read as postage stamps beside a 5:1 wordmark. That
+   is a sponsor-relations problem, not a cosmetic one.
+
+It was found by looking at a render. **The sizing checks therefore have to
+DISCRIMINATE** — "every row has an `h`" passes against `h:44` on all fifteen,
+i.e. against the bug — so they assert the widest mark ends up SMALLER than
+mid-pack and the squarest end up LARGER, with faults that level each back.
+
+⚠️ **And the render that found it was nearly wrong the other way.** The first
+screenshot looked faded, which read as a broken reveal animation. It was an
+EMPTY SHELL: `support.js` boots React from unpkg, the sandbox cannot reach it,
+so every section measured 0x0. **A screenshot of nothing looks like a result** —
+third time this repo has hit that. Route-intercept unpkg to a vendored React and
+fonts.googleapis.com to local Anton/Barlow before believing any render.
+
+### ⚠️ Bili Boys is the ONE documented exception, and it is pinned
+
+It is a badge — dark type on an **opaque cream** ground with a printed border —
+so the white-on-transparent treatment would mean deleting the logo rather than
+recolouring it. And the only artwork supplied is **154x90**, under the house
+160px, so it is stored at NATIVE size with `h:52` rather than the 64 the formula
+gives: padding it up to 160 would bake a 1.78x stretch into the file for ever,
+where storing it small costs 1.16x on a 2x screen and can be swapped out with no
+other change. Both the number and the written reason are asserted, so the
+exception cannot spread by imitation. Replace it the moment they send vector.
+
+### Three confirmed sponsors are deliberately ABSENT
+
+**Anderson Education**, **Recover** and **Crompton Partners** have signed but
+their artwork is not usable. They are NOT in the `UNCONFIRMED` sweep — that list
+is for companies who have not signed — so they get their own assertion that they
+are not **half-added**, with a name on the page and no file behind it. Chase the
+artwork; do not improvise it.
+
+Two more worth chasing, lower priority: **Broadway Malyan** supplied their
+tagline lockup, not their wordmark; **Ashurst Perkins Coie** is the only
+non-monochrome mark in the grid, left in their brand teal deliberately because
+recolouring a law firm's logo is not a unilateral call.
+
+⚠️ **The `sponsor-*.webp` files must stay in `_prove-registration.js`'s `NEEDED`
+list.** The prover creates `assets/`, which flips `test-sponsors.js`'s
+`hasAssets` gate true, so without them the suite fails on an UNDAMAGED copy.
+Same trap as `_signins.js` and `Club.dc.html`.
+
 ### Nineteen company names were in this repo as if they had signed
 
 `sponsorNames` in `Quins JRT.dc.html` listed Transguard Group, MODON, Kibsons,

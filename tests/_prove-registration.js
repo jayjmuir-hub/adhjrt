@@ -94,6 +94,7 @@ const NEEDED = [
   path.join('assets', 'sponsor-yas-cycles.webp'),
   path.join('assets', 'sponsor-arabian-swim-academy.webp'),
   path.join('assets', 'sponsor-align-health.webp'),
+  path.join('assets', 'sponsor-bili-boys.webp'),
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1479,7 +1480,7 @@ const FAULTS = [
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },\n", ''),
-    expect: ['fourteen confirmed supporters'],
+    expect: ['fifteen confirmed supporters'],
   },
   {
     /* A mistyped filename is a broken image on the live site that reports
@@ -1521,7 +1522,7 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Oak View Group',",
       "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44 },\n  { name: 'Oak View Group',"),
-    expect: ['fourteen confirmed supporters'],
+    expect: ['fifteen confirmed supporters'],
   },
   {
     /* Half-adding a sponsor whose artwork is still pending: a name on the page
@@ -1590,6 +1591,31 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 26 }", "sponsor-broadway-malyan.webp',        h: 44 }"),
     expect: ['widest mark'],
+  },
+  {
+    /* ⚠️ Bili Boys "corrected" to the height the formula gives for its ratio.
+       It is the one file stored at native size (154x90) because that is all
+       the artwork there is, so 64 is a blurrier logo, not a bigger one. */
+    name: 'the small-source Bili Boys logo is scaled up to the formula height',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "sponsor-bili-boys.webp',              h: 52 }", "sponsor-bili-boys.webp',              h: 64 }"),
+    expect: ['90px source is not stretched'],
+  },
+  {
+    /* The exception tidied into looking like every other row - which is how an
+       exception spreads by imitation. */
+    name: 'the reason Bili Boys breaks both artwork rules is tidied away',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'badge - dark type on an OPAQUE cream ground', 'logo'),
+    expect: ['breaks both artwork rules is written down'],
+  },
+  {
+    /* Bili Boys quietly dropped again, which is the state the page was in for
+       a day and the thing Jay noticed. */
+    name: 'Bili Boys is dropped from the supporters list',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },\n", ''),
+    expect: ['fifteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
     /* The squarest marks pushed back down to the crowd. This is the postage

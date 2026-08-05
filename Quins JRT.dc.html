@@ -311,10 +311,28 @@
      number that had to be kept in step with the panel width by whoever
      edited it, and that is exactly the kind of thing that rots.
 
-     --pw scales with the browser. The middle value tracks the photo column:
-     the section is 1200 max-width with 32px padding and a 60px gap, split
-     1fr / 1.5fr, so the column is 0.6 * (100vw - 124px) and the panel is
-     about 74% of that. Clamped so it never gets silly in either direction.
+     --pw scales with the browser. The middle value TRACKS THE PHOTO COLUMN,
+     and the arithmetic is written out because it has to be redone by hand if
+     the section's grid ever changes again:
+
+       section content width   = 100vw - 64px      (32px padding each side)
+       photo column            = (content - 70px gap) / 2      two equal columns
+                               = 0.5 * 100vw - 67px
+       panel at 74% of the box = 0.37 * 100vw - 49.6px    ->  37vw - 50px
+       capped at the 1200px max-width: (1136 - 70) / 2 = 533px column,
+                                       74% of 533       = 394px panel
+
+     ⚠️ CHANGED 5 Aug 2026 (evening) from `clamp(190px, 44.4vw - 55px, 480px)`,
+     which was the same 74% of the WIDER 1fr/1.5fr column. Leaving the old
+     numbers behind with the narrower grid would have put a 480px panel in a
+     533px box - 90% instead of 74% - so the photos would have run almost edge
+     to edge and the ring would have looked cramped rather than smaller.
+     Nothing would have errored. Clamped so it never gets silly either way.
+
+     ⚠️ AND THE `sizes` ATTRIBUTE IN THE MARKUP AND THE SCRIPT MUST MATCH THIS
+     LINE. It is the browser's only advance warning of how wide the panel will
+     be; if it says 480 while the CSS says 394, every visitor downloads a file
+     bigger than they need and nothing reports it.
 
      1.20711 is 1 / (2 * tan(180deg / 8)) — the ring radius for 8 panels of
      width --pw. If you change PANELS in the script you must change this
@@ -327,7 +345,7 @@
      site's rhythm, shared with #schedule and #venue), so 40 on top of that
      read as dead space. 24 is still clearly clear. Do not take it to 0 - that
      is the crop-to-the-edge look this was added to get rid of. */
-  --pw: clamp(190px, 44.4vw - 55px, 480px);
+  --pw: clamp(190px, 37vw - 50px, 394px);
   --ph: calc(var(--pw) * 1.25);
   --r:  calc(var(--pw) * 1.20711);
   --turn:1400ms;
@@ -398,12 +416,13 @@
 
 /* Phone sizing lives on .about-photo with the rest of the geometry - the panel
    width there drives the height and the radius on its own. */
-@media (max-width:760px){
-  /* Same 760px breakpoint as the section's own stacking. No room for a 96px
-     crest beside a display heading once the column is narrow, so it goes above
-     the heading instead. */
-  .m-crestrow{flex-direction:column;align-items:flex-start!important;gap:14px!important}
-}
+/* ⚠️ DELETED 5 Aug 2026 (evening) WITH ITS SUBJECT. A `.m-crestrow` rule lived
+   here to stack the About-section crest above the heading below 760px, where
+   there was no room for a 96px badge beside a display heading. The crest itself
+   was removed at Jay's request, so the rule had nothing left to select - dead
+   CSS that reads as if something still uses it. The tombstone explaining the
+   crest is in the About section markup; if it ever comes back, this rule comes
+   back with it. */
 /* Anyone who has asked their OS to cut animation gets an instant change of
    photo rather than a glide. The ring still advances; it just does not move. */
 @media (prefers-reduced-motion:reduce){
@@ -489,10 +508,12 @@
       // width and always takes the big one.
       // Must track --pw in the CSS or the browser fetches the wrong file. First
       // matching condition wins: above 1200 the section is capped so the panel
-      // is a fixed 480px; below 760 the layout is stacked; in between the panel
+      // is a fixed 394px; below 760 the layout is stacked; in between the panel
       // scales with the column. Get this wrong in the generous direction and
       // every visitor silently downloads the 960px file.
-      a.sizes=w.sizes='(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)';
+      // 394, not 480, since 5 Aug 2026 evening - the About grid went back to
+      // two equal columns and the panel is 74% of the narrower one.
+      a.sizes=w.sizes='(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';
       var im=document.createElement('img');
       im.alt=''; im.decoding='async'; im.loading='eager';
       pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
@@ -901,35 +922,50 @@
   </section>
 
   <!-- ============ ABOUT ============ -->
-  <!-- Columns are 1fr 1.5fr, not 1fr 1fr (5 Aug 2026): Jay wanted the photo
-       bigger. Of the 1136px of content width, minus the 60px gap, that gives
-       the photo ~646px and the text ~430px. The text column is at the narrow
-       end of comfortable at 18px - do not take it below 1.5 without checking
-       how the body paragraphs wrap. .m-stack overrides this to one column on
-       a phone, so none of it applies there. -->
-  <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">
+  <!-- ⚠️ TWO EQUAL COLUMNS, 70px gap. RESTORED 5 Aug 2026 (evening) after a few
+       hours at 1fr 1.5fr / 60px.
+
+       Of the 1136px of content width, minus the 70px gap, each column gets
+       ~533px. That is the proportion this section had before the rotating photo
+       ring went in, and going 1fr 1.5fr to make the photo bigger is what forced
+       the heading down from 66px to 52px - a 66px Anton heading does not fit a
+       430px column. Jay asked for the photo smaller AND the heading back, which
+       is one change, not two: the column width is the thing both depend on.
+
+       ⚠️ THREE NUMBERS MOVE TOGETHER IF THIS RATIO EVER CHANGES AGAIN: this
+       grid, --pw on .about-photo, and the `sizes` attribute in three places.
+       --pw is 74% of the photo column and `sizes` must track --pw or the
+       browser fetches the wrong file with no error anywhere. The arithmetic is
+       written out above --pw. .m-stack overrides all of it to one column below
+       760px, so none of it applies on a phone. -->
+  <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
     <div data-reveal>
-      <!-- The crest sits to the left of the WHOLE text block - eyebrow and
-           heading together - so those two share one left edge (5 Aug 2026).
-           It was briefly to the left of the heading only, which pushed the
-           heading right and left it out of line with "About the festival"
-           above it.
+      <!-- ⚠️ TOMBSTONE: THE CREST WAS HERE AND WAS REMOVED (Jay, 5 Aug 2026,
+           evening). There is no crest image in this section any more, and
+           tests/test-about-board.js asserts that it stays that way.
 
-           Before that it was pinned over the top-left corner of the photo box,
-           which stopped working once the photos underneath started moving.
+           What was here: a 96px `assets/crest.png` to the LEFT of the eyebrow
+           and the <h2> together, inside a flex row `.m-crestrow` (gap 22px,
+           `flex:none` on the image so the heading could not squash it,
+           `min-width:0` on the text side so the heading wrapped instead of
+           forcing the row wider). `.m-crestrow` stacked it above the text below
+           760px; that CSS rule went with this markup.
 
-           `flex:none` on the image matters: without it the crest is squashed by
-           the heading rather than the other way round. `min-width:0` on the
-           text side lets the heading wrap instead of forcing the row wider.
-           m-crestrow stacks the crest above on a phone. -->
-      <div class="m-crestrow" style="display:flex;align-items:center;gap:22px">
-        <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest"
-             style="width:96px;height:96px;flex:none;object-fit:contain">
-        <div style="min-width:0">
-          <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:10px">About the festival</div>
-          <h2 style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0">Rugby the way it should be</h2>
-        </div>
-      </div>
+           It had already moved twice before it went, and the reasons are kept
+           because they are arguments against putting it back in either place:
+             1. Pinned over the top-left corner of the photo box - it read as a
+                sticker stuck on a moving thing once the photos rotated.
+             2. Beside the <h2> only - it pushed the heading right and left it
+                out of line with the eyebrow above it.
+           And it cannot hang in the left margin: that needs ~116px outside the
+           content column, which does not exist below about a 1430px viewport.
+
+           The crest is still in the header and the footer, so the page is not
+           short of one. If it ever comes back HERE, note that the heading is
+           66px again - the two competed for the same room, which is most of
+           why the section was re-proportioned at the same time. -->
+      <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>
+      <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0">Rugby the way it should be</h2>
       <p style="font-size:18px;margin-top:24px;color:#3a3f48;max-width:520px">
         The Abu Dhabi Harlequins Junior Rugby Tournament brings clubs from across the UAE and the Gulf together across two brilliant days of mini, midi and youth rugby &mdash; great games, new friends and a proper festival atmosphere.
       </p>
@@ -996,9 +1032,9 @@
                    a single static action photo and nothing looks broken. -->
               <div class="jrtb-p">
                 <picture>
-                  <source type="image/avif" sizes="(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)"
+                  <source type="image/avif" sizes="(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)"
                           srcset="assets/board/board-01-sm.avif 528w, assets/board/board-01.avif 960w">
-                  <source type="image/webp" sizes="(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)"
+                  <source type="image/webp" sizes="(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)"
                           srcset="assets/board/board-01-sm.webp 528w, assets/board/board-01.webp 960w">
                   <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
                 </picture>

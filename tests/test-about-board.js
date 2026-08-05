@@ -180,12 +180,53 @@ section('the sizes attribute — load-bearing, and easy to lose');
    THREE times — twice in the hard-coded fail-safe panel's two <source>s, once
    in the script that builds the other seven — and all three must agree or the
    first panel and the rest are fetched at different sizes. */
-const SIZES = '(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)';
+const SIZES = '(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';
 const sizesCount = PAGE.split(SIZES).length - 1;
 check('the sizes string appears three times, identically', sizesCount === 3,
   `found ${sizesCount}`);
 check('…including in the script that builds the other panels',
   BOARD_CODE.includes(SIZES));
+
+/* ⚠️ AND THE REAL INVARIANT, rather than three copies of a pinned literal:
+   `sizes` must AGREE WITH --pw. The literal above catches an edit that touches
+   one of the three copies; these two catch the more likely mistake, which is
+   re-proportioning the section, updating the CSS, and leaving `sizes` behind.
+   That failure costs every visitor a bigger file than they need and reports
+   nothing anywhere. Both numbers are read out of the page rather than written
+   down here, so this check survives the next resize instead of having to be
+   edited by whoever does it. */
+const pwClamp = PAGE.match(/--pw:\s*clamp\(\s*\d+px,\s*([0-9.]+)vw - ([0-9.]+)px,\s*(\d+)px\s*\)/);
+check('the --pw clamp was located', !!pwClamp);
+if (pwClamp) {
+  const [, pwVw, pwSub, pwMax] = pwClamp;
+  const sizesMax = (SIZES.match(/\(min-width:1200px\) (\d+)px/) || [])[1];
+  const sizesCalc = SIZES.match(/calc\(([0-9.]+)vw - ([0-9.]+)px\)/);
+  eq('sizes\' capped width is --pw\'s clamp maximum', sizesMax, pwMax);
+  check('…and the scaling half matches too',
+    !!sizesCalc && sizesCalc[1] === pwVw && sizesCalc[2] === pwSub,
+    `sizes says ${sizesCalc && sizesCalc[0]}, --pw says ${pwVw}vw - ${pwSub}px`);
+
+  /* And the capped width has to be 74% of the column the grid actually gives
+     it, or the ring is cramped (too wide) or adrift in empty space (too
+     narrow). Derived from the section's own grid, so changing one and not the
+     other fails here rather than on Jay's screen. */
+  /* [0-9.]+ , not \d+ : a ratio like 1.5fr is exactly the edit this is here to
+     catch, and a regex that cannot match it fails the "grid was located" check
+     instead of the one that has something to say. The fault run reported that
+     as "failed, but not on the named check" rather than passing it, which is
+     the entire reason that distinction exists. */
+  const grid = PAGE.match(/id="about"[^>]*grid-template-columns:([0-9.]+)fr ([0-9.]+)fr;gap:(\d+)px/);
+  check('the About grid was located', !!grid, 'the ratio and gap drive the panel width');
+  if (grid) {
+    const a = Number(grid[1]), b = Number(grid[2]), gap = Number(grid[3]);
+    const share = b / (a + b);                       // the photo column's share
+    const column = (1200 - 64 - gap) * share;        // 1200 cap, 32px padding each side
+    const want = Math.round(column * 0.74);
+    check('the panel is ~74% of the photo column at full width',
+      Math.abs(Number(pwMax) - want) <= 8,
+      `--pw max is ${pwMax}px; a ${Math.round(column)}px column wants about ${want}px`);
+  }
+}
 
 /* The breakpoint inside `sizes` must match the one the layout actually uses.
    ⚠️ 760, not 700: at 700 there was a 60px band where the box had gone
@@ -291,19 +332,60 @@ check('the whole build is wrapped so a throw leaves the static photo',
   /\}catch\(e\)\{[^}]*\}/.test(BOARD_CODE));
 
 /* ------------------------------------------------------------------------ */
-section('the crest beside the heading — the complete one, not the holed one');
+section('the crest that is no longer in this section, and the one that never was');
+
+const PAGE_CODE = stripHtmlComments(PAGE);
+const ABOUT = (PAGE_CODE.match(/<section id="about"[\s\S]*?<\/section>/) || [''])[0];
+check('the About section was located', ABOUT.length > 500,
+  `matched ${ABOUT.length} chars`);
+
+/* ⚠️ REPOINTED, NOT DELETED (5 Aug 2026, evening). This used to assert that the
+   About badge was `crest.png` and not the bat-holed `crest-shield.png`. Jay
+   removed the badge, so that check's SUBJECT is gone — but its RULE is not, and
+   a check whose subject dies must be repointed if the rule is still alive.
+
+   The rule splits in two, and both halves are worth having:
+     - the crest is ABSENT from this section, deliberately, and stays absent;
+     - `crest-shield.png` is never a live image ANYWHERE, which is a page-wide
+       rule that never depended on this section in the first place. */
+check('the About section carries no crest image',
+  !/<img[^>]+assets\/crest[^>]*>/.test(ABOUT),
+  'removed at Jay\'s request 5 Aug 2026 — see the tombstone in the markup');
+check('…and the dead .m-crestrow rule went with it',
+  !/\.m-crestrow\s*\{/.test(stripCssComments(PAGE)),
+  'CSS that selects nothing reads as if something still uses it');
+check('the tombstone explaining the removal is still there',
+  /TOMBSTONE: THE CREST WAS HERE/.test(PAGE),
+  'a deletion with no trace is an invitation to re-add it');
+
+/* The crest is still in the header and the footer — the page is not short of
+   one, and asserting an absence without asserting the presence it is measured
+   against is how a whole logo quietly disappears. */
+check('the crest is still on the page elsewhere',
+  (PAGE_CODE.match(/assets\/crest\.png/g) || []).length >= 2,
+  'header and footer');
 
 /* assets/crest-shield.png is the crest with a BAT-SHAPED HOLE in it. It exists
-   only as the backdrop the mothballed animation's bat flew out of. It went live
-   as the About badge once already and sat there with a piece missing until Jay
-   spotted it. Comments are stripped: the mothball note names the file on
-   purpose and must stay legal to write. */
-const PAGE_CODE = stripHtmlComments(PAGE);
-check('the About badge is the complete crest',
-  /class="m-crestrow"[\s\S]{0,400}assets\/crest\.png/.test(PAGE_CODE));
+   only as the backdrop the mothballed animation's bat flew out of, and it went
+   live as the About badge once already, sitting there with a piece missing
+   until Jay spotted it. Comments are stripped: the mothball note names the file
+   on purpose and must stay legal to write. */
 check('crest-shield.png is not referenced by any live element',
   !/crest-shield\.png/.test(PAGE_CODE),
   'if the flying bat is ever restored, swap the badge back IN THE SAME CHANGE');
+
+/* ---- and the wording, which moved with the columns ---------------------- */
+section('the heading size, which is what the column width is really about');
+
+/* ⚠️ 66px, restored 5 Aug 2026 (evening). It was cut to 52px when the photo
+   column was widened to 1.5fr, because a 66px Anton heading does not fit a
+   430px column. Jay asked for the original back, which is the same change as
+   making the photo smaller — the two are one number, not two. Asserted so that
+   widening the photo again cannot quietly shrink the words a second time. */
+const H2 = (ABOUT.match(/<h2[^>]*font-size:clamp\(([^)]*)\)[^>]*>Rugby the way it should be<\/h2>/) || [])[1];
+eq('the About heading is back to its original clamp', H2, '34px,5.5vw,66px');
+check('the eyebrow keeps its original 16px gap under it',
+  /About the festival<\/div>/.test(ABOUT) && /margin-bottom:16px[^>]*>About the festival/.test(ABOUT));
 
 /* ------------------------------------------------------------------------ */
 section('netlify.toml — the folder 404s, which had never worked');

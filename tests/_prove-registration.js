@@ -4630,7 +4630,7 @@ const FAULTS = [
     name: 'the sizes attribute is dropped from the panel builder',
     suite: 'test-about-board.js',
     apply: () => patch(HOME,
-      "a.sizes=w.sizes='(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)';",
+      "a.sizes=w.sizes='(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';",
       "a.sizes=w.sizes='100vw';"),
     expect: ['sizes string appears three times'],
   },
@@ -4685,12 +4685,67 @@ const FAULTS = [
     expect: ['boot loop keeps re-scanning'],
   },
   {
-    /* crest-shield.png is the crest with a bat-shaped HOLE in it. It went live
-       as the About badge once already. */
-    name: 'the About badge is swapped back to the holed crest-shield',
+    /* ⚠️ REPOINTED 5 Aug 2026 (evening). This used to patch `class="m-crestrow"`,
+       the About badge's own row, which Jay has since removed. The rule it guards
+       — the bat-holed shield is never a live image — is page-wide and very much
+       alive, so the fault moved to the footer crest rather than being deleted
+       with its old subject. */
+    name: 'the holed crest-shield is used as a live image',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'class="m-crestrow"', 'class="m-crestrow" data-badge="assets/crest-shield.png"'),
+    apply: () => patch(HOME, '<img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%',
+      '<img src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest" style="width:100%'),
     expect: ['crest-shield.png is not referenced'],
+  },
+  {
+    /* The crest was removed from this section deliberately and the tombstone
+       says so. Putting it back is the tidy-up somebody makes without reading. */
+    name: 'a crest creeps back into the About section',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>',
+      '<img src="assets/crest.png" alt="crest" style="width:96px;height:96px"><div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>'),
+    expect: ['About section carries no crest image'],
+  },
+  {
+    name: 'the tombstone recording the removed crest is tidied away',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'TOMBSTONE: THE CREST WAS HERE', 'NOTE: nothing here'),
+    expect: ['tombstone explaining the removal'],
+  },
+  {
+    /* ⚠️ THE ONE THAT MATTERS. Widening the photo column again without moving
+       --pw with it puts a 394px panel in a 646px box - adrift in empty space -
+       or, in the other direction, a 480px panel in a 533px box, which runs the
+       photos almost edge to edge. Neither errors. */
+    name: 'the About grid is re-proportioned without --pw following it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'grid-template-columns:1fr 1fr;gap:70px;align-items:center">',
+      'grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">'),
+    expect: ['74% of the photo column'],
+  },
+  {
+    /* --pw moves and `sizes` is left behind: every visitor downloads a file
+       bigger than they need and nothing anywhere reports it. */
+    name: 'the CSS panel width drifts away from the sizes attribute',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '--pw: clamp(190px, 37vw - 50px, 394px);',
+      '--pw: clamp(190px, 44.4vw - 55px, 480px);'),
+    expect: ['capped width is --pw'],
+  },
+  {
+    /* The heading was cut to 52px once already, as a consequence of a photo
+       resize rather than as a decision about the words. */
+    name: 'the About heading is shrunk back to 52px',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0\">Rugby the way it should be",
+      "font-size:clamp(30px,4.4vw,52px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0\">Rugby the way it should be"),
+    expect: ['back to its original clamp'],
+  },
+  {
+    name: 'the dead .m-crestrow rule is left behind after the crest goes',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '/* Anyone who has asked their OS to cut animation',
+      '.m-crestrow{flex-direction:column}\n/* Anyone who has asked their OS to cut animation'),
+    expect: ['dead .m-crestrow rule went with it'],
   },
   {
     /* The rule that pointed at itself. Netlify DROPS a self-referential

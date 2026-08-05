@@ -2590,13 +2590,26 @@ also behind a site-wide Netlify password, so previews prompt for it too.
   original.
 - **Format section** rebuilt as two day-cards ("Day 01/02" watermark, date
   pills, MINI & MIDI / YOUTH, age chips still driven by `groupsSaturday/Sunday`).
-- **About-section crest animates.** At rest it's the flat logo bat; on
-  scroll-into-view the bat cross-fades to a shaded realistic version
-  (`crest-bat-real.png`) and flies a two-direction loop across the photo, then
-  lands (also `crest-shield.png` + `crest-bat.png`). Pure CSS keyframes + a small
-  head-script that adds `.play` via IntersectionObserver; a local `.cstage` clip
-  stops the flight ever adding a page scrollbar; fails safe to a static crest and
-  honours `prefers-reduced-motion`.
+- **About-section crest is a static badge.** ⚠️ **The bat animation is
+  MOTHBALLED, not deleted (5 Aug 2026)** — Jay parked it when the rotating photo
+  board went into the same section. What it used to do: at rest the flat logo
+  bat; on scroll-into-view it cross-faded to a shaded realistic version
+  (`crest-bat-real.png`) and flew a two-direction loop across the photo, then
+  landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on `.cf` / `.cfl`
+  / `.breal`, plus a small head-script that added `.play` via
+  IntersectionObserver; a local `.cstage` clip stopped the flight ever adding a
+  page scrollbar.
+
+  **`assets/crest-bat.png` and `assets/crest-bat-real.png` are still in the
+  repo** and must stay — the whole point of mothballing is that this comes back
+  cheaply. `crest-shield.png` reads as a complete club crest on its own, which is
+  why the badge itself was left in place. The CSS, the markup and the script all
+  came out in one commit, each with a comment where it was; pull them from there.
+
+  If it does come back: the script used the **find-it-once boot pattern**, which
+  is precisely the bug the photo board hit on the same day — worked from a local
+  file, did nothing deployed, because the component engine re-renders the body
+  after first paint. Use the re-scanning boot the board now has, not the old one.
 - **Results follows Fixtures.** Homepage passes `age="{{ fxSelectedId }}"` to the
   embedded `<dc-import name="Scores & Standings">`; the scores component syncs its
   public `selectedAgeId` in `componentDidUpdate` (public view + groups that have

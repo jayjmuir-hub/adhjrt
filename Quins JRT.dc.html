@@ -293,25 +293,56 @@
    into a flat horizontal squash. Clipping lives on the wrapper div, which is
    safe. (Panels themselves may have overflow - they have no 3D children.) */
 /* The box the ring sits in.
-   ⚠️ It is TALLER than the panels on purpose (680 vs 600). That 40px of clear
-   space top and bottom is what stops the photos butting into the edge of the
-   box and lets you read their shape. If you ever set --ph to the box height
-   again you will get the old crop-to-the-edge look back.
+   ⚠️ It is TALLER than the panels on purpose — 40px of clear space above and
+   below. That is what stops the photos butting into the edge of the box and
+   lets you read their shape. It comes from the +80px in the height calc below.
 
    ⚠️ It is also the SAME COLOUR as the section behind it (#F3F1ED), with no
    card shadow, so the box itself is invisible and the photos appear to float
    on the page. Turning it back to a dark panel would undo that. The colour is
    duplicated in three places below — box, scene and panel — because all three
    can show through at different moments; keep them in step. */
-.about-photo{position:relative;height:680px;border-radius:18px;overflow:hidden;
-  background:#F3F1ED}
-@media (max-width:700px){ .about-photo{height:480px;border-radius:12px} }
+.about-photo{position:relative;border-radius:18px;overflow:hidden;
+  background:#F3F1ED;
 
-.jrtb{position:absolute;inset:0;
-  --pw:480px;   /* panel width  */
-  --ph:600px;   /* panel height - deliberately SHORTER than the 680px box */
-  --r:579px;    /* = (480/2) / tan(180/8) . Recompute if you change --pw   */
-  --turn:1400ms}
+  /* ---- ONE VARIABLE DRIVES THE WHOLE RING -----------------------------
+     Change --pw and everything else follows. Nothing here needs recomputing
+     by hand any more, which is the point: the radius used to be a magic
+     number that had to be kept in step with the panel width by whoever
+     edited it, and that is exactly the kind of thing that rots.
+
+     --pw scales with the browser. The middle value tracks the photo column:
+     the section is 1200 max-width with 32px padding and a 60px gap, split
+     1fr / 1.5fr, so the column is 0.6 * (100vw - 124px) and the panel is
+     about 74% of that. Clamped so it never gets silly in either direction.
+
+     1.20711 is 1 / (2 * tan(180deg / 8)) — the ring radius for 8 panels of
+     width --pw. If you change PANELS in the script you must change this
+     number too; tools/make-board-photo.py --geometry prints it.
+
+     1.25 is the panel's own 600/480 aspect. The +80px is the clear space
+     above and below the photos - 40px each - that stops them butting into
+     the edge of the box. */
+  --pw: clamp(190px, 44.4vw - 55px, 480px);
+  --ph: calc(var(--pw) * 1.25);
+  --r:  calc(var(--pw) * 1.20711);
+  --turn:1400ms;
+
+  height: calc(var(--ph) + 80px);
+}
+/* ⚠️ 760px, NOT 700px. That is the breakpoint where .m-stack collapses this
+   section to one column — see the @media(max-width:760px) block above. Getting
+   it wrong leaves a band of widths where the box has already gone full-width
+   but the panel is still sized for the old two-column layout, so the photo sits
+   in the middle of a large empty box. That is exactly what happened first time;
+   at 760px the panel was 40% of the box instead of 74%.
+   Stacked, the box is 100vw minus .m-stack's 20px padding each side, so the
+   panel wants to be 0.74 * (100vw - 40px) = 74vw - 30px. */
+@media (max-width:760px){
+  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}
+}
+
+.jrtb{position:absolute;inset:0}   /* the vars above inherit down into this */
 .jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#F3F1ED}
 .jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
   transform:translateZ(calc(var(--r) * -1)) rotateY(var(--jrtb-rot,0deg));
@@ -322,7 +353,11 @@
   margin:calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   overflow:hidden;border-radius:6px;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  background:#F3F1ED}
+  background:#F3F1ED;
+  /* The script sets --a (this panel's angle round the ring) and nothing else.
+     Keeping translateZ here is what lets --r be a calc() that scales with the
+     browser - the script never has to resolve it. */
+  transform:rotateY(var(--a,0deg)) translateZ(var(--r))}
 
 /* ⚠️ DO NOT ADD A box-shadow ANYWHERE IN HERE. Tried twice on 5 Aug 2026 and
    both attempts broke rendering in Chrome:
@@ -357,12 +392,12 @@
   border-radius:0;transform:none!important}
 .jrtb:not(.ready) .jrtb-p::after{opacity:0}
 
-/* Phones: the box is much narrower and shorter, so the panels are too. Radius
-   recomputed for --pw:260px -> (260/2)/tan(22.5deg) = 314px. */
-@media (max-width:700px){
-  .jrtb{--pw:260px;--ph:400px;--r:314px}   /* 400 in a 480 box - same 40px margin */
-  /* No room for a 96px crest beside a display heading on a phone, so it goes
-     above it instead. */
+/* Phone sizing lives on .about-photo with the rest of the geometry - the panel
+   width there drives the height and the radius on its own. */
+@media (max-width:760px){
+  /* Same 760px breakpoint as the section's own stacking. No room for a 96px
+     crest beside a display heading once the column is narrow, so it goes above
+     the heading instead. */
   .m-crestrow{flex-direction:column;align-items:flex-start!important;gap:14px!important}
 }
 /* Anyone who has asked their OS to cut animation gets an instant change of
@@ -448,7 +483,12 @@
       // Tells the browser how wide the panel will actually be, so it can pick
       // the right file BEFORE layout. Without this it assumes full viewport
       // width and always takes the big one.
-      a.sizes=w.sizes='(max-width:700px) 260px, 480px';
+      // Must track --pw in the CSS or the browser fetches the wrong file. First
+      // matching condition wins: above 1200 the section is capped so the panel
+      // is a fixed 480px; below 760 the layout is stacked; in between the panel
+      // scales with the column. Get this wrong in the generous direction and
+      // every visitor silently downloads the 960px file.
+      a.sizes=w.sizes='(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)';
       var im=document.createElement('img');
       im.alt=''; im.decoding='async'; im.loading='eager';
       pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
@@ -468,12 +508,23 @@
         while(panels.length<PANELS){ var p=makePanel(); ring.appendChild(p); panels.push(p); }
         if(panels.length!==PANELS) return;
 
-        // Seat each panel on the ring: turn it to its share of 360deg, then
-        // push it out to the radius. --r comes from the CSS so the phone
-        // breakpoint can change it without this script knowing.
-        var R=getComputedStyle(host).getPropertyValue('--r').trim() || '483px';
+        // Seat each panel on the ring. We only set the ANGLE here; the CSS does
+        // the translateZ, so the radius can be a calc() that scales with the
+        // browser without this script having to understand it.
+        //
+        // ⚠️ ANGLES ARE NORMALISED TO -180..+180, NOT 0..360, AND THAT IS A BUG
+        // FIX, NOT TIDINESS. Panel 7 of 8 used to be rotateY(315deg) and Chrome
+        // simply refused to paint it — the whole left-hand side of the ring was
+        // blank while the right-hand side was fine. Proved on 5 Aug 2026 by
+        // giving that panel a bright red background and its opposite number a
+        // green one: green appeared, red never did, at identical geometry.
+        // Chrome treats rotateY past 180deg as back-facing, so
+        // backface-visibility:hidden hid it. 315deg and -45deg put the panel in
+        // exactly the same place; only one of them renders.
         panels.forEach(function(p,i){
-          p.style.transform='rotateY('+(i*360/PANELS)+'deg) translateZ('+R+')';
+          var a = i * 360 / PANELS;
+          if (a > 180) a -= 360;
+          p.style.setProperty('--a', a + 'deg');
         });
 
         // Visible now: the front panel and one either side. Everything else
@@ -908,9 +959,9 @@
                    a single static action photo and nothing looks broken. -->
               <div class="jrtb-p">
                 <picture>
-                  <source type="image/avif" sizes="(max-width:700px) 260px, 480px"
+                  <source type="image/avif" sizes="(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)"
                           srcset="assets/board/board-01-sm.avif 528w, assets/board/board-01.avif 960w">
-                  <source type="image/webp" sizes="(max-width:700px) 260px, 480px"
+                  <source type="image/webp" sizes="(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)"
                           srcset="assets/board/board-01-sm.webp 528w, assets/board/board-01.webp 960w">
                   <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
                 </picture>

@@ -180,7 +180,7 @@ section('the sizes attribute — load-bearing, and easy to lose');
    THREE times — twice in the hard-coded fail-safe panel's two <source>s, once
    in the script that builds the other seven — and all three must agree or the
    first panel and the rest are fetched at different sizes. */
-const SIZES = '(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';
+const SIZES = '(min-width:1200px) 394px, calc(37vw - 50px)';
 const sizesCount = PAGE.split(SIZES).length - 1;
 check('the sizes string appears three times, identically', sizesCount === 3,
   `found ${sizesCount}`);
@@ -228,19 +228,107 @@ if (pwClamp) {
   }
 }
 
-/* The breakpoint inside `sizes` must match the one the layout actually uses.
-   ⚠️ 760, not 700: at 700 there was a 60px band where the box had gone
-   full-width but the panel was still sized for two columns. */
-check('the sizes breakpoint is 760px', SIZES.includes('(max-width:760px)'));
+/* ⚠️ REPOINTED 5 Aug 2026 (evening). `sizes` used to carry a
+   `(max-width:760px) 74vw` clause and this checked it was 760 and not 700. The
+   section is HIDDEN below 760px now, so the panel builder never runs there and
+   a phone clause in `sizes` would describe a case that cannot happen — it was
+   removed rather than left as decoration. The 760 breakpoint is still very much
+   load-bearing, just somewhere else, so the check moved to where it now lives
+   (the hide rule and the <picture> media conditions, in their own section
+   below) instead of being deleted with its old subject. */
+check('the sizes string carries no phone clause', !SIZES.includes('max-width:760px'),
+  'the builder cannot run below 760px, so a clause for it would be describing nothing');
 /* The stacked layout's own override has to sit at the SAME breakpoint. If the
    two drift apart there is a band of widths where `sizes` promises one width
    and the CSS delivers another, and the browser fetches the wrong file with no
    error anywhere. Whitespace is collapsed because the rule is written across
    three lines. */
 const PAGE_FLAT = PAGE.replace(/\s+/g, ' ');
-check('…and the stacked-layout override uses the same 760px',
-  /@media \(max-width:760px\)\{ \.about-photo\{--pw:clamp\(170px, 74vw - 30px, 520px\)/.test(PAGE_FLAT),
-  'the .about-photo phone rule must live at the same breakpoint');
+/* The 760px block, comments stripped. Declared here because two sections read
+   it; the mobile-hide section below re-derives it under its own name for
+   readability.
+   ⚠️ The closing brace is matched as `\n\s*}`, not `\n}`. With the strict
+   version an indented closing brace did not end the block, so the match ran on
+   into the NEXT media block and swallowed it — a fault that moved a rule into a
+   700px block went uncaught, because the rule was still inside the (wrongly
+   extended) match. A lazy regex that matches too much passes for the same
+   reason it should fail. */
+const CSS_760_FOR_PW = (stripCssComments(PAGE).match(/@media \(max-width:760px\)\{[\s\S]*?\n\s*\}/) || [''])[0];
+/* ⚠️ WIDENED DELIBERATELY, and it is worth saying why. This used to require the
+   .about-photo rule to sit IMMEDIATELY after `@media (max-width:760px){`, which
+   made it an adjacency check rather than a breakpoint check — and it broke the
+   moment the hide rule was added above it, on a change that did nothing wrong.
+   What it is really asserting is that the stacked --pw override lives INSIDE
+   the same 760px block, so the two cannot drift to different breakpoints. That
+   is what it says now. The two things it could have lost by widening — the
+   block existing at all, and the rule being in it — are both still checked. */
+check('…and the stacked-layout override lives in that same 760px block',
+  /\.about-photo\{--pw:clamp\(170px, 74vw - 30px, 520px\)/.test(CSS_760_FOR_PW),
+  'the .about-photo phone rule must sit at the same breakpoint as the hide');
+
+/* ------------------------------------------------------------------------ */
+section('hidden on phones — and it takes THREE things, not one');
+
+/* ⚠️ THE MEASUREMENT THAT DROVE THIS. `display:none` does NOT stop a browser
+   downloading images inside the hidden element: measured at 16 requests and
+   ~290KB to assets/board with the block fully hidden. A CSS rule alone would
+   have hidden the section while a phone went on paying for every photo in it —
+   the worst version of this change, because it looks finished.
+
+   Three things are required and each is asserted separately, since any one
+   alone is cosmetic:
+     1. the CSS hides the whole grid CELL below 760px;
+     2. the <picture> hands phones an inline 1x1, so nothing is fetched;
+     3. build() refuses to construct a ring that has no client rects.
+   Verified by counting real requests rather than reading the rules: 0 at 390px,
+   still 9 at 1400px. */
+
+const CSS_760 = (stripCssComments(PAGE).match(/@media \(max-width:760px\)\{[\s\S]*?\n\s*\}/) || [''])[0];
+check('the 760px media block was located', CSS_760.length > 40);
+check('1. the whole grid cell is hidden, not just the box inside it',
+  /\.about-media\{display:none\}/.test(CSS_760),
+  'hiding .about-photo alone leaves the stacked gap behind as dead space');
+check('…and the cell actually carries that class in the markup',
+  /class="about-media"/.test(PAGE),
+  'a rule with nothing to select is not a hide');
+
+const PIC = (PAGE.match(/<picture>[\s\S]*?<\/picture>/) || [''])[0];
+check('the fail-safe picture was located', PIC.includes('board-01'));
+check('2. phones match a source that costs no request',
+  /<source media="\(max-width:760px\)" srcset="data:image\/gif;base64,/.test(PIC),
+  'a matching <source> wins over the <img src>, so the photo is never asked for');
+check('…and both real sources are fenced ABOVE the breakpoint',
+  (PIC.match(/media="\(min-width:761px\)"/g) || []).length === 2,
+  'avif AND webp, or a phone falls through to a real photo');
+check('…761, so the two conditions meet with no gap',
+  PIC.includes('(max-width:760px)') && PIC.includes('(min-width:761px)'),
+  'a viewport between them would match neither source');
+check('…and the <img> src is still a real photo for the no-JS desktop case',
+  /<img src="assets\/board\/board-01\.webp"/.test(PIC),
+  'it is only used when no source matches, so it remains the fail-safe');
+
+/* ⚠️ AND THE BUG THAT ADDING THE PHONE SOURCE CAUSED, which nothing would have
+   caught. point() used to write the avif and webp srcsets by INDEX - s[0] and
+   s[1]. Inserting the 1x1 source at the front of the markup shifted every index
+   by one, so the avif srcset landed on the phone source and the webp srcset on
+   the source declaring type="image/avif". No error, no visible difference: the
+   front panel just quietly served WebP instead of AVIF, ~30% more bytes. It was
+   found by reading currentSrc off a render, not by any check. It has one now. */
+check('point() finds the sources by TYPE, not by DOM position',
+  /s\[j\]\.type===.image\/avif./.test(BOARD_CODE) && /s\[j\]\.type===.image\/webp./.test(BOARD_CODE),
+  'anything keyed off DOM order breaks when an element is inserted above it');
+check('…and nothing addresses the sources by index any more',
+  !/s\[0\]\.srcset|s\[1\]\.srcset/.test(BOARD_CODE),
+  'the positional version is the bug');
+
+check('3. build() refuses a host with no client rects',
+  /if\(!host\.getClientRects\(\)\.length\) return;/.test(BOARD_CODE));
+check('…and does NOT flag it built, so it retries when the box appears',
+  !/getClientRects\(\)\.length\)[^\n]*__built/.test(BOARD_CODE),
+  'flagging a hidden host built means a rotated phone never gets a ring');
+check('…and a resize re-scan catches the breakpoint being crossed later',
+  /addEventListener\('resize'/.test(BOARD_CODE) && /setTimeout\(scan,\s*\d+\)/.test(BOARD_CODE),
+  'the 20s boot scan is long gone by the time somebody turns a phone sideways');
 
 /* ------------------------------------------------------------------------ */
 section('the photos exist — all four files of every set');

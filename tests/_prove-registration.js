@@ -4630,16 +4630,89 @@ const FAULTS = [
     name: 'the sizes attribute is dropped from the panel builder',
     suite: 'test-about-board.js',
     apply: () => patch(HOME,
-      "a.sizes=w.sizes='(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';",
+      "a.sizes=w.sizes='(min-width:1200px) 394px, calc(37vw - 50px)';",
       "a.sizes=w.sizes='100vw';"),
     expect: ['sizes string appears three times'],
   },
   {
-    name: 'the sizes breakpoint drifts off the layout breakpoint',
+    /* ⚠️ REPOINTED with its check. The phone clause in `sizes` is gone (the
+       section is hidden there, so the builder cannot run), and this fault used
+       to move it. What it really guards is the stacked override drifting off
+       the hide's breakpoint, so it moves that instead. */
+    name: 'the stacked --pw override drifts off the hide breakpoint',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '@media (max-width:760px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px)',
-      '@media (max-width:700px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px)'),
-    expect: ['stacked-layout override uses the same 760px'],
+    apply: () => patch(HOME, '  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}',
+      '  }\n@media (max-width:700px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}'),
+    expect: ['lives in that same 760px block'],
+  },
+  {
+    /* ⚠️ THE ONE THIS WHOLE CHANGE EXISTS FOR. Hiding it in CSS alone leaves a
+       phone downloading every photo in a section it cannot see - measured at 16
+       requests before the picture was fenced. The fault removes the fence. */
+    name: 'the phone source is dropped, so a hidden section still downloads photos',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME,
+      '<source media="(max-width:760px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">\n', ''),
+    expect: ['costs no request'],
+  },
+  {
+    name: 'the real sources lose their min-width fence, so phones fall through to a photo',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, ' media="(min-width:761px)" sizes="(min-width:1200px) 394px', ' sizes="(min-width:1200px) 394px'),
+    expect: ['fenced ABOVE the breakpoint'],
+  },
+  {
+    name: 'the hide is put on the box instead of the grid cell, leaving dead space',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  .about-media{display:none}', '  .about-photo{display:none}'),
+    expect: ['whole grid cell is hidden'],
+  },
+  {
+    name: 'the cell loses the class the hide rule selects',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<div class="about-media" style="position:relative" data-reveal>',
+      '<div style="position:relative" data-reveal>'),
+    expect: ['actually carries that class'],
+  },
+  {
+    name: 'build() stops checking whether the host is on screen at all',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '        if(!host.getClientRects().length) return;\n', ''),
+    expect: ['refuses a host with no client rects'],
+  },
+  {
+    /* Flagging a hidden host as built is the same class of bug as flagging it
+       on entry: the scan skips it for ever and a phone turned sideways never
+       gets a ring. */
+    name: 'a hidden host is flagged built, so it is never revisited',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '        if(!host.getClientRects().length) return;',
+      '        if(!host.getClientRects().length) { host.__built=1; return; }'),
+    expect: ['does NOT flag it built'],
+  },
+  {
+    /* The positional version, which silently downgraded the front panel from
+       AVIF to WebP the moment a source was inserted above it. */
+    name: 'point() goes back to addressing the sources by index',
+    suite: 'test-about-board.js',
+    /* ⚠️ The first version of this fault only changed the DECLARATION and left
+       the type loop below it intact, which reassigned both variables correctly
+       - a no-op, reported as "not caught" rather than passing. The whole
+       lookup has to go, or the fault is not a fault. */
+    apply: () => patch(HOME,
+      "      var s=pic.getElementsByTagName('source'), avif=null, webp=null, j;\n" +
+      "      for(j=0;j<s.length;j++){\n" +
+      "        if(s[j].type==='image/avif') avif=s[j];\n" +
+      "        else if(s[j].type==='image/webp') webp=s[j];\n" +
+      "      }\n",
+      "      var s=pic.getElementsByTagName('source'), avif=s[0], webp=s[1];\n"),
+    expect: ['finds the sources by TYPE'],
+  },
+  {
+    name: 'the resize re-scan is dropped, stranding a rotated phone',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "      window.addEventListener('resize', function(){", "      (function(){"),
+    expect: ['resize re-scan'],
   },
   {
     /* box-shadow inside a backface-visibility:hidden element in a preserve-3d

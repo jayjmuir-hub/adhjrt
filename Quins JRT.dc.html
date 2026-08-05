@@ -361,6 +361,23 @@
    Stacked, the box is 100vw minus .m-stack's 20px padding each side, so the
    panel wants to be 0.74 * (100vw - 40px) = 74vw - 30px. */
 @media (max-width:760px){
+  /* ⚠️ HIDDEN ON PHONES (Jay, 5 Aug 2026). The whole grid cell goes, not just
+     the box inside it, or the stacked layout keeps the cell's 34px gap and
+     leaves a band of dead space under the text where the photo used to be.
+
+     ⚠️ AND HIDING IT IN CSS IS ONLY HALF THE JOB. `display:none` does NOT stop
+     a browser downloading images inside it - measured, 16 requests to
+     assets/board with the block fully hidden - so the phone paid the whole
+     cost of a section it could not see. The other half is the media condition
+     on the <picture> in the markup, which hands phones a 1x1 inline GIF, and
+     the build guard in the script, which stops it constructing a ring nobody
+     can look at. All three are needed; any one alone is cosmetic. */
+  .about-media{display:none}
+
+  /* Kept, not deleted, even though the box is hidden at exactly this width:
+     it is one edit away from being live again if the hide is ever narrowed to
+     a smaller breakpoint, and its comment above records why 760 is the number.
+     The panel would be 74% of a full-width stacked box. */
   .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}
 }
 
@@ -492,9 +509,24 @@
     // the <img> have to move together or the browser keeps the old one.
     function point(pic,i){
       var b=base(i);
-      var s=pic.getElementsByTagName('source');
-      if(s[0]) s[0].srcset = b+'-sm.avif 528w, '+b+'.avif 960w';
-      if(s[1]) s[1].srcset = b+'-sm.webp 528w, '+b+'.webp 960w';
+      /* ⚠️ SOURCES ARE FOUND BY TYPE, NOT BY POSITION - and that is a bug fix,
+         not tidiness (5 Aug 2026). This used to write s[0] = avif and s[1] =
+         webp by index. The moment the fail-safe <picture> in the markup gained
+         a THIRD source at the front - the 1x1 that stops phones downloading
+         anything - every index shifted by one: the avif srcset landed on the
+         phone source and the webp srcset landed on the source declaring
+         type="image/avif". Nothing errored. The front panel quietly started
+         serving WebP instead of AVIF, which is ~30% more bytes, and the only
+         way it was noticed was reading currentSrc off a render.
+         Anything that keys off DOM order breaks when somebody inserts an
+         element above it. */
+      var s=pic.getElementsByTagName('source'), avif=null, webp=null, j;
+      for(j=0;j<s.length;j++){
+        if(s[j].type==='image/avif') avif=s[j];
+        else if(s[j].type==='image/webp') webp=s[j];
+      }
+      if(avif) avif.srcset = b+'-sm.avif 528w, '+b+'.avif 960w';
+      if(webp) webp.srcset = b+'-sm.webp 528w, '+b+'.webp 960w';
       pic.getElementsByTagName('img')[0].src = b+'.webp';
     }
 
@@ -508,12 +540,16 @@
       // width and always takes the big one.
       // Must track --pw in the CSS or the browser fetches the wrong file. First
       // matching condition wins: above 1200 the section is capped so the panel
-      // is a fixed 394px; below 760 the layout is stacked; in between the panel
-      // scales with the column. Get this wrong in the generous direction and
-      // every visitor silently downloads the 960px file.
+      // is a fixed 394px; in between it scales with the column. Get this wrong
+      // in the generous direction and every visitor silently downloads the
+      // 960px file.
       // 394, not 480, since 5 Aug 2026 evening - the About grid went back to
       // two equal columns and the panel is 74% of the narrower one.
-      a.sizes=w.sizes='(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)';
+      // There is no phone clause any more: below 760px the section is hidden
+      // and this function never runs, so a (max-width:760px) rule here would
+      // describe a case that cannot happen. It must stay identical to the two
+      // copies in the markup - test-about-board.js asserts all three match.
+      a.sizes=w.sizes='(min-width:1200px) 394px, calc(37vw - 50px)';
       var im=document.createElement('img');
       im.alt=''; im.decoding='async'; im.loading='eager';
       pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
@@ -535,6 +571,20 @@
          setting the flag means the next scan simply tries again. */
       if(host.__built)return;
       try{
+        /* ⚠️ NOTHING TO BUILD IF IT IS NOT ON SCREEN (5 Aug 2026). Below 760px
+           the whole cell is display:none at Jay's request, and building eight
+           panels there would create the DOM, point six <picture>s at photos and
+           run a timer for a section nobody can look at. getClientRects() is
+           empty for a display:none element and its descendants, which is the
+           cheap way to ask.
+
+           ⚠️ IT DELIBERATELY DOES NOT SET __built - same reasoning as the ring
+           lookup below. Flagging a hidden host as built would mean a phone
+           rotated into landscape, or a desktop window dragged wider, never gets
+           a ring at all: the scan would skip it for ever. Bailing out without
+           the flag means the next scan simply tries again. */
+        if(!host.getClientRects().length) return;
+
         var ring=host.querySelector('.jrtb-ring');
         if(!ring)return;                       // not there yet - retry next scan
 
@@ -655,6 +705,17 @@
     function boot(){
       scan();
       var n=0, iv=setInterval(function(){ scan(); if(++n>40) clearInterval(iv); },500);
+
+      /* The 20-second scan covers the engine's re-renders, which all happen at
+         load. Crossing the 760px breakpoint happens whenever somebody feels
+         like it - a phone turned sideways, a window dragged wider - and by then
+         the interval is long gone, so the host would sit hidden-and-unbuilt for
+         ever. Debounced because a drag fires this continuously, and build() is
+         idempotent per element so a spare call costs nothing. */
+      var rt=null;
+      window.addEventListener('resize', function(){
+        clearTimeout(rt); rt=setTimeout(scan,200);
+      });
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
   })();
@@ -994,7 +1055,7 @@
         </div>
       </div>
     </div>
-    <div style="position:relative" data-reveal>
+    <div class="about-media" style="position:relative" data-reveal>
       <!-- ⚠️ THE CREST USED TO BE HERE, pinned over the top-left corner of the
            photo box by .cstage / .crest-anim, and before that it was the anchor
            for the bat animation. Both are gone as of 5 Aug 2026 — it now sits
@@ -1032,9 +1093,19 @@
                    a single static action photo and nothing looks broken. -->
               <div class="jrtb-p">
                 <picture>
-                  <source type="image/avif" sizes="(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)"
+                  <!-- ⚠️ PHONES MATCH THIS FIRST SOURCE AND FETCH NOTHING. A
+                       matching <source> wins over the <img src> below, so on a
+                       screen where the section is hidden the browser resolves
+                       this 1x1 transparent GIF - which is inline, so it costs
+                       no request at all - and never asks for a photo. Without
+                       it, display:none still downloads: measured at 16 requests
+                       to assets/board on a hidden block. The <img src> stays a
+                       real photo for the desktop no-JS case; it is only used
+                       when no source matches. -->
+                  <source media="(max-width:760px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                  <source type="image/avif" media="(min-width:761px)" sizes="(min-width:1200px) 394px, calc(37vw - 50px)"
                           srcset="assets/board/board-01-sm.avif 528w, assets/board/board-01.avif 960w">
-                  <source type="image/webp" sizes="(min-width:1200px) 394px, (max-width:760px) 74vw, calc(37vw - 50px)"
+                  <source type="image/webp" media="(min-width:761px)" sizes="(min-width:1200px) 394px, calc(37vw - 50px)"
                           srcset="assets/board/board-01-sm.webp 528w, assets/board/board-01.webp 960w">
                   <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
                 </picture>

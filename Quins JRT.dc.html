@@ -78,10 +78,19 @@
      still in the repo, and the animation was .cf / .cfl / .bflat / .breal
      plus the batfly, batflap and batmorph keyframes. Retrieve them from the
      commit that removed this if it is ever wanted back. */
-  .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
-  .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .crest-anim .cbase{z-index:1}
-  .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}
+  /* ⚠️ REMOVED 5 Aug 2026 when the crest moved out of the photo box and up
+     beside the heading. It is now a plain <img> with inline styles, so there
+     is nothing to select here any more. What was here:
+       .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
+       .crest-anim img{position:absolute;inset:0;width:100%;height:100%;
+                       object-fit:contain}
+       .crest-anim .cbase{z-index:1}
+       .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);
+               height:calc(100% + 30px);overflow:hidden;pointer-events:none;
+               z-index:2}
+     .cstage existed to clip the mothballed bat's flight path so it could never
+     add a page scrollbar. If the animation ever comes back, it needs both of
+     these and a container to live in again. */
   @media (prefers-reduced-motion:reduce){
     /* The hero shards and hover sweeps stop too — the crest already honoured
        this preference; the rest of the page now extends the same courtesy
@@ -283,19 +292,27 @@
    forces the browser to flatten preserve-3d and the whole thing collapses
    into a flat horizontal squash. Clipping lives on the wrapper div, which is
    safe. (Panels themselves may have overflow - they have no 3D children.) */
-/* The box the ring sits in. Was an inline style on the div until 5 Aug 2026;
-   it moved here so the height can change on a phone, where 600px of photo is
-   most of the screen. */
-.about-photo{position:relative;height:600px;border-radius:18px;overflow:hidden;
-  box-shadow:0 20px 50px rgba(0,0,0,.2)}
-@media (max-width:700px){ .about-photo{height:420px;border-radius:12px} }
+/* The box the ring sits in.
+   ⚠️ It is TALLER than the panels on purpose (680 vs 600). That 40px of clear
+   space top and bottom is what stops the photos butting into the edge of the
+   box and lets you read their shape. If you ever set --ph to the box height
+   again you will get the old crop-to-the-edge look back.
+
+   ⚠️ It is also the SAME COLOUR as the section behind it (#F3F1ED), with no
+   card shadow, so the box itself is invisible and the photos appear to float
+   on the page. Turning it back to a dark panel would undo that. The colour is
+   duplicated in three places below — box, scene and panel — because all three
+   can show through at different moments; keep them in step. */
+.about-photo{position:relative;height:680px;border-radius:18px;overflow:hidden;
+  background:#F3F1ED}
+@media (max-width:700px){ .about-photo{height:480px;border-radius:12px} }
 
 .jrtb{position:absolute;inset:0;
   --pw:480px;   /* panel width  */
-  --ph:600px;   /* panel height - full box height, so no black bands */
+  --ph:600px;   /* panel height - deliberately SHORTER than the 680px box */
   --r:579px;    /* = (480/2) / tan(180/8) . Recompute if you change --pw   */
   --turn:1400ms}
-.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}
+.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#F3F1ED}
 .jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
   transform:translateZ(calc(var(--r) * -1)) rotateY(var(--jrtb-rot,0deg));
   transition:transform var(--turn) cubic-bezier(.55,.06,.25,1);
@@ -305,7 +322,28 @@
   margin:calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   overflow:hidden;border-radius:6px;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  background:#0C0C0E}
+  background:#F3F1ED}
+
+/* ⚠️ DO NOT ADD A box-shadow ANYWHERE IN HERE. Tried twice on 5 Aug 2026 and
+   both attempts broke rendering in Chrome:
+
+     .jrtb-p{box-shadow:0 10px 30px ...}        -> NO panel painted its <img>
+                                                   at all, just its background
+     .jrtb-p::before{box-shadow:inset 0 0 0 1px} -> the front panel painted,
+                                                   every ANGLED panel did not
+
+   Both were confirmed by removing only the shadow and watching the photos come
+   straight back, so it is the shadow and not anything else. It appears to be a
+   compositing bug with box-shadow on / inside a `backface-visibility:hidden`
+   element in a `preserve-3d` scene.
+
+   Why anyone would want one: against the old black frame every photo had an
+   edge for free. Against cream, a photo whose own edge is pale - board-08 is a
+   washed-out tent and sky - blends into the page and the angled sliver looks
+   like it is missing. That is cosmetic and content-dependent, and nowhere near
+   worth a blank panel. If you want to try again, use a `border` with
+   `box-sizing:border-box`, not a shadow, and check EVERY panel, not just the
+   front one. */
 .jrtb-p img{width:100%;height:100%;object-fit:cover;display:block}
 .jrtb-p::after{content:"";position:absolute;inset:0;background:#000;
   opacity:calc(var(--away,1) * 0.72);
@@ -320,10 +358,12 @@
 .jrtb:not(.ready) .jrtb-p::after{opacity:0}
 
 /* Phones: the box is much narrower and shorter, so the panels are too. Radius
-   recomputed for --pw:260px -> (260/2)/tan(22.5deg) = 314px, and --ph matches
-   the 420px box height above so there are still no bands. */
+   recomputed for --pw:260px -> (260/2)/tan(22.5deg) = 314px. */
 @media (max-width:700px){
-  .jrtb{--pw:260px;--ph:420px;--r:314px}
+  .jrtb{--pw:260px;--ph:400px;--r:314px}   /* 400 in a 480 box - same 40px margin */
+  /* No room for a 96px crest beside a display heading on a phone, so it goes
+     above it instead. */
+  .m-crestrow{flex-direction:column;align-items:flex-start!important;gap:14px!important}
 }
 /* Anyone who has asked their OS to cut animation gets an instant change of
    photo rather than a glide. The ring still advances; it just does not move. */
@@ -791,7 +831,17 @@
   <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">
     <div data-reveal>
       <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>
-      <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;color:#0C0C0E">Rugby the way it should be</h2>
+      <!-- The crest sits beside the heading (5 Aug 2026). It used to be pinned
+           over the top-left corner of the photo box, which stopped working once
+           the photos started moving underneath it. `flex:none` matters: without
+           it the crest is squashed by the heading rather than the other way
+           round. m-crestrow drops it above the heading on a phone, where there
+           is not room for both side by side. -->
+      <div class="m-crestrow" style="display:flex;align-items:center;gap:20px">
+        <img src="assets/crest.png" alt="Abu Dhabi Harlequins crest"
+             style="width:96px;height:96px;flex:none;object-fit:contain">
+        <h2 style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:0.95;text-transform:uppercase;color:#0C0C0E;margin:0">Rugby the way it should be</h2>
+      </div>
       <p style="font-size:18px;margin-top:24px;color:#3a3f48;max-width:520px">
         The Abu Dhabi Harlequins Junior Rugby Tournament brings clubs from across the UAE and the Gulf together across two brilliant days of mini, midi and youth rugby &mdash; great games, new friends and a proper festival atmosphere.
       </p>
@@ -821,32 +871,24 @@
       </div>
     </div>
     <div style="position:relative" data-reveal>
-      <!-- shard accent tile -->
-      <div class="cstage">
-        <div class="crest-anim">
-          <!-- ⚠️ This is crest.png (the complete club crest), NOT
-               crest-shield.png. crest-shield.png is the crest with a
-               BAT-SHAPED HOLE cut out of it — it exists only as the backdrop
-               the animated bat used to fly out of and land back into. On its
-               own it looks like a crest with a piece missing, which is exactly
-               what it did on the live site for a few hours on 5 Aug 2026 after
-               the animation was mothballed. Do not "restore" it here. -->
-          <img class="cbase" src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
-          <!-- ⚠️ MOTHBALLED 5 Aug 2026, not deleted. A bat used to sit here and
-               fly a loop out of the crest and back into it when this section
-               scrolled into view:
-                 <div class="cf"><div class="cfl">
-                   <img class="bflat" src="assets/crest-bat.png" alt="">
-                   <img class="breal" src="assets/crest-bat-real.png" alt="">
-                 </div></div>
-               Both images are still in assets/. The CSS (.cf/.cfl/.breal and the
-               batfly, batflap, batmorph keyframes) and the script that armed it
-               came out in the same commit — pull them from there if it comes
-               back. Note that restoring it also means swapping the image above
-               back to crest-shield.png, or the flying bat and the one already
-               printed on crest.png will both be on screen at once. -->
-        </div>
-      </div>
+      <!-- ⚠️ THE CREST USED TO BE HERE, pinned over the top-left corner of the
+           photo box by .cstage / .crest-anim, and before that it was the anchor
+           for the bat animation. Both are gone as of 5 Aug 2026 — it now sits
+           beside the "Rugby the way it should be" heading in the text column,
+           because a static badge on top of photos that move underneath it read
+           as a sticker rather than a design.
+
+           The mothballed bat animation used to hang off it:
+             <div class="cf"><div class="cfl">
+               <img class="bflat" src="assets/crest-bat.png" alt="">
+               <img class="breal" src="assets/crest-bat-real.png" alt="">
+             </div></div>
+           plus .cstage / .crest-anim / .cf / .cfl / .breal in the stylesheet and
+           the batfly, batflap and batmorph keyframes. assets/crest-bat.png and
+           crest-bat-real.png are still in the repo. If the animation ever comes
+           back it needs its own home again, and the badge has to go back to
+           crest-shield.png at the same time — crest.png already has a bat
+           printed on it, so you would otherwise get two. -->
       <div class="about-photo">
         <!-- Rotating photo RING. Was a single static assets/action-lineout.jpg
              until 5 Aug 2026, then briefly a two-sided flip, now a cylinder of
@@ -876,7 +918,14 @@
             </div>
           </div>
         </div>
-        <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px 12px rgba(12,12,14,.3);pointer-events:none;z-index:8"></div>
+        <!-- ⚠️ REMOVED 5 Aug 2026 with the switch to a cream background. An
+             inset vignette darkened all four edges of the box:
+               <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px
+                    12px rgba(12,12,14,.3);pointer-events:none"></div>
+             It existed to fade a photo that ran edge to edge into a dark frame.
+             The photos no longer touch the edge and the frame is now the same
+             cream as the section, so all it did was smear grey haze around the
+             inside of an invisible box. -->
         <!-- ⚠️ REMOVED 5 Aug 2026, on Jay's call. A red->green signature bar sat
              across the bottom of this box:
                <div style="position:absolute;bottom:0;left:18px;right:18px;

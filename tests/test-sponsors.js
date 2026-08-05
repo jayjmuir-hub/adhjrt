@@ -184,7 +184,7 @@ section('Every placement uses the white lockup');
    day — 3 up to 4 when the hero lockup arrived, and back down to 3 when Jay
    removed the band. Both times by hand, which is the point. The three are the
    sticky header (19px), the hero lockup (128px) and the sponsors section
-   (64px). */
+   (96px, raised from 64 on 5 Aug at Jay's request). */
 const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
 eq('three HSBC images on the page', imgTags.length, 3);
 imgTags.forEach((tag, i) => {
@@ -194,6 +194,16 @@ imgTags.forEach((tag, i) => {
      not simply be deleted. */
   check(`HSBC image ${i + 1} has an alt attribute`, /alt="HSBC"/.test(tag));
 });
+
+/* ⚠️ THE SIZES ARE ASSERTED, NOT JUST THE COUNT. A placement quietly shrinking
+   is the same class of failure as one quietly vanishing — the mark is still
+   there, so nothing looks broken, and the tournament's only confirmed partner
+   is smaller than the day before with nobody the wiser. Written out, so moving
+   one is a deliberate edit here in the same commit. The sponsors-section
+   lockup went 64 -> 96 on 5 Aug at Jay's request. */
+const hsbcHeights = imgTags.map((t) => Number((t.match(/height:(\d+)px/) || [])[1]));
+check('the HSBC placements are 19px, 128px and 96px',
+  JSON.stringify(hsbcHeights) === JSON.stringify([19, 128, 96]), hsbcHeights.join(', '));
 
 /* ⚠️ THE HERO PLACEMENT, AND THE REASON IT IS ALLOWED TO BE THERE.
    The hero sits on #0C0C0E, and the reverse lockup's hexagon is HSBC red. The
@@ -561,6 +571,27 @@ section('The supporters grid');
      neighbour. */
   const lit = rows.filter((r) => r[4]);
   eq('nine sponsors get a white box', lit.length, 9);
+
+  /* ⚠️ THE TILES ALTERNATE, AND THE ORDER OF THE LIST IS WHAT DOES IT — not an
+     :nth-child rule. A positional CSS rule would paint every other tile white
+     regardless of what is in it, so one added sponsor would flip nine logos
+     onto the wrong ground and erase the three that exist only as white files.
+     Asserting the ALTERNATION and the MEASURED flag together is what makes the
+     checkerboard safe: the colour still follows the artwork.
+     Crompton leads at Jay's request (5 Aug), so the run starts white. */
+  check('Crompton leads the list', rows.length > 0 && rows[0][2].includes('crompton-partners'));
+  const alternates = rows.every((r, i) => !!r[4] === (i % 2 === 0));
+  check('the tiles alternate white, dark, white, dark…', alternates,
+    rows.map((r) => (r[4] ? 'W' : 'D')).join(''));
+
+  /* ⚠️ FLEX, NOT GRID. A CSS grid leaves an incomplete final row hanging on the
+     left and there is no grid property that centres it; flex-wrap plus
+     justify-content:center centres whatever the last row holds, at every width,
+     with no count baked in — which matters because the count changes every time
+     a sponsor signs. */
+  check('the last row is centred rather than left-hanging',
+    /display:flex;flex-wrap:wrap;justify-content:center/.test(sponsorsInner)
+      && !/grid-template-columns/.test(sponsorsInner));
   const LIGHT = ['brighton-college', 'beond', 'westminster-construction', 'broadway-malyan',
     'bottle-store', 'align-health', 'anderson-education', 'crompton-partners', 'recover'];
   check('…and they are exactly the nine that fail on the dark tile',

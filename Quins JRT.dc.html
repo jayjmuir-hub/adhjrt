@@ -202,6 +202,16 @@
     .hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}
   }
 
+  /* ⚠️ The supporters tiles are capped at 260px so a short LAST ROW does not
+     stretch into three enormous boxes. On a phone there is only ever one tile
+     per row, so that cap would leave a narrow card floating in the middle of a
+     390px screen - lift it and let the tile use the width it has.
+     !important for the same reason as the rules above: the tile is styled
+     inline and an ordinary rule silently loses. */
+  @media(max-width:640px){
+    .spon-tile{max-width:none!important}
+  }
+
   @media(max-width:760px){
     /* Header stays ONE line. Wrapping the links made everything reachable but
        took three lines, and the header is sticky - so a quarter of the screen
@@ -919,7 +929,7 @@
       <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:52px 40px;overflow:hidden">
         <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
         <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:24px">Principal partner</div>
-        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;max-width:100%;display:block;margin:0 auto">
+        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">
         <p style="margin:26px auto 0;max-width:560px;color:#aeb4bf;font-size:17px;line-height:1.6">HSBC are the principal partner of the 2026 Abu Dhabi Harlequins Junior Rugby Tournament, and a large part of the reason thousands of young players get two full days of rugby.</p>
       </div>
 
@@ -941,7 +951,14 @@
            and one file, not a markup edit. -->
       <div data-reveal style="margin-top:34px">
         <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:22px">With the support of</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px">
+        <!-- ⚠️ FLEX, NOT GRID, and the reason is the LAST ROW. A CSS grid leaves an
+             incomplete final row hanging on the left; there is no grid property that
+             centres it. flex-wrap + justify-content:center centres whatever the last
+             row happens to hold, at every width, with no count baked in - which
+             matters because the count changes every time a sponsor signs.
+             flex:1 1 190px keeps full rows filling the width; max-width:260px stops
+             a short last row stretching into three enormous tiles. -->
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px">
           <sc-for list="{{ sponsors }}" as="s" hint-placeholder-count="8">
             <!-- ⚠️ THE TILE COLOUR COMES FROM THE DATA TOO. Most marks are
                  white-on-transparent and sit on the dark tile; a few exist ONLY
@@ -954,7 +971,7 @@
                  files and would have vanished, which is this exact failure
                  inverted. Per-tile is the version that cannot break anything
                  that currently works. -->
-            <div style="background:{{ s.bg }};border:1px solid {{ s.edge }};border-radius:14px;min-height:104px;display:flex;align-items:center;justify-content:center;padding:16px 22px">
+            <div class="spon-tile" style="flex:1 1 190px;max-width:260px;background:{{ s.bg }};border:1px solid {{ s.edge }};border-radius:14px;min-height:104px;display:flex;align-items:center;justify-content:center;padding:16px 22px">
               <!-- ⚠️ max-height, NOT height, and the number comes from the data.
                    Two separate faults if you go back to a fixed height:
                    (a) a fixed height with max-width:100% SQUASHES a very wide
@@ -1518,34 +1535,48 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
    below which a wordmark stops being legible on a phone. Recompute h when you
    replace a file - a new crop changes the ratio. */
 const SPONSORS = [
-  /* ⚠️ EVERY FILE IS THE SPONSOR'S OWN ARTWORK, IN THEIR OWN COLOURS. Nothing
-     here is recoloured. `light: true` means the mark does not read on the dark
-     tile, so it gets a WHITE BOX instead — Jay's rule, 5 Aug: "put them on the
-     black background, anything that was changed can just go in a white box".
+  /* ⚠️ THE ORDER OF THIS LIST IS LOAD-BEARING. The tiles alternate dark, white,
+     dark, white — Jay's call, 5 Aug — and that is achieved by ORDERING the list
+     so `light` alternates, NOT by an :nth-child rule on the markup.
+
+     The difference matters. A positional CSS rule paints every other tile white
+     regardless of what is in it, so adding one sponsor flips nine logos onto
+     the wrong ground and three of them (Oak View Group, V&P, Yas Mena Cycles —
+     white-on-transparent files with no other version) VANISH, reporting no
+     error anywhere. Here the colour still follows the ARTWORK; the checkerboard
+     is a property of the order, and the tests assert both.
+
+     ⚠️ IT ONLY WORKS BECAUSE IT IS EXACTLY NINE AND NINE.
      The flag is assigned by MEASUREMENT, not taste: median WCAG contrast of the
-     ink against #151517, white box below 4.5:1. Re-measure when a file is
-     replaced. */
+     ink against #151517, white box below 4.5:1. It happened to come out even. **Adding a nineteenth sponsor breaks the
+     alternation**, and the fix is NOT to flip its tile: measure it, put it in
+     its half, and accept one repeat where the halves no longer interleave.
+
+     Crompton Partners leads it at Jay's request, 5 Aug, which is why the run
+     starts WHITE and ends dark rather than the other way round. */
+  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },
   { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },
-  { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44 },
-  { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68 },
   { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },
-  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
+  { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44 },
   { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44, light: true },
+  { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68 },
   { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, light: true },
+  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
   { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36, light: true },
   { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40 },
   { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 43, light: true },
   { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68 },
-  { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
-  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36 },
   { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true },
-  /* Bili Boys is a badge with its own opaque cream ground, so it is already a
-     box and stays on the dark tile. 154x90 is all the artwork there is, so it
-     is stored at native size and h is below the formula on purpose. */
-  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },
+  { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
   { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true },
-  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },
+  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36 },
   { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 39, light: true },
+  /* Bili Boys is a badge with its own opaque cream ground, so it is already a
+     box and belongs in the DARK half — it is also the one logo the contrast
+     measurement gets wrong, reading the ground as ink, so it is pinned by hand.
+     154x90 is all the artwork there is, so it is stored at native size and h
+     sits below the formula on purpose. */
+  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },
 ];
 
 const AGE_GROUP_INFO = [

@@ -1598,6 +1598,44 @@ const FAULTS = [
     expect: ['widest mark'],
   },
   {
+    /* ⚠️ The sponsors-section lockup quietly shrunk back. The mark is still
+       there, so nothing looks broken — and the tournament's only confirmed
+       partner is smaller than it was with nobody the wiser. */
+    name: 'the sponsors-section HSBC lockup shrinks back to 64px',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'alt="HSBC" style="height:96px', 'alt="HSBC" style="height:64px'),
+    expect: ['placements are 19px, 128px and 96px'],
+  },
+  {
+    /* ⚠️ Crompton no longer leads, so the alternation starts on the wrong foot.
+       Jay asked for it first on 5 Aug. */
+    name: 'Crompton is moved out of the first slot',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME,
+      "  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },\n  { name: 'Oak View Group',",
+      "  { name: 'Oak View Group',"),
+    expect: ['Crompton leads the list'],
+  },
+  {
+    /* ⚠️ The alternation broken by a reorder that looks like tidying — grouping
+       the white boxes together, which is exactly what somebody would do. */
+    name: 'the list is regrouped so the tiles stop alternating',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME,
+      "  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },\n  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },",
+      "  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },\n  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },"),
+    expect: ['the tiles alternate'],
+  },
+  {
+    /* ⚠️ Back to a grid, which leaves the last row hanging on the left. There
+       is no grid property that centres an incomplete final row. */
+    name: 'the supporters grid goes back to CSS grid, orphaning the last row',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'display:flex;flex-wrap:wrap;justify-content:center;gap:14px',
+      'display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px'),
+    expect: ['last row is centred'],
+  },
+  {
     /* ⚠️ Broadway Malyan slid back to the TAGLINE lockup — which is a real file
        of theirs, so nothing about it looks wrong, and their NAME disappears
        from the page again. The height is the only thing a source test can see
@@ -3600,14 +3638,14 @@ const FAULTS = [
   {
     name: 'the band is switched to the black-wordmark logo (invisible on the dark page)',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px',
-      'src="assets/sponsor-hsbc.webp" alt="HSBC" style="height:64px'),
+    apply: () => patch(HOME, 'src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px',
+      'src="assets/sponsor-hsbc.webp" alt="HSBC" style="height:96px'),
     expect: ['uses the white lockup, not the black one'],
   },
   {
     name: 'the sponsors-section placement loses its logo',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:64px;width:auto;max-width:100%;display:block;margin:0 auto">', ''),
+    apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">', ''),
     expect: ['three HSBC images on the page'],
   },
   {

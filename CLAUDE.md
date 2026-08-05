@@ -335,7 +335,7 @@ The mark appears in **three** places on the homepage, all on `#0C0C0E`:
 |---|---|---|
 | sticky header, beside the crest | 19px | not a link; hidden below 900px |
 | hero, centred in the space after the Register buttons | **128px** | added 3 Aug 2026; `margin-left:auto` AND `margin-right:auto` — auto on BOTH sides is what makes it halfway rather than hard right, which Jay rejected. `max-width:100%` because at 128px it is ~510px wide, wider than a phone. "In partnership with" above it, divider to its left |
-| `<section id="sponsors">` | 64px | "Principal partner", plus a paragraph |
+| `<section id="sponsors">` | **96px** | "Principal partner", plus a paragraph. Raised from 64px on 5 Aug at Jay's request. ⚠️ **All three sizes are asserted now** — a placement quietly SHRINKING is the same class of failure as one quietly vanishing: the mark is still there, so nothing looks broken, and the only confirmed partner is smaller than the day before with nobody the wiser. |
 
 ⚠️ **There WAS a fourth — `<section id="partner">`, a 54px band between the hero
 and the stat strip — and it was removed on 3 Aug 2026**, the same day the hero
@@ -438,6 +438,36 @@ replaced; never copy the flag from a neighbour.**
 The tile's background and border are **derived from the flag** in
 `renderVals()` — the data says what the ARTWORK is, not what colour to paint a
 box, so the two greys live in one place.
+
+### ⚠️ THE TILES ALTERNATE, AND THE ORDER OF THE LIST IS WHAT DOES IT
+
+Jay, 5 Aug: *"can we do them every other is dark, every other is white."* The
+checkerboard is achieved by **ORDERING `SPONSORS` so `light` alternates**, NOT
+by an `:nth-child` rule on the markup.
+
+**The difference is the whole safety of it.** A positional CSS rule paints every
+other tile white regardless of what is in it, so adding ONE sponsor flips nine
+logos onto the wrong ground — and the three that exist only as white files
+VANISH, reporting no error anywhere. Ordering keeps the colour following the
+ARTWORK; the alternation is a property of the list. Both are asserted.
+
+⚠️ **It only works because it is exactly nine and nine**, which the measurement
+happened to produce. **A nineteenth sponsor breaks the alternation**, and the
+fix is NOT to flip its tile: measure it, put it in its half, and accept one
+repeat. There is a fault that regroups the list to prove the check fires.
+
+**Crompton Partners leads** at Jay's request (5 Aug), so the run starts WHITE.
+
+### ⚠️ FLEX, NOT GRID — because of the last row
+
+`display:flex;flex-wrap:wrap;justify-content:center`, tiles at
+`flex:1 1 190px;max-width:260px`. A CSS grid leaves an incomplete final row
+hanging on the left and **there is no grid property that centres it**; flex-wrap
+plus `justify-content:center` centres whatever the last row holds, at every
+width, with no count baked in — which matters because the count changes every
+time a sponsor signs. The 260px cap stops a short last row stretching into three
+enormous tiles; `.spon-tile` lifts it below 640px, where there is only one tile
+per row anyway.
 
 ⚠️ **THREE LOGOS CAN NEVER TAKE A WHITE BOX**: Oak View Group, V&P and Yas Mena
 Cycles exist **only** as white-on-transparent files, so a white tile would erase

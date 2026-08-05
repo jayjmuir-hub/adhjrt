@@ -75,6 +75,19 @@
   status = 404
   force = true
 
+# --- tools -------------------------------------------------------------
+# Same reasoning as tests/ directly above: no publish directory, so
+# tools/make-board-photo.py would otherwise be readable at
+# adhjrt.com/tools/make-board-photo.py. It holds nothing secret — the repo is
+# public — but a local build script is not part of the site and should not be
+# served as if it were. force = true for the same reason: it is a real file on
+# disk and would be served before this rule was consulted.
+[[redirects]]
+  from = "/tools/*"
+  to = "/tools/:splat"
+  status = 404
+  force = true
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.
@@ -88,3 +101,20 @@
   [headers.values]
     Content-Type = "application/manifest+json"
     Cache-Control = "public, max-age=3600"
+
+# --- About-section ring photos -----------------------------------------
+# assets/board/board-NN{,-sm}.{avif,webp} are content-addressed by hand: a
+# given filename always holds the same photo, because replacing a photo means
+# running tools/make-board-photo.py at a NEW number, never overwriting an old
+# one. That makes them safe to cache for a year and mark immutable, so a
+# returning visitor re-downloads none of them.
+#
+# ⚠️ The corollary, and the way this bites: if you ever DO overwrite an
+# existing board-NN file in place, anyone who has already visited keeps the old
+# photo for up to a year and no deploy will shift it. Always add at a new
+# number. The generator script picks the next free one for you by default,
+# which is precisely why it does that.
+[[headers]]
+  for = "/assets/board/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

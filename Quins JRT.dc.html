@@ -255,48 +255,73 @@
     .m-hide{display:none!important}
   }
 
-/* ============ ROTATING PHOTO BOARD (About section) ============
-   Replaced the single static assets/action-lineout.jpg on 5 Aug 2026. The
-   board turns on its vertical axis every 5s to show the next photo.
+/* ============ ROTATING PHOTO RING (About section) ============
+   Replaced the single static assets/action-lineout.jpg on 5 Aug 2026; became
+   a ring rather than a flip on 5 Aug after Jay found the flip too abrupt.
 
-   HOW THE 3D WORKS, because it is not obvious:
-   - .jrtb-stage carries the `perspective`. That is the camera distance, and
-     it never moves. Lower number = more extreme, fish-eye turn.
-   - .jrtb-card is the only thing that rotates. `transform-style:preserve-3d`
-     tells the browser to keep its children in real 3D space rather than
-     flattening them onto one plane.
-   - There are exactly TWO faces, back to back. Face .b is permanently
-     pre-rotated 180deg. Both have `backface-visibility:hidden`, so each one
-     vanishes the instant it turns away from you - which is what makes
-     exactly one photo visible at a time.
-   - The script NEVER swaps the photo you are looking at. It loads the next
-     one into the face you cannot see, then turns the card another 180deg.
-     Two <img> elements total, however many photos are in the list.
+   WHAT IT IS
+   A cylinder of photo panels standing on end, turning on its vertical axis.
+   The box shows only part of it: a photo swings in from the left, comes face
+   on, and swings out of frame right. You are looking through a window at
+   something bigger, which is the whole reason it fits in 533px.
 
-   DO NOT put `overflow`, `opacity` or `filter` on .jrtb-card. Each of them
-   forces the browser to flatten preserve-3d, and the rotation collapses into
-   a flat horizontal squash. The clipping lives on the wrapper div instead,
-   which is safe. */
-.jrtb{position:absolute;inset:0}
-.jrtb-stage{position:absolute;inset:0;perspective:1600px;background:#0C0C0E}
-.jrtb-card{position:absolute;inset:0;transform-style:preserve-3d;
-  transform:rotateY(var(--jrtb-rot,0deg));
-  transition:transform 900ms cubic-bezier(.62,.03,.31,1);will-change:transform}
-.jrtb-face{position:absolute;inset:0;backface-visibility:hidden;
-  -webkit-backface-visibility:hidden;background:#0C0C0E}
-.jrtb-face.b{transform:rotateY(180deg)}
-.jrtb-face img{width:100%;height:100%;object-fit:cover;display:block}
-/* Darkens the board as it turns edge-on and lifts again as it comes round.
-   This is what makes it read as a physical panel turning out of the light
-   rather than a flat CSS trick. It sits OUTSIDE the card so it stays still. */
-.jrtb-shade{position:absolute;inset:0;background:#000;opacity:0;
-  pointer-events:none;z-index:2}
-.jrtb.turning .jrtb-shade{animation:jrtb-shade 900ms cubic-bezier(.62,.03,.31,1)}
-@keyframes jrtb-shade{0%{opacity:0}46%{opacity:.62}54%{opacity:.62}100%{opacity:0}}
-/* Anyone who has asked their OS to cut animation gets a plain instant swap. */
+   THE GEOMETRY IS NOT A TASTE DECISION
+   Each panel is rotated round the ring by (360 / N) * its index, then pushed
+   outwards by translateZ(radius). For N panels of width W to sit evenly
+   around the ring:
+                    radius = (W / 2) / tan(180 / N)
+   With N=8 and W=400px that is 483px. Change W or N and you MUST recompute
+   the radius or the panels overlap or leave gaps. There is a calculator in
+   tools/make-board-photo.py if you change the panel size.
+
+   THE DIMMING IS DOING MOST OF THE WORK
+   .jrtb-p::after darkens each panel in proportion to how far it is turned
+   away from you. Take it out and the ring stops reading as a lit object and
+   becomes a row of flat rectangles at angles. It is not decoration.
+
+   ⚠️ DO NOT put `overflow`, `opacity` or `filter` on .jrtb-ring. Any of them
+   forces the browser to flatten preserve-3d and the whole thing collapses
+   into a flat horizontal squash. Clipping lives on the wrapper div, which is
+   safe. (Panels themselves may have overflow - they have no 3D children.) */
+.jrtb{position:absolute;inset:0;
+  --pw:400px;   /* panel width  */
+  --ph:460px;   /* panel height - full box height, so no black bands */
+  --r:483px;    /* = (400/2) / tan(180/8) . Recompute if you change --pw   */
+  --turn:1400ms}
+.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}
+.jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
+  transform:translateZ(calc(var(--r) * -1)) rotateY(var(--jrtb-rot,0deg));
+  transition:transform var(--turn) cubic-bezier(.55,.06,.25,1);
+  will-change:transform}
+.jrtb-p{position:absolute;top:50%;left:50%;
+  width:var(--pw);height:var(--ph);
+  margin:calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
+  overflow:hidden;border-radius:6px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:#0C0C0E}
+.jrtb-p img{width:100%;height:100%;object-fit:cover;display:block}
+.jrtb-p::after{content:"";position:absolute;inset:0;background:#000;
+  opacity:calc(var(--away,1) * 0.72);
+  transition:opacity var(--turn) ease;pointer-events:none}
+
+/* FAILS SAFE. Until the script has built the ring and added .ready, the one
+   panel that is hard-coded in the markup simply fills the box - exactly the
+   single static photo that used to be there. With JavaScript off, that is
+   what stays. Nothing collapses, nothing goes blank. */
+.jrtb:not(.ready) .jrtb-p{top:0;left:0;width:100%;height:100%;margin:0;
+  border-radius:0;transform:none!important}
+.jrtb:not(.ready) .jrtb-p::after{opacity:0}
+
+/* Phones: the box is much narrower, so the panels are too. Radius recomputed
+   for --pw:260px -> (260/2)/tan(22.5deg) = 314px. */
+@media (max-width:700px){
+  .jrtb{--pw:260px;--r:314px}
+}
+/* Anyone who has asked their OS to cut animation gets an instant change of
+   photo rather than a glide. The ring still advances; it just does not move. */
 @media (prefers-reduced-motion:reduce){
-  .jrtb-card{transition-duration:1ms}
-  .jrtb.turning .jrtb-shade{animation:none}
+  .jrtb-ring{transition-duration:1ms}
+  .jrtb-p::after{transition-duration:1ms}
 }
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
@@ -312,62 +337,144 @@
      did nothing deployed. If the bat comes back, it needs the re-scanning
      boot the board now uses, not the version that was here. -->
 <script>
-  /* Rotating photo board in the About section (5 Aug 2026). Replaced a single
-     static photo; turns to the next one every 5 seconds.
+  /* Rotating photo RING in the About section (5 Aug 2026). A cylinder of
+     photo panels turning on its vertical axis, clipped by the box.
 
-     TO ADD OR REMOVE PHOTOS: change COUNT below, and put the matching file in
-     assets/board/ named board-NN.webp with a two-digit number (board-12.webp).
-     Photos are cropped to 1200x1035 - the shape of the box they sit in.
-     Nothing else needs editing. .webp with no .jpg fallback is deliberate and
-     matches the rest of the site (see the HSBC lockup).
+     ---------------------------------------------------------------------
+     TO ADD A PHOTO: run  python tools/make-board-photo.py <your.jpg>
+     then bump PHOTOS below. That script does the crop and produces all four
+     files (two formats x two sizes) at the right dimensions. Do not hand-crop
+     them - the panel shape is not the same as the box shape.
+     ---------------------------------------------------------------------
 
-     FAILS SAFE. The first photo is in the markup, so with JavaScript off, or
-     if anything in here throws, the box shows exactly what it showed before:
-     one static action shot. Nothing disappears.
+     WHY THERE ARE 8 PANELS BUT 11 PHOTOS
+     A ring only needs enough panels to look continuous. Eight is plenty, and
+     it caps the number of <img> elements no matter how big the photo library
+     gets. Photos are cycled THROUGH the panels: every time the ring steps, the
+     panel that has just rotated round to the back - four positions away, where
+     backface-visibility has made it invisible - is loaded with the photo it
+     will need in four more steps. That is roughly 24 seconds of lead time, so
+     nothing is ever seen half-loaded, and adding a twelfth photo costs no
+     extra DOM at all.
+
+     WHY ONLY THREE LOAD AT FIRST
+     Only the front panel and its two neighbours are visible when the section
+     comes into view. The other five have no src until the browser is idle. So
+     arriving at this section costs three images, not eight and not eleven.
+
+     FORMAT AND SIZE are the browser's choice, not ours: each panel is a
+     <picture> offering AVIF and WebP at 800w and 440w. A phone on a 1x screen
+     takes the 440w AVIF (~17KB); a retina desktop takes the 800w (~39KB).
+
+     FAILS SAFE. Panel 1 is hard-coded in the markup and the CSS makes it fill
+     the box until this script adds .ready. With JavaScript off, or if anything
+     in here throws, you get one static action shot - exactly what was there
+     before any of this existed.
 
      Costs nothing when unwatched - it stops turning when scrolled off screen
      and when the browser tab is in the background. */
   (function(){
-    var COUNT=11, EVERY=5000, TURN=900;
-    var file=function(i){ var n=i+1; return 'assets/board/board-'+(n<10?'0':'')+n+'.webp'; };
+    var PHOTOS = 11;      // how many board-NN.* sets exist in assets/board/
+    var PANELS = 8;       // panels on the ring. Changing this changes --r in the CSS.
+    var EVERY  = 6000;    // ms between steps
+    var TURN   = 1400;    // ms the glide takes. Must match --turn in the CSS.
+
+    // assets/board/board-07.avif  ->  base name for photo index 6
+    function base(i){ var n=(i%PHOTOS)+1; return 'assets/board/board-'+(n<10?'0':'')+n; }
+
+    // Point an existing <picture> at a different photo. Both <source> sets and
+    // the <img> have to move together or the browser keeps the old one.
+    function point(pic,i){
+      var b=base(i);
+      var s=pic.getElementsByTagName('source');
+      if(s[0]) s[0].srcset = b+'-sm.avif 440w, '+b+'.avif 800w';
+      if(s[1]) s[1].srcset = b+'-sm.webp 440w, '+b+'.webp 800w';
+      pic.getElementsByTagName('img')[0].src = b+'.webp';
+    }
+
+    function makePanel(){
+      var p=document.createElement('div'); p.className='jrtb-p';
+      var pic=document.createElement('picture');
+      var a=document.createElement('source'); a.type='image/avif';
+      var w=document.createElement('source'); w.type='image/webp';
+      // Tells the browser how wide the panel will actually be, so it can pick
+      // the right file BEFORE layout. Without this it assumes full viewport
+      // width and always takes the big one.
+      a.sizes=w.sizes='(max-width:700px) 260px, 400px';
+      var im=document.createElement('img');
+      im.alt=''; im.decoding='async'; im.loading='eager';
+      pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
+      p.appendChild(pic);
+      return p;
+    }
 
     function build(host){
       if(host.__built)return; host.__built=1;
       try{
-        var card=host.querySelector('.jrtb-card');
-        var faces=host.querySelectorAll('.jrtb-face img');
-        if(!card||faces.length!==2)return;
+        var ring=host.querySelector('.jrtb-ring');
+        if(!ring)return;
 
-        var idx=0;        // which photo is facing you
-        var showA=true;   // is face A the one you can see?
-        var rot=0;        // total degrees turned so far
-        var turning=false, timer=null, onScreen=true;
+        // Panel 0 already exists in the markup (the fail-safe photo). Make up
+        // the rest to PANELS.
+        var panels=[].slice.call(ring.querySelectorAll('.jrtb-p'));
+        while(panels.length<PANELS){ var p=makePanel(); ring.appendChild(p); panels.push(p); }
+        if(panels.length!==PANELS) return;
 
-        // Stage photo 2 on the back face now, so the first turn is instant.
-        faces[1].src=file(1);
+        // Seat each panel on the ring: turn it to its share of 360deg, then
+        // push it out to the radius. --r comes from the CSS so the phone
+        // breakpoint can change it without this script knowing.
+        var R=getComputedStyle(host).getPropertyValue('--r').trim() || '483px';
+        panels.forEach(function(p,i){
+          p.style.transform='rotateY('+(i*360/PANELS)+'deg) translateZ('+R+')';
+        });
 
-        function turn(){
-          // If the engine re-rendered the page, this element is orphaned and a
-          // newer one is now on screen. Stop, and let the new one get on with it.
-          if(!host.isConnected){ clearTimeout(timer); return; }
+        // Visible now: the front panel and one either side. Everything else
+        // waits for idle.
+        [0,1,PANELS-1].forEach(function(i){ point(panels[i].querySelector('picture'), i); });
+        panels[0].querySelector('img').setAttribute('fetchpriority','high');
+
+        var idle = window.requestIdleCallback || function(f){ return setTimeout(f,1200); };
+        idle(function(){
+          for(var i=2;i<PANELS-1;i++){
+            var im=panels[i].querySelector('img');
+            im.setAttribute('fetchpriority','low');
+            point(panels[i].querySelector('picture'), i);
+          }
+        });
+
+        host.classList.add('ready');   // switches the CSS from fail-safe to ring
+
+        var at=0, turning=false, timer=null, onScreen=true;
+
+        // Darken every panel in proportion to how far it is turned away.
+        // Without this the ring reads as flat rectangles, not a lit object.
+        function shade(){
+          panels.forEach(function(p,i){
+            var d=Math.abs((i-at)%PANELS); d=Math.min(d,PANELS-d);
+            p.style.setProperty('--away', Math.min(1, d/(PANELS/2)).toFixed(3));
+          });
+        }
+        shade();
+
+        function step(){
+          if(!host.isConnected){ clearTimeout(timer); return; }   // orphaned by a re-render
           if(turning)return; turning=true;
-          rot+=180;
-          card.style.setProperty('--jrtb-rot',rot+'deg');
-          host.classList.add('turning');
+          at++;
+          ring.style.setProperty('--jrtb-rot', (-at*360/PANELS)+'deg');
+          shade();
           setTimeout(function(){
-            host.classList.remove('turning');
-            showA=!showA; idx=(idx+1)%COUNT; turning=false;
-            // Load the NEXT photo into the face that just went out of sight.
-            // It gets a full 5s to download before anyone sees it, which is
-            // why no photo ever pops in half-loaded.
-            (showA?faces[1]:faces[0]).src=file((idx+1)%COUNT);
+            turning=false;
+            // The panel now at the BACK of the ring is invisible, so it is safe
+            // to repoint. It will come round to the front in PANELS/2 steps.
+            var behind=(at+PANELS/2)%PANELS;
+            point(panels[behind].querySelector('picture'), at+PANELS/2);
           },TURN);
         }
 
         function schedule(){
           clearTimeout(timer);
           if(!onScreen||document.hidden)return;
-          timer=setTimeout(function(){ turn(); schedule(); },EVERY);
+          timer=setTimeout(function(){ step(); schedule(); },EVERY);
         }
 
         document.addEventListener('visibilitychange',schedule);
@@ -714,20 +821,32 @@
         </div>
       </div>
       <div style="border-radius:18px;overflow:hidden;height:460px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.2)">
-        <!-- Rotating photo board. Was a single static assets/action-lineout.jpg
-             until 5 Aug 2026. The board turns on its vertical axis every 5s;
-             the CSS and the script are both in <helmet> above, and the comment
-             on the CSS explains how the 3D actually works before you change it.
-             The first photo is hard-coded here on purpose: with JavaScript off,
-             or if the script throws, this box shows one static action shot
-             exactly as it always did. -->
+        <!-- Rotating photo RING. Was a single static assets/action-lineout.jpg
+             until 5 Aug 2026, then briefly a two-sided flip, now a cylinder of
+             photos turning on its vertical axis with the box clipping it - so a
+             photo swings in from the left, comes face on, and swings out right.
+             The CSS and the script are both in <helmet> above. Read the comment
+             on the CSS before changing the panel size: the ring radius is
+             trigonometry, not taste, and getting it wrong makes the panels
+             overlap. The first photo is hard-coded here on purpose - see the
+             fail-safe note inside. -->
         <div class="jrtb" role="img" aria-label="Abu Dhabi Harlequins junior rugby in action">
-          <div class="jrtb-stage">
-            <div class="jrtb-card">
-              <div class="jrtb-face"><img src="assets/board/board-01.webp" alt=""></div>
-              <div class="jrtb-face b"><img alt=""></div>
+          <div class="jrtb-scene">
+            <div class="jrtb-ring">
+              <!-- Panel 1 only. The script builds the other seven and seats all
+                   eight on the ring. Until it does, the CSS (.jrtb:not(.ready))
+                   makes this one fill the box - so with JavaScript off this is
+                   a single static action photo and nothing looks broken. -->
+              <div class="jrtb-p">
+                <picture>
+                  <source type="image/avif" sizes="(max-width:700px) 260px, 400px"
+                          srcset="assets/board/board-01-sm.avif 440w, assets/board/board-01.avif 800w">
+                  <source type="image/webp" sizes="(max-width:700px) 260px, 400px"
+                          srcset="assets/board/board-01-sm.webp 440w, assets/board/board-01.webp 800w">
+                  <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
+                </picture>
+              </div>
             </div>
-            <div class="jrtb-shade"></div>
           </div>
         </div>
         <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px 12px rgba(12,12,14,.3);pointer-events:none"></div>

@@ -406,7 +406,7 @@ just above the mobile breakpoint.
 
 ## The supporters grid (added 5 Aug 2026)
 
-Fifteen sponsors under **With the support of**, below the HSBC card in
+Sixteen sponsors under **With the support of**, below the HSBC card in
 `<section id="sponsors">`. Spec: `claude/specs/spec-sponsors-grid.md`.
 
 **The list is DATA** — `SPONSORS` near the top of the homepage script block,
@@ -474,10 +474,25 @@ where storing it small costs 1.16x on a 2x screen and can be swapped out with no
 other change. Both the number and the written reason are asserted, so the
 exception cannot spread by imitation. Replace it the moment they send vector.
 
-### Three confirmed sponsors are deliberately ABSENT
+### ⚠️ Anderson keeps its RED, and that is a decision
 
-**Anderson Education**, **Recover** and **Crompton Partners** have signed but
-their artwork is not usable. They are NOT in the `UNCONFIRMED` sweep — that list
+Their mark is a red wordmark over a black subline. The subline was turned white
+and **the red was left alone** — flattening the lot to white throws away the
+half of the logo that identifies them. It is the only coloured mark in the grid
+apart from Ashurst's teal. It is HSBC red's neighbour, not HSBC red, and it sits
+three rows below the principal-partner card; **if that ever reads as competing
+with HSBC, recolour Anderson, not the card.** Asserted, so a later "make the
+grid consistent" pass has to argue with it first.
+
+The supplied file was a flat 810x189 logo on white. It was keyed out by
+`alpha = 255 - min(r,g,b)`, then each pixel classified red (`r - max(g,b) > 40`)
+or ink. That is the recipe for any future logo that arrives on a white ground.
+
+### Two confirmed sponsors are deliberately ABSENT
+
+**Recover** and **Crompton Partners** have signed but their artwork is not
+usable — Recover's file is far too small at any size, and what Crompton supplied
+is a photograph rather than a logo. They are NOT in the `UNCONFIRMED` sweep — that list
 is for companies who have not signed — so they get their own assertion that they
 are not **half-added**, with a name on the page and no file behind it. Chase the
 artwork; do not improvise it.

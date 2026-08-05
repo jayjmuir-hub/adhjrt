@@ -439,7 +439,7 @@ section('The supporters grid');
      the COUNT check instead of the format check — the fault run caught that.
      A pattern that only matches the healthy case cannot report the sick one. */
   const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+) \}/g)];
-  eq('fifteen confirmed supporters', rows.length, 15);
+  eq('sixteen confirmed supporters', rows.length, 16);
 
   /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
      MAXIMUM. The first version rendered every logo at a fixed height:44px with
@@ -515,15 +515,16 @@ section('The supporters grid');
   check('HSBC is not repeated inside the supporters grid',
     !sponsorsInner.slice(gridAt).includes('sponsor-hsbc'));
 
-  /* ⚠️ THREE CONFIRMED SPONSORS ARE DELIBERATELY ABSENT because their artwork
-     could not be made legible — Anderson Education, Recover and Crompton
-     Partners. They are NOT in the UNCONFIRMED sweep above, because they HAVE
+  /* ⚠️ TWO CONFIRMED SPONSORS ARE DELIBERATELY ABSENT because their artwork
+     could not be made legible — Recover (too small at any size) and Crompton
+     Partners (what was supplied is a photograph, not a logo). Anderson came off
+     this list on 5 Aug when they sent a flat file. They are NOT in the UNCONFIRMED sweep above, because they HAVE
      signed; this asserts they are not half-added either, with a name on the
      page and no file behind it.
      ⚠️ Bili Boys Biltong came OFF this list on 5 Aug — see below. It is the
      one sponsor shipped on artwork this suite would otherwise call unusable,
      and that was a deliberate decision, not a slip. */
-  ['anderson-education', 'recover', 'crompton'].forEach((slug) => {
+  ['recover', 'crompton'].forEach((slug) => {
     check(`${slug} is not half-added while its artwork is pending`,
       !new RegExp(`file: 'assets/sponsor-${slug}`).test(PAGE));
   });
@@ -542,6 +543,16 @@ section('The supporters grid');
   const bili = rows.find((r) => r[2].includes('bili-boys'));
   check('Bili Boys is on the page', !!bili);
   eq('…rendered small enough that its 90px source is not stretched far', Number(bili && bili[3]), 52);
+  /* ⚠️ ANDERSON KEEPS ITS RED, and that is a decision rather than an oversight.
+     Their mark is a red wordmark over a black subline; the subline was turned
+     white and the red left alone, because flattening the lot to white throws
+     away the half of the logo that identifies them. Asserted so a later
+     "make the grid consistent" pass has to argue with it first. */
+  const anderson = rows.find((r) => r[2].includes('anderson-education'));
+  check('Anderson is on the page', !!anderson);
+  check('…and the reason its red is kept is written down',
+    /red wordmark\s+(?:\*\s+)?over a black subline/i.test(PAGE));
+
   check('…and the reason it breaks both artwork rules is written down',
     /badge[\s\S]{0,400}opaque cream/i.test(PAGE) && /154x90/.test(PAGE));
 }

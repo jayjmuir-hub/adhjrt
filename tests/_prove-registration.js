@@ -95,6 +95,7 @@ const NEEDED = [
   path.join('assets', 'sponsor-arabian-swim-academy.webp'),
   path.join('assets', 'sponsor-align-health.webp'),
   path.join('assets', 'sponsor-bili-boys.webp'),
+  path.join('assets', 'sponsor-anderson-education.webp'),
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1480,7 +1481,7 @@ const FAULTS = [
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },\n", ''),
-    expect: ['fifteen confirmed supporters'],
+    expect: ['sixteen confirmed supporters'],
   },
   {
     /* A mistyped filename is a broken image on the live site that reports
@@ -1522,7 +1523,7 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Oak View Group',",
       "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44 },\n  { name: 'Oak View Group',"),
-    expect: ['fifteen confirmed supporters'],
+    expect: ['sixteen confirmed supporters'],
   },
   {
     /* Half-adding a sponsor whose artwork is still pending: a name on the page
@@ -1615,7 +1616,22 @@ const FAULTS = [
     name: 'Bili Boys is dropped from the supporters list',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },\n", ''),
-    expect: ['fifteen confirmed supporters', 'Bili Boys is on the page'],
+    expect: ['sixteen confirmed supporters', 'Bili Boys is on the page'],
+  },
+  {
+    /* ⚠️ Anderson flattened to white by a "make the grid consistent" pass. The
+       red wordmark is half of what identifies them; the black subline is the
+       half that had to change. */
+    name: "Anderson's red is flattened away with the rest of the grid",
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "Anderson's mark is a red wordmark", "Anderson's mark is a wordmark"),
+    expect: ['reason its red is kept'],
+  },
+  {
+    name: 'Anderson is dropped from the supporters list',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41 },\n", ''),
+    expect: ['sixteen confirmed supporters', 'Anderson is on the page'],
   },
   {
     /* The squarest marks pushed back down to the crowd. This is the postage

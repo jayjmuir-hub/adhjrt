@@ -9,17 +9,17 @@ make-board-photo.py - turn any photo into a set of About-section ring panels.
 
 WHY THIS EXISTS
 The rotating ring in the About section needs FOUR files per photo: two formats
-(AVIF and WebP) at two widths (800 and 440). Doing that by hand is four chances
+(AVIF and WebP) at two widths (960 and 528). Doing that by hand is four chances
 to get a crop or a quality setting wrong, and the panel shape is NOT the shape
 of the box it sits in, so "just crop it to the box" produces a photo that gets
 squashed. One command removes all of that.
 
 WHAT IT PRODUCES, for --at 12:
 
-    assets/board/board-12.avif       800 x 920   retina desktop
-    assets/board/board-12.webp       800 x 920   fallback for the same
-    assets/board/board-12-sm.avif    440 x 506   phones and 1x screens
-    assets/board/board-12-sm.webp    440 x 506   fallback for the same
+    assets/board/board-12.avif       960 x 1200  retina desktop
+    assets/board/board-12.webp       960 x 1200  fallback for the same
+    assets/board/board-12-sm.avif    528 x 660   phones and 1x screens
+    assets/board/board-12-sm.webp    528 x 660   fallback for the same
 
 The browser picks ONE of the four on its own - that is what the <picture> and
 `sizes` attributes in `Quins JRT.dc.html` are for. You never choose.
@@ -45,14 +45,14 @@ import sys
 # --- panel geometry -------------------------------------------------------
 # These MUST agree with the CSS in Quins JRT.dc.html (.jrtb --pw / --ph / --r).
 # If you change them, run --geometry to get the new radius to paste back.
-PANEL_W_CSS = 400          # --pw : panel width in CSS pixels
-PANEL_H_CSS = 460          # --ph : panel height, i.e. the full box height
+PANEL_W_CSS = 480          # --pw : panel width in CSS pixels
+PANEL_H_CSS = 600          # --ph : panel height, i.e. the full box height
 PANELS      = 8            # how many panels are on the ring
 
-# 2x of the panel for retina, and a ~1x file for phones.
+# 2x of the panel for retina, and a ~1x file for phones and 1x desktops.
 SIZES = [
-    (800, 920, ""),        # 800 / 400 = 2x
-    (440, 506, "-sm"),     # a shade over 1x, and what a 260px phone panel takes
+    (960, 1200, ""),       # 960 / 480 = 2x
+    (528, 660,  "-sm"),    # 1.1x - covers a 1x desktop and any phone panel
 ]
 
 # Quality. Chosen by measuring, not by feel: at the size these are displayed,

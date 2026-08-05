@@ -133,10 +133,10 @@ assets/                    crest.jpeg, crest.png (+crest-bat/-shield), action
                            apple-touch-icon.png + icon-*.png (home-screen icons)
 assets/board/              board-NN{,-sm}.{avif,webp} — the 11 photos the
                            About-section rotating RING turns through (5 Aug
-                           2026). FOUR files each: AVIF and WebP, at 800x920
-                           and 440x506. The browser picks one via <picture> +
-                           `sizes`; a 1x screen takes the 440 AVIF (~17KB), a
-                           retina one the 800 (~39KB). Do NOT hand-make these —
+                           2026). FOUR files each: AVIF and WebP, at 960x1200
+                           and 528x660. The browser picks one via <picture> +
+                           `sizes`; a 1x screen takes the 528 AVIF (~23KB), a
+                           retina one the 960 (~52KB). Do NOT hand-make these —
                            `tools/make-board-photo.py` does the crop and all
                            four files. Cached immutable for a year, so always
                            ADD at a new number, never overwrite.
@@ -152,16 +152,25 @@ costs nothing sitting there — but nothing loads it. If you are wondering why
 the About section no longer has `<img src="assets/action-lineout.jpg">`, that
 is why; it was not lost.
 
+⚠️ **`assets/crest-shield.png` is NOT a usable crest on its own.** It is the
+crest with a **bat-shaped hole cut out of it** — it exists only as the backdrop
+the mothballed animation's bat flew out of and landed back into. The About-
+section badge uses `assets/crest.png`, the complete logo. This is written down
+because it was got wrong on 5 Aug 2026: mothballing the bat left the shield in
+place, and the crest sat on the live site with a piece missing until Jay spotted
+it. If you ever restore the flying bat, swap the badge back to `crest-shield.png`
+at the same time, or there will be two bats on screen at once.
+
 **The argument AGAINST the board, recorded because someone will make it again:**
-it adds ~1.5 MB of photos to the repo. Repo size is not page weight: the photo
-you can see costs ~17 KB on a 1x screen — the static photo it replaced was
-110 KB — and the whole eight-panel ring comes to ~148 KB, less than 1.4× that
-one old photo. Measured on the deployed page, not estimated.
+it adds ~2 MB of photos to the repo. Repo size is not page weight: the photo you
+can see costs ~23 KB on a 1x screen — the static photo it replaced was 110 KB.
+Measured on the deployed page, not estimated.
 
 **How the ring is kept cheap** — four separate mechanisms, all of which matter:
 
-1. **Sized to the panel, not the box.** Panels are 400 CSS px wide, so the
-   files are 800px (2x), not 1200. Half the bytes for pixels nobody could see.
+1. **Sized to the panel, not the box.** Panels are 480 CSS px wide, so the
+   files are 960px (2x), not the box width. Bytes for pixels nobody could see
+   are the single biggest saving available and the easiest one to lose.
 2. **AVIF with a WebP fallback**, offered via `<picture>`. ~30% under WebP.
 3. **Eight panels, not eleven.** Photos are cycled *through* the panels: on each
    step the panel that has just rotated to the back — invisible behind

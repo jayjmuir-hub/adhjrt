@@ -283,10 +283,17 @@
    forces the browser to flatten preserve-3d and the whole thing collapses
    into a flat horizontal squash. Clipping lives on the wrapper div, which is
    safe. (Panels themselves may have overflow - they have no 3D children.) */
+/* The box the ring sits in. Was an inline style on the div until 5 Aug 2026;
+   it moved here so the height can change on a phone, where 600px of photo is
+   most of the screen. */
+.about-photo{position:relative;height:600px;border-radius:18px;overflow:hidden;
+  box-shadow:0 20px 50px rgba(0,0,0,.2)}
+@media (max-width:700px){ .about-photo{height:420px;border-radius:12px} }
+
 .jrtb{position:absolute;inset:0;
-  --pw:400px;   /* panel width  */
-  --ph:460px;   /* panel height - full box height, so no black bands */
-  --r:483px;    /* = (400/2) / tan(180/8) . Recompute if you change --pw   */
+  --pw:480px;   /* panel width  */
+  --ph:600px;   /* panel height - full box height, so no black bands */
+  --r:579px;    /* = (480/2) / tan(180/8) . Recompute if you change --pw   */
   --turn:1400ms}
 .jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}
 .jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
@@ -312,10 +319,11 @@
   border-radius:0;transform:none!important}
 .jrtb:not(.ready) .jrtb-p::after{opacity:0}
 
-/* Phones: the box is much narrower, so the panels are too. Radius recomputed
-   for --pw:260px -> (260/2)/tan(22.5deg) = 314px. */
+/* Phones: the box is much narrower and shorter, so the panels are too. Radius
+   recomputed for --pw:260px -> (260/2)/tan(22.5deg) = 314px, and --ph matches
+   the 420px box height above so there are still no bands. */
 @media (max-width:700px){
-  .jrtb{--pw:260px;--r:314px}
+  .jrtb{--pw:260px;--ph:420px;--r:314px}
 }
 /* Anyone who has asked their OS to cut animation gets an instant change of
    photo rather than a glide. The ring still advances; it just does not move. */
@@ -363,8 +371,8 @@
      arriving at this section costs three images, not eight and not eleven.
 
      FORMAT AND SIZE are the browser's choice, not ours: each panel is a
-     <picture> offering AVIF and WebP at 800w and 440w. A phone on a 1x screen
-     takes the 440w AVIF (~17KB); a retina desktop takes the 800w (~39KB).
+     <picture> offering AVIF and WebP at 960w and 528w. A 1x screen takes the
+     528w AVIF (~23KB); a retina desktop takes the 960w (~52KB).
 
      FAILS SAFE. Panel 1 is hard-coded in the markup and the CSS makes it fill
      the box until this script adds .ready. With JavaScript off, or if anything
@@ -387,8 +395,8 @@
     function point(pic,i){
       var b=base(i);
       var s=pic.getElementsByTagName('source');
-      if(s[0]) s[0].srcset = b+'-sm.avif 440w, '+b+'.avif 800w';
-      if(s[1]) s[1].srcset = b+'-sm.webp 440w, '+b+'.webp 800w';
+      if(s[0]) s[0].srcset = b+'-sm.avif 528w, '+b+'.avif 960w';
+      if(s[1]) s[1].srcset = b+'-sm.webp 528w, '+b+'.webp 960w';
       pic.getElementsByTagName('img')[0].src = b+'.webp';
     }
 
@@ -400,7 +408,7 @@
       // Tells the browser how wide the panel will actually be, so it can pick
       // the right file BEFORE layout. Without this it assumes full viewport
       // width and always takes the big one.
-      a.sizes=w.sizes='(max-width:700px) 260px, 400px';
+      a.sizes=w.sizes='(max-width:700px) 260px, 480px';
       var im=document.createElement('img');
       im.alt=''; im.decoding='async'; im.loading='eager';
       pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
@@ -774,7 +782,13 @@
   </section>
 
   <!-- ============ ABOUT ============ -->
-  <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center">
+  <!-- Columns are 1fr 1.5fr, not 1fr 1fr (5 Aug 2026): Jay wanted the photo
+       bigger. Of the 1136px of content width, minus the 60px gap, that gives
+       the photo ~646px and the text ~430px. The text column is at the narrow
+       end of comfortable at 18px - do not take it below 1.5 without checking
+       how the body paragraphs wrap. .m-stack overrides this to one column on
+       a phone, so none of it applies there. -->
+  <section id="about" class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">
     <div data-reveal>
       <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>
       <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;color:#0C0C0E">Rugby the way it should be</h2>
@@ -789,14 +803,19 @@
              turns up plays right through its day. -->
         Hosted by the Quins &mdash; a grass-roots, not-for-profit club run entirely by volunteers since 1970. Every side gets a full day of rugby and every family is welcome. Bring your boots, bring your voice.
       </p>
+      <!-- These two were clamp(24px,3.3vw,40px), sized for a 533px text column.
+           When the column narrowed to ~430px on 5 Aug 2026 to make the photo
+           bigger, 40px Anton pushed both onto three lines - "Tag &" / "contact"
+           stacked, 120px tall. Reduced to 28px so they sit on one line again.
+           If the column ever goes back to 1fr 1fr, these can go back up. -->
       <div style="display:flex;gap:36px;margin-top:36px">
         <div>
-          <div style="font-family:'Anton';font-size:clamp(24px,3.3vw,40px);color:#0C0C0E">Tag &amp; contact</div>
+          <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">Tag &amp; contact</div>
           <div style="color:#7c786f;font-weight:600">mini to youth</div>
         </div>
         <div style="width:1px;background:#d8d4cc"></div>
         <div>
-          <div style="font-family:'Anton';font-size:clamp(24px,3.3vw,40px);color:#0C0C0E">UAERF rules</div>
+          <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">UAERF rules</div>
           <div style="color:#7c786f;font-weight:600">age-grade format</div>
         </div>
       </div>
@@ -805,7 +824,14 @@
       <!-- shard accent tile -->
       <div class="cstage">
         <div class="crest-anim">
-          <img class="cbase" src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest">
+          <!-- ⚠️ This is crest.png (the complete club crest), NOT
+               crest-shield.png. crest-shield.png is the crest with a
+               BAT-SHAPED HOLE cut out of it — it exists only as the backdrop
+               the animated bat used to fly out of and land back into. On its
+               own it looks like a crest with a piece missing, which is exactly
+               what it did on the live site for a few hours on 5 Aug 2026 after
+               the animation was mothballed. Do not "restore" it here. -->
+          <img class="cbase" src="assets/crest.png" alt="Abu Dhabi Harlequins crest">
           <!-- ⚠️ MOTHBALLED 5 Aug 2026, not deleted. A bat used to sit here and
                fly a loop out of the crest and back into it when this section
                scrolled into view:
@@ -816,11 +842,12 @@
                Both images are still in assets/. The CSS (.cf/.cfl/.breal and the
                batfly, batflap, batmorph keyframes) and the script that armed it
                came out in the same commit — pull them from there if it comes
-               back. The crest reads as a complete club crest without it, which
-               is why the badge itself was left alone. -->
+               back. Note that restoring it also means swapping the image above
+               back to crest-shield.png, or the flying bat and the one already
+               printed on crest.png will both be on screen at once. -->
         </div>
       </div>
-      <div style="border-radius:18px;overflow:hidden;height:460px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.2)">
+      <div class="about-photo">
         <!-- Rotating photo RING. Was a single static assets/action-lineout.jpg
              until 5 Aug 2026, then briefly a two-sided flip, now a cylinder of
              photos turning on its vertical axis with the box clipping it - so a
@@ -839,20 +866,27 @@
                    a single static action photo and nothing looks broken. -->
               <div class="jrtb-p">
                 <picture>
-                  <source type="image/avif" sizes="(max-width:700px) 260px, 400px"
-                          srcset="assets/board/board-01-sm.avif 440w, assets/board/board-01.avif 800w">
-                  <source type="image/webp" sizes="(max-width:700px) 260px, 400px"
-                          srcset="assets/board/board-01-sm.webp 440w, assets/board/board-01.webp 800w">
+                  <source type="image/avif" sizes="(max-width:700px) 260px, 480px"
+                          srcset="assets/board/board-01-sm.avif 528w, assets/board/board-01.avif 960w">
+                  <source type="image/webp" sizes="(max-width:700px) 260px, 480px"
+                          srcset="assets/board/board-01-sm.webp 528w, assets/board/board-01.webp 960w">
                   <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
                 </picture>
               </div>
             </div>
           </div>
         </div>
-        <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px 12px rgba(12,12,14,.3);pointer-events:none"></div>
-        <!-- red->green signature bar, same accent used on the age-group cards,
-             the register buttons and the stat strip below this section -->
-        <div style="position:absolute;bottom:0;left:18px;right:18px;height:6px;background:linear-gradient(90deg,#E11B22,#E11B22 40%,#17A34A);border-radius:3px 3px 0 0;z-index:3"></div>
+        <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px 12px rgba(12,12,14,.3);pointer-events:none;z-index:8"></div>
+        <!-- ⚠️ REMOVED 5 Aug 2026, on Jay's call. A red->green signature bar sat
+             across the bottom of this box:
+               <div style="position:absolute;bottom:0;left:18px;right:18px;
+                    height:6px;background:linear-gradient(90deg,#E11B22,
+                    #E11B22 40%,#17A34A);border-radius:3px 3px 0 0;
+                    z-index:3"></div>
+             It is the same accent used on the age-group cards, the register
+             buttons and the stat strip, so the motif is NOT gone from the page
+             - it was just competing with the moving photos underneath it. If
+             you want it back, that is the exact markup. -->
       </div>
     </div>
   </section>

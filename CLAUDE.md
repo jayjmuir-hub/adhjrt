@@ -181,8 +181,71 @@ Measured on the deployed page, not estimated.
    `fetchpriority="low"` so they never race the hero image.
 
 ⚠️ **The `sizes` attribute is load-bearing.** Without it the browser assumes the
-image fills the viewport and always takes the 800px file, silently doubling the
-cost. If page weight ever jumps, check that first.
+image fills the viewport and always takes the 960px file, silently doubling the
+cost. It must track `--pw`, and it currently reads
+`(min-width:1200px) 480px, (max-width:760px) 74vw, calc(44.4vw - 55px)`.
+If page weight ever jumps, check that first.
+
+### The ring's geometry, and the traps in it
+
+**One variable drives everything.** `--pw` (panel width) is set on
+`.about-photo`; `--ph`, `--r` (ring radius) and the box height are all `calc()`s
+off it. There is no magic radius number to keep in step by hand any more — that
+was a footgun that sat in this file being documented rather than removed.
+
+```
+--pw   clamp(190px, 44.4vw - 55px, 480px)      760px+  two-column
+--pw   clamp(170px, 74vw - 30px, 520px)        <=760px stacked
+--ph   calc(var(--pw) * 1.25)                  panel aspect, 600/480
+--r    calc(var(--pw) * 1.20711)               1 / (2 * tan(180deg / 8))
+height calc(var(--ph) + 48px)                  24px clear above and below
+```
+
+Measured 1400 / 1200 / 1000 / 860 / 760 / 600 / 400px: the panel stays 74–76% of
+the box at every width. **If you change `PANELS` in the script, 1.20711 changes
+too** — `tools/make-board-photo.py --geometry <width>` prints it.
+
+⚠️ **760px, not 700px.** That is where `.m-stack` collapses this section to one
+column. Using 700 left a 60px band where the box had gone full-width but the
+panel was still sized for two columns — the photo sat at 40% of the box in a sea
+of empty space.
+
+⚠️ **Panel angles are normalised to −180..+180, not 0..360.** Chrome treats
+`rotateY` past 180° as back-facing, so with angles of 225/270/315° the entire
+left-hand side of the ring silently never painted. Proved by giving the left
+panel a red background and its mirror image a green one at identical geometry:
+green appeared, red never did. `315deg` and `-45deg` put a panel in exactly the
+same place; only one of them renders.
+
+⚠️ **Never put a `box-shadow` on `.jrtb-p` or its pseudo-elements.** On the
+element, no panel paints its `<img>` at all — just the background colour. On a
+`::before`, the front panel paints and every angled one does not. Both confirmed
+by removing only the shadow and watching the photos return. It is a compositing
+bug with `box-shadow` on or inside a `backface-visibility:hidden` element in a
+`preserve-3d` scene. If an edge is ever wanted, use a `border` with
+`box-sizing:border-box` and check EVERY panel, not just the front one.
+
+⚠️ **Never put `overflow`, `opacity` or `filter` on `.jrtb-ring`.** Any of them
+forces the browser to flatten `preserve-3d` and the ring collapses into a flat
+horizontal squash. Clipping belongs on `.about-photo`.
+
+⚠️ **`build()` sets its `__built` flag at the END, not the start.** It used to
+set it on entry; if it ran while the component engine was mid-re-render — element
+present, its inner `.jrtb-ring` not yet — the early return left the host flagged
+as built when it was not, and the re-scanning loop skipped it for ever. Same
+shape as the find-it-once bug below. Bailing out without setting the flag means
+the next scan simply retries.
+
+⚠️ **The boot loop must keep re-scanning.** The engine renders the page body
+after first paint and does it more than once, so a one-shot "found it, stop
+looking" builds an element that is then thrown away and replaced by one nobody
+builds. It worked perfectly from a local file and did nothing at all deployed.
+**Local green is not deployed green** — verify this section on a real deploy.
+
+**A note on verifying it by script:** forcing `transform:none` on the
+`[data-reveal]` wrapper to skip the fade-in disturbs the 3D compositing and makes
+panels appear blank in screenshots. That is the measuring technique, not the
+page. Scroll to it and let the reveal finish on its own.
 
 (`netlify-forms.html` used to sit here as the Forms decoy — deleted 28 Jul
 2026 with the move off Netlify Forms; see that section below.)
@@ -2619,21 +2682,45 @@ also behind a site-wide Netlify password, so previews prompt for it too.
   original.
 - **Format section** rebuilt as two day-cards ("Day 01/02" watermark, date
   pills, MINI & MIDI / YOUTH, age chips still driven by `groupsSaturday/Sunday`).
-- **About-section crest is a static badge.** ⚠️ **The bat animation is
-  MOTHBALLED, not deleted (5 Aug 2026)** — Jay parked it when the rotating photo
-  board went into the same section. What it used to do: at rest the flat logo
-  bat; on scroll-into-view it cross-faded to a shaded realistic version
-  (`crest-bat-real.png`) and flew a two-direction loop across the photo, then
-  landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on `.cf` / `.cfl`
-  / `.breal`, plus a small head-script that added `.play` via
+- **About-section crest is a static badge, beside the heading.** It is a plain
+  96px `<img>` of `assets/crest.png` sitting to the LEFT of the eyebrow and the
+  `<h2>` together, inside `.m-crestrow`, so "About the festival" and "Rugby the
+  way it should be" share one left edge. On a phone the row stacks and the crest
+  goes above.
+
+  It has moved twice, and the reasons are worth keeping:
+  1. It was pinned over the top-left corner of the photo box by `.cstage` /
+     `.crest-anim`. Once the photos underneath started rotating it read as a
+     sticker stuck on a moving thing.
+  2. It was then beside the `<h2>` only, which pushed the heading right and left
+     it out of line with the eyebrow above it.
+
+  ⚠️ **It cannot hang in the left margin.** Putting it left of the heading while
+  keeping the heading at the column's left edge needs ~116px outside the content
+  column. The section caps at 1200px with 32px padding, so below roughly 1430px
+  viewport there is no margin to hang in and it would be clipped. That is why the
+  eyebrow moved inside the row instead.
+
+  ⚠️ **The bat animation is MOTHBALLED, not deleted (5 Aug 2026)** — Jay parked
+  it when the rotating photo board went into the same section. What it used to
+  do: at rest the flat logo bat; on scroll-into-view it cross-faded to a shaded
+  realistic version (`crest-bat-real.png`) and flew a two-direction loop across
+  the photo, then landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on
+  `.cf` / `.cfl` / `.breal`, plus a small head-script that added `.play` via
   IntersectionObserver; a local `.cstage` clip stopped the flight ever adding a
   page scrollbar.
 
   **`assets/crest-bat.png` and `assets/crest-bat-real.png` are still in the
   repo** and must stay — the whole point of mothballing is that this comes back
-  cheaply. `crest-shield.png` reads as a complete club crest on its own, which is
-  why the badge itself was left in place. The CSS, the markup and the script all
-  came out in one commit, each with a comment where it was; pull them from there.
+  cheaply. The CSS, the markup and the script all came out in one commit, each
+  with a comment where it was; pull them from there.
+
+  ⚠️ **Restoring it also means swapping the badge back to `crest-shield.png`.**
+  `crest.png` already has a bat printed on it, so leaving both would put two bats
+  on screen. See the crest-shield warning earlier in this file — an earlier
+  version of this very note claimed the shield "reads as a complete club crest on
+  its own", which is FALSE and caused a live bug; it is the crest with a
+  bat-shaped hole in it.
 
   If it does come back: the script used the **find-it-once boot pattern**, which
   is precisely the bug the photo board hit on the same day — worked from a local

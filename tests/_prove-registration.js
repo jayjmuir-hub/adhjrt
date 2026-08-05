@@ -1594,8 +1594,18 @@ const FAULTS = [
        coming straight back. */
     name: 'the widest mark is levelled up to match the others',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 26 }", "sponsor-broadway-malyan.webp',        h: 44 }"),
+    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35 }", "sponsor-brighton-college.webp',       h: 55 }"),
     expect: ['widest mark'],
+  },
+  {
+    /* ⚠️ Broadway Malyan slid back to the TAGLINE lockup — which is a real file
+       of theirs, so nothing about it looks wrong, and their NAME disappears
+       from the page again. The height is the only thing a source test can see
+       it by: 11.5:1 needed 26, the wordmark is 5.4:1 at 36. */
+    name: 'Broadway Malyan goes back to the tagline lockup',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36 }", "sponsor-broadway-malyan.webp',        h: 26 }"),
+    expect: ['sized for the wordmark'],
   },
   {
     /* ⚠️ Bili Boys "corrected" to the height the formula gives for its ratio.

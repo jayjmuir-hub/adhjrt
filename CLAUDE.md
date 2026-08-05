@@ -519,9 +519,23 @@ list — **an empty `forEach` is a check that asserts nothing while looking like
 coverage.** It now asserts every sponsor on the page has a file behind it, which
 is what it was really guarding.
 
+⚠️ **Broadway Malyan's file was replaced on 5 Aug** — the first one they sent
+was their TAGLINE lockup ("Creating places. Together."), which is theirs but
+does not say who they are, so their name was nowhere on the page. The wordmark
+replaced it and the ratio moved 11.5:1 -> 5.4:1, so `h` moved 26 -> 36. It was
+**recoloured white rather than given a white tile**: their copper is flat
+single-colour type so it recolours cleanly, and measured on `#151517` it is only
+about 2.6:1. **That is the line — a white tile is for artwork that CANNOT be
+recoloured** (Crompton's navy keyhole), not for artwork that merely arrived in a
+colour. Asserted by shape, since a source-reading test cannot see a picture: the
+tagline lockup needed `h:26`, the wordmark needs 36, and a slide back would take
+the height with it.
+
+⚠️ **Ashurst Perkins Coie's teal is APPROVED, not pending.** Jay, 5 Aug:
+*"ashurst is good."* Do not raise recolouring it again.
+
 Still worth chasing better files: **Recover** is the smallest asset on the page
-(143x32 native) and **Bili Boys** the second (154x90); **Broadway Malyan**
-supplied their tagline lockup rather than their wordmark. They are NOT in the `UNCONFIRMED` sweep — that list
+(143x32 native) and **Bili Boys** the second (154x90). Nothing else. They are NOT in the `UNCONFIRMED` sweep — that list
 is for companies who have not signed — so they get their own assertion that they
 are not **half-added**, with a name on the page and no file behind it. Chase the
 artwork; do not improvise it.

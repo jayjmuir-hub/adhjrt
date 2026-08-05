@@ -1525,7 +1525,15 @@ const SPONSORS = [
   { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
   { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44 },
   { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43 },
-  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 26 },
+  /* ⚠️ THE FILE CHANGED ON 5 AUG and the ratio changed with it, 11.5:1 -> 5.4:1,
+     so h moved 26 -> 36. The first file was their TAGLINE lockup ("Creating
+     places. Together.") - which is theirs, but does not say who they are, so
+     their name was nowhere on the page. This is the wordmark.
+     Recoloured white rather than given a white tile: their copper is flat
+     single-colour type, so it recolours cleanly (measured - copper on #151517
+     is about 2.6:1, which is not readable). A white tile is reserved for
+     artwork that CANNOT be recoloured, like Crompton's navy keyhole. */
+  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36 },
   { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40 },
   { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 44 },
   { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68 },

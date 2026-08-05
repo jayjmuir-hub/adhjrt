@@ -468,11 +468,26 @@ section('The supporters grid');
      pass against h:44 on all fourteen — the very bug this replaced. The widest
      mark must end up SMALLER than the squarest one, which is the whole claim. */
   const hOf = (slug) => Number((rows.find((r) => r[2].includes(slug)) || [])[3]);
-  check('the widest mark (Broadway Malyan, 11.5:1) is sized down',
-    hOf('broadway-malyan') < hOf('brighton-college'), `${hOf('broadway-malyan')} vs ${hOf('brighton-college')}`);
+  /* ⚠️ REPOINTED 5 Aug. Broadway Malyan was the widest mark at 11.5:1 while the
+     file was their TAGLINE lockup; the wordmark that replaced it is 5.4:1, so
+     the anchor moved to the mark that is actually widest now. The RULE — a very
+     wide mark must end up smaller than a mid-pack one — is unchanged, and it is
+     the rule the fixed-height bug broke. */
+  check('the widest mark (Brighton College, 5.6:1) is sized down',
+    hOf('brighton-college') < hOf('oak-view-group'), `${hOf('brighton-college')} vs ${hOf('oak-view-group')}`);
   check('the squarest marks are sized UP, not left as postage stamps',
     hOf('sportsmans-arms') > hOf('brighton-college') && hOf('ashurst') > hOf('brighton-college'),
     `${hOf('sportsmans-arms')}/${hOf('ashurst')} vs ${hOf('brighton-college')}`);
+
+  /* ⚠️ BROADWAY MALYAN'S FILE IS THE WORDMARK, NOT THE TAGLINE. The first one
+     they supplied was "Creating places. Together." — theirs, but it does not
+     say who they are, so their NAME was nowhere on the page and nobody could
+     have told from the grid who the sponsor was. Asserted by shape, which is
+     the only thing a source-reading test can see: the tagline lockup was
+     11.5:1 and needed h:26; the wordmark is 5.4:1 at h:36. A slide back to the
+     tagline file would take the ratio and the height with it. */
+  check('Broadway Malyan is sized for the wordmark, not the tagline lockup',
+    hOf('broadway-malyan') >= 34, String(hOf('broadway-malyan')));
   check('the heights are not all the same number',
     new Set(rows.map((r) => r[3])).size >= 6);
 

@@ -1482,7 +1482,7 @@ const FAULTS = [
   {
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true },\n", ''),
     expect: ['eighteen confirmed supporters'],
   },
   {
@@ -1594,7 +1594,7 @@ const FAULTS = [
        coming straight back. */
     name: 'the widest mark is levelled up to match the others',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35 }", "sponsor-brighton-college.webp',       h: 55 }"),
+    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35, light: true }", "sponsor-brighton-college.webp',       h: 55, light: true }"),
     expect: ['widest mark'],
   },
   {
@@ -1604,7 +1604,7 @@ const FAULTS = [
        it by: 11.5:1 needed 26, the wordmark is 5.4:1 at 36. */
     name: 'Broadway Malyan goes back to the tagline lockup',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36 }", "sponsor-broadway-malyan.webp',        h: 26 }"),
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36, light: true }", "sponsor-broadway-malyan.webp',        h: 26, light: true }"),
     expect: ['sized for the wordmark'],
   },
   {
@@ -1619,10 +1619,13 @@ const FAULTS = [
   {
     /* The exception tidied into looking like every other row - which is how an
        exception spreads by imitation. */
-    name: 'the reason Bili Boys breaks both artwork rules is tidied away',
+    /* ⚠️ REPOINTED 5 Aug, when the grid stopped recolouring anything: Bili Boys
+       is no longer "the exception to the white treatment", it is the one logo
+       that is already a box. The reason moved with it. */
+    name: 'the reason Bili Boys stays on the dark tile is tidied away',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'badge - dark type on an OPAQUE cream ground', 'logo'),
-    expect: ['breaks both artwork rules is written down'],
+    apply: () => patch(HOME, 'badge with its own opaque cream ground', 'logo'),
+    expect: ['stays on the dark tile is written down'],
   },
   {
     /* Bili Boys quietly dropped again, which is the state the page was in for
@@ -1633,35 +1636,39 @@ const FAULTS = [
     expect: ['eighteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
-    /* ⚠️ Anderson flattened to white by a "make the grid consistent" pass. The
-       red wordmark is half of what identifies them; the black subline is the
-       half that had to change. */
-    name: "Anderson's red is flattened away with the rest of the grid",
+    /* ⚠️ REPOINTED 5 Aug. This guarded Anderson's red while the grid recoloured
+       logos; nothing is recoloured now, so the rule it protects has become the
+       WHITE-BOX RULE ITSELF. "Why is this one white and that one not?" is the
+       question a later session asks, and an unwritten answer gets replaced by
+       somebody's eye. */
+    name: 'the white-box rule is deleted, leaving the flags unexplained',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "Anderson's mark is a red wordmark", "Anderson's mark is a wordmark"),
-    expect: ['reason its red is kept'],
+    apply: () => patch(HOME, 'The flag is assigned by MEASUREMENT, not taste', 'The flag is set per logo'),
+    expect: ['white-box rule is recorded'],
   },
   {
     name: 'Anderson is dropped from the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41 },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true },\n", ''),
     expect: ['eighteen confirmed supporters', 'Anderson is on the page'],
   },
   {
-    /* ⚠️ A white tile spreading to a logo that HAS a white version — the lazy
-       fix, and it puts a bright rectangle in the dark band for no reason. */
-    name: 'a third sponsor is given a white tile',
+    /* ⚠️ A white box spreading to a logo that reads perfectly well on the dark
+       tile — the lazy fix, and it puts a bright rectangle in the band for no
+       reason. Yas Mena Cycles is the worst case: it exists ONLY as a white
+       file, so a white box would erase it outright. */
+    name: 'a white box spreads to a logo that only exists as a white file',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-align-health.webp',           h: 40 }", "sponsor-align-health.webp',           h: 40, light: true }"),
-    expect: ['exactly two sponsors get a white tile'],
+    apply: () => patch(HOME, "sponsor-yas-cycles.webp',             h: 65 }", "sponsor-yas-cycles.webp',             h: 65, light: true }"),
+    expect: ['nine sponsors get a white box', 'yas-cycles stays on the dark tile'],
   },
   {
-    /* The white tiles removed: Crompton's navy and Recover's hairline type go
-       back to being invisible on #151517, reporting no error anywhere. */
-    name: 'the white tiles are dropped, hiding the two dark-ink logos',
+    /* A white box removed: Crompton's navy keyhole goes back to being invisible
+       on #151517, reporting no error anywhere. */
+    name: 'a white box is dropped, hiding a dark-ink logo',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "h: 53, light: true }", "h: 53 }"),
-    expect: ['exactly two sponsors get a white tile'],
+    apply: () => patch(HOME, "h: 54, light: true }", "h: 54 }"),
+    expect: ['nine sponsors get a white box'],
   },
   {
     /* The tile goes back to one hardcoded colour — which looks like a tidy-up

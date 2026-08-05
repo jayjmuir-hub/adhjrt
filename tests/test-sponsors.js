@@ -547,17 +547,33 @@ section('The supporters grid');
   check('no sponsor is named without a file behind it',
     rows.every((r) => r[2] && r[2].startsWith('assets/sponsor-')));
 
-  /* ⚠️ A WHITE TILE IS AN EXCEPTION, NOT A DEFAULT. Two marks exist only as
-     dark ink on white and cannot be recoloured — Crompton's navy keyhole,
-     Recover's hairline type — so they get a light tile (Jay's call, 5 Aug).
-     Every white box is a bright rectangle in a dark band, so the count is
-     written out: a third one appearing unnoticed must be impossible, and
-     `light: true` spreading to a logo that HAS a white version is the lazy fix
-     this guards against. */
+  /* ⚠️ NOTHING IN THIS GRID IS RECOLOURED. Jay's call, 5 Aug: "put them on the
+     black background, anything that was changed can just go in a white box."
+     Every file is the sponsor's own artwork in their own colours; a mark that
+     does not read on `#151517` gets a WHITE BOX rather than being repainted.
+
+     ⚠️ THE SPLIT IS MEASURED, NOT CHOSEN — median WCAG contrast of the ink
+     against the tile, white box below 4.5:1. That is why it is nine rather
+     than a tidier number, and why the nine are not the nine anyone would have
+     guessed. The count is written out because moving a logo from one treatment
+     to the other changes how that sponsor is presented, and must not happen
+     unnoticed. Re-measure when a file is replaced; never copy the flag from a
+     neighbour. */
   const lit = rows.filter((r) => r[4]);
-  eq('exactly two sponsors get a white tile', lit.length, 2);
-  check('…and they are the two whose artwork cannot be recoloured',
-    lit.every((r) => /crompton|recover/.test(r[2])), lit.map((r) => r[2]).join(', '));
+  eq('nine sponsors get a white box', lit.length, 9);
+  const LIGHT = ['brighton-college', 'beond', 'westminster-construction', 'broadway-malyan',
+    'bottle-store', 'align-health', 'anderson-education', 'crompton-partners', 'recover'];
+  check('…and they are exactly the nine that fail on the dark tile',
+    lit.length === LIGHT.length && lit.every((r) => LIGHT.some((n) => r[2].includes(n))),
+    lit.map((r) => r[2]).join(', '));
+  /* ⚠️ AND THE OTHER NINE ARE ASSERTED TOO, or the check above would pass on a
+     grid where every tile had gone white. Three of them CANNOT take a white box
+     at any point — Oak View Group, V&P and Yas Mena Cycles exist only as
+     white-on-transparent files, so a white tile would erase them outright. */
+  ['oak-view-group', 'value-performance', 'yas-cycles'].forEach((slug) => {
+    const r = rows.find((row) => row[2].includes(slug));
+    check(`${slug} stays on the dark tile — no other version of it exists`, !!r && !r[4]);
+  });
   check('the tile colour is DERIVED from that flag, not written into the data',
     /bg:\s*s\.light \? '#ffffff' : '#151517'/.test(PAGE));
   /* ⚠️ SCOPED TO THE LOOP, not to the whole section. The HSBC card above it is
@@ -588,16 +604,27 @@ section('The supporters grid');
      logo, so the number is asserted and the reasoning has to stay next to it. */
   const bili = rows.find((r) => r[2].includes('bili-boys'));
   check('Bili Boys is on the page', !!bili);
+  /* ⚠️ ON THE DARK TILE, because the badge carries its OWN opaque cream ground
+     — it is already a box, and a cream rectangle inside a white one is worse
+     than leaving it alone. It is the one logo the contrast measurement gets
+     wrong (it reads the ground as ink), so it is pinned by hand. */
+  check('…on the dark tile, because the badge carries its own ground', !!bili && !bili[4]);
   eq('…rendered small enough that its 90px source is not stretched far', Number(bili && bili[3]), 52);
-  /* ⚠️ ANDERSON KEEPS ITS RED, and that is a decision rather than an oversight.
-     Their mark is a red wordmark over a black subline; the subline was turned
-     white and the red left alone, because flattening the lot to white throws
-     away the half of the logo that identifies them. Asserted so a later
-     "make the grid consistent" pass has to argue with it first. */
+  check('…and the reason it stays on the dark tile is written down',
+    /badge with its own opaque cream ground/i.test(PAGE) && /154x90/.test(PAGE));
+
   const anderson = rows.find((r) => r[2].includes('anderson-education'));
   check('Anderson is on the page', !!anderson);
-  check('…and the reason its red is kept is written down',
-    /red wordmark\s+(?:\*\s+)?over a black subline/i.test(PAGE));
+  /* Red wordmark over a BLACK subline — the subline is invisible on the dark
+     tile and recolouring it is exactly what this pass undid, so it takes a box. */
+  check('…on a white box, since its subline is black', !!anderson && !!anderson[4]);
+
+  /* ⚠️ THE RULE ITSELF HAS TO BE WRITTEN DOWN, not just applied. "Why is this
+     one white and that one not?" is what a later session will ask, and the
+     answer — measured contrast, not taste — is the only thing that stops the
+     flag being copied around by eye. */
+  check('the white-box rule is recorded next to the data',
+    /assigned by MEASUREMENT/i.test(PAGE) && /4\.5:1/.test(PAGE));
 
   check('…and the reason it breaks both artwork rules is written down',
     /badge[\s\S]{0,400}opaque cream/i.test(PAGE) && /154x90/.test(PAGE));

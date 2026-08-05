@@ -1518,56 +1518,33 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
    below which a wordmark stops being legible on a phone. Recompute h when you
    replace a file - a new crop changes the ratio. */
 const SPONSORS = [
+  /* ⚠️ EVERY FILE IS THE SPONSOR'S OWN ARTWORK, IN THEIR OWN COLOURS. Nothing
+     here is recoloured. `light: true` means the mark does not read on the dark
+     tile, so it gets a WHITE BOX instead — Jay's rule, 5 Aug: "put them on the
+     black background, anything that was changed can just go in a white box".
+     The flag is assigned by MEASUREMENT, not taste: median WCAG contrast of the
+     ink against #151517, white box below 4.5:1. Re-measure when a file is
+     replaced. */
   { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },
   { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44 },
   { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68 },
-  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35 },
+  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true },
   { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
-  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44 },
-  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43 },
-  /* ⚠️ THE FILE CHANGED ON 5 AUG and the ratio changed with it, 11.5:1 -> 5.4:1,
-     so h moved 26 -> 36. The first file was their TAGLINE lockup ("Creating
-     places. Together.") - which is theirs, but does not say who they are, so
-     their name was nowhere on the page. This is the wordmark.
-     Recoloured white rather than given a white tile: their copper is flat
-     single-colour type, so it recolours cleanly (measured - copper on #151517
-     is about 2.6:1, which is not readable). A white tile is reserved for
-     artwork that CANNOT be recoloured, like Crompton's navy keyhole. */
-  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36 },
+  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44, light: true },
+  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, light: true },
+  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36, light: true },
   { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40 },
-  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 44 },
+  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 43, light: true },
   { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68 },
   { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
-  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 35 },
-  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },
-  /* ⚠️ THE ONE EXCEPTION TO BOTH HOUSE RULES, deliberately. Bili Boys is a
-     badge - dark type on an OPAQUE cream ground with a printed border - so
-     white-on-transparent would mean deleting the logo rather than recolouring
-     it. And the only artwork supplied is 154x90, so it is stored at native
-     size instead of the house 160px tall: h is 52 rather than the 64 the
-     formula gives, which keeps a 2x screen at a 1.16x stretch rather than the
-     1.78x that padding it up would have baked in permanently.
-     Replace this the moment they send vector or something ≥800px. */
+  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36 },
+  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true },
+  /* Bili Boys is a badge with its own opaque cream ground, so it is already a
+     box and stays on the dark tile. 154x90 is all the artwork there is, so it
+     is stored at native size and h is below the formula on purpose. */
   { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52 },
-  /* ⚠️ THE RED IS KEPT, and it is the ONE coloured element in an otherwise
-     white grid apart from Ashurst's teal. Anderson's mark is a red wordmark
-     over a black subline; the subline was turned white and the red left alone,
-     because flattening the whole thing to white throws away the half of the
-     logo that identifies them. It is HSBC red's neighbour, not HSBC red, and it
-     sits three rows below the principal-partner card - if that ever reads as
-     competing with HSBC, recolour THIS one, not the card. */
-  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41 },
-  /* ⚠️ `light: true` = THIS ARTWORK ONLY EXISTS AS DARK INK ON WHITE and cannot
-     be recoloured without destroying it — Crompton's navy keyhole is inside the
-     O, Recover's type is a hairline. They get a white tile instead. Do NOT add
-     the flag to a logo that has a white version; a white box in a dark grid is
-     a deliberate exception, not a default, and every one of them is a small
-     bright rectangle in an otherwise dark band.
-     Both are stored at NATIVE size (240x97 and 143x32) because that is all the
-     artwork there is — same reasoning as Bili Boys above. Recover is the
-     smallest file on the page and is the first to replace if they ever send
-     better. */
-  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 53, light: true },
+  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true },
+  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true },
   { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 39, light: true },
 ];
 

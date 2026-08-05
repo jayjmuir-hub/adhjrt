@@ -418,17 +418,61 @@ supporters. Folding the two into one wall is the obvious visual tidy-up and it
 demotes the tournament's only confirmed partner. Asserted three ways, with a
 fault that injects exactly that merge.
 
+### ⚠️ NOTHING IN THIS GRID IS RECOLOURED (5 Aug 2026)
+
+Jay: *"put them on the black background, anything that was changed can just go
+in a white box."* Every file is the sponsor's own artwork in their own colours.
+A mark that does not read on the dark tile gets a **white box** rather than
+being repainted.
+
+**The split is MEASURED, not chosen** — median WCAG contrast of the ink against
+`#151517`, white box below 4.5:1. That is why it is **nine and nine**, and why
+the nine are not the nine anybody would guess. **Re-measure when a file is
+replaced; never copy the flag from a neighbour.**
+
+| | |
+|---|---|
+| **White box** (`light: true`) | Brighton College, BEOND, Westminster, Broadway Malyan, The Bottle Store, Align Health, Anderson, Crompton Partners, Recover |
+| **Dark tile** | Oak View Group, V&P, Ashurst, Sedbergh, McCafferty's, The Sportsman's Arms, Yas Mena Cycles, Arabian Swim Academy, Bili Boys |
+
+The tile's background and border are **derived from the flag** in
+`renderVals()` — the data says what the ARTWORK is, not what colour to paint a
+box, so the two greys live in one place.
+
+⚠️ **THREE LOGOS CAN NEVER TAKE A WHITE BOX**: Oak View Group, V&P and Yas Mena
+Cycles exist **only** as white-on-transparent files, so a white tile would erase
+them outright. Asserted by name, with a fault that adds the flag to Yas Cycles.
+
+⚠️ **Lightening the WHOLE section was asked for and rejected**, twice, for the
+same reason — those three would vanish. Per-tile is the only version that cannot
+break something that already works.
+
+**Both sides of the split are asserted**, or "nine are light" would pass on a
+grid where every tile had gone white. Faults cover a tenth box appearing, a box
+being dropped (which hides a dark-ink logo with no error anywhere), the tile
+hardcoding one colour again, the border not following the background, and the
+written rule being deleted.
+
+⚠️ **The "no hardcoded tile colour" check is SCOPED TO THE `sc-for` BLOCK.** The
+HSBC card above it is legitimately `background:#151517`, so a section-wide
+negative check fails on the principal-partner card. The slice asserts it is
+non-empty first — *"no hardcoded colour in nothing"* would pass for ever.
+
 ### Artwork rules
 
-White-on-transparent, trimmed to 160px tall, saved as `.webp`. **The `.webp`
-conversion is WHERE the white treatment happened** — a `.png` in the list means
-somebody dropped a raw download in and skipped it, and a dark logo on `#0C0C0E`
-vanishes while reporting no error anywhere. That is the HSBC lesson one section
-up. Asserted, with a fault.
+Transparent background, trimmed to the ink, **never upscaled** — a file smaller
+than the house 160px tall is stored at native size rather than padded up, so a
+better file can replace it later with no stretch baked in. Saved as `.webp`.
 
-Dark was chosen by rendering all nineteen candidates on dark AND on light before
-deciding. The prediction — that a light band would be safer — was **wrong**;
-recolouring six single-colour marks to white is what made dark win.
+⚠️ **Bili Boys is the one file with an OPAQUE ground** — a cream badge with a
+printed border. It stays on the dark tile because it is already a box; putting a
+cream rectangle inside a white one is worse. It is also the one logo the
+contrast measurement gets wrong (it reads the ground as ink), so it is pinned by
+hand with the reason written beside it.
+
+**The recipe for a logo that arrives on a white ground:** key the white out with
+`alpha = 255 - min(r,g,b)`, un-multiply so the ink keeps its true colour, crop
+to the ink, scale DOWN to 160px tall if it is bigger.
 
 ### ⚠️ `h` — why there is not one height
 
@@ -439,20 +483,19 @@ Each row carries its own MAX height. The markup uses `max-height` plus
 
 68 is what fits the 104px tile with 16px of padding; 26 is the legibility floor
 on a phone. **Recompute `h` when a file is replaced** — a new crop changes the
-ratio.
+ratio. Native-size files sit BELOW the formula on purpose.
 
 **The first draft used one fixed `height:44px` and the tests were GREEN against
 it.** It is wrong twice:
 
-1. **A fixed height with a clamped width SQUASHES a wide mark.** Broadway
-   Malyan is 11.5:1 — at 44px tall it wants 506px of width, gets ~246, and
-   renders distorted rather than smaller. Nothing reports it.
+1. **A fixed height with a clamped width SQUASHES a wide mark** — height fixed,
+   width clamped, so it distorts rather than shrinks. Nothing reports it.
 2. **Equal height is not equal presence.** The near-square marks (Ashurst, The
    Sportsman's Arms, ~1.1:1) read as postage stamps beside a 5:1 wordmark. That
    is a sponsor-relations problem, not a cosmetic one.
 
 It was found by looking at a render. **The sizing checks therefore have to
-DISCRIMINATE** — "every row has an `h`" passes against `h:44` on all fifteen,
+DISCRIMINATE** — "every row has an `h`" passes against `h:44` on all eighteen,
 i.e. against the bug — so they assert the widest mark ends up SMALLER than
 mid-pack and the squarest end up LARGER, with faults that level each back.
 
@@ -463,87 +506,25 @@ so every section measured 0x0. **A screenshot of nothing looks like a result** �
 third time this repo has hit that. Route-intercept unpkg to a vendored React and
 fonts.googleapis.com to local Anton/Barlow before believing any render.
 
-### ⚠️ Bili Boys is the ONE documented exception, and it is pinned
+### Every confirmed sponsor is on the page (5 Aug)
 
-It is a badge — dark type on an **opaque cream** ground with a printed border —
-so the white-on-transparent treatment would mean deleting the logo rather than
-recolouring it. And the only artwork supplied is **154x90**, under the house
-160px, so it is stored at NATIVE size with `h:52` rather than the 64 the formula
-gives: padding it up to 160 would bake a 1.78x stretch into the file for ever,
-where storing it small costs 1.16x on a 2x screen and can be swapped out with no
-other change. Both the number and the written reason are asserted, so the
-exception cannot spread by imitation. Replace it the moment they send vector.
+The pending-artwork sweep was rewritten rather than left as an empty loop over
+an empty list — **an empty `forEach` is a check that asserts nothing while
+looking like coverage.** It now asserts every sponsor on the page has a file
+behind it, which is what it was really guarding.
 
-### ⚠️ Anderson keeps its RED, and that is a decision
-
-Their mark is a red wordmark over a black subline. The subline was turned white
-and **the red was left alone** — flattening the lot to white throws away the
-half of the logo that identifies them. It is the only coloured mark in the grid
-apart from Ashurst's teal. It is HSBC red's neighbour, not HSBC red, and it sits
-three rows below the principal-partner card; **if that ever reads as competing
-with HSBC, recolour Anderson, not the card.** Asserted, so a later "make the
-grid consistent" pass has to argue with it first.
-
-The supplied file was a flat 810x189 logo on white. It was keyed out by
-`alpha = 255 - min(r,g,b)`, then each pixel classified red (`r - max(g,b) > 40`)
-or ink. That is the recipe for any future logo that arrives on a white ground.
-
-### ⚠️ `light: true` — a WHITE TILE is an exception, not a default
-
-Two marks exist **only** as dark ink on white and cannot be recoloured without
-destroying them: **Crompton Partners** (the navy keyhole lives inside the O) and
-**Recover** (hairline letterspaced type). Jay's call, 5 Aug: *"you can use a
-white box around logos that won't work on the dark background, that is fine."*
-
-So a sponsor row may carry `light: true`, and the tile's background and border
-are **derived** from it in `renderVals()` — the data says what the ARTWORK is,
-not what colour to paint a box, so the two greys live in one place.
-
-⚠️ **Do NOT add the flag to a logo that has a white version.** Every white box
-is a bright rectangle in an otherwise dark band. The count is written out —
-exactly two — so a third appearing unnoticed is impossible, and there are faults
-for a third being added, for the flag being removed (which hides both logos with
-no error), for the tile hardcoding one colour again, and for the border not
-following the background.
-
-⚠️ **Lightening the WHOLE section was considered and rejected.** Oak View Group,
-V&P and Yas Mena Cycles exist only as white-on-transparent files and would have
-vanished on a light ground — this exact failure, inverted. Per-tile is the
-version that cannot break anything that already works.
-
-### No confirmed sponsor is missing any more (5 Aug)
-
-Every 2026/27 sponsor is on the page. The pending-artwork sweep in
-`test-sponsors.js` was rewritten rather than left as an empty loop over an empty
-list — **an empty `forEach` is a check that asserts nothing while looking like
-coverage.** It now asserts every sponsor on the page has a file behind it, which
-is what it was really guarding.
-
-⚠️ **Broadway Malyan's file was replaced on 5 Aug** — the first one they sent
-was their TAGLINE lockup ("Creating places. Together."), which is theirs but
-does not say who they are, so their name was nowhere on the page. The wordmark
-replaced it and the ratio moved 11.5:1 -> 5.4:1, so `h` moved 26 -> 36. It was
-**recoloured white rather than given a white tile**: their copper is flat
-single-colour type so it recolours cleanly, and measured on `#151517` it is only
-about 2.6:1. **That is the line — a white tile is for artwork that CANNOT be
-recoloured** (Crompton's navy keyhole), not for artwork that merely arrived in a
-colour. Asserted by shape, since a source-reading test cannot see a picture: the
-tagline lockup needed `h:26`, the wordmark needs 36, and a slide back would take
-the height with it.
+⚠️ **Broadway Malyan's file was replaced on 5 Aug.** The first one was their
+TAGLINE lockup ("Creating places. Together."), which is theirs but does not say
+who they are, so their name was nowhere on the page. The wordmark replaced it
+and the ratio moved 11.5:1 -> 5.4:1, so `h` moved 26 -> 36. Asserted by shape,
+since a source-reading test cannot see a picture, and a slide back to the tagline
+would take the height with it.
 
 ⚠️ **Ashurst Perkins Coie's teal is APPROVED, not pending.** Jay, 5 Aug:
 *"ashurst is good."* Do not raise recolouring it again.
 
-Still worth chasing better files: **Recover** is the smallest asset on the page
-(143x32 native) and **Bili Boys** the second (154x90). Nothing else. They are NOT in the `UNCONFIRMED` sweep — that list
-is for companies who have not signed — so they get their own assertion that they
-are not **half-added**, with a name on the page and no file behind it. Chase the
-artwork; do not improvise it.
-
-Two more worth chasing, lower priority: **Broadway Malyan** supplied their
-tagline lockup, not their wordmark; **Ashurst Perkins Coie** is the only
-non-monochrome mark in the grid, left in their brand teal deliberately because
-recolouring a law firm's logo is not a unilateral call.
+Still worth chasing better files: **Recover** (143x32 native) and **Bili Boys**
+(154x90) are the two smallest assets on the page. Nothing else.
 
 ⚠️ **The `sponsor-*.webp` files must stay in `_prove-registration.js`'s `NEEDED`
 list.** The prover creates `assets/`, which flips `test-sponsors.js`'s

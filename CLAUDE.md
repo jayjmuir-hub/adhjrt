@@ -131,7 +131,30 @@ assets/                    crest.jpeg, crest.png (+crest-bat/-shield), action
                            (the "Run by volunteers" group photo),
                            share-card.png (the og:image card — see Brand),
                            apple-touch-icon.png + icon-*.png (home-screen icons)
+assets/board/              board-NN.webp — the 11 photos the About-section
+                           rotating board turns through (5 Aug 2026). Cropped
+                           to 1200x1035, the shape of the box they sit in.
+                           .webp only, no .jpg fallback, same as the HSBC
+                           lockup. To add one: drop in board-12.webp and bump
+                           COUNT in the board script in `Quins JRT.dc.html`.
 ```
+
+⚠️ **`assets/action-lineout.jpg` is no longer referenced.** It was the single
+static photo in the About section until 5 Aug 2026, when the rotating board
+replaced it. The file is left in place deliberately — it is a good shot and
+costs nothing sitting there — but nothing loads it. If you are wondering why
+the About section no longer has `<img src="assets/action-lineout.jpg">`, that
+is why; it was not lost.
+
+**The argument AGAINST the board, recorded because someone will make it again:**
+it adds ~1.2 MB of photos to the repo, and a second moving thing to a section
+that already has the crest/bat animation. Both were weighed. Repo size is not
+page weight — only the first photo loads on view (~110 KB, the same as the
+static photo it replaced), and every later one is fetched into the hidden face
+a full interval before anyone sees it. The two animations do not compete
+because the crest is a still badge pinned over a turning board, not a second
+thing moving on its own.
+
 (`netlify-forms.html` used to sit here as the Forms decoy — deleted 28 Jul
 2026 with the move off Netlify Forms; see that section below.)
 

@@ -259,6 +259,49 @@
     .m-hide{display:none!important}
   }
 
+/* ============ ROTATING PHOTO BOARD (About section) ============
+   Replaced the single static assets/action-lineout.jpg on 5 Aug 2026. The
+   board turns on its vertical axis every 5s to show the next photo.
+
+   HOW THE 3D WORKS, because it is not obvious:
+   - .jrtb-stage carries the `perspective`. That is the camera distance, and
+     it never moves. Lower number = more extreme, fish-eye turn.
+   - .jrtb-card is the only thing that rotates. `transform-style:preserve-3d`
+     tells the browser to keep its children in real 3D space rather than
+     flattening them onto one plane.
+   - There are exactly TWO faces, back to back. Face .b is permanently
+     pre-rotated 180deg. Both have `backface-visibility:hidden`, so each one
+     vanishes the instant it turns away from you - which is what makes
+     exactly one photo visible at a time.
+   - The script NEVER swaps the photo you are looking at. It loads the next
+     one into the face you cannot see, then turns the card another 180deg.
+     Two <img> elements total, however many photos are in the list.
+
+   DO NOT put `overflow`, `opacity` or `filter` on .jrtb-card. Each of them
+   forces the browser to flatten preserve-3d, and the rotation collapses into
+   a flat horizontal squash. The clipping lives on the wrapper div instead,
+   which is safe. */
+.jrtb{position:absolute;inset:0}
+.jrtb-stage{position:absolute;inset:0;perspective:1600px;background:#0C0C0E}
+.jrtb-card{position:absolute;inset:0;transform-style:preserve-3d;
+  transform:rotateY(var(--jrtb-rot,0deg));
+  transition:transform 900ms cubic-bezier(.62,.03,.31,1);will-change:transform}
+.jrtb-face{position:absolute;inset:0;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;background:#0C0C0E}
+.jrtb-face.b{transform:rotateY(180deg)}
+.jrtb-face img{width:100%;height:100%;object-fit:cover;display:block}
+/* Darkens the board as it turns edge-on and lifts again as it comes round.
+   This is what makes it read as a physical panel turning out of the light
+   rather than a flat CSS trick. It sits OUTSIDE the card so it stays still. */
+.jrtb-shade{position:absolute;inset:0;background:#000;opacity:0;
+  pointer-events:none;z-index:2}
+.jrtb.turning .jrtb-shade{animation:jrtb-shade 900ms cubic-bezier(.62,.03,.31,1)}
+@keyframes jrtb-shade{0%{opacity:0}46%{opacity:.62}54%{opacity:.62}100%{opacity:0}}
+/* Anyone who has asked their OS to cut animation gets a plain instant swap. */
+@media (prefers-reduced-motion:reduce){
+  .jrtb-card{transition-duration:1ms}
+  .jrtb.turning .jrtb-shade{animation:none}
+}
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
 <script>
@@ -275,6 +318,84 @@
       } else { host.classList.add('play'); }
     }
     function scan(){ var h=document.querySelector('.crest-anim'); if(h){arm(h);return true;} return false; }
+    function boot(){
+      if(scan())return;
+      var mo=new MutationObserver(function(){ if(scan()) mo.disconnect(); });
+      try{ mo.observe(document.documentElement,{childList:true,subtree:true}); }catch(e){}
+      setTimeout(function(){ try{mo.disconnect();}catch(e){} scan(); },10000);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  })();
+</script>
+<script>
+  /* Rotating photo board in the About section (5 Aug 2026). Replaced a single
+     static photo; turns to the next one every 5 seconds.
+
+     TO ADD OR REMOVE PHOTOS: change COUNT below, and put the matching file in
+     assets/board/ named board-NN.webp with a two-digit number (board-12.webp).
+     Photos are cropped to 1200x1035 - the shape of the box they sit in.
+     Nothing else needs editing. .webp with no .jpg fallback is deliberate and
+     matches the rest of the site (see the HSBC lockup).
+
+     FAILS SAFE. The first photo is in the markup, so with JavaScript off, or
+     if anything in here throws, the box shows exactly what it showed before:
+     one static action shot. Nothing disappears.
+
+     Costs nothing when unwatched - it stops turning when scrolled off screen
+     and when the browser tab is in the background. */
+  (function(){
+    var COUNT=11, EVERY=5000, TURN=900;
+    var file=function(i){ var n=i+1; return 'assets/board/board-'+(n<10?'0':'')+n+'.webp'; };
+
+    function build(host){
+      if(host.__built)return; host.__built=1;
+      try{
+        var card=host.querySelector('.jrtb-card');
+        var faces=host.querySelectorAll('.jrtb-face img');
+        if(!card||faces.length!==2)return;
+
+        var idx=0;        // which photo is facing you
+        var showA=true;   // is face A the one you can see?
+        var rot=0;        // total degrees turned so far
+        var turning=false, timer=null, onScreen=true;
+
+        // Stage photo 2 on the back face now, so the first turn is instant.
+        faces[1].src=file(1);
+
+        function turn(){
+          if(turning)return; turning=true;
+          rot+=180;
+          card.style.setProperty('--jrtb-rot',rot+'deg');
+          host.classList.add('turning');
+          setTimeout(function(){
+            host.classList.remove('turning');
+            showA=!showA; idx=(idx+1)%COUNT; turning=false;
+            // Load the NEXT photo into the face that just went out of sight.
+            // It gets a full 5s to download before anyone sees it, which is
+            // why no photo ever pops in half-loaded.
+            (showA?faces[1]:faces[0]).src=file((idx+1)%COUNT);
+          },TURN);
+        }
+
+        function schedule(){
+          clearTimeout(timer);
+          if(!onScreen||document.hidden)return;
+          timer=setTimeout(function(){ turn(); schedule(); },EVERY);
+        }
+
+        document.addEventListener('visibilitychange',schedule);
+        if('IntersectionObserver' in window){
+          new IntersectionObserver(function(es){
+            onScreen=es[0].isIntersecting; schedule();
+          },{threshold:0.2}).observe(host);
+        }
+        schedule();
+      }catch(e){ /* leave the static first photo showing */ }
+    }
+
+    /* Same boot pattern as the crest animation above: the page body is
+       rendered by the component engine, so the element may not exist yet. */
+    function scan(){ var h=document.querySelector('.jrtb'); if(h){build(h);return true;} return false; }
     function boot(){
       if(scan())return;
       var mo=new MutationObserver(function(){ if(scan()) mo.disconnect(); });
@@ -583,7 +704,22 @@
         </div>
       </div>
       <div style="border-radius:18px;overflow:hidden;height:460px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.2)">
-        <img src="assets/action-lineout.jpg" alt="Abu Dhabi Harlequins youth players contest a lineout" style="width:100%;height:100%;object-fit:cover;object-position:center top">
+        <!-- Rotating photo board. Was a single static assets/action-lineout.jpg
+             until 5 Aug 2026. The board turns on its vertical axis every 5s;
+             the CSS and the script are both in <helmet> above, and the comment
+             on the CSS explains how the 3D actually works before you change it.
+             The first photo is hard-coded here on purpose: with JavaScript off,
+             or if the script throws, this box shows one static action shot
+             exactly as it always did. -->
+        <div class="jrtb" role="img" aria-label="Abu Dhabi Harlequins junior rugby in action">
+          <div class="jrtb-stage">
+            <div class="jrtb-card">
+              <div class="jrtb-face"><img src="assets/board/board-01.webp" alt=""></div>
+              <div class="jrtb-face b"><img alt=""></div>
+            </div>
+            <div class="jrtb-shade"></div>
+          </div>
+        </div>
         <div style="position:absolute;inset:0;box-shadow:inset 0 0 70px 12px rgba(12,12,14,.3);pointer-events:none"></div>
         <!-- red->green signature bar, same accent used on the age-group cards,
              the register buttons and the stat strip below this section -->

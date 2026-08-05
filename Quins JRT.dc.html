@@ -923,8 +923,45 @@
         <p style="margin:26px auto 0;max-width:560px;color:#aeb4bf;font-size:17px;line-height:1.6">HSBC are the principal partner of the 2026 Abu Dhabi Harlequins Junior Rugby Tournament, and a large part of the reason thousands of young players get two full days of rugby.</p>
       </div>
 
-      <div data-reveal style="margin-top:20px;border:1px dashed rgba(255,255,255,0.16);border-radius:18px;padding:30px 40px">
-        <p style="margin:0 auto;max-width:560px;color:#aeb4bf;font-size:16px;line-height:1.6">More partners will be announced here before the tournament. Interested in supporting a volunteer-run festival of junior rugby? <a href="mailto:admin@adhjrt.com" style="color:#3bd070;font-weight:700">Get in touch</a>.</p>
+      <!-- ===== SUPPORTERS GRID (Aug 2026) =====
+           The 2026/27 sponsors, confirmed by Jay. Deliberately BELOW and
+           visually lighter than HSBC's block above: HSBC is the principal
+           partner and everyone here is a supporter, and that hierarchy is the
+           whole reason the two are separate blocks rather than one wall.
+
+           ⚠️ EVERY MARK HERE IS WHITE OR READS WHITE ON #0C0C0E. That was
+           measured, not assumed - all 19 supplied files were rendered on this
+           exact background before any of this was written. Six single-colour
+           marks were recoloured white; the rest already were. Four sponsors are
+           NOT here because their artwork could not be made legible, and they
+           are listed in claude/specs/spec-sponsors-grid.md rather than being
+           silently forgotten.
+
+           The list is DATA, in renderVals - so adding a sponsor is one line
+           and one file, not a markup edit. -->
+      <div data-reveal style="margin-top:34px">
+        <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:22px">With the support of</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px">
+          <sc-for list="{{ sponsors }}" as="s" hint-placeholder-count="8">
+            <div style="background:#151517;border:1px solid rgba(255,255,255,0.08);border-radius:14px;min-height:104px;display:flex;align-items:center;justify-content:center;padding:16px 22px">
+              <!-- ⚠️ max-height, NOT height, and the number comes from the data.
+                   Two separate faults if you go back to a fixed height:
+                   (a) a fixed height with max-width:100% SQUASHES a very wide
+                       mark - width is clamped while height is not, so Broadway
+                       Malyan (11.5:1) renders distorted, not shrunk;
+                   (b) equal height is not equal presence. At 44px the near
+                       square marks (Ashurst, The Sportsman's Arms, ~1.1:1)
+                       read as postage stamps next to a 5:1 wordmark.
+                   s.h is per-logo and normalises optical AREA. See
+                   claude/specs/spec-sponsors-grid.md. -->
+              <img src="{{ s.file }}" alt="{{ s.name }}" loading="lazy" style="max-height:{{ s.h }}px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block">
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div data-reveal style="margin-top:22px;border:1px dashed rgba(255,255,255,0.16);border-radius:18px;padding:26px 40px">
+        <p style="margin:0 auto;max-width:560px;color:#aeb4bf;font-size:16px;line-height:1.6">Interested in supporting a volunteer-run festival of junior rugby? <a href="mailto:admin@adhjrt.com" style="color:#3bd070;font-weight:700">Get in touch</a>.</p>
       </div>
     </div>
   </section>
@@ -1439,6 +1476,53 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
 
    All four girls' groups play 7s with a squad of 12, including U16G and U18G,
    which is why they differ from the boys' groups of the same age. */
+/* ===== THE 2026/27 SUPPORTERS =====================================
+   Confirmed by Jay, 4 Aug 2026. Rendered in the sponsors section BELOW the
+   HSBC principal-partner block, deliberately: HSBC is the partner, these are
+   supporters, and the two must not read as one flat wall.
+
+   ⚠️ NAMING A COMPANY AS A SPONSOR BEFORE THEY HAVE SIGNED IS A COMMERCIAL
+   PROBLEM, NOT A CODE ONE. Nineteen unconfirmed names sat in this file until
+   2 Aug 2026 and were deleted; test-sponsors.js STILL asserts the ones that
+   remain unconfirmed are absent by name. Do not add a row here without Jay
+   confirming the sponsor has signed for the current season.
+
+   ⚠️ Every file here is white-on-transparent and was checked on #0C0C0E
+   before shipping. A dark logo added here would vanish and report no error
+   anywhere - the same failure the HSBC reverse-lockup rule exists for. Six of
+   these were single-colour marks recoloured white to achieve that.
+
+   Four confirmed sponsors are deliberately ABSENT because their supplied
+   artwork could not be made legible: Anderson Education, Recover, Bili Boys
+   Biltong and Crompton Partners. See claude/specs/spec-sponsors-grid.md.
+   Adding one back is a line here plus a file in assets/. */
+/* h = the logo's MAX height in the supporters grid, in px.
+   Every file is white-on-transparent and already trimmed to 160px tall with
+   no padding, so the only thing that differs is aspect ratio - and it differs
+   by more than ten times (Broadway Malyan is 11.5:1, The Sportsman's Arms is
+   1.1:1). Rendering them all at one height makes the square ones look tiny
+   and the wide ones look enormous, so h normalises optical area instead:
+       h = round(83.5 / sqrt(width / height)), clamped to 26..68
+   68 is what fits inside the 104px tile with 16px of padding; 26 is the floor
+   below which a wordmark stops being legible on a phone. Recompute h when you
+   replace a file - a new crop changes the ratio. */
+const SPONSORS = [
+  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51 },
+  { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44 },
+  { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68 },
+  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35 },
+  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37 },
+  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44 },
+  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43 },
+  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 26 },
+  { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40 },
+  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 44 },
+  { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68 },
+  { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65 },
+  { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 35 },
+  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },
+];
+
 const AGE_GROUP_INFO = [
   { id: 'u6', name: 'U6 Tag', ages: [5], format: '7s', squad: 12 },
   { id: 'u7', name: 'U7 Tag', ages: [6], format: '7s', squad: 12 },
@@ -2567,6 +2651,13 @@ class Component extends DCLogic {
       regFormNote: rs.closesAt
         ? `Registration closes at the end of ${this.state.fxApi && this.state.fxApi.fmtWindowDate ? this.state.fxApi.fmtWindowDate(rs.closesAt) : ''} — Abu Dhabi time.`
         : 'Registration is open.',
+      /* ⚠️ A `sponsors:` key lived here once and carried NINETEEN UNCONFIRMED
+         company names, doubled, for a marquee that nothing rendered. It was
+         deleted on 2 Aug 2026 and test-sponsors.js asserted it stayed gone.
+         This is its deliberate return with a CONFIRMED list and real files -
+         and the check that guarded it was rewritten in the same commit rather
+         than quietly dropped. */
+      sponsors: SPONSORS,
       statClubs: Math.round(20 * sp) + '+',
       statPlayers: Math.round(3000 * sp) + '+',
       statGroups: String(Math.round(15 * sp)),

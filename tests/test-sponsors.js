@@ -109,12 +109,24 @@ section('The unconfirmed sponsor names are gone');
    alone would pass the moment somebody re-added the same list under a
    different name, which is the mistake this is guarding against — the names
    are the problem, not the variable. */
+/* ⚠️ THIS LIST SHRANK ON 4 AUG 2026, BY HAND, IN THE SAME COMMIT THAT PUT THE
+   REAL SPONSORS UP. Nine of the original nineteen came back as CONFIRMED
+   2026/27 sponsors and moved out of this list into SPONSORS on the page:
+   McCafferty's, BEOND, Sedbergh School, The Sportsman's Arms, Crompton
+   Partners, Arabian Swim Academy, RECOVER, Broadway Malyan and JOOS/Yas Mena
+   Cycles.
+
+   ⚠️ EDITING THIS LIST IS THE POINT, NOT AN OBSTACLE. Every one of those nine
+   failed this file when its name went on the page — which is exactly what it
+   is for. The correct response was to check with Jay that they had signed and
+   then move the name deliberately, one at a time. It must never be widened,
+   emptied, or turned into a substring match to make a build pass.
+
+   What is left is the ten that are STILL not confirmed for 2026/27. */
 const UNCONFIRMED = [
   'Craft by Side Hustle', 'Pizza di Rocco', "Gino's Deli", 'Transguard Group',
-  "McCafferty's", 'MODON', 'Smile Rite Dental Care', 'Stanford Medical Center',
-  'BEOND', 'Kibsons International', 'Sedbergh School', "The Sportsman's Arms",
-  'BestBites', 'Crompton Partners', 'The Club', 'Arabian Swim Academy',
-  'RECOVER', 'Broadway Malyan', 'JOOS MENA Cycles',
+  'MODON', 'Smile Rite Dental Care', 'Stanford Medical Center',
+  'Kibsons International', 'BestBites', 'The Club',
 ];
 
 UNCONFIRMED.forEach((name) => {
@@ -122,11 +134,25 @@ UNCONFIRMED.forEach((name) => {
 });
 
 check('the sponsorNames list is gone', !PAGE.includes('sponsorNames'));
-check('renderVals no longer returns a sponsors list', !/\bsponsors\s*:/.test(PAGE));
-/* The marquee animation existed only to scroll that list. Left behind it is a
-   keyframe nothing uses, and the next person to find it has a ready-made place
-   to put a new list of names back. */
-check('the marquee keyframes are gone', !PAGE.includes('marquee'));
+
+/* ⚠️ `sponsors:` IS BACK, ON PURPOSE — and this check is the inverse of what it
+   was. It used to assert renderVals returned NO sponsors list, because the one
+   it had carried nineteen unconfirmed names doubled for a marquee that nothing
+   rendered. On 4 Aug 2026 a CONFIRMED list with real logo files replaced it.
+
+   The old check was inverted rather than deleted: what mattered was never the
+   identifier, it was that no unconfirmed name reaches the page, and the
+   UNCONFIRMED sweep above is what actually enforces that. */
+check('renderVals returns the confirmed sponsors list', /\bsponsors:\s*SPONSORS\b/.test(PAGE));
+check('…sourced from the SPONSORS constant, not an inline literal',
+  /^const SPONSORS = \[/m.test(PAGE));
+
+/* The marquee animation existed only to scroll the old fake list. A keyframe
+   nothing uses is a ready-made place to put a list of names back.
+   ⚠️ Comments stripped: the SPONSORS block explains the marquee's removal by
+   name, and a comment about a marquee is not a marquee. */
+check('the marquee keyframes are gone',
+  !stripComments(PAGE).replace(/\/\*[\s\S]*?\*\//g, '').includes('marquee'));
 
 /* =========================================================================
    2. The assets
@@ -398,10 +424,116 @@ check('HSBC is named as the principal partner', /Principal partner/i.test(sponso
 /* The placeholder said the line-up was "Coming soon". There is now a confirmed
    partner on the page, so that badge would be contradicting the logo above it. */
 check('the "coming soon" placeholder badge is gone', !/Coming soon/i.test(sponsorsInner));
+
+/* =========================================================================
+   5b. THE SUPPORTERS GRID (added 4 Aug 2026)
+   ========================================================================= */
+
+section('The supporters grid');
+{
+  /* ⚠️ THE COUNT IS WRITTEN OUT. Same discipline as the HSBC placements: a
+     sponsor appearing or vanishing UNNOTICED must be impossible, and adding
+     one is meant to be a deliberate edit here as well as on the page. */
+  /* ⚠️ Captures ANY extension, not just .webp. The first version required
+     `.webp`, so a raw .png dropped in fell OUT of the list entirely and tripped
+     the COUNT check instead of the format check — the fault run caught that.
+     A pattern that only matches the healthy case cannot report the sick one. */
+  const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+) \}/g)];
+  eq('fourteen confirmed supporters', rows.length, 14);
+
+  /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
+     MAXIMUM. The first version rendered every logo at a fixed height:44px with
+     max-width:100%, which is wrong twice over —
+       (a) height fixed + width clamped SQUASHES a very wide mark. Broadway
+           Malyan is 11.5:1; at 44px tall it wants 506px of width, gets ~246,
+           and renders distorted rather than smaller. Nothing reports it.
+       (b) equal height is not equal presence. The near-square marks (Ashurst,
+           The Sportsman's Arms, ~1.1:1) read as postage stamps beside a 5:1
+           wordmark, which is exactly the sponsor-relations problem this
+           section exists to avoid.
+     h normalises optical AREA instead — see claude/specs/spec-sponsors-grid.md.
+     The bounds are the tile: 68px is what fits inside 104px with 16px padding,
+     26px is the legibility floor on a phone. */
+  rows.forEach(([, name, , h]) => {
+    const n = Number(h);
+    check(`${name.replace(/['"]/g, '')} has a height inside the tile (26-68)`, n >= 26 && n <= 68, h);
+  });
+  check('the grid binds the per-logo height', /max-height:\{\{ s\.h \}\}px/.test(sponsorsInner));
+  check('…as a maximum, never a fixed height that would squash wide marks',
+    !/<img[^>]*\{\{ s\.file \}\}[^>]*[^-]height:\d+px/.test(sponsorsInner));
+  check('…with object-fit:contain so the aspect ratio survives the clamp',
+    /object-fit:contain/.test(sponsorsInner));
+
+  /* ⚠️ DISCRIMINATING, not decorative. Asserting "everything has an h" would
+     pass against h:44 on all fourteen — the very bug this replaced. The widest
+     mark must end up SMALLER than the squarest one, which is the whole claim. */
+  const hOf = (slug) => Number((rows.find((r) => r[2].includes(slug)) || [])[3]);
+  check('the widest mark (Broadway Malyan, 11.5:1) is sized down',
+    hOf('broadway-malyan') < hOf('brighton-college'), `${hOf('broadway-malyan')} vs ${hOf('brighton-college')}`);
+  check('the squarest marks are sized UP, not left as postage stamps',
+    hOf('sportsmans-arms') > hOf('brighton-college') && hOf('ashurst') > hOf('brighton-college'),
+    `${hOf('sportsmans-arms')}/${hOf('ashurst')} vs ${hOf('brighton-college')}`);
+  check('the heights are not all the same number',
+    new Set(rows.map((r) => r[3])).size >= 6);
+
+  /* Every file the list names must EXIST. A typo here is a broken image on the
+     live site and nothing anywhere reports it. Skipped in the prover's temp
+     copy, which carries no assets/ - the same guard the HSBC asset checks use. */
+  if (hasAssets) {
+    rows.forEach(([, name, file]) => {
+      check(`${name.replace(/['"]/g, '')} has its logo file on disk`,
+        fs.existsSync(path.join(repoRoot(), file)));
+    });
+  }
+
+  /* ⚠️ WHITE-ON-TRANSPARENT, ALL OF THEM. Every supplied file was rendered on
+     #0C0C0E before shipping and six single-colour marks were recoloured white
+     to get there. WebP is asserted because the conversion is where that
+     treatment happened - a .png creeping in means somebody dropped a raw
+     download in and skipped it, and a dark logo on this ground vanishes while
+     reporting no error at all. That is the HSBC lesson, one section down. */
+  rows.forEach(([, name, file]) => {
+    check(`${name.replace(/['"]/g, '')} is a processed .webp, not a raw drop-in`,
+      file.endsWith('.webp'));
+  });
+
+  /* The grid must actually RENDER the list. A list returned and never bound is
+     the single most common way this page breaks, and it is invisible to a
+     check that only reads the data. */
+  check('the grid loops over the sponsors list', /<sc-for list="\{\{ sponsors \}\}"/.test(PAGE));
+  check('…and binds both the file and the name', /src="\{\{ s\.file \}\}"/.test(PAGE) && /alt="\{\{ s\.name \}\}"/.test(PAGE));
+  check('…with lazy loading, since it is well below the fold', /loading="lazy"/.test(sponsorsInner));
+
+  /* ⚠️ HSBC STAYS ABOVE AND SEPARATE. They are the principal partner; these are
+     supporters. Folding the two into one wall is the tidy-up that quietly
+     demotes the tournament's only confirmed partner, and it has been warned
+     about in CLAUDE.md since 2 Aug. */
+  const hsbcAt = sponsorsInner.indexOf('Principal partner');
+  const gridAt = sponsorsInner.indexOf('With the support of');
+  check('HSBC is still called the principal partner', hsbcAt >= 0);
+  check('the supporters grid sits BELOW HSBC, not alongside', gridAt > hsbcAt);
+  check('HSBC is not repeated inside the supporters grid',
+    !sponsorsInner.slice(gridAt).includes('sponsor-hsbc'));
+
+  /* ⚠️ FOUR CONFIRMED SPONSORS ARE DELIBERATELY ABSENT because their artwork
+     could not be made legible — Anderson Education, Recover, Bili Boys Biltong
+     and Crompton Partners. They are NOT in the UNCONFIRMED sweep above, because
+     they HAVE signed; this asserts they are not half-added either, with a name
+     on the page and no file behind it. */
+  ['anderson-education', 'recover', 'bili-boys', 'crompton'].forEach((slug) => {
+    check(`${slug} is not half-added while its artwork is pending`,
+      !new RegExp(`file: 'assets/sponsor-${slug}`).test(PAGE));
+  });
+}
 /* THE INVITATION STAYS. It is the only route by which another sponsor reaches
    Jay, and the section is the page a prospective one lands on. */
 check('the get-in-touch invitation is kept', sponsorsInner.includes('mailto:admin@adhjrt.com'));
-check('the invitation still says more are to come', /More partners will be announced/i.test(sponsorsInner));
+/* ⚠️ "More partners will be announced" was TRUE while the section held only
+   HSBC and a dashed placeholder. With fourteen supporters up it reads as a
+   page that has not been finished, so it went with the placeholder on 4 Aug
+   2026. The invitation itself stays — that is the part that matters. */
+check('the finished-page copy no longer promises announcements',
+  !/More partners will be announced/i.test(sponsorsInner));
 
 /* =========================================================================
    6. The page does not undersell itself

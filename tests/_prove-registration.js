@@ -73,6 +73,27 @@ const NEEDED = [
      only, same caveat as above. */
   path.join('assets', 'sponsor-hsbc-white.webp'),
   path.join('assets', 'sponsor-hsbc.webp'),
+  /* ⚠️ The supporters grid (4 Aug 2026). test-sponsors.js asserts every file the
+     SPONSORS list names EXISTS, and its assets-on-disk gate is flipped TRUE by
+     the assets/ folder this script already creates for the HSBC lockups — so
+     without these the suite fails on an UNDAMAGED copy and takes every sponsor
+     fault with it, reporting them all as "caught" while proving nothing. Same
+     trap as _signins.js and Club.dc.html. The rule is: check this list whenever
+     a test starts reading new files. */
+  path.join('assets', 'sponsor-oak-view-group.webp'),
+  path.join('assets', 'sponsor-value-performance.webp'),
+  path.join('assets', 'sponsor-ashurst-perkins-coie.webp'),
+  path.join('assets', 'sponsor-brighton-college.webp'),
+  path.join('assets', 'sponsor-sedbergh.webp'),
+  path.join('assets', 'sponsor-beond.webp'),
+  path.join('assets', 'sponsor-westminster-construction.webp'),
+  path.join('assets', 'sponsor-broadway-malyan.webp'),
+  path.join('assets', 'sponsor-mccaffertys.webp'),
+  path.join('assets', 'sponsor-bottle-store.webp'),
+  path.join('assets', 'sponsor-sportsmans-arms.webp'),
+  path.join('assets', 'sponsor-yas-cycles.webp'),
+  path.join('assets', 'sponsor-arabian-swim-academy.webp'),
+  path.join('assets', 'sponsor-align-health.webp'),
   path.join('netlify', 'functions', '_registration.js'),
   path.join('netlify', 'functions', '_venue.js'),
   path.join('netlify', 'functions', '_agegroups.js'),
@@ -1452,6 +1473,133 @@ const FAULTS = [
       '      open = true;'),
     expect: ['an unreadable window refuses rather than guessing'],
   },
+  /* ---- the supporters grid (test-sponsors.js, 4 Aug 2026) --------------- */
+
+  {
+    name: 'a supporter is dropped without anybody noticing',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40 },\n", ''),
+    expect: ['fourteen confirmed supporters'],
+  },
+  {
+    /* A mistyped filename is a broken image on the live site that reports
+       nothing, anywhere — the exact shape of the crest reference that once
+       killed every social share preview. */
+    name: 'a logo filename is mistyped, so the image silently 404s',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "file: 'assets/sponsor-sedbergh.webp'", "file: 'assets/sponsor-sedburgh.webp'"),
+    expect: ['has its logo file on disk'],
+  },
+  {
+    /* ⚠️ A raw download dropped in unprocessed. The .webp conversion is WHERE
+       the white treatment happened; a .png means somebody skipped it, and a
+       dark logo on #0C0C0E vanishes while reporting no error. The HSBC lesson,
+       one section down the page. */
+    name: 'a raw .png is dropped in, skipping the white conversion',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "file: 'assets/sponsor-beond.webp'", "file: 'assets/sponsor-beond.png'"),
+    expect: ['processed .webp'],
+  },
+  {
+    /* The list returned and never bound — invisible to any check that only
+       reads the data, which is why this suite drives the markup too. */
+    name: 'the grid stops looping over the sponsors list',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<sc-for list="{{ sponsors }}" as="s"', '<sc-for list="{{ nothing }}" as="s"'),
+    expect: ['loops over the sponsors list'],
+  },
+  {
+    name: 'the grid stops binding the logo file',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'src="{{ s.file }}"', 'src="assets/sponsor-hsbc-white.webp"'),
+    expect: ['binds both the file and the name'],
+  },
+  {
+    /* ⚠️ The tidy-up that demotes the tournament's only confirmed PARTNER into
+       a row of supporters. Warned about in CLAUDE.md since 2 Aug. */
+    name: 'HSBC is folded into the supporters grid, losing the hierarchy',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "  { name: 'Oak View Group',",
+      "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44 },\n  { name: 'Oak View Group',"),
+    expect: ['fourteen confirmed supporters'],
+  },
+  {
+    /* Half-adding a sponsor whose artwork is still pending: a name on the page
+       with no usable file behind it. */
+    name: 'a sponsor with unusable artwork is half-added anyway',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "  { name: 'Align Health',",
+      "  { name: 'Recover', file: 'assets/sponsor-recover.webp', h: 44 },\n  { name: 'Align Health',"),
+    expect: ['not half-added while its artwork is pending'],
+  },
+  {
+    name: 'the grid label is changed so it reads as one flat wall with HSBC',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '>With the support of<', '>Principal partner<'),
+    expect: ['sits BELOW HSBC'],
+  },
+  {
+    name: 'the grid stops lazy-loading, so fourteen logos block the fold',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, ' loading="lazy" style="max-height:', ' style="max-height:'),
+    expect: ['lazy loading'],
+  },
+
+  /* ---- per-logo sizing in the grid (test-sponsors.js, 5 Aug 2026) ------- */
+
+  {
+    /* ⚠️ THE BUG THAT SHIPPED IN THE FIRST DRAFT and was caught only by looking
+       at a render: one fixed height for fourteen logos whose aspect ratios span
+       1.1:1 to 11.5:1. height + max-width squashes the wide ones and the square
+       ones come out the size of a postage stamp. */
+    name: 'the grid goes back to one fixed height for every logo',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'style="max-height:{{ s.h }}px;max-width:100%;width:auto;height:auto;object-fit:contain',
+      'style="height:44px;max-width:100%;width:auto;object-fit:contain'),
+    expect: ['binds the per-logo height'],
+  },
+  {
+    /* The heights are still in the data but the markup ignores them - the
+       "returned and never bound" failure, one level down from the sc-for. */
+    name: 'the markup stops using the per-logo height it is given',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'max-height:{{ s.h }}px', 'max-height:44px'),
+    expect: ['binds the per-logo height'],
+  },
+  {
+    /* object-fit dropped: the clamp then distorts instead of fitting. */
+    name: 'object-fit is dropped, so a clamped logo stretches',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, ';object-fit:contain;display:block">', ';display:block">'),
+    expect: ['object-fit:contain'],
+  },
+  {
+    /* A height taller than the tile: the logo is clipped by the flex box and
+       the row grows unevenly. 68 is the ceiling for a reason. */
+    name: 'a logo is given a height that does not fit the tile',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "h: 51 },", "h: 96 },"),
+    expect: ['height inside the tile'],
+  },
+  {
+    /* ⚠️ THE LAZY FIX. Somebody hits the "not all the same number" check and
+       flattens the list to one value with a couple of outliers - or, as here,
+       levels the widest mark UP to match the rest, which is the distortion
+       coming straight back. */
+    name: 'the widest mark is levelled up to match the others',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 26 }", "sponsor-broadway-malyan.webp',        h: 44 }"),
+    expect: ['widest mark'],
+  },
+  {
+    /* The squarest marks pushed back down to the crowd. This is the postage
+       stamp bug, and it is invisible to every check that only counts rows. */
+    name: "the near-square marks are shrunk back to the pack",
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "sponsor-sportsmans-arms.webp',        h: 68 }", "sponsor-sportsmans-arms.webp',        h: 35 }"),
+    expect: ['squarest marks'],
+  },
+
   /* ---- the club form's window exemption (4 Aug 2026) -------------------- */
 
   {
@@ -3312,10 +3460,16 @@ const FAULTS = [
   /* ---- HSBC / sponsors (test-sponsors.js) ------------------------------- */
 
   {
-    name: 'an unconfirmed company is named as a sponsor again',
+    /* ⚠️ REPOINTED 4 Aug 2026. Its old anchor was the "More partners will be
+       announced" placeholder copy, which went when the real grid arrived. The
+       RULE is unchanged and is the most important one in this file — an
+       unconfirmed company named as a sponsor is a commercial problem — so the
+       fault moved to where names now live rather than being deleted with the
+       copy it happened to sit in. */
+    name: 'an unconfirmed company is added to the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'More partners will be announced here before the tournament.',
-      'More partners, including Transguard Group, will be announced here before the tournament.'),
+    apply: () => patch(HOME, "  { name: 'Align Health',",
+      "  { name: 'Transguard Group', file: 'assets/sponsor-transguard.webp' },\n  { name: 'Align Health',"),
     expect: ['does not name "Transguard Group"'],
   },
   {
@@ -3330,11 +3484,15 @@ const FAULTS = [
     expect: ['sponsorNames list is gone'],
   },
   {
-    name: 'renderVals returns a sponsors list again',
+    /* ⚠️ REPOINTED, not deleted. It used to prove renderVals returned NO
+       sponsors list, because the one it had held nineteen unconfirmed names.
+       It now returns a CONFIRMED one, so the fault that matters is that list
+       being swapped for an inline literal the UNCONFIRMED sweep and the count
+       check cannot see. */
+    name: 'the sponsors list is inlined, escaping the SPONSORS constant',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, '      standingsPreview: [1, 2, 3, 4, 5, 6],',
-      '      standingsPreview: [1, 2, 3, 4, 5, 6],\n      sponsors: [],'),
-    expect: ['no longer returns a sponsors list'],
+    apply: () => patch(HOME, '      sponsors: SPONSORS,', '      sponsors: [],'),
+    expect: ['returns the confirmed sponsors list'],
   },
   {
     name: 'the marquee keyframes come back',

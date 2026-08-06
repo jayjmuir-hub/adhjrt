@@ -933,20 +933,15 @@
 }
 
 .jrtb{position:absolute;inset:0}   /* the vars above inherit down into this */
-/* ⚠️ touch-action:pan-y IS THE WHOLE BALLGAME ON TOUCH. Without it a
-   horizontal drag on this scene swallows the gesture and the page stops
-   scrolling vertically while a finger is inside the carousel - the visitor is
-   trapped in a box they were only trying to scroll past. `pan-y` hands
-   vertical panning back to the browser and leaves us only the horizontal part,
-   which is the only part this needs.
-   ⚠️ It cannot be seen to be missing on a desktop. The About block is hidden
-   at and below 760px, so the people this protects are on TABLETS at 761px+ -
-   the exact band nobody tests, and where the stuck-hover bug lived for four
-   days. It is asserted. */
+/* ⚠️ touch-action:pan-y WAS HERE AND WENT WITH THE DRAG (6 Aug 2026). It
+   existed only to stop a horizontal drag swallowing vertical scrolling and
+   trapping a finger inside the box; with no drag handler there is no gesture
+   to steal, and the rule would have restricted horizontal panning for nothing.
+   ⚠️ IF DRAG EVER COMES BACK, THIS COMES BACK IN THE SAME CHANGE. Its absence
+   cannot be seen on a desktop - the About block is hidden at and below 760px,
+   so the people it protects are on tablets at 761px+, the band nobody tests. */
 .jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E;
-  touch-action:pan-y;cursor:grab;outline:none}
-.jrtb-scene:focus-visible{box-shadow:inset 0 0 0 2px #E11B22}
-.jrtb.dragging .jrtb-scene{cursor:grabbing}
+  outline:none}
 /* ⚠️ NO overflow / opacity / filter ON THE TRACK, EVER. Any of the three makes
    the browser flatten preserve-3d and the whole arrangement collapses into a
    flat overlapping row. Clipping belongs on .about-photo, which has it. */
@@ -957,8 +952,8 @@
   overflow:hidden;border-radius:8px;
   /* The script sets --x/--z/--ry/--sc/--op per card and nothing else, so the
      geometry stays in the CSS and scales with the browser on its own.
-     --dragx is the live finger offset; it is 0 unless a drag is in progress. */
-  transform:translate3d(calc(var(--x,0px) + var(--dragx,0px)),0,var(--z,0px))
+     (--dragx, the live finger offset, went with the drag on 6 Aug 2026.) */
+  transform:translate3d(var(--x,0px),0,var(--z,0px))
             rotateY(var(--ry,0deg)) scale(var(--sc,1));
   opacity:var(--op,1);
   transition:transform var(--glide) cubic-bezier(.22,.61,.36,1),
@@ -970,8 +965,6 @@
      the other two went dark, an unloaded panel would flash as a pale rectangle
      against black, which reads as a broken image rather than a loading one. */
   background:#0C0C0E}
-/* A finger has to move the cards NOW, not 600ms after it stops. */
-.jrtb.dragging .jrtb-p{transition:none}
 
 /* ⚠️ DO NOT ADD A box-shadow ANYWHERE IN HERE. Tried twice on 5 Aug 2026 and
    both attempts broke rendering in Chrome:
@@ -994,7 +987,8 @@
    `box-sizing:border-box`, not a shadow, and check EVERY panel, not just the
    front one. */
 .jrtb-p img{width:100%;height:100%;object-fit:cover;display:block;
-  /* A drag that starts on a photo must not become a browser image-drag. */
+  /* Kept after the drag went: a photo that can be picked up and dragged as an
+     image is a stray browser behaviour on a decorative card either way. */
   -webkit-user-drag:none;user-select:none;pointer-events:none}
 .jrtb-p::after{content:"";position:absolute;inset:0;background:#000;
   opacity:calc(var(--away,0) * 0.62);
@@ -1239,8 +1233,7 @@
         // included. That threw a SyntaxError on every page load once already,
         // while the page still looked perfect. tests/test-about-board.js pins
         // it with a sweep over every inline script.
-        var at=0, onscreen=true, timer=null, dragging=false, moved=0;
-        var slowmo = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var at=0, onscreen=true, timer=null;
 
         // Which slot is card j sitting in, for the current photo index?
         function slotof(j){
@@ -1307,60 +1300,49 @@
 
         function schedule(){
           clearTimeout(timer);
-          // ⚠️ Auto-advance is what prefers-reduced-motion switches off. Drag
-          // and the arrow keys keep working - see the CSS note.
-          if(slowmo||!onscreen||document.hidden||dragging)return;
+          // ⚠️ prefers-reduced-motion is NOT in this gate, deliberately - see
+          // the note above. It drops the glide to 1ms in the CSS instead, so
+          // the photo cuts rather than slides. Switching the timer off here
+          // would leave a reduced-motion visitor on photo 1 for ever, because
+          // there is nothing left for them to press.
+          if(!onscreen||document.hidden)return;
           timer=setTimeout(function(){ go(1); schedule(); },EVERY);
         }
 
-        /* ---- drag ---------------------------------------------------------
-           Pointer Events, not a mouse/touch pair, and setPointerCapture so a
-           drag that leaves the box still tracks instead of sticking. */
-        var scene=host.querySelector('.jrtb-scene'), startx=0;
-        function down(e){
-          dragging=true; moved=0; startx=e.clientX;
-          host.classList.add('dragging');
-          try{ scene.setPointerCapture(e.pointerId); }catch(err){}
-          clearTimeout(timer);
-        }
-        function move(e){
-          if(!dragging)return;
-          var dx=e.clientX-startx;
-          if(Math.abs(dx)>Math.abs(moved)) moved=dx;
-          host.style.setProperty('--dragx',dx+'px');
-        }
-        function up(e){
-          if(!dragging)return;
-          dragging=false; host.classList.remove('dragging');
-          try{ scene.releasePointerCapture(e.pointerId); }catch(err){}
-          var dx=e.clientX-startx;
-          host.style.setProperty('--dragx','0px');
-          /* One card per ~62% of a card width, clamped so a violent throw
-             cannot skip half the set and leave unpointed cards on screen. */
-          var w=scene.getBoundingClientRect().width || 1;
-          var stepsize=Math.max(80, w*0.18);
-          var n=Math.round(-dx/stepsize);
-          if(n>2)n=2; if(n<-2)n=-2;
-          if(n) go(n);
-          schedule();
-        }
-        scene.addEventListener('pointerdown',down);
-        scene.addEventListener('pointermove',move,{passive:true});
-        scene.addEventListener('pointerup',up);
-        scene.addEventListener('pointercancel',up);
-        /* ⚠️ A DRAG MUST NOT END IN A CLICK. Without this, every swipe that
-           finishes over a link activates it, which on a touch device is most
-           of them. Capture phase, so it is stopped before anything sees it. */
-        scene.addEventListener('click',function(e){
-          if(Math.abs(moved)>6){ e.preventDefault(); e.stopPropagation(); moved=0; }
-        },true);
+        /* ⚠️ DRAG WAS HERE AND WAS REMOVED (Jay, 6 Aug 2026: "i don't think we
+           need the ability to grab and drag to the next photo"). It worked -
+           Pointer Events with capture, a clamped throw, and a click suppressed
+           after 6px so a swipe could not activate whatever it finished over.
 
-        /* Keyboard, because a carousel that only answers to dragging is
-           unusable for anyone who does not drag. */
-        scene.addEventListener('keydown',function(e){
-          if(e.key==='ArrowRight'){ go(1); schedule(); e.preventDefault(); }
-          else if(e.key==='ArrowLeft'){ go(-1); schedule(); e.preventDefault(); }
-        });
+           What went with it, and why none of it is missed:
+             - touch-action:pan-y on the scene. It existed ONLY to stop a
+               horizontal drag swallowing vertical scrolling. With no drag
+               handler there is no gesture to steal, and leaving the rule would
+               have restricted horizontal panning for nothing.
+             - cursor:grab / :grabbing and the .dragging class.
+             - --dragx, the live finger offset in the card transform.
+             - `dragging` in the auto-advance gate - there is no longer a state
+               where the timer has to stand aside.
+           Retrieve the lot from the commit that removed this if it comes back;
+           ⚠️ and if it does, touch-action:pan-y comes back WITH it, in the same
+           change. It is the difference between a carousel and a trap for a
+           finger on a tablet, and its absence cannot be seen on a desktop. */
+
+        /* ⚠️ NO MANUAL CONTROL AT ALL (Jay, 6 Aug 2026: "purely automatic").
+           Drag went first, then the arrow keys. Nothing here responds to a
+           visitor; it turns on its own or not at all.
+
+           ⚠️ AND THAT CHANGED WHAT prefers-reduced-motion HAS TO DO. While the
+           arrow keys existed, switching the timer off under `reduce` was right:
+           the automatic motion stopped and anybody who wanted the next photo
+           could still ask for it. With no controls left, that same rule strands
+           a visitor on photo 1 FOR EVER - the section silently becomes a single
+           static image for exactly the people who did not ask for that.
+
+           So the timer keeps running under `reduce` and the CSS drops the
+           glide to 1ms instead: the photo CHANGES, it just does not slide. A
+           hard cut is not motion, and it is what the ring did before this. The
+           preference is about movement, not about content standing still. */
 
         document.addEventListener('visibilitychange',schedule);
         if('IntersectionObserver' in window){
@@ -1837,9 +1819,13 @@
              overlap. The first photo is hard-coded here on purpose - see the
              fail-safe note inside. -->
         <div class="jrtb" role="img" aria-label="Abu Dhabi Harlequins junior rugby in action">
-          <!-- tabindex + a role make the arrow keys reachable. A carousel that
-               only answers to dragging is unusable for anyone who does not drag. -->
-          <div class="jrtb-scene" tabindex="0" role="group" aria-label="Photos, use the left and right arrow keys">
+          <!-- ⚠️ NOT FOCUSABLE, and that is correct now. It carried
+               tabindex="0" while the arrow keys existed; with no controls left,
+               a focusable element with nothing to operate is a dead stop in the
+               tab order. The .jrtb wrapper still carries role="img" and a
+               label, which is what a screen reader needs from a decorative
+               photo panel. -->
+          <div class="jrtb-scene">
             <div class="jrtb-track">
               <!-- Card 1 only. The script builds the other five and places all six
                    in their slots. Until it does, the CSS (.jrtb:not(.ready))

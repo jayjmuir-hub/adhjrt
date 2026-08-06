@@ -4597,7 +4597,7 @@ const FAULTS = [
   {
     name: 'a camelCase assignment goes back into an inline script (encodeCase mangles it, head copy throws)',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'var at=0, onscreen=true, timer=null, dragging=false, moved=0;',
+    apply: () => patch(HOME, 'var at=0, onscreen=true, timer=null;',
       'var at=0, turning=false, timer=null, onScreen=true;'),
     expect: ['no inline script assigns to a camelCase name'],
   },
@@ -4606,7 +4606,7 @@ const FAULTS = [
        so only the positive checks can catch this. That is why they exist. */
     name: 'the screen-visibility flag is renamed and the timer gate is orphaned',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'if(slowmo||!onscreen||document.hidden||dragging)return;', 'if(!document.hidden)return;'),
+    apply: () => patch(HOME, 'if(!onscreen||document.hidden)return;', 'if(!document.hidden)return;'),
     expect: ['it gates the timer'],
   },
   {
@@ -4957,8 +4957,8 @@ const FAULTS = [
     suite: 'test-about-board.js',
     /* ⚠️ ANCHOR REPOINTED — the rule gained touch-action when the ring became
        a carousel, so the whole-rule literal could no longer be injected. */
-    apply: () => patch(HOME, 'perspective:1200px;background:#0C0C0E;\n  touch-action:pan-y',
-      'perspective:1200px;background:#F3F1ED;\n  touch-action:pan-y'),
+    apply: () => patch(HOME, 'perspective:1200px;background:#0C0C0E;\n  outline:none}',
+      'perspective:1200px;background:#F3F1ED;\n  outline:none}'),
     expect: ['the 3D scene is on #0C0C0E', 'same colour as each other'],
   },
   {
@@ -4972,8 +4972,11 @@ const FAULTS = [
     /* ⚠️ ANCHOR REPOINTED with the ring's angle comment, which went when the
        cards stopped being seated on a cylinder. The rule is unchanged: the
        card's own background is the one that gets forgotten. */
-    apply: () => patch(HOME, '  background:#0C0C0E}\n/* A finger has to move the cards NOW',
-      '  background:#F3F1ED}\n/* A finger has to move the cards NOW'),
+    /* ⚠️ ANCHOR REPOINTED AGAIN — the comment it hung off went with the drag.
+       It now hangs off the box-shadow warning, which is the most permanent
+       thing in this file. */
+    apply: () => patch(HOME, '  background:#0C0C0E}\n\n/* ⚠️ DO NOT ADD A box-shadow',
+      '  background:#F3F1ED}\n\n/* ⚠️ DO NOT ADD A box-shadow'),
     expect: ['the card is on #0C0C0E', 'same colour as each other'],
   },
   {
@@ -5628,31 +5631,9 @@ const FAULTS = [
     apply: () => patch(HOME, 'border-radius:18px 0 0 18px;', 'border-radius:18px;'),
     expect: ['right-hand corners are square'],
   },
-  {
-    /* ⚠️ INVISIBLE ON A DESKTOP, AND IT TRAPS A FINGER ON A TABLET. Removing
-       this makes a horizontal drag swallow vertical scrolling, so a visitor
-       who only wanted to scroll past the section cannot get out of it. */
-    name: 'touch-action is dropped and the carousel eats vertical scrolling',
-    suite: 'test-about-board.js',
-    apply: () => patch(HOME, '  touch-action:pan-y;cursor:grab;outline:none}', '  cursor:grab;outline:none}'),
-    expect: ['hands vertical scrolling back to the browser'],
-  },
-  {
-    /* Every swipe that ends over a link would otherwise activate it. */
-    name: 'a drag is allowed to fire the click it finishes on',
-    suite: 'test-about-board.js',
-    apply: () => patch(HOME, "          if(Math.abs(moved)>6){ e.preventDefault(); e.stopPropagation(); moved=0; }",
-      "          if(false){ e.preventDefault(); e.stopPropagation(); moved=0; }"),
-    expect: ['suppresses the click it would otherwise fire'],
-  },
-  {
-    /* A throw that skips further than the set has been pointed leaves blank or
-       stale cards on screen. */
-    name: 'a violent throw is no longer clamped and can skip past pointed cards',
-    suite: 'test-about-board.js',
-    apply: () => patch(HOME, '          if(n>2)n=2; if(n<-2)n=-2;\n', ''),
-    expect: ['clamped rather than skipping the set'],
-  },
+
+
+
   {
     /* ⚠️ THE BUG THIS SUITE ACTUALLY CAUGHT WHILE BEING WRITTEN. slotof()
        folds into -1..CARDS-2, so CARDS-2+1 is a slot that cannot occur and
@@ -5691,36 +5672,64 @@ const FAULTS = [
     /* ⚠️ REDUCED MOTION MUST STOP THE AUTO-ADVANCE AND NOTHING ELSE. This
        removes the gate, so somebody who asked for less motion gets a carousel
        turning on its own every six seconds. */
-    name: 'auto-advance ignores prefers-reduced-motion',
+    /* ⚠️ THE FAULT THIS SECTION EXISTS FOR, AND IT IS THE VERSION THAT WAS
+       CORRECT UNTIL THE ARROW KEYS WENT. Putting reduced motion back in the
+       gate looks like an accessibility improvement and is the opposite: with
+       no controls left, it strands that visitor on photo 1 for ever and the
+       section silently becomes one static image. */
+    name: 'reduced motion is put back in the gate and strands the visitor on photo 1',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '          if(slowmo||!onscreen||document.hidden||dragging)return;',
-      '          if(!onscreen||document.hidden||dragging)return;'),
-    expect: ['auto-advance is switched off under prefers-reduced-motion'],
+    apply: () => patch(HOME, '          if(!onscreen||document.hidden)return;',
+      "          var slowmo = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;\n          if(slowmo||!onscreen||document.hidden)return;"),
+    expect: ['reduced motion is NOT in the auto-advance gate'],
   },
   {
-    /* And the mirror: the keyboard is what makes this usable for anybody who
-       does not drag, and it costs almost nothing to keep. */
-    name: 'the arrow keys are removed and only dragging works',
+    /* And the other half: the cut is what makes keeping the timer defensible.
+       Lose it and a reduced-motion visitor gets the full 600ms glide. */
+    name: 'the glide is no longer cut short under reduced motion',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, "          if(e.key==='ArrowRight'){ go(1); schedule(); e.preventDefault(); }",
-      "          if(false){ go(1); schedule(); e.preventDefault(); }"),
-    expect: ['the arrow keys step it'],
+    apply: () => patch(HOME, '  .jrtb-p{transition-duration:1ms}', '  .jrtb-p{transition-duration:600ms}'),
+    expect: ['drops the glide to a cut instead'],
   },
   {
-    name: 'the scene stops being focusable, so the arrow keys cannot be reached',
+    name: 'the record of why reduced motion keeps advancing is tidied away',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '<div class="jrtb-scene" tabindex="0"', '<div class="jrtb-scene"'),
-    expect: ['the scene is focusable'],
+    apply: () => patch(HOME, 'a visitor on photo 1 FOR EVER', 'a visitor on photo 1 briefly'),
+    expect: ['the reasoning survives'],
   },
   {
-    /* Without this every swipe becomes a browser image-drag with a ghost
-       thumbnail, and the carousel does not move at all. */
-    name: 'the photos become draggable images again and swipes stop working',
+    /* A focusable element with nothing to operate is a dead stop in the tab
+       order — worse than no focus at all. */
+    name: 'the scene becomes focusable again with nothing left to operate',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '  -webkit-user-drag:none;user-select:none;pointer-events:none}',
-      '  user-select:none;pointer-events:none}'),
-    expect: ['photos cannot be dragged as images'],
+    apply: () => patch(HOME, '          <div class="jrtb-scene">', '          <div class="jrtb-scene" tabindex="0">'),
+    expect: ['not focusable, so it is not a dead stop'],
   },
+
+  {
+    /* ⚠️ THE TOMBSTONE, not tidiness. Drag was removed on 6 Aug and
+       touch-action:pan-y went with it — correctly, since there is no gesture
+       left to steal. But if drag ever returns and that rule does not return
+       WITH it, a horizontal drag swallows vertical scrolling and traps a
+       finger inside the box, invisibly on any desktop. The note is the only
+       thing standing between the next person and repeating it. */
+    name: 'the warning about what drag took with it is tidied away',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'IF DRAG EVER COMES BACK, THIS COMES BACK IN THE SAME CHANGE', 'It was removed'),
+    expect: ['note about what drag took with it survives'],
+  },
+  {
+    /* CSS that selects nothing reads as if something still uses it, and the
+       next person keeps it alive on that basis. */
+    name: 'the dead .dragging rule is left behind after the drag goes',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.jrtb-p img{width:100%;height:100%;object-fit:cover;display:block;',
+      '.jrtb.dragging .jrtb-p{transition:none}\n.jrtb-p img{width:100%;height:100%;object-fit:cover;display:block;'),
+    expect: ['nothing is left behind pointing at a drag'],
+  },
+
+
+
   {
     /* Stacked, the box is already full width; a negative right margin there
        pushes it past the screen edge on every phone. */

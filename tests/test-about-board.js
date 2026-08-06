@@ -143,8 +143,8 @@ check('no inline script assigns to a camelCase name (encodeCase would mangle it)
    things is not a test — pair it with one that reads the working code. */
 check('the ring still has a screen-visibility flag', /\bonscreen\b/.test(BOARD_CODE));
 check('…and it gates the timer, so an off-screen carousel stops advancing',
-  /if\(slowmo\|\|!onscreen\|\|document\.hidden\|\|dragging\)return;/.test(BOARD_CODE),
-  'and the same gate is what stops it under prefers-reduced-motion and mid-drag');
+  /if\(!onscreen\|\|document\.hidden\)return;/.test(BOARD_CODE),
+  'costs nothing when nobody is looking at it');
 check('…and an IntersectionObserver sets it',
   /onscreen=es\[0\]\.isIntersecting/.test(BOARD_CODE));
 
@@ -1152,59 +1152,73 @@ check('the open animations move opacity and transform only',
 
 section('the carousel can be driven, and driving it does not break the page');
 
-/* ⚠️⚠️ touch-action:pan-y IS THE SINGLE MOST IMPORTANT LINE IN THE DRAG CODE
-   AND ITS ABSENCE IS INVISIBLE ON A DESKTOP. Without it a horizontal drag
-   swallows the gesture and the page stops scrolling vertically while a finger
-   is inside the carousel — the visitor is trapped in a box they were only
-   trying to scroll past. The About block is hidden at and below 760px, so the
-   people this protects are on TABLETS at 761px+: the exact band nobody tests,
-   and where the stuck-hover bug lived for four days. */
-check('the scene hands vertical scrolling back to the browser',
-  /\.jrtb-scene\{[^}]*touch-action:pan-y/.test(CSSNC),
-  'without this a horizontal drag traps a finger on a tablet');
+/* ⚠️ THE DRAG CHECKS WERE HERE AND WENT WITH THEIR SUBJECT (6 Aug 2026). Jay:
+   "i don't think we need the ability to grab and drag to the next photo".
+   Seven checks came out: touch-action:pan-y, Pointer Events, pointer capture,
+   pointercancel, the click suppressed after a 6px drag, the clamped throw, and
+   the image-drag guard.
 
-/* Pointer Events, and capture — a drag that leaves the box must keep tracking
-   rather than sticking half way. */
-check('drag uses Pointer Events rather than a mouse/touch pair',
-  /addEventListener\('pointerdown'/.test(BOARD_CODE) &&
-  /addEventListener\('pointerup'/.test(BOARD_CODE));
-check('…and captures the pointer, so a drag leaving the box still tracks',
-  /setPointerCapture/.test(BOARD_CODE));
-check('…and pointercancel is handled, or an interrupted drag sticks',
-  /addEventListener\('pointercancel'/.test(BOARD_CODE));
+   ⚠️ THEY ARE DELETED, NOT REPOINTED, AND THAT IS THE RIGHT CALL HERE — the
+   RULES went with the feature rather than outliving it. There is no drag, so
+   there is no gesture to steal, nothing to clamp and no click to suppress. A
+   check kept alive past its subject guards nothing and reads as if something
+   still depends on it.
 
-/* ⚠️ A DRAG MUST NOT END IN A CLICK. Without this every swipe that finishes
-   over a link activates it, which on a touch device is most of them. Capture
-   phase, so it is stopped before anything else sees it. */
-check('a drag past a few pixels suppresses the click it would otherwise fire',
-  /addEventListener\('click',function\(e\)\{[\s\S]{0,140}Math\.abs\(moved\)>\d+[\s\S]{0,80}preventDefault/.test(BOARD_CODE));
-check('…on the capture phase, before anything else sees it',
-  /addEventListener\('click',[\s\S]{0,320}\},true\);/.test(BOARD_CODE));
+   ⚠️ WHAT SURVIVES IS THE ONE THAT WOULD BE MISSED. If drag ever returns,
+   `touch-action:pan-y` returns IN THE SAME CHANGE — without it a horizontal
+   drag swallows vertical scrolling and traps a finger inside the box, and that
+   is invisible on a desktop because the About block is hidden at and below
+   760px. The people it protects are on tablets at 761px+. That instruction is
+   written at both the CSS and the script, and this note is the third copy. */
 
-/* ⚠️ A throw must not skip so far that cards land on slots whose pictures were
-   never pointed. Clamped both ways. */
-check('a violent throw is clamped rather than skipping the set',
-  /if\(n>2\)n=2; if\(n<-2\)n=-2;/.test(BOARD_CODE));
+section('purely automatic — and what that costs, and how it is paid');
 
-/* Keyboard, because a carousel that only answers to dragging is unusable for
-   anyone who does not drag — and it costs almost nothing. */
-check('the arrow keys step it', /e\.key==='ArrowRight'/.test(BOARD_CODE) && /e\.key==='ArrowLeft'/.test(BOARD_CODE));
-check('…and the scene is focusable so they can reach it',
-  /class="jrtb-scene" tabindex="0"/.test(PAGE));
-check('…with a visible focus ring, or keyboard users cannot see where they are',
-  /\.jrtb-scene:focus-visible\{/.test(CSSNC));
+/* ⚠️ NO MANUAL CONTROL AT ALL (Jay, 6 Aug 2026: "purely automatic"). Drag went
+   first, then the arrow keys. Nothing in this section responds to a visitor. */
+check('nothing is left listening for a key that does nothing',
+  !/ArrowRight/.test(BOARD_CODE) && !/ArrowLeft/.test(BOARD_CODE));
+check('…and the scene is not focusable, so it is not a dead stop in the tab order',
+  !/class="jrtb-scene"[^>]*tabindex/.test(PAGE),
+  'a focusable element with nothing to operate is worse than no focus at all');
+check('…while the wrapper still carries a role and a label for a screen reader',
+  /class="jrtb"[^>]*role="img"[^>]*aria-label=/.test(PAGE),
+  'the photos are decorative, but they still have to announce as something');
 
-/* ⚠️ REDUCED MOTION SPLITS THE TWO KINDS OF MOVEMENT. Auto-advance is motion
-   the visitor did not ask for and it stops. Dragging and the arrow keys are
-   motion they are causing on purpose, and freezing those would just look
-   broken. The gate is one condition, so both halves are asserted here. */
-check('auto-advance is switched off under prefers-reduced-motion',
-  /var slowmo = window\.matchMedia && window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches;/.test(BOARD_CODE)
-  && /if\(slowmo\|\|/.test(BOARD_CODE));
-check('…but the arrow keys and drag still call go(), so it can still be driven',
-  /ArrowRight'\)\{ go\(1\)/.test(BOARD_CODE) && /if\(n\) go\(n\);/.test(BOARD_CODE));
+/* ⚠️⚠️ THE CONSEQUENCE THAT HAD TO BE FIXED, NOT SHIPPED. While the arrow keys
+   existed, switching the timer off under prefers-reduced-motion was right: the
+   automatic movement stopped and anyone who wanted the next photo could ask
+   for it. With no controls left, that SAME rule strands a visitor on photo 1
+   for ever — the section silently becomes one static image, for exactly the
+   people who never asked for that.
 
-/* An image the browser treats as draggable turns every swipe into a
+   So the timer keeps running under `reduce` and the CSS drops the glide to 1ms
+   instead: the photo CHANGES, it just does not slide. A hard cut is not
+   motion. The preference is about movement, not about content standing still —
+   and this is what the ring did before any of it. */
+check('reduced motion is NOT in the auto-advance gate',
+  /if\(!onscreen\|\|document\.hidden\)return;/.test(BOARD_CODE)
+  && !/slowmo/.test(BOARD_CODE),
+  'switching the timer off would strand a reduced-motion visitor on photo 1');
+check('…it drops the glide to a cut instead',
+  /@media \(prefers-reduced-motion:reduce\)\{[\s\S]{0,200}\.jrtb-p\{transition-duration:1ms\}/.test(CSSNC),
+  'the photo still changes; it just does not slide');
+/* The drag is gone; the tombstone saying what must come back WITH it if it
+   ever returns is not. touch-action:pan-y is the part that would be forgotten,
+   and its absence cannot be seen on a desktop. */
+check('the note about what drag took with it survives',
+  /IF DRAG EVER COMES BACK, THIS COMES BACK IN THE SAME CHANGE/.test(PAGE),
+  'touch-action:pan-y is the part that would be forgotten');
+
+/* CSS that selects nothing reads as if something still uses it, and the next
+   person keeps it alive on that basis. */
+check('nothing is left behind pointing at a drag that no longer exists',
+  !/\.jrtb\.dragging/.test(CSSNC) && !/var\(--dragx/.test(CSSNC));
+
+check('…and the reasoning survives, because this is the second time it flipped',
+  /strands\s+a visitor on photo 1 FOR EVER/.test(PAGE.replace(/\s+/g, ' ')),
+  'a decision recorded without its argument gets re-argued from scratch');
+
+/* An image the browser treats as draggable is a stray behaviour on a
    ghost-image drag instead of moving the carousel. */
 check('the photos cannot be dragged as images',
   /\.jrtb-p img\{[^}]*user-drag:none/.test(CSSNC));

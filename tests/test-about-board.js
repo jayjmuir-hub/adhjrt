@@ -890,6 +890,127 @@ check('the band rule sits BELOW the base .hdr-nav a rule',
   'above it, the base padding wins and the band silently does nothing');
 
 /* ------------------------------------------------------------------------ */
+/* =========================================================================
+   The header condense loop, the bat's new cadence, and the two drop-downs
+   (Compare branch, 6 Aug 2026)
+   ========================================================================= */
+
+section('the condensing bar cannot flip itself back and forth');
+
+/* ⚠️⚠️ THIS WAS A LIVE BUG ON PRODUCTION AND IT WAS A FEEDBACK LOOP, not a
+   rendering glitch. Jay: "if you scroll down just a tiny bit and stop, the top
+   bar starts freaking out like its going back and forth between full size and
+   smaller size super fast."
+
+   Measured before the fix: park the page at 95px, touch nothing — 92 class
+   flips in 2 seconds, with scrollY moving ON ITS OWN over a 19px range.
+
+   The loop: cross the threshold -> `hdr-tight` on -> the bar is 18px shorter ->
+   the content above the viewport shrinks -> the browser's SCROLL ANCHORING
+   pulls scrollY back to hold your view still -> you are now under the
+   threshold -> class off -> bar grows -> anchoring pushes you back up ->
+   repeat, once per frame.
+
+   The fix is two thresholds with a gap wider than the height change. */
+
+const HDRJS = stripJsComments(PAGE);
+const tightOn = Number((HDRJS.match(/var TIGHT_ON\s*=\s*(\d+)/) || [])[1]);
+const tightOff = Number((HDRJS.match(/var TIGHT_OFF\s*=\s*(\d+)/) || [])[1]);
+check('there are TWO thresholds, not one', !!tightOn && !!tightOff, `${tightOn} / ${tightOff}`);
+check('the single-threshold constant is gone', !/TIGHT_AT/.test(HDRJS),
+  'a lone threshold is the bug, not a style preference');
+
+/* ⚠️ MEASURED, NOT CHOSEN. `.hdr-row` is 68px full and 50px condensed — 18px,
+   and 17-18px at every width from 1440 down to 761. Below 760 the condensed
+   rules do not apply at all, which is why phones never saw this. The gap has
+   to be wider than that or the loop comes straight back, so this is asserted
+   against the measurement rather than against the number somebody typed. */
+const HEADER_HEIGHT_DELTA_PX = 18;
+check('the gap is wider than the height change that caused the loop',
+  (tightOn - tightOff) > HEADER_HEIGHT_DELTA_PX,
+  `gap ${tightOn - tightOff}px against an ${HEADER_HEIGHT_DELTA_PX}px delta`);
+check('…and it condenses on the way down, not up', tightOn > tightOff);
+
+/* The constants alone prove nothing if the condition ignores one of them —
+   which is exactly what a half-applied fix looks like. */
+check('the condition actually reads BOTH thresholds',
+  /tight \? \(y > TIGHT_OFF\) : \(y > TIGHT_ON\)/.test(HDRJS),
+  'sticky once condensed, and only expands well back up');
+check('…and the first pass decides from scratch rather than inheriting',
+  /tight === null\) \? \(y > TIGHT_ON\)/.test(HDRJS));
+
+section('the bat flies once every 30 seconds, and rests in between');
+
+/* ⚠️ ALL THREE ANIMATIONS OR NONE. The flight, the wing flap and the
+   flat/real crossfade are three separate animations on three elements driven
+   only by having the same duration. Change one and the wings flap while the
+   bat is parked on the crest, or the photographic bat fades in over nothing. */
+const batDur = ['batfly', 'batflap', 'batmorph'].map((n) =>
+  (HDRCSS.match(new RegExp('animation:' + n + ' (\\d+)s')) || [])[1]);
+check('all three bat animations declare a duration', batDur.every(Boolean), batDur.join(' / '));
+eq('the flight and the wing flap run on the same clock', batDur[0], batDur[1]);
+eq('…and so does the flat/real crossfade', batDur[0], batDur[2]);
+check('the cycle is long enough to be occasional', Number(batDur[0]) >= 30,
+  `${batDur[0]}s — it was 13s with TWO flights in it, i.e. one every ~6s`);
+
+/* ⚠️ LONGER IS NOT THE SAME AS LESS OFTEN. Stretching the same keyframes over
+   30s gives a bat drifting in slow motion — a different animation, not a rarer
+   one. The flight has to FINISH early and leave the rest of the cycle empty,
+   so this reads the last keyframe before 100% and requires real dead air. */
+const flyBody = (HDRCSS.match(/@keyframes batfly\{([\s\S]*?)\}\n/) || [''])[1] || '';
+/* ⚠️ THE STOPS ONLY — a percentage followed by `{`. The first version of this
+   matched any `NN%` and picked up `translate(30%,80%)` out of a keyframe's
+   VALUE, so it reported the flight ending at 80% when the real last stop is
+   18.633%. It failed loudly, which is the only reason it was caught; the same
+   sloppiness in an absence check would have passed silently. */
+const flyStops = [...flyBody.matchAll(/(?:^|\})\s*(\d+(?:\.\d+)?)%\{/g)].map((m) => parseFloat(m[1]));
+const lastMove = Math.max(...flyStops.filter((x) => x < 100));
+check('the flight keyframes were found', flyStops.length > 5, `${flyStops.length} stops`);
+check('the bat is home well before the cycle ends', lastMove < 25,
+  `last movement at ${lastMove}% — the remaining ${Math.round(100 - lastMove)}% is rest`);
+
+section('both drop-downs open with a movement');
+
+/* ⚠️ ANIMATIONS, NOT TRANSITIONS, AND IT IS FORCED — this is the check worth
+   having. The desktop panel is inside an <sc-if>, so it is MOUNTED on open: a
+   transition needs a from-state from a previous frame and a just-inserted
+   element has none, so it silently never runs. The phone panel goes
+   display:none -> display:flex, and `display` is not animatable at all.
+   Reaching for a transition does nothing in BOTH cases and looks exactly like
+   "too subtle to see". */
+check('the desktop panel has an open animation', /@keyframes hdrMenuIn\{/.test(HDRCSS));
+check('the shared panel/stagger animation exists', /@keyframes hdrPanelIn\{/.test(HDRCSS));
+check('the desktop panel carries the class that drives it',
+  /class="hdr-menu-panel"/.test(PAGE));
+check('…and the rule animates rather than transitions',
+  /\.hdr-menu-panel\{animation:hdrMenuIn/.test(HDRCSS),
+  'a transition on a just-mounted element does not run');
+check('the phone panel animates too', /animation:hdrPanelIn[^;}]*\}?/.test(HDRCSS)
+  && /\[data-nav-open="true"\] \.hdr-nav\{[^}]*animation:hdrPanelIn/.test(HDRCSS));
+
+/* ⚠️ SCOPED TO THE OPEN STATE. On `.hdr-nav` itself the animation would also
+   run at 761px+ every time the engine re-renders the header — which it does
+   after first paint, more than once — so a desktop that never opens this panel
+   would get a flickering nav. */
+check('the phone animation is scoped to the OPEN attribute, not to .hdr-nav',
+  !/^\s*\.hdr-nav\{[^}]*animation:hdrPanelIn/m.test(HDRCSS));
+
+/* ⚠️ Both use `both`, which holds the FROM state before the animation starts.
+   Killing the animation for reduced motion without resetting opacity and
+   transform leaves the panel invisible and shifted — a menu that does not open
+   is worse than a menu that opens plainly. */
+const RMB = (PAGE.match(/@media \(prefers-reduced-motion:reduce\)\{[\s\S]*?\n  \}/) || [''])[0];
+check('reduced motion still lets the menus appear',
+  /\.hdr-menu-panel[\s\S]{0,200}opacity:1!important;transform:none!important/.test(RMB),
+  'animation:none alone would strand them at the from-state');
+
+/* Nothing here may touch layout: the sticky header changing height under its
+   own scroll handler is the loop fixed at the top of this block. */
+check('the open animations move opacity and transform only',
+  /@keyframes hdrMenuIn\{from\{opacity:0;transform:[^}]*\}to\{opacity:1;transform:none\}\}/.test(HDRCSS)
+  && /@keyframes hdrPanelIn\{from\{opacity:0;transform:[^}]*\}to\{opacity:1;transform:none\}\}/.test(HDRCSS),
+  'animating height would move the header and reopen the feedback loop');
+
 section('the tournament rules page');
 
 const RULES = readRepo('rules.html').replace(/\r\n/g, '\n');

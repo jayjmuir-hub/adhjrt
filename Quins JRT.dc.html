@@ -44,7 +44,38 @@
      Fails safe: if any of it throws, the header stays at its resting size and
      no section is marked current. Nothing else on the page depends on it. */
   (function(){
-    var TIGHT_AT = 90;    // px scrolled before the bar condenses
+    /* ⚠️⚠️ TWO THRESHOLDS, NOT ONE, AND THAT IS A BUG FIX (Jay, 6 Aug 2026:
+       "if you scroll down just a tiny bit and stop, the top bar starts freaking
+       out like its going back and forth between full size and smaller size
+       super fast").
+
+       IT WAS A FEEDBACK LOOP, NOT A RENDERING GLITCH, and it was live on
+       production. Measured: park the page at 95px and touch nothing —
+       **92 class flips in 2 seconds**, with `scrollY` moving ON ITS OWN over a
+       19px range (76..95).
+
+       The loop: cross 90 -> `hdr-tight` goes on -> the bar gets 18px shorter ->
+       the content above the viewport shrinks by 18px -> the browser's SCROLL
+       ANCHORING pulls scrollY back down to keep what you are looking at still
+       -> you are now under 90 -> the class comes off -> the bar grows 18px ->
+       anchoring pushes you back up -> repeat, once per frame, for ever.
+
+       Scroll anchoring is doing its job. The bug is a single threshold sitting
+       inside the range the header's own height change moves you through, so
+       the condition flips itself.
+
+       ⚠️ THE GAP IS SIZED OFF THE MEASURED HEIGHT DELTA, NOT PICKED. `.hdr-row`
+       is 68px full and 50px condensed — **18px, and 17-18px at every width from
+       1440 down to 761** (below 760 the condensed rules do not apply at all and
+       the delta is 0, which is why phones never saw this). 90 -> 56 is a 34px
+       gap, comfortably wider than 18 with room for a browser that rounds
+       differently. **If the header's padding or font sizes change, re-measure
+       this** — a gap narrower than the delta brings the whole thing back.
+
+       Going ON and OFF at different points is also just better behaviour: it
+       stops the bar twitching when somebody rests near the boundary. */
+    var TIGHT_ON  = 90;   // px scrolled before the bar condenses
+    var TIGHT_OFF = 56;   // and it only expands again below THIS - see above
     var SPY_LINE = 130;   // a section counts as "current" once its top passes this
     var SECTIONS = ['about','format','schedule','results','venue','sponsors'];
     var ticking = false, tight = null, cursec = null;
@@ -57,7 +88,11 @@
         /* Only touch the DOM when the answer actually changes. A scroll fires
            this continuously and classList.toggle on every frame is how a
            smooth page starts to feel expensive. */
-        var wanttight = y > TIGHT_AT;
+        /* Hysteresis: once condensed it STAYS condensed until you are well
+           back up. `tight` starting as null is what makes the first pass
+           decide from scratch rather than inheriting a state it never had. */
+        var wanttight = (tight === null) ? (y > TIGHT_ON)
+                      : (tight ? (y > TIGHT_OFF) : (y > TIGHT_ON));
         if(wanttight !== tight){
           tight = wanttight;
           document.documentElement.classList.toggle('hdr-tight', wanttight);
@@ -162,6 +197,21 @@
      own". That was false, and it is what put a crest with a hole in it live on
      5 Aug. With the bat back, the shield is correct again.)
 
+     ⚠️ ONE FLIGHT EVERY 30 SECONDS (Jay, 6 Aug 2026: "lets have the bat fly
+     around less often"). It was a 13s cycle carrying TWO flights — a bat
+     crossing the screen roughly every 6 seconds, which reads as a loop rather
+     than a surprise. The cycle is 30s now and holds ONE flight: 5.59s of
+     flying, then 24.4s of the crest sitting still.
+
+     ⚠️ THE FLIGHT ITSELF IS NOT SLOWED DOWN, and that is the point. Stretching
+     the same keyframes over 30s would have given a bat drifting in slow motion,
+     which is a different animation, not a less frequent one. Every percentage
+     below is the ORIGINAL 13s timing multiplied by 13/30 so the bat moves at
+     exactly the speed it always did; the extra time is dead air at the end.
+     The numbers were COMPUTED, not hand-edited — there are ~40 of them across
+     three keyframe sets and they have to stay in step with each other or the
+     wings flap while the bat is parked.
+
      ⚠️ .cstage IS NOT DECORATION. It clips the bat's flight path. The batfly
      keyframes carry the bat up to 410% of its own width to the right and 180%
      down, which lands well outside the photo box — without an overflow:hidden
@@ -177,19 +227,27 @@
   .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
   .crest-anim .cbase{z-index:1}
   .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}
-  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 13s cubic-bezier(.45,.05,.4,1) .5s infinite;animation-play-state:paused}
-  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 13s ease-in-out .5s infinite;animation-play-state:paused}
+  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s infinite;animation-play-state:paused}
+  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 30s ease-in-out .5s infinite;animation-play-state:paused}
   .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
-  @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}7%{transform:scaleX(1) scaleY(1)}9%{transform:scaleX(1) scaleY(1)}12.2%{transform:scaleX(.72) scaleY(1.16)}15.4%{transform:scaleX(1) scaleY(1)}18.6%{transform:scaleX(.72) scaleY(1.16)}21.8%{transform:scaleX(1) scaleY(1)}25%{transform:scaleX(.72) scaleY(1.16)}28.2%{transform:scaleX(1) scaleY(1)}31.4%{transform:scaleX(.72) scaleY(1.16)}34.6%{transform:scaleX(1) scaleY(1)}37.8%{transform:scaleX(.72) scaleY(1.16)}41%{transform:scaleX(1) scaleY(1)}44%{transform:scaleX(1) scaleY(1)}57%{transform:scaleX(1) scaleY(1)}59%{transform:scaleX(1) scaleY(1)}62.2%{transform:scaleX(.72) scaleY(1.16)}65.4%{transform:scaleX(1) scaleY(1)}68.6%{transform:scaleX(.72) scaleY(1.16)}71.8%{transform:scaleX(1) scaleY(1)}75%{transform:scaleX(.72) scaleY(1.16)}78.2%{transform:scaleX(1) scaleY(1)}81.4%{transform:scaleX(.72) scaleY(1.16)}84.6%{transform:scaleX(1) scaleY(1)}87.8%{transform:scaleX(.72) scaleY(1.16)}94%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
-  @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}7%{transform:translate(0%,0%) rotate(0deg) scale(1)}9.16%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}12.76%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}18.88%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}25%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}29.68%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}34%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}37.96%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}40.84%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}43%{transform:translate(0%,0%) rotate(0deg) scale(1)}57%{transform:translate(0%,0%) rotate(0deg) scale(1)}59.16%{transform:translate(4%,6%) rotate(2deg) scale(1.01)}62.76%{transform:translate(40%,90%) rotate(10deg) scale(1.02)}68.88%{transform:translate(170%,150%) rotate(6deg) scale(0.95)}75%{transform:translate(330%,120%) rotate(-14deg) scale(0.9)}79.68%{transform:translate(410%,20%) rotate(-10deg) scale(0.88)}84%{transform:translate(320%,-20%) rotate(8deg) scale(0.9)}87.96%{transform:translate(140%,-18%) rotate(10deg) scale(0.93)}90.84%{transform:translate(26%,-6%) rotate(5deg) scale(0.97)}93%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
+  @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}3.033%{transform:scaleX(1) scaleY(1)}3.9%{transform:scaleX(1) scaleY(1)}5.287%{transform:scaleX(.72) scaleY(1.16)}6.673%{transform:scaleX(1) scaleY(1)}8.06%{transform:scaleX(.72) scaleY(1.16)}9.447%{transform:scaleX(1) scaleY(1)}10.833%{transform:scaleX(.72) scaleY(1.16)}12.22%{transform:scaleX(1) scaleY(1)}13.607%{transform:scaleX(.72) scaleY(1.16)}14.993%{transform:scaleX(1) scaleY(1)}16.38%{transform:scaleX(.72) scaleY(1.16)}17.767%{transform:scaleX(1) scaleY(1)}19.067%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
+  @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}3.033%{transform:translate(0%,0%) rotate(0deg) scale(1)}3.969%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}5.529%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}8.181%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}10.833%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}12.861%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}14.733%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}16.449%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}17.697%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}18.633%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
   .crest-anim .cfl img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .crest-anim .breal{opacity:0;animation:batmorph 13s linear .5s infinite;animation-play-state:paused}
+  .crest-anim .breal{opacity:0;animation:batmorph 30s linear .5s infinite;animation-play-state:paused}
   .crest-anim.play .breal{animation-play-state:running}
-  @keyframes batmorph{0%{opacity:0}7%{opacity:0}11%{opacity:1}41%{opacity:1}44%{opacity:0}56%{opacity:0}60%{opacity:1}90%{opacity:1}93%{opacity:0}100%{opacity:0}}
+  @keyframes batmorph{0%{opacity:0}3.033%{opacity:0}4.767%{opacity:1}17.767%{opacity:1}19.067%{opacity:0}100%{opacity:0}}
   @media (prefers-reduced-motion:reduce){
     /* ⚠️ The bat stops AND hides. Not just `animation:none` — parked mid-flight
        it would sit somewhere out over the photos looking like a stray image. */
     .crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}
+    /* ⚠️ The menus must still APPEAR. `animation:none` on a rule using
+       `both` would leave the panel stuck at its from-state — invisible and
+       shifted — so the opacity and transform are reset explicitly. A menu that
+       does not open is a worse outcome than a menu that opens without flair. */
+    .hdr-menu-panel,.hdr-menu-panel > *,
+    .hdr-row[data-nav-open="true"] .hdr-nav,
+    .hdr-row[data-nav-open="true"] .hdr-nav > *{
+      animation:none!important;opacity:1!important;transform:none!important}
     /* The hero shards and hover sweeps stop too — the crest already honoured
        this preference; the rest of the page now extends the same courtesy
        (design audit, Aug 2026). Scroll reveals land instantly. */
@@ -397,6 +455,46 @@
      Only two things are added here, both because .reg-btn was written for a
      <button> and this is an <a>: kill the underline, and stop the arrow
      inheriting the label's letter-spacing gap on the right. */
+  /* ===== The two drop-downs open with a movement (Jay, 6 Aug 2026: "lets
+     animate the drop down menu"). Both of them, so the header has one
+     behaviour rather than two that nearly match.
+
+     ⚠️ THESE ARE ANIMATIONS, NOT TRANSITIONS, AND THAT IS FORCED.
+       - The desktop Menu panel is inside an <sc-if>, so it is MOUNTED when it
+         opens. A transition needs a from-state that existed in a previous
+         frame; an element that has just been inserted has no previous frame,
+         so a transition simply does not run. An animation on mount does.
+       - The phone panel is display:none -> display:flex. `display` is not an
+         animatable property, so a transition on it is a no-op no matter what
+         else is transitioning alongside it.
+     Reaching for a transition first is the obvious move and it silently does
+     nothing in BOTH cases, which looks exactly like "the animation is too
+     subtle to see".
+
+     ⚠️ NO CLOSING ANIMATION, deliberately. Both panels vanish from the DOM (or
+     from display) the instant their state flips, so there is nothing left to
+     animate out — faking it means keeping a closed menu mounted and fighting
+     the click-away handler for it. An instant close is also what a menu should
+     do: you have already decided.
+
+     ⚠️ transform + opacity ONLY. Animating height or margin here would move
+     the sticky header's own height mid-animation, and the header's height
+     changing under its own scroll handler is exactly the feedback loop fixed
+     above. Keep it off the layout. */
+  @keyframes hdrMenuIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+  @keyframes hdrPanelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .hdr-menu-panel{animation:hdrMenuIn .18s cubic-bezier(.2,.8,.2,1) both;transform-origin:top right}
+  /* The links arrive a beat after the panel, so it reads as a panel opening
+     rather than a block appearing. Staggered by nth-child; the delays are
+     small enough that the whole thing is done inside 300ms. */
+  .hdr-menu-panel > *{animation:hdrPanelIn .2s ease-out both}
+  .hdr-menu-panel > *:nth-child(1){animation-delay:.03s}
+  .hdr-menu-panel > *:nth-child(2){animation-delay:.045s}
+  .hdr-menu-panel > *:nth-child(3){animation-delay:.06s}
+  .hdr-menu-panel > *:nth-child(4){animation-delay:.075s}
+  .hdr-menu-panel > *:nth-child(5){animation-delay:.09s}
+  .hdr-menu-panel > *:nth-child(6){animation-delay:.105s}
+  .hdr-menu-panel > *:nth-child(n+7){animation-delay:.12s}
   .rules-btn{text-decoration:none}
   .rules-btn:hover{text-decoration:none}
   .rules-btn .reg-btn-label{display:inline-flex;align-items:center}
@@ -545,10 +643,22 @@
        a shrink-wrapped flex item. */
     .hdr-row[data-nav-open="true"]{flex-wrap:wrap!important}
     .hdr-row[data-nav-open="true"] .hdr-right{width:100%!important}
+    /* ⚠️ The animation is on the OPEN rule, not on .hdr-nav itself. On
+       .hdr-nav it would also run at 761px+ every time the engine re-renders
+       the header, which it does after first paint more than once — the nav
+       would flicker on a desktop that never opens this panel at all. */
     .hdr-row[data-nav-open="true"] .hdr-nav{
       display:flex!important;flex-direction:column!important;align-items:stretch!important;
       width:100%!important;gap:2px!important;margin-top:10px!important;
-      border-top:1px solid rgba(255,255,255,0.12)!important;padding-top:10px!important}
+      border-top:1px solid rgba(255,255,255,0.12)!important;padding-top:10px!important;
+      animation:hdrPanelIn .2s cubic-bezier(.2,.8,.2,1) both}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *{animation:hdrPanelIn .22s ease-out both}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(1){animation-delay:.04s}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(2){animation-delay:.06s}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(3){animation-delay:.08s}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(4){animation-delay:.1s}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(5){animation-delay:.12s}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(n+6){animation-delay:.14s}
     .hdr-row[data-nav-open="true"] .hdr-nav a{font-size:16px!important;padding:11px 4px!important;display:block!important}
     /* The two Register buttons sit inside the nav; let them fill the panel. */
     .hdr-row[data-nav-open="true"] .hdr-nav > div{width:100%!important;margin-top:6px!important}
@@ -1190,7 +1300,7 @@
                position:fixed backdrop inside it would cover only the header
                strip — measured, not guessed (a hero click sailed past it). -->
           <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
-            <div onClick="{{ closeMenu }}" style="position:absolute;right:0;top:calc(100% + 12px);background:rgba(12,12,14,0.97);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:8px;min-width:240px;box-shadow:0 18px 40px rgba(0,0,0,0.55)">
+            <div onClick="{{ closeMenu }}" class="hdr-menu-panel" style="position:absolute;right:0;top:calc(100% + 12px);background:rgba(12,12,14,0.97);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:8px;min-width:240px;box-shadow:0 18px 40px rgba(0,0,0,0.55)">
               <a href="#about" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">About</a>
               <a href="#format" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Format</a>
               <a href="#schedule" style="display:block;padding:9px 12px;border-radius:8px;color:#EDEDED;font-weight:600;font-size:14px" style-hover="background:rgba(255,255,255,0.08)">Fixtures</a>

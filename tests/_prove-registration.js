@@ -5412,6 +5412,101 @@ const FAULTS = [
     expect: ['NOT the Register-player green'],
   },
 
+  /* ---- the condense loop, the bat cadence, the two drop-downs ------------ */
+
+  {
+    /* ⚠️ THE BUG ITSELF, PUT BACK. One threshold instead of two is the whole
+       fault: the bar's own 18px height change then carries scrollY back across
+       it, via the browser's scroll anchoring, once per frame for ever. */
+    name: 'the condensing bar goes back to a single threshold and self-oscillates',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var TIGHT_OFF = 56;', 'var TIGHT_OFF = 90;'),
+    expect: ['gap is wider than the height change'],
+  },
+  {
+    /* ⚠️ THE HALF FIX, which is the one somebody would actually write. Both
+       constants stay, so a check that merely counted them passes — but the
+       condition only reads one, so the loop is entirely back. */
+    name: 'both thresholds are declared but the condition only uses one',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var wanttight = (tight === null) ? (y > TIGHT_ON)\n                      : (tight ? (y > TIGHT_OFF) : (y > TIGHT_ON));',
+      'var wanttight = y > TIGHT_ON;'),
+    expect: ['condition actually reads BOTH thresholds'],
+  },
+  {
+    /* A gap narrower than the 18px the header actually moves. Still two
+       thresholds, still hysteresis-shaped, still broken. */
+    name: 'the hysteresis gap is narrowed below the header height change',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var TIGHT_OFF = 56;', 'var TIGHT_OFF = 78;'),
+    expect: ['gap is wider than the height change'],
+  },
+  {
+    /* ⚠️ THE DRIFT FAULT for the bat, and why the durations are compared to
+       each other rather than to 30. One animation left behind means the wings
+       flap while the bat is parked on the crest. */
+    name: 'the wing flap is left on the old clock while the flight slows down',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'animation:batflap 30s', 'animation:batflap 13s'),
+    expect: ['flight and the wing flap run on the same clock'],
+  },
+  {
+    /* ⚠️ "LONGER" IS NOT "LESS OFTEN". This stretches the ORIGINAL 13s
+       keyframes over 30s: the duration check passes, all three agree, and the
+       bat drifts across the screen in slow motion for the whole cycle. Only
+       the dead-air check catches it. */
+    name: 'the bat is slowed to a crawl instead of flying less often',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '18.633%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}',
+      '43%{transform:translate(0%,0%) rotate(0deg) scale(1)}80%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}100%{transform:translate(0,0) rotate(0deg) scale(1)}'),
+    expect: ['home well before the cycle ends'],
+  },
+  {
+    /* The obvious wrong instinct, and it renders as nothing at all. */
+    name: 'the desktop menu is given a transition instead of an animation',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .18s cubic-bezier(.2,.8,.2,1) both;transform-origin:top right}',
+      '.hdr-menu-panel{transition:opacity .18s ease,transform .18s ease;transform-origin:top right}'),
+    expect: ['animates rather than transitions'],
+  },
+  {
+    /* The class comes off the markup and the CSS is orphaned - nothing errors,
+       the menu just opens flat again. */
+    name: 'the desktop panel loses the class that drives its animation',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<div onClick="{{ closeMenu }}" class="hdr-menu-panel"', '<div onClick="{{ closeMenu }}"'),
+    expect: ['carries the class that drives it'],
+  },
+  {
+    /* ⚠️ THE ONE THAT HURTS DESKTOP. Moving the animation off the open-state
+       selector onto .hdr-nav makes the nav re-run it every time the engine
+       re-renders the header - which it does after first paint, more than once
+       - so a desktop that never opens this panel gets a flickering nav. */
+    name: 'the phone panel animation is moved onto .hdr-nav and fires on every re-render',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  .hdr-nav{gap:2px!important}', '  .hdr-nav{gap:2px!important;animation:hdrPanelIn .2s ease-out both}'),
+    expect: ['scoped to the OPEN attribute'],
+  },
+  {
+    /* ⚠️ `both` holds the FROM state. Killing the animation without resetting
+       opacity and transform leaves the panel invisible and shifted - a menu
+       that never opens, for exactly the people who asked for less motion. */
+    name: 'reduced motion strands the menus at their from-state',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '      animation:none!important;opacity:1!important;transform:none!important}',
+      '      animation:none!important}'),
+    expect: ['reduced motion still lets the menus appear'],
+  },
+  {
+    /* Animating height would move the sticky header mid-animation - which is
+       the feedback loop this same commit fixed, arriving by another door. */
+    name: 'the open animation is changed to move height instead of transform',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}',
+      '@keyframes hdrPanelIn{from{opacity:0;height:0}to{opacity:1;height:auto}}'),
+    expect: ['opacity and transform only'],
+  },
+
   {
     /* ⚠️ THE COVER FAULT. Section 5 asserts the FOUR earlier corrections that
        had nothing holding them in place. This re-introduces the dead preview

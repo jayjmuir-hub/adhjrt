@@ -1089,6 +1089,233 @@ const REG_TEAMS = [
   eq('a regenerated draw carries the derived names too', (saved && saved.teamNames || {}).DS1, 'Dubai Sharks 1');
 }
 
+/* ------------------------------------------------------------------------
+   ⚠️ SWITCHING AGE GROUP WHILE A WRITE IS IN FLIGHT — 6 Aug 2026.
+
+   Only an ORGANISER sees the age-group switcher, and it is a plain <select>
+   with no `disabled` binding, so it stays live while the Draw tab is busy.
+   Every write path on this tab — saveDraw(), doPublish(), doUnpublish() —
+   captures `ageId` out of state, awaits a network call, and then calls
+   loadDraw(thatId) to take the server's copy as the new clean baseline.
+
+   ⚠️⚠️ THE BUG THAT WAS FOUND HERE, AND IT WAS FOUND BY AUDIT, NOT BY A
+   REPORT. loadDraw() opened with an UNCONDITIONAL
+
+       this.setState({ draw: null, drawDirty: false });
+
+   and only checked `this.state.ageId !== agId` AFTER its fetch resolved. So a
+   reload aimed at the group the organiser had already LEFT still blanked the
+   draw they were now looking at and — far worse — cleared `drawDirty` on it.
+   Unsaved edits to the new group were discarded with no confirm and no
+   message, and because the dirty flag was gone, the NEXT switch would not
+   warn either. Silent, and compounding.
+
+   Driven end to end below: publish U14B, flip to U16B while the weekend clash
+   check is still running, start editing, then confirm. Before the fix that
+   sequence ended `drawDirty:false, draw:null`.
+
+   ⚠️ PUBLISHING THE GROUP THE BUTTON WAS PRESSED ON IS CORRECT AND IS
+   ASSERTED, not treated as the bug. The confirm names that group in its own
+   text ("Publish these fixtures for U14 Boys?"), so honouring it is the
+   honest reading; the damage was never the write, it was the reload after it.
+
+   The fix is ONE entry guard in loadDraw() rather than three checks in three
+   callers — a general guard beats three copies of it, and saveDraw() is the
+   one that would have bitten first, being the write an organiser runs most. */
+section('a reload for a group the organiser has already left cannot touch the one they are on');
+
+/* An organiser (age group '*') with two groups to flip between, and a gate so
+   the in-flight network call can be held open for exactly as long as the test
+   needs. `tick` drains the microtask queue the component runs on. */
+const tick = () => new Promise((r) => setImmediate(r));
+/* ⚠️ A SWITCH IS NOT ONE TICK. switchAge() -> load() -> loadDraw() is a chain
+   of awaits, and loadDraw()'s own first act is to clear drawDirty for the group
+   being ENTERED — which is correct. A test that marks the new group dirty after
+   a single tick is racing that legitimate clear and blaming the code for its
+   own impatience. Drain the chain, then edit. */
+const settle = async (n = 8) => { for (let i = 0; i < n; i += 1) await tick(); };
+
+/* ⚠️ ANSWER THE MODAL WITHOUT ASSUMING THERE IS ONE. Several faults below
+   remove a confirm entirely, and a bare `c.state.modal.onConfirm()` then
+   throws, kills the process, and every check after it silently never runs —
+   so the fault reports as "caught" while proving nothing about the check that
+   was meant to catch it. The guarding check above each call is what reports;
+   this just lets the file carry on. (Same reasoning as the `|| {}` fallbacks
+   in test-venue-splits.js and test-venue-map.js.) */
+const answerModal = async (c) => {
+  const m = c.state.modal;
+  if (m && typeof m.onConfirm === 'function') await m.onConfirm();
+};
+
+function buildOrganiser(apiOverrides) {
+  const c = buildDraw(apiOverrides);
+  c.setState({
+    session: { ageGroupId: '*', token: 'tok', isOrganizer: true },
+    ageGroups: [
+      { id: 'u14b', name: 'U14 Boys', hasStandings: true },
+      { id: 'u16b', name: 'U16 Boys', hasStandings: true },
+    ],
+  });
+  return c;
+}
+
+{
+  let release;
+  const held = new Promise((r) => { release = r; });
+  let publishedFor = null;
+
+  const c = buildOrganiser({
+    canPublishNow: () => true,
+    publishDraw: async (agId) => { publishedFor = agId; return { ok: true, published: true }; },
+    loadAllDraws: async () => { await held; return { drawsByAge: {}, ageNames: {}, failed: [] }; },
+  });
+
+  const pending = c.doPublish();
+  await tick();
+  check('the weekend check is still running, so no modal is up yet',
+    c.state.drawBusy === true && !c.state.modal);
+
+  c.switchAge('u16b');                    // the switcher is NOT disabled while busy
+  await settle();
+  c.setState({ drawDirty: true });        // …and the organiser starts editing the new group
+  check('the organiser is now on the other group, with unsaved work',
+    c.state.ageId === 'u16b' && c.state.drawDirty === true && !!c.state.draw);
+
+  release();
+  await pending;
+  check('the confirm names the group the button was pressed on, not the one on screen',
+    !!c.state.modal && /U14 Boys/.test(c.state.modal.title || ''));
+
+  await answerModal(c);
+  await tick();
+
+  eq('it publishes the group that was asked for', publishedFor, 'u14b');
+  check('…and the draft the organiser is actually editing survives',
+    c.state.drawDirty === true,
+    'drawDirty was cleared by a reload aimed at the group they left');
+  check('…and their draw is still loaded, not blanked',
+    !!c.state.draw, `draw was ${String(c.state.draw)}`);
+}
+
+{
+  /* saveDraw() is the same shape and the one that would bite first — an
+     organiser saves far more often than they publish. Asserted separately,
+     because a guard that covered only the publish path would pass the check
+     above while leaving the common case broken. */
+  let release;
+  const held = new Promise((r) => { release = r; });
+  let savedFor = null;
+
+  const c = buildOrganiser({
+    saveDraw: async (agId) => { savedFor = agId; await held; return { ok: true }; },
+  });
+  c.setState({ regs: { teams: [], players: [] }, drawDirty: true });
+
+  const pending = c.saveDraw();
+  await tick();
+  /* ⚠️ THE SWITCH IS ITSELF GATED HERE, and the test has to answer that gate
+     rather than pretend it is not there: saving implies a dirty draft, so
+     switchAge() asks before it moves. Confirming is the realistic sequence —
+     the organiser accepts losing the edits they have just sent to the server
+     anyway — and it is what puts them on u16b to start work there. */
+  c.switchAge('u16b');
+  check('switching mid-save asks about the dirty draft first',
+    !!c.state.modal && c.state.modal.kind === 'confirm');
+  await answerModal(c);
+  await settle();
+  c.setState({ drawDirty: true });
+  release();
+  await pending;
+  await tick();
+
+  eq('the save went to the group that was being edited', savedFor, 'u14b');
+  check('the group now on screen keeps its unsaved changes',
+    c.state.drawDirty === true, 'a save for the previous group cleared them');
+  check('…and keeps its loaded draw', !!c.state.draw, `draw was ${String(c.state.draw)}`);
+}
+
+{
+  /* The guard must not break the ordinary path — a reload for the group you
+     ARE on has to go through, or Save silently stops refreshing the baseline
+     and every later edit is compared against a stale copy.
+     ⚠️ Without this, "return early" would pass every check above by never
+     reloading anything at all. */
+  let asked = null;
+  const c = buildOrganiser({ getDraw: async (agId) => { asked = agId; return freshDraw(); } });
+  c.setState({ drawDirty: true });
+  await c.loadDraw('u14b');
+  eq('a reload for the CURRENT group still fetches', asked, 'u14b');
+  check('…and it is what clears the dirty flag, the server copy being the clean baseline',
+    c.state.drawDirty === false);
+  check('…and the fetched draw is loaded', !!c.state.draw && c.state.drawLoadedFor === 'u14b');
+}
+
+/* ------------------------------------------------------------------------
+   switchAge()'s dirty-draft confirm, DRIVEN rather than read.
+
+   The switcher's gate, its "Viewing as" label and the isOrganiser flag were
+   already covered structurally; the switch ACTION was not, and a structural
+   check cannot tell a confirm that fires from one that is asked and ignored. */
+section('switchAge(): the dirty-draft confirm actually gates the switch');
+{
+  const c = buildOrganiser();
+  c.setState({ drawDirty: true });
+  c.switchAge('u16b');
+  check('an unsaved draft is asked about before anything moves',
+    !!c.state.modal && c.state.modal.kind === 'confirm');
+  check('…and the question says the changes will be discarded',
+    /unsaved changes/i.test(c.state.modal.title || '') && /discard/i.test(c.state.modal.title || ''));
+  eq('…and NOTHING has switched yet', c.state.ageId, 'u14b');
+  check('…and the draft is still there while the question is open',
+    c.state.drawDirty === true && !!c.state.draw);
+}
+{
+  /* Answering YES: the draft is dropped explicitly BEFORE load() runs, so
+     load()'s own keepDraw carry-through (which exists for the save/clear
+     case) cannot attach one group's unsaved edits to another group's data. */
+  const c = buildOrganiser();
+  c.setState({ drawDirty: true });
+  c.switchAge('u16b');
+  await answerModal(c);
+  await tick();
+  eq('confirming switches the group', c.state.ageId, 'u16b');
+  check('…and the previous group\'s unsaved edits are dropped, not carried across',
+    c.state.drawDirty === false);
+  eq('…and nothing is left pointing the old draw at the new group',
+    c.state.drawLoadedFor, 'u16b');
+}
+{
+  /* Answering NO — the modal is dismissed rather than confirmed. This is the
+     half a structural check can never see: a confirm that is asked, ignored,
+     and switches anyway looks identical in the source. */
+  const c = buildOrganiser();
+  c.setState({ drawDirty: true });
+  c.switchAge('u16b');
+  c.closeModal();
+  await tick();
+  eq('dismissing the question leaves the organiser where they were', c.state.ageId, 'u14b');
+  check('…with their unsaved work untouched', c.state.drawDirty === true && !!c.state.draw);
+}
+{
+  const c = buildOrganiser();
+  c.setState({ drawDirty: false });
+  c.switchAge('u16b');
+  check('a CLEAN draft switches straight away, with no question',
+    !c.state.modal, 'a confirm on every switch trains people to click through it');
+  await tick();
+  eq('…and the switch happened', c.state.ageId, 'u16b');
+}
+{
+  const c = buildOrganiser();
+  c.setState({ drawDirty: true });
+  c.switchAge('u14b');
+  check('re-picking the group you are already on does nothing at all',
+    !c.state.modal && c.state.ageId === 'u14b' && c.state.drawDirty === true);
+  c.switchAge('');
+  check('…and an empty selection is ignored rather than loading nothing',
+    !c.state.modal && c.state.ageId === 'u14b');
+}
+
 summary('tests/test-manager-dc-draw.js');
 }
 

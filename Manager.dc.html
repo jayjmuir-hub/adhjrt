@@ -1033,6 +1033,24 @@ class Component extends DCLogic {
   }
 
   async loadDraw(agId) {
+    /* ⚠️ ENTRY GUARD, AND IT IS LOAD-BEARING — DO NOT "SIMPLIFY" IT AWAY AS A
+       DUPLICATE OF THE STALE-RESPONSE GUARD BELOW. They cover opposite ends of
+       the same call.
+
+       Only an ORGANISER gets the age-group switcher, and it is a plain <select>
+       with no `disabled` binding, so it stays live while this tab is busy.
+       saveDraw(), doPublish() and doUnpublish() each capture `ageId`, await a
+       network call, and then reload THAT id to take the server's copy as the
+       new clean baseline. Flip the switcher mid-flight and the reload is aimed
+       at a group the organiser has already left.
+
+       Without this line the setState below still ran, so a reload for the
+       OLD group blanked the draw for the NEW one and cleared its drawDirty —
+       discarding unsaved edits with no confirm and no message, and leaving the
+       next switch unable to warn either, because the flag it warns on was gone.
+       The guard below cannot help: it only fires after the fetch, by which time
+       the damage is done. Driven end to end in test-manager-dc-draw.js. */
+    if (this.state.ageId !== agId) return;
     const { api, session } = this.state;
     this.setState({ draw: null, drawDirty: false }); // a fresh fetch IS the clean baseline
     this.clearDrawPicks();

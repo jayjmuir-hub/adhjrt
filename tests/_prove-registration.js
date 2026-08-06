@@ -4945,6 +4945,64 @@ const FAULTS = [
     expect: ['moves or animates is behind'],
   },
 
+  /* ---- switching age group while a write is in flight (6 Aug 2026) ------
+     Found by audit, not by a report. Only an organiser sees the switcher and
+     it is never disabled, so every captured-ageId-then-await path on the Draw
+     tab can land its reload on a group the organiser has already left. */
+  {
+    /* THE BUG ITSELF. Without the entry guard, loadDraw() still ran its
+       opening setState, so a reload aimed at the OLD group blanked the draw
+       for the NEW one and cleared its drawDirty — losing unsaved edits with
+       no confirm, and leaving the next switch unable to warn either. */
+    name: 'a reload for the group just left wipes the draft on the group now on screen',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      '    if (this.state.ageId !== agId) return;\n    const { api, session } = this.state;',
+      '    const { api, session } = this.state;'),
+    expect: ['draft the organiser is actually editing survives', 'keeps its unsaved changes'],
+  },
+  {
+    /* ⚠️ THE OTHER HALF, AND IT IS THE ONE THAT MAKES THE FIX A FIX RATHER
+       THAN A DELETION. "Return early" would satisfy every check above by
+       never reloading anything at all, so the ordinary path — a reload for
+       the group you ARE on — has to be asserted too. */
+    name: 'the reload guard is inverted, so the group you are on never refreshes',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      '    if (this.state.ageId !== agId) return;\n    const { api, session } = this.state;',
+      '    if (this.state.ageId === agId) return;\n    const { api, session } = this.state;'),
+    expect: ['reload for the CURRENT group still fetches'],
+  },
+  {
+    /* A confirm that is never asked. Structural checks cannot see this — the
+       handler still exists, it just stops gating on anything. */
+    name: 'switching age group stops asking about an unsaved draft',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html', '    if (s.drawDirty) {\n      this.confirmModal(',
+      '    if (false) {\n      this.confirmModal('),
+    expect: ['unsaved draft is asked about before anything moves'],
+  },
+  {
+    /* ⚠️ Dropping the draft is not tidiness — load()'s keepDraw carry-through
+       exists for the save/clear case and would otherwise attach one age
+       group's unsaved edits to another age group's data. */
+    name: 'the discarded draft is not cleared, so it rides across to the new age group',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html',
+      "      this.setState({ draw: undefined, drawLoadedFor: null, drawDirty: false, drawMsg: '' });",
+      "      this.setState({ draw: undefined, drawLoadedFor: null, drawMsg: '' });"),
+    expect: ['dropped, not carried across'],
+  },
+  {
+    /* Re-picking the group you are already on would otherwise throw away a
+       dirty draft — or ask about it — for a switch that is not a switch. */
+    name: 're-picking the current age group is treated as a real switch',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html', '    if (!agId || agId === s.ageId) return;',
+      '    if (!agId) return;'),
+    expect: ['re-picking the group you are already on does nothing'],
+  },
+
   /* ---- the same rule, swept across every page (6 Aug 2026) --------------
      The three below prove the SITE-WIDE sweep in test-design-polish.js, which
      the homepage's own sweep above cannot: it reads 'Quins JRT.dc.html' and

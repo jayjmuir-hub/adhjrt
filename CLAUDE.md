@@ -1228,6 +1228,32 @@ match-day guard, typed confirmation) live on in that tool and in git history
 
 ## Publishing fixtures
 
+⚠️ **`loadDraw(agId)` ON `/manager` OPENS WITH AN ENTRY GUARD, AND IT IS
+LOAD-BEARING (6 Aug 2026).** It looks like a duplicate of the stale-response
+guard after the fetch and is not — they cover opposite ends of the same call.
+
+Only an **organiser** gets the age-group switcher, and it is a plain `<select>`
+with no `disabled` binding, so it stays live while the Draw tab is busy.
+`saveDraw()`, `doPublish()` and `doUnpublish()` each capture `ageId`, await a
+network call, then reload **that** id to take the server's copy as the new
+clean baseline. Flip the switcher mid-flight — easily done while `doPublish()`
+reads all fifteen groups for the clash check — and that reload is aimed at a
+group the organiser has already left.
+
+Without the entry guard, `loadDraw()` still ran its opening
+`setState({ draw: null, drawDirty: false })`, so a reload for the OLD group
+**blanked the draw for the NEW one and cleared its dirty flag** — discarding
+unsaved edits with no confirm and no message, and leaving the next switch
+unable to warn either, because the flag it warns on was gone. Silent, and
+compounding. Found by audit, never reported. Driven end to end in
+`tests/test-manager-dc-draw.js` with five faults, including one that **inverts**
+the guard — "return early" would satisfy every other check by never reloading
+anything at all, so the ordinary path is asserted too.
+
+⚠️ **Publishing the group the button was pressed on is CORRECT**, not part of
+the bug: the confirm names that group in its own text. The damage was never the
+write, it was the reload after it.
+
 Fixtures are draft-first. The `schedules` blob store holds two copies per age
 group: `<ageGroupId>` is the DRAFT the fixture editor reads/writes, `pub:<id>`
 is the PUBLISHED copy and the only thing the public sees.
@@ -3016,7 +3042,7 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring and the doc-claim suite — **36 files** — plus `_prove-registration.js`, the fault-injection
-script (**633 faults** as of 6 Aug 2026, all of which must be caught by the
+script (**638 faults** as of 6 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

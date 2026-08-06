@@ -512,7 +512,16 @@ const HDRCSS = stripCssComments(PAGE);
 check('the nav hover uses the SAME holo gradient as the cards and buttons',
   (HDRCSS.match(/linear-gradient\(115deg,transparent 25%,rgba\(225,27,34,\.4\) 38%/g) || []).length >= 3,
   'header, age-group cards and Register buttons must all read from the same recipe');
-check('…and the same holoShift drift', /\.hdr-nav a:hover::before\{opacity:\.85;animation:holoShift/.test(HDRCSS));
+/* ⚠️ REPOINTED 5 Aug 2026 with the shimmer fix. This asserted the nav used
+   holoShift — the LOOPING keyframe the cards use — which was the bug Jay
+   reported, not the contract. What was really being protected is that the nav
+   reuses the shared GRADIENT rather than inventing its own; the checked
+   above does that. The timing is deliberately its own: a nav item is rested on,
+   a card is brushed past. */
+check('…but the nav times its own sweep rather than copying the cards\' loop',
+  /\.hdr-nav a:hover::before\{opacity:\.85;animation:holoSweep/.test(HDRCSS) &&
+  /\.fmt-grp:hover \.holo\{opacity:\.7;animation:holoShift/.test(HDRCSS),
+  'the gradient is shared; the timing is not');
 
 /* B — the underline, inset to the pill so the two line up. */
 check('the underline wipes from the left', /\.hdr-nav a::after\{[^}]*transform:scaleX\(0\);transform-origin:left/.test(HDRCSS));
@@ -587,6 +596,59 @@ check('…and swallows its own errors, leaving the header at rest',
 check('the decorations come off inside the open phone panel',
   /\.hdr-row\[data-nav-open="true"\] \.hdr-nav a::before,\s*\.hdr-row\[data-nav-open="true"\] \.hdr-nav a::after\{display:none\}/.test(HDRCSS.replace(/\n\s*/g, '\n')),
   '');
+
+/* ⚠️ THE HOVER TREATMENT IS BEHIND @media (hover:hover), AND THAT IS A BUG FIX.
+   Jay, 5 Aug 2026: "the header buttons continue to shimmer forever after being
+   pressed."
+
+   A touch device has no pointer to move away, so it applies :hover on tap and
+   keeps it applied until you touch something else. Measured on an 820px touch
+   viewport — the band where the nav bar is still shown rather than collapsed —
+   the shimmer was still running 3.4 seconds after a tap with nothing that could
+   ever end it. On desktop it stopped correctly the moment the mouse left, which
+   is why it shipped: two different experiences of one rule, and only one of them
+   had been looked at.
+
+   The sweep also runs ONCE now instead of `infinite`. Copying .fmt-grp's rule
+   wholesale is what put a permanent loop on a nav item you rest on while
+   reading seven of them. */
+/* EVERY hover:hover block, not just the first. A rule moved into a second one
+   is still inside a pointer query, and a check that only reads block #1 would
+   call that an escape; a rule moved OUT is what actually matters. */
+const HOVER_BLOCKS = HDRCSS.match(/@media \(hover:hover\)\{[\s\S]*?\n  \}/g) || [];
+const HOVER_BLOCK = HOVER_BLOCKS.join('\n');
+check('the hover block exists', HOVER_BLOCK.length > 100);
+['a:hover{background', 'a[href="/app"]:hover', 'a:hover::before', 'a:hover::after']
+  .forEach((rule) => {
+    check(`the "${rule}" rule is inside it`, HOVER_BLOCK.includes('.hdr-nav ' + rule),
+      'a hover rule outside the query sticks on after a tap, for ever');
+  });
+/* ⚠️ COUNTED, NOT MATCHED BY TEXT. The first version asked whether each
+   `:hover` string it found also appeared inside the block — which is true even
+   when a rule has been moved OUT, because an identical string is still sitting
+   inside. The fault that moves one out reported "failed, but not on the named
+   check", which is the prover distinguishing a check that fired from one that
+   merely went red. Counting occurrences cannot be fooled that way. */
+const hoverAll = (HDRCSS.match(/\.hdr-nav a[^{]*:hover/g) || []).length;
+const hoverIn  = (HOVER_BLOCK.match(/\.hdr-nav a[^{]*:hover/g) || []).length;
+check('…and NO hover rule escaped it', hoverAll > 0 && hoverAll === hoverIn,
+  `${hoverAll} :hover rules in the file, ${hoverIn} inside a pointer query - one left outside is one that still sticks`);
+
+check('the sweep runs once and ends off the far edge',
+  /animation:holoSweep \.9s ease-out 1 forwards/.test(HOVER_BLOCK));
+check('…and holoSweep is one-way, unlike the looping holoShift',
+  /@keyframes holoSweep\{from\{background-position:0% 0%\}to\{background-position:140% 140%\}\}/.test(HDRCSS),
+  'holoShift returns to its start so it can loop; this one must not');
+check('the nav no longer uses the infinite loop at all',
+  !/\.hdr-nav[^}]*holoShift/.test(HDRCSS));
+
+/* ⚠️ FOCUS IS NOT A HOVER EFFECT and must stay OUTSIDE the query. A keyboard
+   user has no pointer at all; putting the outline inside would take it away
+   from the people who need it most. */
+check('the focus outline is outside the pointer query',
+  !HOVER_BLOCKS.some((blk) => blk.includes('.hdr-nav a:focus-visible')) &&
+  /\.hdr-nav a:focus-visible\{outline:2px solid #3bd070/.test(HDRCSS),
+  'inside ANY hover query, a keyboard user with no pointer loses the outline');
 
 /* ⚠️ THE NAV GOT WIDER AND THE HEADER OVERFLOWED — twice, and the second time
    it turned out to have been live already.

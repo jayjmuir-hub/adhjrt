@@ -4713,13 +4713,50 @@ const FAULTS = [
   },
   /* ---- the header nav: hover, current section, condensed bar (5 Aug 2026) -- */
   {
-    /* The header would go back to inventing its own effect instead of reusing
-       the one the cards and buttons already share. */
-    name: 'the nav hover stops using the shared holo recipe',
+    /* ⚠️ THE BUG JAY REPORTED: "the header buttons continue to shimmer forever
+       after being pressed". A touch device applies :hover on tap and never
+       removes it, so an infinite animation runs until you touch something
+       else. Measured still running 3.4s after a tap. */
+    name: 'the nav sweep goes back to looping for ever',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, ".hdr-nav a:hover::before{opacity:.85;animation:holoShift 2.2s ease-in-out infinite}",
-      ".hdr-nav a:hover::before{opacity:.85}"),
-    expect: ['same holoShift drift'],
+    apply: () => patch(HOME, "animation:holoSweep .9s ease-out 1 forwards",
+      "animation:holoShift 2.2s ease-in-out infinite"),
+    expect: ['sweep runs once'],
+  },
+  {
+    /* The one-way keyframe turned back into a there-and-back one: it would
+       finish where it started, leaving a bright band parked on the item. */
+    name: 'holoSweep is made to return to where it started',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes holoSweep{from{background-position:0% 0%}to{background-position:140% 140%}}',
+      '@keyframes holoSweep{from{background-position:0% 0%}to{background-position:0% 0%}}'),
+    expect: ['one-way, unlike the looping holoShift'],
+  },
+  {
+    /* ⚠️ The whole point of the fix. Outside the pointer query, a tap on a
+       tablet leaves the pill and the shimmer applied indefinitely. */
+    name: 'a hover rule escapes the pointer query and sticks after a tap',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "    .hdr-nav a:hover::after{transform:scaleX(1)}\n  }",
+      "  }\n  .hdr-nav a:hover::after{transform:scaleX(1)}"),
+    expect: ['NO hover rule escaped it'],
+  },
+  {
+    /* Focus is not a hover effect. Inside the query, a keyboard user with no
+       pointer loses the outline entirely - taking it from the people who need
+       it most. */
+    name: 'the focus outline is swept inside the pointer query with the hover rules',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "  .hdr-nav a:focus-visible{outline:2px solid #3bd070;outline-offset:2px}",
+      "  @media (hover:hover){.hdr-nav a:focus-visible{outline:2px solid #3bd070;outline-offset:2px}}"),
+    expect: ['focus outline is outside the pointer query'],
+  },
+  {
+    name: 'the nav stops reusing the shared gradient recipe',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, ".hdr-nav a:hover::before{opacity:.85;animation:holoSweep",
+      ".hdr-nav a:hover::before{opacity:.85;animation:navGlow"),
+    expect: ['times its own sweep'],
   },
   {
     name: 'the underline runs edge to edge instead of matching the pill',

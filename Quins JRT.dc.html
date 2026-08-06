@@ -731,7 +731,7 @@
    away from you. Take it out and the ring stops reading as a lit object and
    becomes a row of flat rectangles at angles. It is not decoration.
 
-   ⚠️ DO NOT put `overflow`, `opacity` or `filter` on .jrtb-ring. Any of them
+   ⚠️ DO NOT put `overflow`, `opacity` or `filter` on .jrtb-track. Any of them
    forces the browser to flatten preserve-3d and the whole thing collapses
    into a flat horizontal squash. Clipping lives on the wrapper div, which is
    safe. (Panels themselves may have overflow - they have no 3D children.) */
@@ -799,12 +799,58 @@
      site's rhythm, shared with #schedule and #venue), so 40 on top of that
      read as dead space. 24 is still clearly clear. Do not take it to 0 - that
      is the crop-to-the-edge look this was added to get rid of. */
-  --pw: clamp(190px, 37vw - 50px, 394px);
-  --ph: calc(var(--pw) * 1.25);
-  --r:  calc(var(--pw) * 1.20711);
-  --turn:1400ms;
+  /* ---- COVERFLOW (6 Aug 2026). ONE VARIABLE STILL DRIVES IT --------------
+     --cw is the centre card's width; everything else is a calc() off it, the
+     same discipline the ring had. See claude/specs/spec-about-coverflow.md.
 
-  height: calc(var(--ph) + 48px);
+       --cw at the 1200px cap = 26vw = 312px
+       capped at 380px so it stops growing on a very wide screen
+       floor 190px - below 760px the section is hidden and this never runs
+
+     ⚠️ AND THE `sizes` ATTRIBUTE IN THE MARKUP AND THE SCRIPT MUST MATCH THIS
+     LINE, in all three places. 26vw reaches 380px at a 1461px viewport, which
+     is where the fixed clause takes over. Get it wrong in the generous
+     direction and every visitor downloads a bigger file than they need, and
+     nothing anywhere reports it. */
+  --cw: clamp(190px, 26vw, 380px);
+  --ch: calc(var(--cw) * 1.25);
+  --glide: 600ms;
+
+  /* ⚠️ THE FOCAL POINT IS PINNED TO THE OLD COLUMN, NOT TO THE BOX. The box
+     now bleeds off the right of the page (below), so its centre drifts right
+     as the screen widens. Anchoring the hero card to the box centre would walk
+     the photo away from the text it sits beside, and the composition Jay
+     approved would change with every screen size.
+     This is half the ORIGINAL photo column: min(533px, 50vw - 67px) / 2. The
+     centre card therefore sits exactly where the ring's front panel sat, and
+     everything the bleed buys is spent on the cards fanning out to its right. */
+  --focal: min(266px, calc(25vw - 33px));
+
+  height: calc(var(--ch) + 48px);
+
+  /* ⚠️ THE BLEED, and the arithmetic, because it must be redone by hand if the
+     section's max-width or padding ever change:
+
+       section content   = min(1200px, 100vw) - 64px     32px padding each side
+       content right edge= (100vw + min(1200px, 100vw))/2 - 32px
+       gap to viewport   = (100vw - min(1200px, 100vw))/2 + 32px
+
+       100vw >= 1200px  ->  50vw - 568px
+       100vw <  1200px  ->  32px
+
+     max() is exactly those two branches and is continuous at 1200px, where
+     both evaluate to 32px. At 1440 the box is 685px; at 1920, 925px.
+
+     ⚠️ THIS IS THE MOST LIKELY THING HERE TO BREAK, AND IT BREAKS SILENTLY. A
+     box sized to finish exactly at the viewport edge is one sub-pixel rounding
+     error away from putting a horizontal scrollbar on the WHOLE PAGE. It is
+     swept every 20px from 1440 to 761 and asserted - the header shipped a
+     6-12px overflow at 762-770px that was live for days and nobody saw it. */
+  margin-right: calc(-1 * max(32px, 50vw - 568px));
+
+  /* A rounded corner hard against the edge of the screen reads as a mistake,
+     so the right-hand corners are square and the left-hand ones are not. */
+  border-radius:18px 0 0 18px;
 }
 /* ⚠️ 760px, NOT 700px. That is the breakpoint where .m-stack collapses this
    section to one column — see the @media(max-width:760px) block above. Getting
@@ -832,30 +878,49 @@
      it is one edit away from being live again if the hide is ever narrowed to
      a smaller breakpoint, and its comment above records why 760 is the number.
      The panel would be 74% of a full-width stacked box. */
-  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}
+  .about-photo{--cw:clamp(170px, 62vw, 400px);--focal:50%;margin-right:0;border-radius:12px}
 }
 
 .jrtb{position:absolute;inset:0}   /* the vars above inherit down into this */
-.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}
-.jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
-  transform:translateZ(calc(var(--r) * -1)) rotateY(var(--jrtb-rot,0deg));
-  transition:transform var(--turn) cubic-bezier(.55,.06,.25,1);
-  will-change:transform}
-.jrtb-p{position:absolute;top:50%;left:50%;
-  width:var(--pw);height:var(--ph);
-  margin:calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
-  overflow:hidden;border-radius:6px;
-  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+/* ⚠️ touch-action:pan-y IS THE WHOLE BALLGAME ON TOUCH. Without it a
+   horizontal drag on this scene swallows the gesture and the page stops
+   scrolling vertically while a finger is inside the carousel - the visitor is
+   trapped in a box they were only trying to scroll past. `pan-y` hands
+   vertical panning back to the browser and leaves us only the horizontal part,
+   which is the only part this needs.
+   ⚠️ It cannot be seen to be missing on a desktop. The About block is hidden
+   at and below 760px, so the people this protects are on TABLETS at 761px+ -
+   the exact band nobody tests, and where the stuck-hover bug lived for four
+   days. It is asserted. */
+.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E;
+  touch-action:pan-y;cursor:grab;outline:none}
+.jrtb-scene:focus-visible{box-shadow:inset 0 0 0 2px #E11B22}
+.jrtb.dragging .jrtb-scene{cursor:grabbing}
+/* ⚠️ NO overflow / opacity / filter ON THE TRACK, EVER. Any of the three makes
+   the browser flatten preserve-3d and the whole arrangement collapses into a
+   flat overlapping row. Clipping belongs on .about-photo, which has it. */
+.jrtb-track{position:absolute;inset:0;transform-style:preserve-3d}
+.jrtb-p{position:absolute;top:50%;left:var(--focal);
+  width:var(--cw);height:var(--ch);
+  margin:calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2);
+  overflow:hidden;border-radius:8px;
+  /* The script sets --x/--z/--ry/--sc/--op per card and nothing else, so the
+     geometry stays in the CSS and scales with the browser on its own.
+     --dragx is the live finger offset; it is 0 unless a drag is in progress. */
+  transform:translate3d(calc(var(--x,0px) + var(--dragx,0px)),0,var(--z,0px))
+            rotateY(var(--ry,0deg)) scale(var(--sc,1));
+  opacity:var(--op,1);
+  transition:transform var(--glide) cubic-bezier(.22,.61,.36,1),
+             opacity var(--glide) ease;
+  will-change:transform,opacity;
   /* ⚠️ THE THIRD OF THE THREE SURFACES, and the easiest to miss. This one is
      only ever seen for the instant before a panel's photo has decoded - the
      five idle-loaded panels have no src at all to begin with. Left cream while
      the other two went dark, an unloaded panel would flash as a pale rectangle
      against black, which reads as a broken image rather than a loading one. */
-  background:#0C0C0E;
-  /* The script sets --a (this panel's angle round the ring) and nothing else.
-     Keeping translateZ here is what lets --r be a calc() that scales with the
-     browser - the script never has to resolve it. */
-  transform:rotateY(var(--a,0deg)) translateZ(var(--r))}
+  background:#0C0C0E}
+/* A finger has to move the cards NOW, not 600ms after it stops. */
+.jrtb.dragging .jrtb-p{transition:none}
 
 /* ⚠️ DO NOT ADD A box-shadow ANYWHERE IN HERE. Tried twice on 5 Aug 2026 and
    both attempts broke rendering in Chrome:
@@ -877,17 +942,19 @@
    worth a blank panel. If you want to try again, use a `border` with
    `box-sizing:border-box`, not a shadow, and check EVERY panel, not just the
    front one. */
-.jrtb-p img{width:100%;height:100%;object-fit:cover;display:block}
+.jrtb-p img{width:100%;height:100%;object-fit:cover;display:block;
+  /* A drag that starts on a photo must not become a browser image-drag. */
+  -webkit-user-drag:none;user-select:none;pointer-events:none}
 .jrtb-p::after{content:"";position:absolute;inset:0;background:#000;
-  opacity:calc(var(--away,1) * 0.72);
-  transition:opacity var(--turn) ease;pointer-events:none}
+  opacity:calc(var(--away,0) * 0.62);
+  transition:opacity var(--glide) ease;pointer-events:none}
 
 /* FAILS SAFE. Until the script has built the ring and added .ready, the one
    panel that is hard-coded in the markup simply fills the box - exactly the
    single static photo that used to be there. With JavaScript off, that is
    what stays. Nothing collapses, nothing goes blank. */
 .jrtb:not(.ready) .jrtb-p{top:0;left:0;width:100%;height:100%;margin:0;
-  border-radius:0;transform:none!important}
+  border-radius:0;transform:none!important;opacity:1!important}
 .jrtb:not(.ready) .jrtb-p::after{opacity:0}
 
 /* Phone sizing lives on .about-photo with the rest of the geometry - the panel
@@ -901,8 +968,12 @@
    back with it. */
 /* Anyone who has asked their OS to cut animation gets an instant change of
    photo rather than a glide. The ring still advances; it just does not move. */
+/* ⚠️ AUTO-ADVANCE STOPS, DRAGGING STILL WORKS. The preference is about motion
+   the visitor did not ask for; a card moving because a finger is pushing it is
+   motion they are causing on purpose, and freezing that would just look
+   broken. The script checks the same query and never schedules the timer. */
 @media (prefers-reduced-motion:reduce){
-  .jrtb-ring{transition-duration:1ms}
+  .jrtb-p{transition-duration:1ms}
   .jrtb-p::after{transition-duration:1ms}
 }
 </style>
@@ -1009,12 +1080,37 @@
      and when the browser tab is in the background. */
   (function(){
     var PHOTOS = 11;      // how many board-NN.* sets exist in assets/board/
-    var PANELS = 8;       // panels on the ring. Changing this changes --r in the CSS.
+    /* ⚠️ SIX CARDS, FIVE SLOTS YOU CAN SEE. Slots run -1..+4 relative to the
+       current photo. -1 is the one sliding out on the left, 0 is the hero,
+       +1..+3 fan out to the right into the bled area, and +4 is a STAGING
+       SLOT at opacity 0 - which is the only place it is safe to repoint a
+       card's <picture> without the swap being visible.
+       Six cards carry eleven photos, exactly as eight panels did on the ring.
+       ⚠️ DO NOT rebuild this as one card per photo: that is eleven downloads
+       on arrival instead of three, and a twelfth photo would then cost DOM. */
+    var CARDS  = 6;
+    var LEFT   = -1;      // lowest slot; CARDS-2 is the last visible one
     var EVERY  = 6000;    // ms between steps
-    var TURN   = 1400;    // ms the glide takes. Must match --turn in the CSS.
+    var GLIDE  = 600;     // ms the move takes. Must match --glide in the CSS.
+
+    /* The coverflow arrangement itself, as data rather than as branches - it
+       is the thing most likely to be tuned, and a table can be read at a
+       glance and asserted. x is a MULTIPLE OF THE CARD WIDTH so the whole
+       thing scales with --cw and this script never resolves a pixel value.
+       ⚠️ The x steps are deliberately NOT linear: 0.62, 1.18, 1.62, 1.95
+       compress as they recede, which is what stops the far cards marching off
+       in a straight line and makes it read as depth. */
+    var SLOTS = {
+      '-1': { x:-0.62, ry: 42, z:-120, sc:0.90, op:0.55, away:0.5, zi:9 },
+      '0':  { x: 0,    ry:  0, z:   0, sc:1.00, op:1.00, away:0.0, zi:12 },
+      '1':  { x: 0.62, ry:-42, z:-120, sc:0.90, op:0.85, away:0.35, zi:11 },
+      '2':  { x: 1.18, ry:-52, z:-260, sc:0.80, op:0.60, away:0.6, zi:10 },
+      '3':  { x: 1.62, ry:-58, z:-400, sc:0.72, op:0.32, away:0.8, zi:8 },
+      '4':  { x: 1.95, ry:-60, z:-520, sc:0.66, op:0.00, away:1.0, zi:7 }
+    };
 
     // assets/board/board-07.avif  ->  base name for photo index 6
-    function base(i){ var n=(i%PHOTOS)+1; return 'assets/board/board-'+(n<10?'0':'')+n; }
+    function base(i){ var n=(((i%PHOTOS)+PHOTOS)%PHOTOS)+1; return 'assets/board/board-'+(n<10?'0':'')+n; }
 
     // Point an existing <picture> at a different photo. Both <source> sets and
     // the <img> have to move together or the browser keeps the old one.
@@ -1024,13 +1120,10 @@
          not tidiness (5 Aug 2026). This used to write s[0] = avif and s[1] =
          webp by index. The moment the fail-safe <picture> in the markup gained
          a THIRD source at the front - the 1x1 that stops phones downloading
-         anything - every index shifted by one: the avif srcset landed on the
-         phone source and the webp srcset landed on the source declaring
-         type="image/avif". Nothing errored. The front panel quietly started
-         serving WebP instead of AVIF, which is ~30% more bytes, and the only
-         way it was noticed was reading currentSrc off a render.
-         Anything that keys off DOM order breaks when somebody inserts an
-         element above it. */
+         anything - every index shifted by one and the front panel quietly
+         started serving WebP instead of AVIF, ~30% more bytes, with nothing
+         erroring. Anything that keys off DOM order breaks when somebody
+         inserts an element above it. */
       var s=pic.getElementsByTagName('source'), avif=null, webp=null, j;
       for(j=0;j<s.length;j++){
         if(s[j].type==='image/avif') avif=s[j];
@@ -1041,26 +1134,19 @@
       pic.getElementsByTagName('img')[0].src = b+'.webp';
     }
 
-    function makePanel(){
+    function makecard(){
       var p=document.createElement('div'); p.className='jrtb-p';
       var pic=document.createElement('picture');
       var a=document.createElement('source'); a.type='image/avif';
       var w=document.createElement('source'); w.type='image/webp';
-      // Tells the browser how wide the panel will actually be, so it can pick
-      // the right file BEFORE layout. Without this it assumes full viewport
-      // width and always takes the big one.
-      // Must track --pw in the CSS or the browser fetches the wrong file. First
-      // matching condition wins: above 1200 the section is capped so the panel
-      // is a fixed 394px; in between it scales with the column. Get this wrong
-      // in the generous direction and every visitor silently downloads the
-      // 960px file.
-      // 394, not 480, since 5 Aug 2026 evening - the About grid went back to
-      // two equal columns and the panel is 74% of the narrower one.
-      // There is no phone clause any more: below 760px the section is hidden
-      // and this function never runs, so a (max-width:760px) rule here would
-      // describe a case that cannot happen. It must stay identical to the two
-      // copies in the markup - test-about-board.js asserts all three match.
-      a.sizes=w.sizes='(min-width:1200px) 394px, calc(37vw - 50px)';
+      /* Tells the browser how wide the card will be before layout happens.
+         MUST track --cw in the CSS: clamp(190px, 26vw, 380px). 26vw reaches
+         380px at a 1461px viewport, which is where the fixed clause takes
+         over. There is no phone clause - below 760px the section is hidden and
+         this function never runs, so one would describe a case that cannot
+         happen. Identical to the two copies in the markup;
+         test-about-board.js asserts all three match. */
+      a.sizes=w.sizes='(min-width:1461px) 380px, 26vw';
       var im=document.createElement('img');
       im.alt=''; im.decoding='async'; im.loading='eager';
       pic.appendChild(a); pic.appendChild(w); pic.appendChild(im);
@@ -1071,120 +1157,159 @@
     function build(host){
       /* ⚠️ __built IS SET AT THE END, NOT THE TOP, AND THAT MATTERS.
          It used to be set on entry, before anything had been checked. If this
-         ran while the component engine was midway through re-rendering the page
-         - so the element existed but its inner .jrtb-ring did not yet - the
-         early `return` left the host flagged as built when it was not. The
-         re-scanning loop then skipped it for ever and the board sat there as a
-         single static photo, `built:true, ready:false, panelCount:1`.
-
-         That is the same shape of mistake as the original find-it-once bug: a
-         flag claiming success before success happened. Bailing out WITHOUT
-         setting the flag means the next scan simply tries again. */
+         ran while the component engine was midway through re-rendering the
+         page - element present, its inner track not yet - the early `return`
+         left the host flagged as built when it was not, the re-scanning loop
+         skipped it for ever, and the section sat there as a single static
+         photo. A flag claiming success before success happened. Bailing out
+         WITHOUT setting it means the next scan simply tries again. */
       if(host.__built)return;
       try{
-        /* ⚠️ NOTHING TO BUILD IF IT IS NOT ON SCREEN (5 Aug 2026). Below 760px
-           the whole cell is display:none at Jay's request, and building eight
-           panels there would create the DOM, point six <picture>s at photos and
-           run a timer for a section nobody can look at. getClientRects() is
-           empty for a display:none element and its descendants, which is the
-           cheap way to ask.
-
-           ⚠️ IT DELIBERATELY DOES NOT SET __built - same reasoning as the ring
-           lookup below. Flagging a hidden host as built would mean a phone
-           rotated into landscape, or a desktop window dragged wider, never gets
-           a ring at all: the scan would skip it for ever. Bailing out without
-           the flag means the next scan simply tries again. */
+        /* ⚠️ NOTHING TO BUILD IF IT IS NOT ON SCREEN. Below 760px the whole
+           cell is display:none at Jay's request, and building six cards there
+           would create the DOM, point five <picture>s at photos and run a timer
+           for a section nobody can look at. getClientRects() is empty for a
+           display:none element and its descendants.
+           ⚠️ IT DELIBERATELY DOES NOT SET __built - flagging a hidden host as
+           built means a window dragged wider never gets a carousel at all. */
         if(!host.getClientRects().length) return;
 
-        var ring=host.querySelector('.jrtb-ring');
-        if(!ring)return;                       // not there yet - retry next scan
+        var track=host.querySelector('.jrtb-track');
+        if(!track)return;                      // not there yet - retry next scan
 
-        // Panel 0 already exists in the markup (the fail-safe photo). Make up
-        // the rest to PANELS.
-        var panels=[].slice.call(ring.querySelectorAll('.jrtb-p'));
-        while(panels.length<PANELS){ var p=makePanel(); ring.appendChild(p); panels.push(p); }
-        if(panels.length!==PANELS) return;      // ditto
+        // Card 0 already exists in the markup (the fail-safe photo).
+        var cards=[].slice.call(track.querySelectorAll('.jrtb-p'));
+        while(cards.length<CARDS){ var c=makecard(); track.appendChild(c); cards.push(c); }
+        if(cards.length!==CARDS) return;       // ditto
 
-        // Seat each panel on the ring. We only set the ANGLE here; the CSS does
-        // the translateZ, so the radius can be a calc() that scales with the
-        // browser without this script having to understand it.
-        //
-        // ⚠️ ANGLES ARE NORMALISED TO -180..+180, NOT 0..360, AND THAT IS A BUG
-        // FIX, NOT TIDINESS. Panel 7 of 8 used to be rotateY(315deg) and Chrome
-        // simply refused to paint it — the whole left-hand side of the ring was
-        // blank while the right-hand side was fine. Proved on 5 Aug 2026 by
-        // giving that panel a bright red background and its opposite number a
-        // green one: green appeared, red never did, at identical geometry.
-        // Chrome treats rotateY past 180deg as back-facing, so
-        // backface-visibility:hidden hid it. 315deg and -45deg put the panel in
-        // exactly the same place; only one of them renders.
-        panels.forEach(function(p,i){
-          var a = i * 360 / PANELS;
-          if (a > 180) a -= 360;
-          p.style.setProperty('--a', a + 'deg');
-        });
+        // NOTE: every local here is lower case ON PURPOSE. encodeCase() in
+        // support.js rewrites whitespace + camelCase + "=" into an
+        // "sc-camel-" attribute name ANYWHERE in this file, <script> bodies
+        // included. That threw a SyntaxError on every page load once already,
+        // while the page still looked perfect. tests/test-about-board.js pins
+        // it with a sweep over every inline script.
+        var at=0, onscreen=true, timer=null, dragging=false, moved=0;
+        var slowmo = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        // Visible now: the front panel and one either side. Everything else
-        // waits for idle.
-        [0,1,PANELS-1].forEach(function(i){ point(panels[i].querySelector('picture'), i); });
-        panels[0].querySelector('img').setAttribute('fetchpriority','high');
+        // Which slot is card j sitting in, for the current photo index?
+        function slotof(j){
+          var d=(j-at)%CARDS; if(d<0)d+=CARDS;      // 0..CARDS-1
+          return d>CARDS-1+LEFT ? d-CARDS : d;      // fold the tail down to -1
+        }
 
-        var idle = window.requestIdleCallback || function(f){ return setTimeout(f,1200); };
-        idle(function(){
-          for(var i=2;i<PANELS-1;i++){
-            var im=panels[i].querySelector('img');
-            im.setAttribute('fetchpriority','low');
-            point(panels[i].querySelector('picture'), i);
-          }
-        });
-
-        // Only NOW is it genuinely built. See the note at the top of build().
-        host.__built=1;
-        host.classList.add('ready');   // switches the CSS from fail-safe to ring
-
-        // NOTE: onscreen is deliberately all lower case, and must stay that way.
-        // The component engine runs encodeCase() over this whole file BEFORE it
-        // is parsed, and its regex - /(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g - does
-        // not stop at <script> boundaries. A camelCase name followed by "=" is
-        // rewritten to a kebab-case "sc-camel-" attribute name wherever it appears,
-        // so the old name (onScreen, then an equals sign) was rewritten to
-        // "sc-camel-on-screen" and the copy of this script
-        // the engine mounts into <head> threw SyntaxError on every page load. The
-        // in-place copy still ran, so the ring worked and only the console showed
-        // it. Any local variable in an inline script here must avoid a capital
-        // letter before its "=". tests/test-about-board.js pins this.
-        var at=0, turning=false, timer=null, onscreen=true;
-
-        // Darken every panel in proportion to how far it is turned away.
-        // Without this the ring reads as flat rectangles, not a lit object.
-        function shade(){
-          panels.forEach(function(p,i){
-            var d=Math.abs((i-at)%PANELS); d=Math.min(d,PANELS-d);
-            p.style.setProperty('--away', Math.min(1, d/(PANELS/2)).toFixed(3));
+        function layout(){
+          cards.forEach(function(c,j){
+            var d=slotof(j), sp=SLOTS[String(d)];
+            if(!sp) return;
+            c.style.setProperty('--x','calc(var(--cw) * '+sp.x+')');
+            c.style.setProperty('--z',sp.z+'px');
+            c.style.setProperty('--ry',sp.ry+'deg');
+            c.style.setProperty('--sc',sp.sc);
+            c.style.setProperty('--op',sp.op);
+            c.style.setProperty('--away',sp.away);
+            c.style.zIndex=sp.zi;
           });
         }
-        shade();
 
-        function step(){
-          if(!host.isConnected){ clearTimeout(timer); return; }   // orphaned by a re-render
-          if(turning)return; turning=true;
-          at++;
-          ring.style.setProperty('--jrtb-rot', (-at*360/PANELS)+'deg');
-          shade();
-          setTimeout(function(){
-            turning=false;
-            // The panel now at the BACK of the ring is invisible, so it is safe
-            // to repoint. It will come round to the front in PANELS/2 steps.
-            var behind=(at+PANELS/2)%PANELS;
-            point(panels[behind].querySelector('picture'), at+PANELS/2);
-          },TURN);
+        /* Three photos on arrival - the hero and its two neighbours. The rest
+           wait for idle and carry fetchpriority=low so they never race the
+           hero image. */
+        [0,1,CARDS-1].forEach(function(j){ point(cards[j].querySelector('picture'), slotof(j)); });
+        cards[0].querySelector('img').setAttribute('fetchpriority','high');
+        var idle = window.requestIdleCallback || function(f){ return setTimeout(f,1200); };
+        idle(function(){
+          cards.forEach(function(c,j){
+            var d=slotof(j);
+            if(d===0||d===1||d===LEFT) return;
+            c.querySelector('img').setAttribute('fetchpriority','low');
+            point(c.querySelector('picture'), d);
+          });
+        });
+
+        layout();
+        host.__built=1;
+        host.classList.add('ready');   // switches the CSS from fail-safe to coverflow
+
+        /* Repoint whichever card has just landed in the staging slot. Slot
+           CARDS-2+1 is opacity 0, so the swap cannot be seen - which is the
+           only reason recycling six cards through eleven photos is invisible. */
+        /* ⚠️ CARDS-2 IS THE LAST SLOT, AND GETTING IT WRONG COSTS NOTHING
+           VISIBLE UNTIL PHOTO 7. slotof() folds into -1..CARDS-2, so with six
+           cards the range is -1..4 and the staging slot is 4. This said
+           CARDS-2+1 first time — slot 5, which cannot occur — so restock()
+           never fired at all: the carousel would have cycled the same six
+           photos for ever and the other five would never have appeared.
+           Nothing errors, nothing looks broken, and you would only notice by
+           counting. Caught by the check that asserts the staging slot is
+           transparent, which could not find slot 5 either. */
+        var STAGE = CARDS - 2;
+        function restock(){
+          cards.forEach(function(c,j){
+            if(slotof(j)===STAGE) point(c.querySelector('picture'), at+STAGE);
+          });
+        }
+
+        function go(n){
+          if(!host.isConnected){ clearTimeout(timer); return; }  // orphaned by a re-render
+          at+=n; layout(); restock();
         }
 
         function schedule(){
           clearTimeout(timer);
-          if(!onscreen||document.hidden)return;
-          timer=setTimeout(function(){ step(); schedule(); },EVERY);
+          // ⚠️ Auto-advance is what prefers-reduced-motion switches off. Drag
+          // and the arrow keys keep working - see the CSS note.
+          if(slowmo||!onscreen||document.hidden||dragging)return;
+          timer=setTimeout(function(){ go(1); schedule(); },EVERY);
         }
+
+        /* ---- drag ---------------------------------------------------------
+           Pointer Events, not a mouse/touch pair, and setPointerCapture so a
+           drag that leaves the box still tracks instead of sticking. */
+        var scene=host.querySelector('.jrtb-scene'), startx=0;
+        function down(e){
+          dragging=true; moved=0; startx=e.clientX;
+          host.classList.add('dragging');
+          try{ scene.setPointerCapture(e.pointerId); }catch(err){}
+          clearTimeout(timer);
+        }
+        function move(e){
+          if(!dragging)return;
+          var dx=e.clientX-startx;
+          if(Math.abs(dx)>Math.abs(moved)) moved=dx;
+          host.style.setProperty('--dragx',dx+'px');
+        }
+        function up(e){
+          if(!dragging)return;
+          dragging=false; host.classList.remove('dragging');
+          try{ scene.releasePointerCapture(e.pointerId); }catch(err){}
+          var dx=e.clientX-startx;
+          host.style.setProperty('--dragx','0px');
+          /* One card per ~62% of a card width, clamped so a violent throw
+             cannot skip half the set and leave unpointed cards on screen. */
+          var w=scene.getBoundingClientRect().width || 1;
+          var stepsize=Math.max(80, w*0.18);
+          var n=Math.round(-dx/stepsize);
+          if(n>2)n=2; if(n<-2)n=-2;
+          if(n) go(n);
+          schedule();
+        }
+        scene.addEventListener('pointerdown',down);
+        scene.addEventListener('pointermove',move,{passive:true});
+        scene.addEventListener('pointerup',up);
+        scene.addEventListener('pointercancel',up);
+        /* ⚠️ A DRAG MUST NOT END IN A CLICK. Without this, every swipe that
+           finishes over a link activates it, which on a touch device is most
+           of them. Capture phase, so it is stopped before anything sees it. */
+        scene.addEventListener('click',function(e){
+          if(Math.abs(moved)>6){ e.preventDefault(); e.stopPropagation(); moved=0; }
+        },true);
+
+        /* Keyboard, because a carousel that only answers to dragging is
+           unusable for anyone who does not drag. */
+        scene.addEventListener('keydown',function(e){
+          if(e.key==='ArrowRight'){ go(1); schedule(); e.preventDefault(); }
+          else if(e.key==='ArrowLeft'){ go(-1); schedule(); e.preventDefault(); }
+        });
 
         document.addEventListener('visibilitychange',schedule);
         if('IntersectionObserver' in window){
@@ -1661,10 +1786,12 @@
              overlap. The first photo is hard-coded here on purpose - see the
              fail-safe note inside. -->
         <div class="jrtb" role="img" aria-label="Abu Dhabi Harlequins junior rugby in action">
-          <div class="jrtb-scene">
-            <div class="jrtb-ring">
-              <!-- Panel 1 only. The script builds the other seven and seats all
-                   eight on the ring. Until it does, the CSS (.jrtb:not(.ready))
+          <!-- tabindex + a role make the arrow keys reachable. A carousel that
+               only answers to dragging is unusable for anyone who does not drag. -->
+          <div class="jrtb-scene" tabindex="0" role="group" aria-label="Photos, use the left and right arrow keys">
+            <div class="jrtb-track">
+              <!-- Card 1 only. The script builds the other five and places all six
+                   in their slots. Until it does, the CSS (.jrtb:not(.ready))
                    makes this one fill the box - so with JavaScript off this is
                    a single static action photo and nothing looks broken. -->
               <div class="jrtb-p">
@@ -1679,9 +1806,9 @@
                        real photo for the desktop no-JS case; it is only used
                        when no source matches. -->
                   <source media="(max-width:760px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-                  <source type="image/avif" media="(min-width:761px)" sizes="(min-width:1200px) 394px, calc(37vw - 50px)"
+                  <source type="image/avif" media="(min-width:761px)" sizes="(min-width:1461px) 380px, 26vw"
                           srcset="assets/board/board-01-sm.avif 528w, assets/board/board-01.avif 960w">
-                  <source type="image/webp" media="(min-width:761px)" sizes="(min-width:1200px) 394px, calc(37vw - 50px)"
+                  <source type="image/webp" media="(min-width:761px)" sizes="(min-width:1461px) 380px, 26vw"
                           srcset="assets/board/board-01-sm.webp 528w, assets/board/board-01.webp 960w">
                   <img src="assets/board/board-01.webp" alt="" decoding="async" fetchpriority="high">
                 </picture>

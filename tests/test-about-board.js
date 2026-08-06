@@ -94,8 +94,8 @@ section('the block this file is reading is the right block');
 
 check('the board script was located in the page', BOARD.length > 2000,
   `matched ${BOARD.length} chars`);
-check('…and it is the ring script, not some other block',
-  /jrtb-ring/.test(BOARD) && /PHOTOS/.test(BOARD));
+check('…and it is the carousel script, not some other block',
+  /jrtb-track/.test(BOARD) && /PHOTOS/.test(BOARD));
 
 /* ------------------------------------------------------------------------ */
 section('⚠️ the encodeCase trap — no camelCase assignment in any inline script');
@@ -142,35 +142,66 @@ check('no inline script assigns to a camelCase name (encodeCase would mangle it)
    its job, under a name the engine leaves alone. Asserting the absence of
    things is not a test — pair it with one that reads the working code. */
 check('the ring still has a screen-visibility flag', /\bonscreen\b/.test(BOARD_CODE));
-check('…and it gates the timer, so an off-screen ring stops turning',
-  /if\(!onscreen\|\|document\.hidden\)return;/.test(BOARD_CODE));
+check('…and it gates the timer, so an off-screen carousel stops advancing',
+  /if\(slowmo\|\|!onscreen\|\|document\.hidden\|\|dragging\)return;/.test(BOARD_CODE),
+  'and the same gate is what stops it under prefers-reduced-motion and mid-drag');
 check('…and an IntersectionObserver sets it',
   /onscreen=es\[0\]\.isIntersecting/.test(BOARD_CODE));
 
 /* ------------------------------------------------------------------------ */
 section('geometry — the radius is trigonometry, not taste');
 
-const panels = Number((BOARD_CODE.match(/var PANELS\s*=\s*(\d+)/) || [])[1]);
+/* ⚠️ REPOINTED WHOLESALE 6 Aug 2026 when the ring became a coverflow carousel.
+   The RING is gone — PANELS, the 1/(2·tan(180/PANELS)) radius and --turn with
+   it — but every RULE this section enforced survived the change and is
+   asserted against the new subject: one variable drives the geometry, the CSS
+   and the script agree on the timing, and there are more photos than slots so
+   the cards have to recycle. Deleting these along with their subject would
+   have retired three live guarantees by accident. */
+const cards  = Number((BOARD_CODE.match(/var CARDS\s*=\s*(\d+)/) || [])[1]);
 const photos = Number((BOARD_CODE.match(/var PHOTOS\s*=\s*(\d+)/) || [])[1]);
-const turnMs = Number((BOARD_CODE.match(/var TURN\s*=\s*(\d+)/) || [])[1]);
+const glide  = Number((BOARD_CODE.match(/var GLIDE\s*=\s*(\d+)/) || [])[1]);
 
-eq('the ring has 8 panels', panels, 8);
-check('there are more photos than panels (they cycle through)', photos > panels,
-  `${photos} photos, ${panels} panels`);
+eq('the carousel carries 6 cards', cards, 6);
+check('there are more photos than cards (they recycle through)', photos > cards,
+  `${photos} photos, ${cards} cards`);
 
-/* --r is 1 / (2 * tan(180deg / PANELS)). If PANELS ever changes and this
-   number does not, the panels overlap or gap and nothing errors. */
-const cssR = Number((PAGE.match(/--r:\s*calc\(var\(--pw\)\s*\*\s*([0-9.]+)\)/) || [])[1]);
-const wantR = 1 / (2 * Math.tan(Math.PI / panels));
-check('the CSS ring radius agrees with PANELS',
-  Math.abs(cssR - wantR) < 0.0001,
-  `CSS has ${cssR}, PANELS=${panels} needs ${wantR.toFixed(5)}`);
+/* ⚠️ SIX CARDS, AND EVERY SLOT FROM -1 TO CARDS-2+1 MUST HAVE AN ENTRY. A card
+   whose slot has no row in SLOTS keeps whatever transform it last had and
+   parks itself on top of the hero — and it renders perfectly, so nothing else
+   would catch it. */
+const slotKeys = [...(BOARD_CODE.match(/'(-?\d)':\s*\{ x:/g) || [])]
+  .map((m) => Number(m.match(/'(-?\d)'/)[1])).sort((a, b) => a - b);
+eq('every slot from -1 upwards has a row in the table',
+  slotKeys.join(','), Array.from({length: cards}, (_, i) => i - 1).join(','));
 
-/* The glide length is written twice — once in CSS as --turn, once in the script
-   as TURN, which uses it to know when the step has finished. Drift means the
-   script re-enters mid-animation. */
-const cssTurn = Number((PAGE.match(/--turn:\s*(\d+)ms/) || [])[1]);
-eq('the CSS --turn and the script TURN are the same number', cssTurn, turnMs);
+/* ⚠️ NO CARD IS TURNED PAST 90°. Chrome treats rotateY past 180deg as
+   back-facing and silently never paints it — the ring lost its entire
+   left-hand side to exactly that. Well inside 90 also keeps every card
+   readable rather than edge-on. */
+const rys = [...(BOARD_CODE.matchAll(/ry:\s*(-?\d+)/g))].map((m) => Number(m[1]));
+check('the slot rotations were found', rys.length === cards, rys.join(', '));
+check('no card is rotated past 90°, where Chrome stops painting it',
+  rys.every((r) => Math.abs(r) < 90), rys.join(', '));
+
+/* ⚠️ THE STAGING SLOT MUST BE INVISIBLE. Recycling six cards through eleven
+   photos only works because the swap happens where nobody can see it. If the
+   last slot ever gains opacity, photos visibly flip on the far side. */
+const lastOp = Number((BOARD_CODE.match(new RegExp("'" + (cards - 2) + "':\\s*\\{[^}]*op:([0-9.]+)")) || [])[1]);
+eq('the staging slot is fully transparent, so the repoint cannot be seen', lastOp, 0);
+/* ⚠️ AND THE SCRIPT MUST TARGET THAT SAME SLOT. It targeted CARDS-2+1 first
+   time — a slot that cannot occur — so restock() never ran and the carousel
+   would have shown the same six photos for ever while the other five never
+   appeared. Nothing errors and nothing looks broken; you would notice by
+   counting, or not at all. Derived, so the two cannot drift. */
+check('the script restocks at the staging slot, not one past it',
+  /var STAGE = CARDS - 2;/.test(BOARD_CODE) && /slotof\(j\)===STAGE/.test(BOARD_CODE),
+  'CARDS-2 is the last slot slotof() can return');
+
+/* The glide length is written twice — once in CSS as --glide, once in the
+   script as GLIDE. Drift means the script and the animation disagree. */
+const cssGlide = Number((PAGE.match(/--glide:\s*(\d+)ms/) || [])[1]);
+eq('the CSS --glide and the script GLIDE are the same number', cssGlide, glide);
 
 /* ------------------------------------------------------------------------ */
 section('the sizes attribute — load-bearing, and easy to lose');
@@ -180,53 +211,63 @@ section('the sizes attribute — load-bearing, and easy to lose');
    THREE times — twice in the hard-coded fail-safe panel's two <source>s, once
    in the script that builds the other seven — and all three must agree or the
    first panel and the rest are fetched at different sizes. */
-const SIZES = '(min-width:1200px) 394px, calc(37vw - 50px)';
+const SIZES = '(min-width:1461px) 380px, 26vw';
 const sizesCount = PAGE.split(SIZES).length - 1;
 check('the sizes string appears three times, identically', sizesCount === 3,
   `found ${sizesCount}`);
-check('…including in the script that builds the other panels',
+check('…including in the script that builds the other cards',
   BOARD_CODE.includes(SIZES));
 
 /* ⚠️ AND THE REAL INVARIANT, rather than three copies of a pinned literal:
-   `sizes` must AGREE WITH --pw. The literal above catches an edit that touches
-   one of the three copies; these two catch the more likely mistake, which is
-   re-proportioning the section, updating the CSS, and leaving `sizes` behind.
-   That failure costs every visitor a bigger file than they need and reports
-   nothing anywhere. Both numbers are read out of the page rather than written
-   down here, so this check survives the next resize instead of having to be
-   edited by whoever does it. */
-const pwClamp = PAGE.match(/--pw:\s*clamp\(\s*\d+px,\s*([0-9.]+)vw - ([0-9.]+)px,\s*(\d+)px\s*\)/);
-check('the --pw clamp was located', !!pwClamp);
-if (pwClamp) {
-  const [, pwVw, pwSub, pwMax] = pwClamp;
-  const sizesMax = (SIZES.match(/\(min-width:1200px\) (\d+)px/) || [])[1];
-  const sizesCalc = SIZES.match(/calc\(([0-9.]+)vw - ([0-9.]+)px\)/);
-  eq('sizes\' capped width is --pw\'s clamp maximum', sizesMax, pwMax);
-  check('…and the scaling half matches too',
-    !!sizesCalc && sizesCalc[1] === pwVw && sizesCalc[2] === pwSub,
-    `sizes says ${sizesCalc && sizesCalc[0]}, --pw says ${pwVw}vw - ${pwSub}px`);
+   `sizes` must AGREE WITH --cw. The literal above catches an edit that touches
+   one of the three copies; this catches the more likely mistake, which is
+   re-proportioning the section, updating the CSS and leaving `sizes` behind.
+   That costs every visitor a bigger file than they need and reports nothing.
+   Both numbers are read out of the page rather than written down here, so the
+   check survives the next resize instead of needing edited by whoever does it.
 
-  /* And the capped width has to be 74% of the column the grid actually gives
-     it, or the ring is cramped (too wide) or adrift in empty space (too
-     narrow). Derived from the section's own grid, so changing one and not the
-     other fails here rather than on Jay's screen. */
-  /* [0-9.]+ , not \d+ : a ratio like 1.5fr is exactly the edit this is here to
-     catch, and a regex that cannot match it fails the "grid was located" check
-     instead of the one that has something to say. The fault run reported that
-     as "failed, but not on the named check" rather than passing it, which is
-     the entire reason that distinction exists. */
-  const grid = PAGE.match(/id="about"[^>]*grid-template-columns:([0-9.]+)fr ([0-9.]+)fr;gap:(\d+)px/);
-  check('the About grid was located', !!grid, 'the ratio and gap drive the panel width');
-  if (grid) {
-    const a = Number(grid[1]), b = Number(grid[2]), gap = Number(grid[3]);
-    const share = b / (a + b);                       // the photo column's share
-    const column = (1200 - 64 - gap) * share;        // 1200 cap, 32px padding each side
-    const want = Math.round(column * 0.74);
-    check('the panel is ~74% of the photo column at full width',
-      Math.abs(Number(pwMax) - want) <= 8,
-      `--pw max is ${pwMax}px; a ${Math.round(column)}px column wants about ${want}px`);
-  }
+   ⚠️ AND THE BREAKPOINT IS DERIVED. --cw is clamp(190px, Nvw, Mpx), so the vw
+   term reaches the cap at 100*M/N px of viewport — that is where `sizes` must
+   switch to the fixed clause. Writing 1461 in both places would pass happily
+   while the two drifted; computing it cannot. */
+const cwClamp = PAGE.match(/--cw:\s*clamp\(\s*\d+px,\s*([0-9.]+)vw,\s*(\d+)px\s*\)/);
+check('the --cw clamp was located', !!cwClamp);
+if (cwClamp) {
+  const cwVw = Number(cwClamp[1]), cwMax = Number(cwClamp[2]);
+  const sizesMax = Number((SIZES.match(/\(min-width:\d+px\) (\d+)px/) || [])[1]);
+  const sizesAt  = Number((SIZES.match(/\(min-width:(\d+)px\)/) || [])[1]);
+  const sizesVw  = Number((SIZES.match(/,\s*([0-9.]+)vw/) || [])[1]);
+  eq("sizes' capped width is --cw's clamp maximum", sizesMax, cwMax);
+  eq('…and the scaling half is the same vw', sizesVw, cwVw);
+  check('…and the breakpoint is where the vw term actually reaches the cap',
+    Math.abs(sizesAt - (100 * cwMax / cwVw)) <= 1,
+    `sizes switches at ${sizesAt}px; ${cwVw}vw hits ${cwMax}px at ${Math.round(100 * cwMax / cwVw)}px`);
 }
+
+/* ⚠️ THE BLEED, WHICH IS THE MOST DANGEROUS LINE IN THIS SECTION. The photo box
+   is deliberately sized to finish exactly at the right edge of the viewport, so
+   the carousel has room the two-column grid cannot give it without stealing
+   from the heading. One sub-pixel error there is a horizontal scrollbar on
+   EVERY page of the site — it is swept live from 1440 to 360, and the formula
+   is pinned here so it cannot be "tidied" into something that only looks right
+   at one width.
+
+     content right edge to viewport = (100vw - min(1200px,100vw))/2 + 32px
+     100vw >= 1200  ->  50vw - 568px
+     100vw <  1200  ->  32px
+   max() is exactly those branches and is continuous at 1200px. */
+/* ⚠️ A LOCAL COPY ON PURPOSE. An earlier block in this file read a const that
+   was declared LATER and the whole suite died on a ReferenceError rather than
+   failing a check — a test file that cannot load reports nothing at all. */
+const CSSNC = stripCssComments(PAGE);
+check('the carousel bleeds to the right edge with the derived formula',
+  /margin-right:\s*calc\(-1 \* max\(32px,\s*50vw - 568px\)\)/.test(CSSNC),
+  'sized off the section max-width and padding, not eyeballed');
+check('…and the section it is derived from is still 1200px wide with 32px padding',
+  /id="about"[^>]*max-width:1200px[^>]*padding:100px 32px/.test(PAGE),
+  'change either and the bleed formula has to be redone by hand');
+check('…and the right-hand corners are square, not rounded against the screen edge',
+  /border-radius:18px 0 0 18px/.test(CSSNC));
 
 /* ⚠️ REPOINTED 5 Aug 2026 (evening). `sizes` used to carry a
    `(max-width:760px) 74vw` clause and this checked it was 760 and not 700. The
@@ -263,8 +304,14 @@ const CSS_760_FOR_PW = (stripCssComments(PAGE).match(/@media \(max-width:760px\)
    is what it says now. The two things it could have lost by widening — the
    block existing at all, and the rule being in it — are both still checked. */
 check('…and the stacked-layout override lives in that same 760px block',
-  /\.about-photo\{--pw:clamp\(170px, 74vw - 30px, 520px\)/.test(CSS_760_FOR_PW),
+  /\.about-photo\{--cw:clamp\(170px, 62vw, 400px\);--focal:50%;margin-right:0/.test(CSS_760_FOR_PW),
   'the .about-photo phone rule must sit at the same breakpoint as the hide');
+/* ⚠️ AND THE BLEED IS CANCELLED THERE. Stacked, the box is already full width;
+   leaving a negative right margin on it would push it past the screen edge and
+   put a scrollbar on every phone. It is hidden at this width today, so nothing
+   would show the mistake until the hide was ever narrowed. */
+check('…and it cancels the bleed, not just the width',
+  /margin-right:0/.test(CSS_760_FOR_PW));
 
 /* ------------------------------------------------------------------------ */
 section('hidden on phones — and it takes THREE things, not one');
@@ -388,8 +435,15 @@ const RING_BG = '#0C0C0E';
    and broke immediately - the comment is exactly the thing most likely to be
    reworded. */
 [['the box', /\.about-photo\{position:relative;border-radius:18px;overflow:hidden;\s*background:(#[0-9A-Fa-f]{6})/],
- ['the 3D scene', /\.jrtb-scene\{position:absolute;inset:0;perspective:1200px;background:(#[0-9A-Fa-f]{6})\}/],
- ['the panel', /\.jrtb-p\{[\s\S]*?background:(#[0-9A-Fa-f]{6});/]].forEach(([label, re]) => {
+ /* ⚠️ WIDENED, AND SPLIT, ON PURPOSE. The old anchor matched the WHOLE rule
+     as one literal, so adding touch-action to .jrtb-scene broke a check about
+     a background colour. An anchor that reads more of the rule than it is
+     asserting fails on changes that did nothing wrong — but simply widening it
+     to `[^}]*` would let the rule lose every other property it carries, which
+     is how a check quietly stops guarding anything. So it reads the colour
+     loosely and the properties that matter have their own checks below. */
+  ['the 3D scene', /\.jrtb-scene\{[^}]*background:(#[0-9A-Fa-f]{6})/],
+ ['the card', /\.jrtb-p\{[\s\S]*?background:(#[0-9A-Fa-f]{6})\}/]].forEach(([label, re]) => {
   const got = (RING_CSS_BG.match(re) || [])[1];
   check(`${label} is on ${RING_BG}`, got === RING_BG, `found ${got || 'nothing — the anchor moved'}`);
 });
@@ -431,17 +485,22 @@ check('no box-shadow on .jrtb-p or its pseudo-elements',
 /* overflow, opacity or filter on .jrtb-ring forces the browser to flatten
    preserve-3d and the cylinder collapses into a flat horizontal squash.
    Clipping belongs on .about-photo, which is why that one IS allowed to. */
-const ringRule = (RING_CSS.match(/\.jrtb-ring\{[\s\S]*?\}/) || [''])[0];
-check('the .jrtb-ring rule was located', ringRule.length > 40);
-check('no overflow / opacity / filter on .jrtb-ring',
+const ringRule = (RING_CSS.match(/\.jrtb-track\{[\s\S]*?\}/) || [''])[0];
+check('the .jrtb-track rule was located', ringRule.length > 30);
+check('no overflow / opacity / filter on .jrtb-track',
   !/(^|[;{\s])(overflow|opacity|filter)\s*:/.test(ringRule), ringRule.slice(0, 160));
 check('…and the clipping is on .about-photo instead',
   /\.about-photo\{[^}]*overflow:hidden/.test(PAGE));
 
-/* Chrome treats rotateY past 180deg as back-facing, so with angles of
-   225/270/315 the whole left-hand side of the ring never painted. */
-check('panel angles are normalised to -180..+180',
-  /if\s*\(a\s*>\s*180\)\s*a\s*-=\s*360;/.test(BOARD_CODE));
+/* ⚠️ REPOINTED, SAME RULE. This asserted that ring angles were normalised to
+   -180..+180, because Chrome treats rotateY past 180deg as back-facing and the
+   whole left-hand side of the ring silently never painted. The ring is gone;
+   the hazard is not. The slot rotations are checked against 90° in the
+   geometry section above, and what is left here is the other half of that
+   lesson — the cards must not carry backface-visibility:hidden, which is what
+   turned an unpainted angle into an invisible one rather than a mirrored one. */
+check('no card is hidden by backface-visibility, which masked the ring bug',
+  !/\.jrtb-p\{[^}]*backface-visibility/.test(CSSNC));
 
 /* ------------------------------------------------------------------------ */
 section('the two boot bugs that made this work locally and not deployed');
@@ -450,10 +509,10 @@ section('the two boot bugs that made this work locally and not deployed');
    re-scanning loop skipped it for ever. It has to be set only once the panels
    are actually seated. */
 const flagAt = BOARD_CODE.indexOf('host.__built=1');
-const seatAt = BOARD_CODE.indexOf('panels.forEach');
-check('build() flags success only AFTER seating the panels',
+const seatAt = BOARD_CODE.indexOf('layout();');
+check('build() flags success only AFTER the cards are placed',
   flagAt > 0 && seatAt > 0 && flagAt > seatAt,
-  `flag at ${flagAt}, seating at ${seatAt}`);
+  `flag at ${flagAt}, layout at ${seatAt}`);
 check('…and the early return does not set it',
   /if\(host\.__built\)return;/.test(BOARD_CODE) &&
   !/if\(host\.__built\)return;\s*host\.__built/.test(BOARD_CODE));
@@ -1050,6 +1109,69 @@ check('the open animations move opacity and transform only',
   /@keyframes hdrMenuIn\{from\{opacity:0;transform:[^}]*\}to\{opacity:1;transform:none\}\}/.test(HDRCSS)
   && /@keyframes hdrPanelIn\{from\{opacity:0;transform:[^}]*\}to\{opacity:1;transform:none\}\}/.test(HDRCSS),
   'animating height would move the header and reopen the feedback loop');
+
+/* =========================================================================
+   Drag, keyboard and the reduced-motion split (coverflow, 6 Aug 2026)
+   ========================================================================= */
+
+section('the carousel can be driven, and driving it does not break the page');
+
+/* ⚠️⚠️ touch-action:pan-y IS THE SINGLE MOST IMPORTANT LINE IN THE DRAG CODE
+   AND ITS ABSENCE IS INVISIBLE ON A DESKTOP. Without it a horizontal drag
+   swallows the gesture and the page stops scrolling vertically while a finger
+   is inside the carousel — the visitor is trapped in a box they were only
+   trying to scroll past. The About block is hidden at and below 760px, so the
+   people this protects are on TABLETS at 761px+: the exact band nobody tests,
+   and where the stuck-hover bug lived for four days. */
+check('the scene hands vertical scrolling back to the browser',
+  /\.jrtb-scene\{[^}]*touch-action:pan-y/.test(CSSNC),
+  'without this a horizontal drag traps a finger on a tablet');
+
+/* Pointer Events, and capture — a drag that leaves the box must keep tracking
+   rather than sticking half way. */
+check('drag uses Pointer Events rather than a mouse/touch pair',
+  /addEventListener\('pointerdown'/.test(BOARD_CODE) &&
+  /addEventListener\('pointerup'/.test(BOARD_CODE));
+check('…and captures the pointer, so a drag leaving the box still tracks',
+  /setPointerCapture/.test(BOARD_CODE));
+check('…and pointercancel is handled, or an interrupted drag sticks',
+  /addEventListener\('pointercancel'/.test(BOARD_CODE));
+
+/* ⚠️ A DRAG MUST NOT END IN A CLICK. Without this every swipe that finishes
+   over a link activates it, which on a touch device is most of them. Capture
+   phase, so it is stopped before anything else sees it. */
+check('a drag past a few pixels suppresses the click it would otherwise fire',
+  /addEventListener\('click',function\(e\)\{[\s\S]{0,140}Math\.abs\(moved\)>\d+[\s\S]{0,80}preventDefault/.test(BOARD_CODE));
+check('…on the capture phase, before anything else sees it',
+  /addEventListener\('click',[\s\S]{0,320}\},true\);/.test(BOARD_CODE));
+
+/* ⚠️ A throw must not skip so far that cards land on slots whose pictures were
+   never pointed. Clamped both ways. */
+check('a violent throw is clamped rather than skipping the set',
+  /if\(n>2\)n=2; if\(n<-2\)n=-2;/.test(BOARD_CODE));
+
+/* Keyboard, because a carousel that only answers to dragging is unusable for
+   anyone who does not drag — and it costs almost nothing. */
+check('the arrow keys step it', /e\.key==='ArrowRight'/.test(BOARD_CODE) && /e\.key==='ArrowLeft'/.test(BOARD_CODE));
+check('…and the scene is focusable so they can reach it',
+  /class="jrtb-scene" tabindex="0"/.test(PAGE));
+check('…with a visible focus ring, or keyboard users cannot see where they are',
+  /\.jrtb-scene:focus-visible\{/.test(CSSNC));
+
+/* ⚠️ REDUCED MOTION SPLITS THE TWO KINDS OF MOVEMENT. Auto-advance is motion
+   the visitor did not ask for and it stops. Dragging and the arrow keys are
+   motion they are causing on purpose, and freezing those would just look
+   broken. The gate is one condition, so both halves are asserted here. */
+check('auto-advance is switched off under prefers-reduced-motion',
+  /var slowmo = window\.matchMedia && window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches;/.test(BOARD_CODE)
+  && /if\(slowmo\|\|/.test(BOARD_CODE));
+check('…but the arrow keys and drag still call go(), so it can still be driven',
+  /ArrowRight'\)\{ go\(1\)/.test(BOARD_CODE) && /if\(n\) go\(n\);/.test(BOARD_CODE));
+
+/* An image the browser treats as draggable turns every swipe into a
+   ghost-image drag instead of moving the carousel. */
+check('the photos cannot be dragged as images',
+  /\.jrtb-p img\{[^}]*user-drag:none/.test(CSSNC));
 
 section('the tournament rules page');
 

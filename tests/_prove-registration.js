@@ -4597,7 +4597,7 @@ const FAULTS = [
   {
     name: 'a camelCase assignment goes back into an inline script (encodeCase mangles it, head copy throws)',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'var at=0, turning=false, timer=null, onscreen=true;',
+    apply: () => patch(HOME, 'var at=0, onscreen=true, timer=null, dragging=false, moved=0;',
       'var at=0, turning=false, timer=null, onScreen=true;'),
     expect: ['no inline script assigns to a camelCase name'],
   },
@@ -4606,20 +4606,20 @@ const FAULTS = [
        so only the positive checks can catch this. That is why they exist. */
     name: 'the screen-visibility flag is renamed and the timer gate is orphaned',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'if(!onscreen||document.hidden)return;', 'if(!document.hidden)return;'),
+    apply: () => patch(HOME, 'if(slowmo||!onscreen||document.hidden||dragging)return;', 'if(!document.hidden)return;'),
     expect: ['it gates the timer'],
   },
   {
     name: 'PANELS changes without the CSS ring radius moving with it',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'var PANELS = 8;', 'var PANELS = 10;'),
-    expect: ['CSS ring radius agrees with PANELS'],
+    apply: () => patch(HOME, 'var CARDS  = 6;', 'var PANELS = 10;'),
+    expect: ['every slot from -1 upwards has a row in the table'],
   },
   {
     name: 'the CSS glide length drifts away from the script TURN',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '--turn:1400ms;', '--turn:900ms;'),
-    expect: ['--turn and the script TURN are the same number'],
+    apply: () => patch(HOME, '--glide: 600ms;', '--turn:900ms;'),
+    expect: ['--glide and the script GLIDE are the same number'],
   },
   {
     name: 'PHOTOS is raised without the photo files being added',
@@ -4633,7 +4633,7 @@ const FAULTS = [
     name: 'the sizes attribute is dropped from the panel builder',
     suite: 'test-about-board.js',
     apply: () => patch(HOME,
-      "a.sizes=w.sizes='(min-width:1200px) 394px, calc(37vw - 50px)';",
+      "a.sizes=w.sizes='(min-width:1461px) 380px, 26vw';",
       "a.sizes=w.sizes='100vw';"),
     expect: ['sizes string appears three times'],
   },
@@ -4644,8 +4644,8 @@ const FAULTS = [
        the hide's breakpoint, so it moves that instead. */
     name: 'the stacked --pw override drifts off the hide breakpoint',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}',
-      '  }\n@media (max-width:700px){\n  .about-photo{--pw:clamp(170px, 74vw - 30px, 520px);border-radius:12px}'),
+    apply: () => patch(HOME, '  .about-photo{--cw:clamp(170px, 62vw, 400px);--focal:50%;margin-right:0;border-radius:12px}',
+      '  }\n@media (max-width:700px){\n  .about-photo{--cw:clamp(170px, 62vw, 400px);--focal:50%;margin-right:0;border-radius:12px}'),
     expect: ['lives in that same 760px block'],
   },
   {
@@ -4661,7 +4661,7 @@ const FAULTS = [
   {
     name: 'the real sources lose their min-width fence, so phones fall through to a photo',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, ' media="(min-width:761px)" sizes="(min-width:1200px) 394px', ' sizes="(min-width:1200px) 394px'),
+    apply: () => patch(HOME, ' media="(min-width:761px)" sizes="(min-width:1461px) 380px', ' sizes="(min-width:1200px) 394px'),
     expect: ['fenced ABOVE the breakpoint'],
   },
   {
@@ -4955,8 +4955,10 @@ const FAULTS = [
   {
     name: 'the 3D scene behind the panels goes back to cream',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}',
-      '.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#F3F1ED}'),
+    /* ⚠️ ANCHOR REPOINTED — the rule gained touch-action when the ring became
+       a carousel, so the whole-rule literal could no longer be injected. */
+    apply: () => patch(HOME, 'perspective:1200px;background:#0C0C0E;\n  touch-action:pan-y',
+      'perspective:1200px;background:#F3F1ED;\n  touch-action:pan-y'),
     expect: ['the 3D scene is on #0C0C0E', 'same colour as each other'],
   },
   {
@@ -4967,9 +4969,12 @@ const FAULTS = [
        image. */
     name: 'the panel keeps a cream background, flashing pale before its photo loads',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '  background:#0C0C0E;\n  /* The script sets --a (this panel\'s angle round the ring) and nothing else.',
-      '  background:#F3F1ED;\n  /* The script sets --a (this panel\'s angle round the ring) and nothing else.'),
-    expect: ['the panel is on #0C0C0E', 'same colour as each other'],
+    /* ⚠️ ANCHOR REPOINTED with the ring's angle comment, which went when the
+       cards stopped being seated on a cylinder. The rule is unchanged: the
+       card's own background is the one that gets forgotten. */
+    apply: () => patch(HOME, '  background:#0C0C0E}\n/* A finger has to move the cards NOW',
+      '  background:#F3F1ED}\n/* A finger has to move the cards NOW'),
+    expect: ['the card is on #0C0C0E', 'same colour as each other'],
   },
   {
     name: 'the record of the cream-vs-black reversal is tidied away',
@@ -5074,17 +5079,22 @@ const FAULTS = [
        cylinder collapses into a flat horizontal squash. */
     name: 'overflow is put on .jrtb-ring, flattening preserve-3d',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;',
-      '.jrtb-ring{position:absolute;inset:0;overflow:hidden;transform-style:preserve-3d;'),
-    expect: ['no overflow / opacity / filter on .jrtb-ring'],
+    apply: () => patch(HOME, '.jrtb-track{position:absolute;inset:0;transform-style:preserve-3d}',
+      '.jrtb-track{position:absolute;inset:0;overflow:hidden;transform-style:preserve-3d}'),
+    expect: ['no overflow / opacity / filter on .jrtb-track'],
   },
   {
     /* Chrome treats rotateY past 180deg as back-facing, so the whole left-hand
        side of the ring silently stops painting. */
     name: 'panel angles go back to 0..360 and the left half of the ring stops painting',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '          if (a > 180) a -= 360;\n', ''),
-    expect: ['angles are normalised'],
+    /* ⚠️ REPOINTED WITH ITS SUBJECT. The ring normalised angles because Chrome
+       stops painting past 180deg; the carousel has no angles to normalise, but
+       the hazard survives — backface-visibility is what turned an unpainted
+       card into an invisible one rather than a mirrored one. */
+    apply: () => patch(HOME, '  overflow:hidden;border-radius:8px;',
+      '  overflow:hidden;border-radius:8px;backface-visibility:hidden;'),
+    expect: ['no card is hidden by backface-visibility'],
   },
   {
     /* The flag on entry is what left the host marked built when it was not, so
@@ -5093,7 +5103,7 @@ const FAULTS = [
     suite: 'test-about-board.js',
     apply: () => patch(HOME, '      if(host.__built)return;\n      try{',
       '      if(host.__built)return;\n      host.__built=1;\n      try{'),
-    expect: ['flags success only AFTER seating the panels'],
+    expect: ['flags success only AFTER the cards are placed'],
   },
   {
     /* Find-it-once worked from a local file and did nothing deployed, because
@@ -5147,18 +5157,25 @@ const FAULTS = [
        photos almost edge to edge. Neither errors. */
     name: 'the About grid is re-proportioned without --pw following it',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'grid-template-columns:1fr 1fr;gap:70px;align-items:center">',
-      'grid-template-columns:1fr 1.5fr;gap:60px;align-items:center">'),
-    expect: ['74% of the photo column'],
+    /* ⚠️ REPOINTED. The grid no longer drives the card width — the carousel
+       bleeds past the column instead — but the section's max-width and padding
+       ARE what the bleed formula is derived from, so re-proportioning them
+       without redoing the formula is the same class of silent mistake. */
+    apply: () => patch(HOME, 'max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px',
+      'max-width:1320px;margin:0 auto;padding:100px 48px;display:grid;grid-template-columns:1fr 1fr;gap:70px'),
+    expect: ['still 1200px wide with 32px padding'],
   },
   {
     /* --pw moves and `sizes` is left behind: every visitor downloads a file
        bigger than they need and nothing anywhere reports it. */
     name: 'the CSS panel width drifts away from the sizes attribute',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '--pw: clamp(190px, 37vw - 50px, 394px);',
-      '--pw: clamp(190px, 44.4vw - 55px, 480px);'),
-    expect: ['capped width is --pw'],
+    /* ⚠️ REPOINTED. --pw is --cw now and the drift it guards is identical: the
+       CSS card width moving while `sizes` stays behind, so every visitor
+       downloads a bigger file than they need and nothing reports it. */
+    apply: () => patch(HOME, '--cw: clamp(190px, 26vw, 380px);',
+      '--cw: clamp(190px, 32vw, 460px);'),
+    expect: ['breakpoint is where the vw term actually reaches the cap'],
   },
   {
     /* The heading was cut to 52px once already, as a consequence of a photo
@@ -5551,6 +5568,138 @@ const FAULTS = [
     apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}',
       '@keyframes hdrPanelIn{from{opacity:0;height:0}to{opacity:1;height:auto}}'),
     expect: ['opacity and transform only'],
+  },
+
+  /* ---- the coverflow carousel (6 Aug 2026) ------------------------------ */
+
+  {
+    /* ⚠️⚠️ THE MOST DANGEROUS EDIT ON THE PAGE. The box is sized to finish
+       exactly at the viewport edge; a bleed that overshoots puts a horizontal
+       scrollbar on EVERY page of the site, and it is invisible until somebody
+       happens to look at the right width. This is the "tidied into a round
+       number" version. */
+    name: 'the bleed is simplified to a fixed value and overshoots the viewport',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'margin-right: calc(-1 * max(32px, 50vw - 568px));',
+      'margin-right: -200px;'),
+    expect: ['bleeds to the right edge with the derived formula'],
+  },
+  {
+    /* The other half: the formula stays, and the section it was derived FROM
+       moves. Nothing about the bleed line looks wrong; it is simply now
+       describing a section that no longer exists. */
+    name: 'the section is re-proportioned without the bleed formula following it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px',
+      'max-width:1320px;margin:0 auto;padding:100px 48px;display:grid;grid-template-columns:1fr 1fr;gap:70px'),
+    expect: ['still 1200px wide with 32px padding'],
+  },
+  {
+    name: 'the right-hand corners are rounded again, against the edge of the screen',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'border-radius:18px 0 0 18px;', 'border-radius:18px;'),
+    expect: ['right-hand corners are square'],
+  },
+  {
+    /* ⚠️ INVISIBLE ON A DESKTOP, AND IT TRAPS A FINGER ON A TABLET. Removing
+       this makes a horizontal drag swallow vertical scrolling, so a visitor
+       who only wanted to scroll past the section cannot get out of it. */
+    name: 'touch-action is dropped and the carousel eats vertical scrolling',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  touch-action:pan-y;cursor:grab;outline:none}', '  cursor:grab;outline:none}'),
+    expect: ['hands vertical scrolling back to the browser'],
+  },
+  {
+    /* Every swipe that ends over a link would otherwise activate it. */
+    name: 'a drag is allowed to fire the click it finishes on',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "          if(Math.abs(moved)>6){ e.preventDefault(); e.stopPropagation(); moved=0; }",
+      "          if(false){ e.preventDefault(); e.stopPropagation(); moved=0; }"),
+    expect: ['suppresses the click it would otherwise fire'],
+  },
+  {
+    /* A throw that skips further than the set has been pointed leaves blank or
+       stale cards on screen. */
+    name: 'a violent throw is no longer clamped and can skip past pointed cards',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '          if(n>2)n=2; if(n<-2)n=-2;\n', ''),
+    expect: ['clamped rather than skipping the set'],
+  },
+  {
+    /* ⚠️ THE BUG THIS SUITE ACTUALLY CAUGHT WHILE BEING WRITTEN. slotof()
+       folds into -1..CARDS-2, so CARDS-2+1 is a slot that cannot occur and
+       restock() never fires: the carousel shows the same six photos for ever
+       and the other five never appear. Nothing errors, nothing looks broken,
+       and you would only notice by counting. */
+    name: 'restocking targets a slot that cannot occur, so five photos never appear',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '        var STAGE = CARDS - 2;', '        var STAGE = CARDS - 2 + 1;'),
+    expect: ['restocks at the staging slot, not one past it'],
+  },
+  {
+    /* The staging slot is only safe to repoint in because nobody can see it. */
+    name: 'the staging slot gains opacity, so photos visibly flip on the far side',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "op:0.00, away:1.0, zi:7 }", "op:0.30, away:1.0, zi:7 }"),
+    expect: ['staging slot is fully transparent'],
+  },
+  {
+    /* A slot with no row keeps whatever transform it last had and parks itself
+       on top of the hero - and it renders perfectly. */
+    name: 'a slot loses its row in the table and a card parks on top of the hero',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "      '3':  { x: 1.62, ry:-58, z:-400, sc:0.72, op:0.32, away:0.8, zi:8 },\n", ''),
+    expect: ['every slot from -1 upwards has a row in the table'],
+  },
+  {
+    /* Past 90 a card is edge-on; past 180 Chrome stops painting it at all,
+       which is how the ring lost its entire left-hand side. */
+    name: 'a card is rotated past 90 degrees, where Chrome stops painting it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "'3':  { x: 1.62, ry:-58,", "'3':  { x: 1.62, ry:-118,"),
+    expect: ['rotated past 90'],
+  },
+  {
+    /* ⚠️ REDUCED MOTION MUST STOP THE AUTO-ADVANCE AND NOTHING ELSE. This
+       removes the gate, so somebody who asked for less motion gets a carousel
+       turning on its own every six seconds. */
+    name: 'auto-advance ignores prefers-reduced-motion',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '          if(slowmo||!onscreen||document.hidden||dragging)return;',
+      '          if(!onscreen||document.hidden||dragging)return;'),
+    expect: ['auto-advance is switched off under prefers-reduced-motion'],
+  },
+  {
+    /* And the mirror: the keyboard is what makes this usable for anybody who
+       does not drag, and it costs almost nothing to keep. */
+    name: 'the arrow keys are removed and only dragging works',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "          if(e.key==='ArrowRight'){ go(1); schedule(); e.preventDefault(); }",
+      "          if(false){ go(1); schedule(); e.preventDefault(); }"),
+    expect: ['the arrow keys step it'],
+  },
+  {
+    name: 'the scene stops being focusable, so the arrow keys cannot be reached',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<div class="jrtb-scene" tabindex="0"', '<div class="jrtb-scene"'),
+    expect: ['the scene is focusable'],
+  },
+  {
+    /* Without this every swipe becomes a browser image-drag with a ghost
+       thumbnail, and the carousel does not move at all. */
+    name: 'the photos become draggable images again and swipes stop working',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  -webkit-user-drag:none;user-select:none;pointer-events:none}',
+      '  user-select:none;pointer-events:none}'),
+    expect: ['photos cannot be dragged as images'],
+  },
+  {
+    /* Stacked, the box is already full width; a negative right margin there
+       pushes it past the screen edge on every phone. */
+    name: 'the stacked layout keeps the bleed and overflows every phone',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '--focal:50%;margin-right:0;border-radius:12px}', '--focal:50%;border-radius:12px}'),
+    expect: ['cancels the bleed'],
   },
 
   {

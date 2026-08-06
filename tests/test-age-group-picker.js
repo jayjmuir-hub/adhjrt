@@ -336,6 +336,41 @@ section('One design, two implementations — the parts that must agree');
     !/function centreActivePill/.test(APP_CODE));
 }
 
+/* ====================================================================== */
+section('The day is stated ONCE — dayTag() went with the regroup');
+{
+  /* ⚠️ WHY THIS IS A CHECK AND NOT JUST A DELETION. dayTag() printed a solid
+     day marker and the date directly under the picker, for whichever group was
+     being browsed — "DAY 02 · Sunday 8 November". Once the picker grouped BY
+     day, the selected chip already sat inside a block headed with that exact
+     string about 30px higher, so the tag was a second copy of the sentence
+     immediately above it. Two identical sentences a thumb apart read as a
+     mistake, not as emphasis; it is the same argument that took the HSBC band
+     out from under the /scores header.
+
+     ⚠️ The rule this guards is NOT "never show the day" — it is "show it
+     once". So the absence check is paired with the positive one: the day must
+     still be on screen, in the block heading, which is what makes the removal
+     a tidy-up rather than a loss. */
+  check('dayTag() is gone from the match-day app',
+    !/function dayTag/.test(APP_CODE), 'the duplicate day line is back');
+  check('…and nothing still calls it', !/dayTag\(/.test(APP_CODE));
+  check('…and its CSS went with it, so it cannot come back half-styled',
+    !/\.daytag/.test(APP_CODE));
+  check('…and the deletion is recorded rather than silent',
+    /TOMBSTONE - dayTag\(\)/.test(APP));
+
+  /* The positive half — the day did not leave the screen, it stopped being
+     said twice. */
+  const html = appPicker(
+    [{ id: 'u9', name: 'U9 Mixed Contact' }, { id: 'u12g', name: 'U12G QR' }], 'u12g');
+  check('the day is still on screen, in the block heading',
+    html.indexOf('Sunday 8 November') >= 0, html);
+  eq('…and said exactly once per day, not twice',
+    (html.match(/Sunday 8 November/g) || []).length, 1);
+  eq('…same for the other day', (html.match(/Saturday 7 November/g) || []).length, 1);
+}
+
 summary('test-age-group-picker.js');
 }
 

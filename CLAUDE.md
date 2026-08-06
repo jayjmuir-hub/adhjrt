@@ -1267,6 +1267,16 @@ rather than disappearing. Asserted against all fifteen real names, read out of
   Both are asserted; "it goes red" would pass on a picker that had lost green.
 - `centreActivePill()` is **deleted with a tombstone** — nothing scrolls
   sideways now. Dead code here is published code.
+- ⚠️ **`dayTag()` WENT WITH IT, and the rule is "say the day ONCE", not "never
+  say it".** It printed a solid day marker and the date — "DAY 02 · Sunday 8
+  November" — directly under the picker, which after the regroup was a second
+  copy of the block heading about 30px above it. Two identical sentences a
+  thumb apart read as a mistake, not emphasis; same argument that took the HSBC
+  band out from under the `/scores` header. **Nothing was lost** — the day is
+  still on screen and is now readable BEFORE a choice is made rather than only
+  after. Tombstoned, CSS removed with it, and asserted from **both** ends: a
+  fault that brings the duplicate back, and one that empties the block heading
+  so "it is gone" cannot be satisfied by the day vanishing altogether.
 
 ## Publishing fixtures
 
@@ -3084,7 +3094,7 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring, the doc-claim suite and the age-group picker — **37 files** — plus `_prove-registration.js`, the fault-injection
-script (**645 faults** as of 6 Aug 2026, all of which must be caught by the
+script (**647 faults** as of 6 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

@@ -365,7 +365,7 @@ tr.me td{background:#fffdf4;font-weight:800}
    eyebrows, day sub-labels, the age chips on the format cards. Anton stays
    for display type and numbers, Barlow for body copy. */
 .hero-k,.tcard-k,.tcard-cta,.cd span,.kick span,.tile span,.pool-h,.chip,
-.cs-pill,.ag-age,.btn,label,th,.daytag-d{
+.cs-pill,.ag-age,.btn,label,th{
   font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif}
 /* Semi Condensed runs narrow, so the site opens the tracking up to match. */
 .hero-k,.tcard-k,.pool-h,.cs-pill,.tile span{letter-spacing:.14em}
@@ -374,13 +374,6 @@ tr.me td{background:#fffdf4;font-weight:800}
 /* Score-entry labels are sentence case, not micro-caps — leave them Barlow. */
 .sb-row label{font-family:'Barlow',system-ui,sans-serif;letter-spacing:0}
 
-/* Day tag, from the homepage format cards: a solid day marker in the day's
-   colour, then the date in the eyebrow voice. */
-.daytag{display:flex;align-items:center;gap:10px;margin:0 2px 12px}
-.daytag-n{font-family:'Anton';font-size:12px;letter-spacing:.14em;color:#fff;
-          background:var(--red);padding:5px 10px;border-radius:6px}
-.daytag.sun .daytag-n{background:var(--green)}
-.daytag-d{font-weight:700;text-transform:uppercase;font-size:12px;color:var(--muted)}
 
 /* Venue map, opened full width in a sheet. */
 .vmap{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
@@ -744,14 +737,22 @@ function loadFail(){
     <button class="btn btn-o" data-age="${esc(S.browseId || '')}" style="margin-top:12px;display:inline-block;width:auto;padding:12px 26px">Try again</button></div></div>`;
 }
 
-function dayTag(agId){
-  if (!agId) return '';
-  const sat = isSat(agId);
-  return `<div class="daytag ${sat?'':'sun'}">
-      <span class="daytag-n">DAY ${sat?'01':'02'}</span>
-      <span class="daytag-d">${esc(api.dayLabelOfAgeGroup(agId))}</span>
-    </div>`;
-}
+/* ⚠️ TOMBSTONE - dayTag() lived here and was DELETED 6 Aug 2026, the same day
+   the age-group picker was regrouped BY DAY. It rendered a solid day marker
+   and the date ("DAY 02 · Sunday 8 November") directly under the picker, for
+   whichever group was being browsed.
+
+   It went because it had become a second copy of a fact the thing immediately
+   above it now states: the selected chip sits inside a block headed with that
+   exact string, about 30px higher. Two identical sentences a thumb apart read
+   as a mistake, not as emphasis - the same argument that removed the HSBC band
+   from under the /scores header, recorded in CLAUDE.md.
+
+   ⚠️ NOTHING IS LOST. The day is still on screen, and it is now readable
+   BEFORE a choice is made rather than only after one, which the tag never
+   managed. If the picker ever stops grouping by day, this comes back with it -
+   the .daytag CSS is gone too, so it comes back whole rather than half. */
+
 function comingSoon(what, agId){
   return `<div class="card"><div class="empty">
     <span class="cs-pill">Coming soon</span>
@@ -961,7 +962,7 @@ function teamSeg(){
 /* Results is its own tab. Fixtures no longer repeats the scores. */
 function viewResults(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Results</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
+  const head = `<div class="sec-t">Results</div>${pills()}${teamKeyButton()}`;
   if (!fx) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (fx.awaitingPublication) return head + comingSoon('Results', S.browseId);
   const { showFilter, seg } = teamSeg();
@@ -970,7 +971,7 @@ function viewResults(){
 
 function viewFixtures(){
   const fx = S.fixtures;
-  const head = `<div class="sec-t">Fixtures</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
+  const head = `<div class="sec-t">Fixtures</div>${pills()}${teamKeyButton()}`;
   if (!fx) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (fx.awaitingPublication) return head + comingSoon('Fixtures', S.browseId);
 
@@ -995,7 +996,7 @@ function viewFixtures(){
 /* ---------------- Tables ---------------- */
 function viewTables(){
   const st = S.standings;
-  const head = `<div class="sec-t">Tables</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;
+  const head = `<div class="sec-t">Tables</div>${pills()}${teamKeyButton()}`;
   if (!st) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (st.awaitingPublication) return head + comingSoon('Standings', S.browseId);
   if (!st.ageGroup.hasStandings) return head +

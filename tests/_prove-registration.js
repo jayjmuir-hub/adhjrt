@@ -5014,6 +5014,32 @@ const FAULTS = [
     expect: ['selected day-two chip is green, not red'],
   },
   {
+    /* ⚠️ The duplicate day line comes back. dayTag() printed the same sentence
+       the block heading now carries, 30px lower — the HSBC-band mistake in
+       miniature. Restored as a caller, which is the realistic regression: the
+       function is easy to re-add from git history and the call site is one
+       template literal. */
+    name: 'the day is said twice again — dayTag returns under the picker',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html',
+      '  const head = `<div class="sec-t">Fixtures</div>${pills()}${teamKeyButton()}`;',
+      '  function dayTag(a){ return a ? `<div class="daytag">${esc(api.dayLabelOfAgeGroup(a))}</div>` : ""; }\n'
+      + '  const head = `<div class="sec-t">Fixtures</div>${pills()}${dayTag(S.browseId)}${teamKeyButton()}`;'),
+    expect: ['dayTag() is gone from the match-day app', 'nothing still calls it'],
+  },
+  {
+    /* ⚠️ THE OTHER HALF, AND THE REASON THE REMOVAL IS A TIDY-UP RATHER THAN A
+       LOSS. The rule is "say the day ONCE", not "never say it" — so deleting
+       it from the block heading as well must fail, or the absence check above
+       would be satisfied by a picker that had lost the day entirely. */
+    name: 'the day disappears from the picker altogether, not just from the duplicate',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html',
+      '      + `<span class="ag-d">${esc(label)}</span></div>`',
+      '      + `<span class="ag-d"></span></div>`'),
+    expect: ['the day is still on screen, in the block heading'],
+  },
+  {
     /* A deletion with no trace is an invitation to re-add it — and the next
        person to build a horizontal row will rediscover the problem this one
        solved. */

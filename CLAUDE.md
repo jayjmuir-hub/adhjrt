@@ -1226,6 +1226,48 @@ match-day guard, typed confirmation) live on in that tool and in git history
 
 ---
 
+## The age-group picker (rebuilt 6 Aug 2026)
+
+**Two DAY blocks of wrapped chips, on `/app` and `/scores`, one design.** Spec:
+`claude/specs/spec-age-group-selector.md`. Jay asked for the age-group
+selection in Fixtures and Results to be "cleaner".
+
+It was one horizontally scrolling strip of fifteen on `/app` — **with its
+scrollbar hidden on purpose**, so eleven sat off the right edge with nothing
+saying they existed — and thirteen identical chips wrapping over three or four
+lines on `/scores`. The full name was one string, 6 to 16 characters, so every
+chip was a different width; and the **day** was visible only as the colour of
+the pill you had already chosen.
+
+⚠️ **THE DAY SPLIT IS DERIVED FROM THE VENUE LAYOUT, NEVER TYPED.**
+`api.isDayOne()` and `api.dayLabelOfAgeGroup()` answer from the layout, where a
+group is on Saturday **because that is where it holds pitches**. Move a group in
+the back office and it moves block, with no deploy. `app.html` once carried
+`const SATURDAY = [...]` and showed U12G and both U18 groups on the wrong day on
+the public site with registration open — **grouping the picker by day is the
+first thing in a year that has made that list tempting again**, so
+`tests/test-age-group-picker.js` sweeps for it AND drives the answer, because a
+call to `isDayOne()` proves nothing about whether its answer is used.
+
+⚠️ **THE LABEL SPLITS ON THE FIRST SPACE** — band big, format small
+(`U12G` + `QR`, `U9` + `Mixed Contact`). A name with **no** space keeps the
+whole string as the band and renders no format line, so a future `U20` degrades
+rather than disappearing. Asserted against all fifteen real names, read out of
+`_agegroups.js` rather than typed.
+
+- **Two implementations, one design** — `pills()` in `app.html` (vanilla) and
+  `ageDayBlocks` in `Scores & Standings.dc.html` (nested `<sc-for>`). They share
+  no code and there is no build step, so the test reads BOTH and asserts the
+  parts that must agree.
+- ⚠️ **`pills()` is shared by Fixtures, Results AND Tables** on `/app`.
+- ⚠️ **`onSelect` still reports upward through `props.onAgeChange`** — that is
+  the homepage embed contract, and a regroup that dropped it would look perfect
+  and silently unlink the two. Asserted.
+- ⚠️ **Selected chips keep the DAY's colour** — red day one, green day two.
+  Both are asserted; "it goes red" would pass on a picker that had lost green.
+- `centreActivePill()` is **deleted with a tombstone** — nothing scrolls
+  sideways now. Dead code here is published code.
+
 ## Publishing fixtures
 
 ⚠️ **`loadDraw(agId)` ON `/manager` OPENS WITH AN ENTRY GUARD, AND IT IS
@@ -3041,8 +3083,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
-photo ring and the doc-claim suite — **36 files** — plus `_prove-registration.js`, the fault-injection
-script (**638 faults** as of 6 Aug 2026, all of which must be caught by the
+photo ring, the doc-claim suite and the age-group picker — **37 files** — plus `_prove-registration.js`, the fault-injection
+script (**645 faults** as of 6 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

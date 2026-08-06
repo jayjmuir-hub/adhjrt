@@ -73,6 +73,13 @@ function build(file, props) {
    this is a deliberately dumb stand-in — enough that renderVals doesn't throw
    reaching for one of them, with real per-test overrides (getStandings,
    getDraw, teamLabel...) layered on top of it. */
+/* Age chips live inside day blocks since 6 Aug 2026 — flatten to reach them.
+   Which day they land in is test-age-group-picker.js's business, not this
+   file's; these tests are about the pick being reported upward. */
+function syncTabs(vals) {
+  return (vals.ageDayBlocks || []).reduce((all, d) => all.concat(d.tabs || []), []);
+}
+
 function fakeScoresApi(overrides) {
   return {
     getStandings: async () => null,
@@ -83,7 +90,8 @@ function fakeScoresApi(overrides) {
     canPublishNow: () => false,
     supportsSpiritAward: () => false,
     pitchesForAgeGroup: () => [],
-    dayLabelOfAgeGroup: () => '',
+    dayLabelOfAgeGroup: () => 'Saturday 7 November',
+    isDayOne: () => true,
     dayStartMins: () => 480,
     slotLengthMins: () => 20,
     poolEndMins: () => 480,
@@ -217,7 +225,7 @@ section('Scores & Standings: public Results tab calls onAgeChange upward');
       api: fakeScoresApi(),
     };
     const vals = c.renderVals();
-    const tab = (vals.ageTabs || []).find((t) => t.name === 'U16B Contact');
+    const tab = syncTabs(vals).find((t) => t.name === 'U16B Contact');
     check('the U16B public tab exists and is clickable', !!tab && typeof tab.onSelect === 'function');
     tab.onSelect();
     check('picking it updates the widget\'s own selection', c.state.selectedAgeId === 'u16b');
@@ -235,7 +243,7 @@ section('Scores & Standings: public Results tab calls onAgeChange upward');
       api: fakeScoresApi(),
     };
     const vals = c.renderVals();
-    const tab = vals.ageTabs[0];
+    const tab = syncTabs(vals)[0];
     let threw = false;
     try { tab.onSelect(); } catch (e) { threw = true; }
     check('clicking a tab on the standalone /scores page (no onAgeChange prop) does not throw', !threw);

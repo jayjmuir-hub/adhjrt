@@ -59,10 +59,25 @@ function standingsFixture() {
 function fakeApi(overrides) {
   return Object.assign({
     getStandings: async () => standingsFixture(),
+    /* The public picker groups its chips by DAY, read off the venue layout, so
+       renderVals() calls these two. The stand-in puts every U1x on day two and
+       everything else on day one, which is close enough to the real layout to
+       exercise both blocks — the point here is the grouping, not the calendar.
+       ⚠️ Whenever renderVals starts reading a new api function, it joins this
+       stub in the same commit or the whole file dies on a TypeError and every
+       fault after it reports as caught while proving nothing. */
+    isDayOne: (id) => !/^u1[2-6]g?$|^u13$|^u14/.test(String(id)),
+    dayLabelOfAgeGroup: (id) => (/^u1[2-6]g?$|^u13$|^u14/.test(String(id))
+      ? 'Sunday 8 November' : 'Saturday 7 November'),
     teamShort: (v) => v,
     teamLogoSrc: () => '',
     teamKey: () => [{ code: 'ZZ1', name: 'Zebra Zoo', logoSrc: '' }],
   }, overrides || {});
+}
+
+/* The public age chips, flattened out of their day blocks. */
+function publicTabs(vals) {
+  return (vals.ageDayBlocks || []).reduce((all, d) => all.concat(d.tabs || []), []);
 }
 
 async function main() {
@@ -79,7 +94,11 @@ section('What remains: the public page still renders standings, brackets, tabs')
 
   const vals = c.renderVals();
   check('the page reports itself public', vals.isPublic === true);
-  eq('festival groups are hidden from the public tabs', vals.ageTabs.map((t) => t.name),
+  /* The picker is grouped by DAY now (6 Aug 2026), so renderVals returns
+     ageDayBlocks rather than a flat ageTabs. Flattened here because what this
+     check is about is WHICH groups are offered, not how they are arranged —
+     the arrangement has its own file, test-age-group-picker.js. */
+  eq('festival groups are hidden from the public tabs', publicTabs(vals).map((t) => t.name),
     ['U9 Mixed Contact', 'U16B Contact']);
   check('the pool tables render', vals.showTables === true && vals.pools.length === 1
     && vals.pools[0].rows.length === 2, JSON.stringify(vals.pools));
@@ -94,7 +113,7 @@ section('What remains: the public page still renders standings, brackets, tabs')
   const calls = [];
   const c2 = build({ onAgeChange: (id) => calls.push(id) });
   c2.state = { ...c2.state, api: fakeApi(), ageGroups: AGE_GROUPS, selectedAgeId: 'u9' };
-  c2.renderVals().ageTabs.find((t) => t.name === 'U16B Contact').onSelect();
+  publicTabs(c2.renderVals()).find((t) => t.name === 'U16B Contact').onSelect();
   eq('an age-tab pick still reports upward to the homepage embed', calls, ['u16b']);
 }
 

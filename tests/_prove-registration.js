@@ -4018,8 +4018,15 @@ const FAULTS = [
   {
     name: 'the old scores band is put back under the header, duplicating the mark',
     suite: 'test-sponsors.js',
-    apply: () => patch('Scores & Standings.dc.html', '      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">',
-      '      <div><span>In partnership with</span><img src="assets/sponsor-hsbc-white.webp" alt="HSBC"></div>\n      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">'),
+    /* ⚠️ ANCHOR REPOINTED 6 Aug 2026 — it hung off the flat age-tab row's
+       wrapper div, and the picker was regrouped into day blocks, so the text
+       no longer existed and the fault could not be injected. A fault that
+       cannot be injected is a FAILED RUN, not a pass. The rule is unchanged
+       and still load-bearing: an HSBC band directly above the age-group picker
+       duplicates the mark already in the header. Repointed to the picker's new
+       opening, which is what "above the picker" has always really meant. */
+    apply: () => patch('Scores & Standings.dc.html', '      <div style="margin-bottom:28px">\n        <sc-for list="{{ ageDayBlocks }}"',
+      '      <div><span>In partnership with</span><img src="assets/sponsor-hsbc-white.webp" alt="HSBC"></div>\n      <div style="margin-bottom:28px">\n        <sc-for list="{{ ageDayBlocks }}"'),
     expect: ['band above the age-group pills is gone', 'one HSBC image on the scores page'],
   },
   {
@@ -4943,6 +4950,77 @@ const FAULTS = [
     apply: () => patch(HOME, '  .rules-btn{text-decoration:none}',
       '  .spon-tile:hover{transform:translateY(-3px)}\n  .rules-btn{text-decoration:none}'),
     expect: ['moves or animates is behind'],
+  },
+
+  /* ---- the age-group picker, both surfaces (6 Aug 2026) -----------------
+     Grouping the picker by day is the first thing in a year that has made a
+     written-out list of age groups tempting again — which is exactly how U12G
+     and both U18 groups once went live on the wrong day. The first two faults
+     below are that regression, from both ends. */
+  {
+    name: 'the picker declares its own list of Saturday age groups again',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', 'function pills(){',
+      "const SATURDAY = ['u6','u7','u8','u9','u10','u11','u12','u12g'];\nfunction pills(){"),
+    expect: ['declares no age-group list next to a day'],
+  },
+  {
+    /* ⚠️ THE OTHER END, AND THE ONE THAT MATTERS. A call to isDayOne() proves
+       nothing about whether its ANSWER is used, so the sweep above is paired
+       with a driven check: move a group between days and it must move block. */
+    name: 'the day answer is ignored, so every group lands in one block',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '    const list = (S.ageGroups || []).filter(a => isSat(a.id) === sat);',
+      '    const list = (S.ageGroups || []).filter(() => sat);'),
+    expect: ['U9 above the Sunday heading and U12G below it', 'draws a Saturday block and a Sunday block'],
+  },
+  {
+    /* The split is the FIRST space. On the last space "U9 Mixed Contact"
+       becomes band "U9 Mixed" — which still renders, still looks like a chip,
+       and is wrong on every multi-word format. */
+    name: 'the label is split on the last space instead of the first',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', "  const i = t.indexOf(' ');\n  return i < 0 ? { band: t, fmt: '' }",
+      "  const i = t.lastIndexOf(' ');\n  return i < 0 ? { band: t, fmt: '' }"),
+    expect: ['puts the band in its own element'],
+  },
+  {
+    /* A future group with no space in its name must keep its whole name as the
+       band. Swapped round it renders a chip with an empty first line. */
+    name: 'a name with no space loses its band instead of keeping it',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', "  return i < 0 ? { band: t, fmt: '' } :",
+      "  return i < 0 ? { band: '', fmt: t } :"),
+    expect: ['keeps the whole string as the band'],
+  },
+  {
+    /* Back to the thing Jay actually complained about: a horizontal strip with
+       most of the list off the right edge and no scrollbar to say so. */
+    name: 'the chips stop wrapping and go back to a hidden horizontal scroller',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '.ag-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}',
+      '.ag-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin-bottom:14px}'),
+    expect: ['the chips wrap instead'],
+  },
+  {
+    /* ⚠️ Red for day one, GREEN for day two. Both are asserted, or "it goes
+       red" passes on a picker that has quietly lost the second colour — and
+       the day coding is half the reason for grouping at all. */
+    name: 'a selected day-two chip on /scores goes red like day one',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      "          ? { ...t, style: t.style.replace(/#E11B22;background:#E11B22/, '#17A34A;background:#17A34A') }",
+      '          ? { ...t }'),
+    expect: ['selected day-two chip is green, not red'],
+  },
+  {
+    /* A deletion with no trace is an invitation to re-add it — and the next
+       person to build a horizontal row will rediscover the problem this one
+       solved. */
+    name: 'the deleted pill-centring helper loses its tombstone',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '/* ⚠️ TOMBSTONE - centreActivePill() lived here', '/* Nothing to see here'),
+    expect: ['recorded, not silently dropped'],
   },
 
   /* ---- switching age group while a write is in flight (6 Aug 2026) ------

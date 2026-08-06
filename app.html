@@ -142,14 +142,33 @@ main{padding:16px}
 .tile span{font-size:10px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
            color:var(--muted);margin-top:5px;display:block}
 
-.pill-row{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
-.pill-row::-webkit-scrollbar{display:none}
-.pill{flex:none;padding:8px 14px;border-radius:100px;font-weight:700;font-size:13px;
-      border:1.5px solid var(--line);background:#fff;color:var(--muted);white-space:nowrap}
-/* Red for day one, green for day two — the same coding the homepage format
-   cards use for Saturday and Sunday. */
-.pill.on{background:var(--red);border-color:var(--red);color:#fff}
-.pill.on.sun{background:var(--green);border-color:var(--green)}
+/* ---------- the age-group picker ----------
+   ⚠️ IT WAS ONE SCROLLING STRIP OF FIFTEEN AND IT IS TWO WRAPPED DAY BLOCKS
+   NOW (6 Aug 2026). The strip hid its own scrollbar on purpose, so eleven of
+   the fifteen groups sat off the right edge with nothing saying they existed;
+   the labels ran 6 to 16 characters ("U6 Tag" against "U9 Mixed Contact"); and
+   the DAY - the one thing that halves the list - was visible only as the
+   colour of the pill you had ALREADY chosen.
+   Nothing scrolls sideways now, so nothing is hidden. */
+.ag-day{display:flex;align-items:center;gap:9px;margin:2px 0 9px}
+.ag-rule{height:3px;width:20px;border-radius:2px;background:var(--red);flex:none}
+.ag-day.sun .ag-rule{background:var(--green)}
+.ag-d{font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+.ag-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.ag-chip{padding:6px 12px 7px;border-radius:12px;font-weight:700;
+         border:1.5px solid var(--line);background:#fff;text-align:left;line-height:1.05}
+/* Two facts, two lines: you scan for the age band, the format is there for
+   whoever wants it. Glued together they made every chip a different width. */
+.ag-age{display:block;font-weight:800;font-size:14.5px;color:var(--text);letter-spacing:.2px}
+.ag-fmt{display:block;font-weight:600;font-size:9.5px;letter-spacing:.9px;
+        text-transform:uppercase;color:var(--muted);margin-top:3px}
+/* Red for day one, green for day two - the same coding the homepage format
+   cards use for Saturday and Sunday, and now on the block rule as well, so it
+   means something BEFORE you choose rather than only after. */
+.ag-chip.on{background:var(--red);border-color:var(--red)}
+.ag-chip.on.sun{background:var(--green);border-color:var(--green)}
+.ag-chip.on .ag-age{color:#fff}
+.ag-chip.on .ag-fmt{color:rgba(255,255,255,.82)}
 
 /* match rows */
 .mrow{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;
@@ -305,11 +324,11 @@ input:focus,select:focus{outline:none;border-color:var(--red)}
 }
 /* Pressed + hover feedback on the app's main tap targets (design audit, Aug 2026). */
 .mrow:active,.row:active{background:#faf9f7}
-.pill:active,.btn:active,.keybtn:active{transform:scale(.97)}
+.ag-chip:active,.btn:active,.keybtn:active{transform:scale(.97)}
 .tabbar button:active{opacity:.55}
 @media(hover:hover){
   .mrow:hover,.row:hover{background:#faf9f7}
-  .pill:hover,.btn:hover,.keybtn:hover{filter:brightness(.97)}
+  .ag-chip:hover,.btn:hover,.keybtn:hover{filter:brightness(.97)}
 }
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 /* team card + chips */
@@ -346,11 +365,11 @@ tr.me td{background:#fffdf4;font-weight:800}
    eyebrows, day sub-labels, the age chips on the format cards. Anton stays
    for display type and numbers, Barlow for body copy. */
 .hero-k,.tcard-k,.tcard-cta,.cd span,.kick span,.tile span,.pool-h,.chip,
-.cs-pill,.pill,.btn,label,th,.daytag-d{
+.cs-pill,.ag-age,.btn,label,th,.daytag-d{
   font-family:'Barlow Semi Condensed','Barlow',system-ui,sans-serif}
 /* Semi Condensed runs narrow, so the site opens the tracking up to match. */
 .hero-k,.tcard-k,.pool-h,.cs-pill,.tile span{letter-spacing:.14em}
-.pill{letter-spacing:.03em}
+.ag-age{letter-spacing:.03em}
 .btn{letter-spacing:.1em}
 /* Score-entry labels are sentence case, not micro-caps — leave them Barlow. */
 .sb-row label{font-family:'Barlow',system-ui,sans-serif;letter-spacing:0}
@@ -677,9 +696,40 @@ async function refresh(){
 }
 
 /* ---------------- shared bits ---------------- */
+/* Every age-group name is "<band> <format>" - "U6 Tag", "U9 Mixed Contact",
+   "U12G QR". The split is the FIRST SPACE, so a future group with no space in
+   its name keeps the whole string as the band and simply renders no format
+   line: it degrades rather than disappearing. */
+function ageparts(name){
+  const t = String(name || '');
+  const i = t.indexOf(' ');
+  return i < 0 ? { band: t, fmt: '' } : { band: t.slice(0, i), fmt: t.slice(i + 1) };
+}
+
+/* ⚠️ THE DAY SPLIT IS DERIVED FROM THE VENUE LAYOUT, NEVER TYPED HERE.
+   api.isDayOne() answers from the layout, where a group is on Saturday because
+   that is where it holds pitches - so moving a group in the back office moves
+   it between these blocks with no deploy. This app once carried
+   `const SATURDAY = [...]` and had U12G and both U18 groups on the wrong day,
+   on the public site, with registration open. Do not reintroduce a list. */
 function pills(){
-  return `<div class="pill-row">${S.ageGroups.map(a =>
-    `<button class="pill ${a.id===S.browseId?'on':''} ${isSat(a.id)?'':'sun'}" data-age="${a.id}">${esc(a.name)}</button>`).join('')}</div>`;
+  return [true, false].map(sat => {
+    const list = (S.ageGroups || []).filter(a => isSat(a.id) === sat);
+    if (!list.length) return '';                 // a day with no groups draws nothing
+    /* The heading comes from the layout too, off the first group in the block,
+       so the date cannot drift from the one the countdown uses. */
+    const label = api.dayLabelOfAgeGroup(list[0].id);
+    const chips = list.map(a => {
+      const p = ageparts(a.name);
+      return `<button class="ag-chip ${a.id===S.browseId?'on':''} ${sat?'':'sun'}" data-age="${a.id}">`
+        + `<span class="ag-age">${esc(p.band)}</span>`
+        + (p.fmt ? `<span class="ag-fmt">${esc(p.fmt)}</span>` : '')
+        + `</button>`;
+    }).join('');
+    return `<div class="ag-day ${sat?'':'sun'}"><span class="ag-rule"></span>`
+      + `<span class="ag-d">${esc(label)}</span></div>`
+      + `<div class="ag-chips">${chips}</div>`;
+  }).join('');
 }
 
 /* Which of the two days this age group plays on. The app has always known
@@ -1008,29 +1058,21 @@ function viewMore(){
 }
 
 /* ---------------- interactions ---------------- */
-/* Fifteen age-group pills do not fit across a phone, so the selected one is
-   usually off to the right and you had to scroll to find out where you were.
-   Centre it in its scroller after every render.
+/* ⚠️ TOMBSTONE - centreActivePill() lived here and was DELETED 6 Aug 2026.
+   Fifteen pills did not fit across a phone, so the selected one was usually off
+   to the right and the row was scrolled to centre it after every render (by
+   setting scrollLeft, not scrollIntoView, which would also have scrolled the
+   page). The picker wraps into two day blocks now and nothing scrolls
+   sideways, so there is nothing to centre. It is deleted rather than left
+   inert because this repo's root IS the deployed site: dead code here is
+   published code. If a horizontal strip ever comes back, so does this. */
 
-   Done by setting scrollLeft rather than scrollIntoView(): scrollIntoView also
-   scrolls the nearest vertical scroller, which on this layout is the page, so
-   it would jump the whole screen. The row is rebuilt by every render anyway
-   (innerHTML resets scrollLeft to 0), so this never fights a manual scroll. */
-function centreActivePill(){
-  const row = document.querySelector('.pill-row');
-  if (!row) return;
-  const on = row.querySelector('.pill.on');
-  if (!on) return;
-  const target = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
-  row.scrollLeft = Math.max(0, target);
-}
 
 function wire(){
   document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => load(b.dataset.age));
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
-  centreActivePill();
 }
 
 function act(a){

@@ -4940,6 +4940,39 @@ const FAULTS = [
     expect: ['moves or animates is behind'],
   },
 
+  {
+    name: 'the ring box goes back to cream while the rest stays dark',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.about-photo{position:relative;border-radius:18px;overflow:hidden;\n  background:#0C0C0E;',
+      '.about-photo{position:relative;border-radius:18px;overflow:hidden;\n  background:#F3F1ED;'),
+    expect: ['the box is on #0C0C0E'],
+  },
+  {
+    name: 'the 3D scene behind the panels goes back to cream',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}',
+      '.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#F3F1ED}'),
+    expect: ['the 3D scene is on #0C0C0E', 'same colour as each other'],
+  },
+  {
+    /* ⚠️ THE ONE THAT WAS ACTUALLY FORGOTTEN when this change was made. The
+       panel's own background shows only while its photo is still decoding, so
+       a screenshot taken a second later looks perfect - and a panel left cream
+       against a black box flashes as a pale rectangle that reads as a broken
+       image. */
+    name: 'the panel keeps a cream background, flashing pale before its photo loads',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  background:#0C0C0E;\n  /* The script sets --a (this panel\'s angle round the ring) and nothing else.',
+      '  background:#F3F1ED;\n  /* The script sets --a (this panel\'s angle round the ring) and nothing else.'),
+    expect: ['the panel is on #0C0C0E', 'same colour as each other'],
+  },
+  {
+    name: 'the record of the cream-vs-black reversal is tidied away',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "IT IS DARK AGAIN (#0C0C0E), reversed at Jay's request", 'It is dark'),
+    expect: ['argument for cream are both recorded'],
+  },
+
   /* ---- the tournament rules page ---------------------------------------- */
   {
     name: 'the /rules rewrite is removed, so the button 404s',

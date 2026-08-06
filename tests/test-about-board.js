@@ -359,6 +359,57 @@ if (haveDir) {
 }
 
 /* ------------------------------------------------------------------------ */
+section('the ring sits on black, on all THREE of its surfaces');
+
+/* ⚠️ Jay, 5 Aug 2026 (evening): "lets make the background of the 3d picture
+   rotation black again". It was #0C0C0E until `65f319c` swapped it to cream a
+   few hours earlier; this puts it back. Both looks are defensible — cream made
+   the box vanish into the section so the photos floated, black makes it a
+   framed object and turns the wedges that open while the ring rotates into part
+   of the effect. The page has now had both, so the colour is pinned rather than
+   left to drift a third time.
+
+   ⚠️ THE COLOUR LIVES IN THREE PLACES and the third is the one that gets
+   forgotten: the box, the 3D scene, and THE PANEL ITSELF. The panel's own
+   background shows only for the instant before its photo has decoded — and the
+   five idle-loaded panels start with no src at all — so a panel left cream
+   against a black box flashes as a pale rectangle that reads like a broken
+   image. It WAS forgotten on the first pass of this change and caught by
+   re-reading the comment above it, which is why this checks all three rather
+   than the one you can see in a screenshot. */
+/* Comments stripped, and computed HERE rather than reusing the header
+   section's copy: that one is declared further down the file, and a const
+   cannot be read before its own declaration. The first version of this block
+   did exactly that and the whole suite died on a ReferenceError. */
+const RING_CSS_BG = stripCssComments(PAGE);
+const RING_BG = '#0C0C0E';
+/* The box's own rule, comments already stripped, so the background is simply
+   the first colour inside it. Anchoring through the comment block was brittle
+   and broke immediately - the comment is exactly the thing most likely to be
+   reworded. */
+[['the box', /\.about-photo\{position:relative;border-radius:18px;overflow:hidden;\s*background:(#[0-9A-Fa-f]{6})/],
+ ['the 3D scene', /\.jrtb-scene\{position:absolute;inset:0;perspective:1200px;background:(#[0-9A-Fa-f]{6})\}/],
+ ['the panel', /\.jrtb-p\{[\s\S]*?background:(#[0-9A-Fa-f]{6});/]].forEach(([label, re]) => {
+  const got = (RING_CSS_BG.match(re) || [])[1];
+  check(`${label} is on ${RING_BG}`, got === RING_BG, `found ${got || 'nothing — the anchor moved'}`);
+});
+
+/* And the invariant behind the three literals: they must AGREE. Two dark and
+   one cream is the failure mode, not "one of them is the wrong dark". */
+const surfaces = [
+  (RING_CSS_BG.match(/\.jrtb-scene\{[^}]*background:(#[0-9A-Fa-f]{6})/) || [])[1],
+  (RING_CSS_BG.match(/\.jrtb-p\{[\s\S]*?background:(#[0-9A-Fa-f]{6});/) || [])[1],
+];
+check('the scene and the panel are the same colour as each other',
+  surfaces[0] && surfaces[0] === surfaces[1],
+  `scene ${surfaces[0]}, panel ${surfaces[1]}`);
+
+/* The tombstone, so the next person meets the argument before the temptation. */
+check('the reversal and the argument for cream are both recorded',
+  /IT IS DARK AGAIN \(#0C0C0E\), reversed at Jay's request/.test(PAGE) &&
+  /do not flip it a third time/.test(PAGE));
+
+/* ------------------------------------------------------------------------ */
 section('the three rendering traps, asserted as absences on the CODE');
 
 const RING_CSS = stripCssComments(

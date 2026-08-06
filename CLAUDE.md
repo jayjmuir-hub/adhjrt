@@ -2978,7 +2978,7 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring — **35 files** — plus `_prove-registration.js`, the fault-injection
-script (**563 faults** as of 5 Aug 2026, all of which must be caught by the
+script (**567 faults** as of 5 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

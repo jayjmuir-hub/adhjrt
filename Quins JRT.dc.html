@@ -579,13 +579,24 @@
    below. That is what stops the photos butting into the edge of the box and
    lets you read their shape. It comes from the +48px in the height calc below.
 
-   ⚠️ It is also the SAME COLOUR as the section behind it (#F3F1ED), with no
-   card shadow, so the box itself is invisible and the photos appear to float
-   on the page. Turning it back to a dark panel would undo that. The colour is
-   duplicated in three places below — box, scene and panel — because all three
-   can show through at different moments; keep them in step. */
+   ⚠️ IT IS DARK AGAIN (#0C0C0E), reversed at Jay's request on 5 Aug 2026 after
+   a few hours in cream. The cream made the box the SAME COLOUR as the section
+   behind it, so the box vanished and the photos appeared to float; black makes
+   it a framed object instead, and the wedges that open either side while the
+   ring turns become part of the effect rather than empty space. Both readings
+   are defensible and the page has now had both — do not flip it a third time
+   without asking, and if it ever goes back to cream, the argument for that is
+   the floating look, recorded here so it does not have to be rediscovered.
+
+   ⚠️ THE COLOUR IS DUPLICATED IN THREE PLACES — box, scene and PANEL — because
+   all three can show through at different moments. The panel's own background
+   is the one that gets forgotten: it is visible only while a photo is still
+   loading, so leaving it behind produces a pale rectangle flashing against
+   black that looks like a broken image. It was in fact forgotten on the first
+   pass of this very change and caught by re-reading this comment. Keep all
+   three in step; tests/test-about-board.js asserts they agree. */
 .about-photo{position:relative;border-radius:18px;overflow:hidden;
-  background:#F3F1ED;
+  background:#0C0C0E;
 
   /* ---- ONE VARIABLE DRIVES THE WHOLE RING -----------------------------
      Change --pw and everything else follows. Nothing here needs recomputing
@@ -664,7 +675,7 @@
 }
 
 .jrtb{position:absolute;inset:0}   /* the vars above inherit down into this */
-.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#F3F1ED}
+.jrtb-scene{position:absolute;inset:0;perspective:1200px;background:#0C0C0E}
 .jrtb-ring{position:absolute;inset:0;transform-style:preserve-3d;
   transform:translateZ(calc(var(--r) * -1)) rotateY(var(--jrtb-rot,0deg));
   transition:transform var(--turn) cubic-bezier(.55,.06,.25,1);
@@ -674,7 +685,12 @@
   margin:calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
   overflow:hidden;border-radius:6px;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  background:#F3F1ED;
+  /* ⚠️ THE THIRD OF THE THREE SURFACES, and the easiest to miss. This one is
+     only ever seen for the instant before a panel's photo has decoded - the
+     five idle-loaded panels have no src at all to begin with. Left cream while
+     the other two went dark, an unloaded panel would flash as a pale rectangle
+     against black, which reads as a broken image rather than a loading one. */
+  background:#0C0C0E;
   /* The script sets --a (this panel's angle round the ring) and nothing else.
      Keeping translateZ here is what lets --r be a calc() that scales with the
      browser - the script never has to resolve it. */

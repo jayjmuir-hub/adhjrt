@@ -4945,6 +4945,46 @@ const FAULTS = [
     expect: ['moves or animates is behind'],
   },
 
+  /* ---- the same rule, swept across every page (6 Aug 2026) --------------
+     The three below prove the SITE-WIDE sweep in test-design-polish.js, which
+     the homepage's own sweep above cannot: it reads 'Quins JRT.dc.html' and
+     nothing else. Each is injected into a DIFFERENT file, so no single anchor
+     covers two of them and a sweep that quietly stopped reading one page still
+     fails. */
+  {
+    /* The back office is where a manager taps on a phone at a tournament, and
+       nothing has ever checked its hover rules. A lift on tap is the exact
+       shape of the bug Jay reported on the header. */
+    name: 'the back-office buttons grow a lift on hover with no pointer gate',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html',
+      '  button:hover:not(:disabled){filter:brightness(0.94)}',
+      '  button:hover:not(:disabled){filter:brightness(0.94);transform:translateY(-2px)}'),
+    expect: ['moves or animates outside (hover:hover)'],
+  },
+  {
+    /* ⚠️ ON rules.html SPECIFICALLY, because it is one of the two files NOT in
+       ALL_PAGES. If the sweep ever falls back to that list instead of its own,
+       this fault stops being caught and nothing else would say so. */
+    name: 'the rules page grows a hover effect that moves, outside the gate',
+    suite: 'test-design-polish.js',
+    apply: () => patch('rules.html',
+      '  .back:hover{background:rgba(255,255,255,0.18);text-decoration:none}',
+      '  .back:hover{background:rgba(255,255,255,0.18);text-decoration:none;transform:translateY(-2px)}'),
+    expect: ['moves or animates outside (hover:hover)'],
+  },
+  {
+    /* ⚠️ THE SWEEP CANNOT CATCH THIS ONE, WHICH IS WHY THE NAMED CHECK EXISTS.
+       app.html's hover rules are colour-only, so removing their pointer gate
+       makes nothing "loud" and the sweep stays green — the gate would simply
+       stop existing, silently, on the one page outside the homepage that has
+       one. Rewritten rather than deleted so the block still parses. */
+    name: 'the match-day app\'s hover rules lose their pointer gate',
+    suite: 'test-design-polish.js',
+    apply: () => patch('app.html', '@media(hover:hover){', '@media(pointer:fine){'),
+    expect: ['stay behind a pointer gate'],
+  },
+
   {
     name: 'the ring box goes back to cream while the rest stays dark',
     suite: 'test-about-board.js',

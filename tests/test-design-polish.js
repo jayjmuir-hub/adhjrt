@@ -197,6 +197,138 @@ section('The club wordmark says the club\'s name');
   check('the header wordmark cannot wrap to a second line', !!wmSpan && /white-space:nowrap/.test(wmSpan));
 }
 
+/* ------------------------------------------------------------------------
+   ⚠️ THE POINTER GATE, SWEPT ACROSS EVERY PAGE — 6 Aug 2026.
+
+   A touch device has no pointer to move away, so it applies :hover on tap and
+   KEEPS IT APPLIED until you touch something else. `2e57420` and `c3ea255`
+   fixed that on the homepage after Jay reported header buttons shimmering for
+   ever, and `c3ea255` added a sweep so the next component to grow a hover
+   effect would be caught rather than shipped.
+
+   ⚠️ THAT SWEEP READS THE HOMEPAGE AND NOTHING ELSE. It lives in
+   test-about-board.js as `stripCssComments(PAGE)` where PAGE is
+   'Quins JRT.dc.html'. A site-wide rule was being enforced on one page in ten.
+
+   ⚠️ THIS FIXES NO LIVE BUG, and that is worth writing down rather than hiding.
+   Measured at 1c26612: nine hover rules in the whole repo carry
+   transform/animation/box-shadow, all nine are on the homepage, and all nine
+   are already gated. Every other page changes colour, brightness or
+   text-decoration only — harmless when it sticks. This is coverage for a rule
+   that is currently satisfied everywhere, on the nine pages where nothing was
+   watching it. The homepage's version of this bug was also satisfied-everywhere
+   right up until it wasn't, and was then live and invisible for four days.
+
+   ⚠️ THE HOMEPAGE'S OWN SWEEP IS DELIBERATELY LEFT ALONE. Three faults are
+   anchored on its text and it carries the four named checks (.fmt-grp,
+   .reg-btn, .fmt-day, .rules-btn) that were actually measured on a 390px touch
+   viewport. Moving a check orphans the fault anchored on its old name,
+   silently. So this overlaps it on purpose: a general sweep with the specific
+   one still inside it, not a second copy of one rule.
+
+   Spec: claude/specs/spec-hover-sweep-all-pages.md */
+section('Nothing that moves on hover can stick on a touch screen — on ANY page');
+{
+  /* ⚠️ ALL_PAGES is NOT reused-and-extended here. It drives three other loops
+     above (icons, og:image, twitter:image) and quietly adding two files to it
+     would change what those assert — a different change wearing this one's
+     clothes. The hover sweep gets its own list.
+     ⚠️ deck-stage.js and image-slot.js also carry :hover rules in injected CSS
+     and are NOT swept: no page in the repo references either file (grepped
+     6 Aug), so they are editor-side, not the public site. If one is ever loaded
+     by a page it joins this list. */
+  const HOVER_PAGES = [...ALL_PAGES, 'Club.dc.html', 'rules.html'];
+
+  const stripCss = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+  /* ⚠️ BRACE-MATCHED, NOT FORMAT-MATCHED, AND THIS IS THE WHOLE REASON THE
+     HOMEPAGE'S SWEEP COULD NOT SIMPLY BE POINTED AT MORE FILES. It anchors on
+     /@media \(hover:hover\)\{[\s\S]*?\n  \}/ — one space after @media, no
+     spaces around the colon, closing brace at exactly two spaces of indent.
+     app.html writes it `@media(hover:hover){` with no space at all, so that
+     anchor does not see app.html's gate AT ALL and would report its correctly
+     gated rules as ungated the moment one of them grew a transform. Opening on
+     a loose pattern and counting braces to the close survives spacing,
+     indentation and a compound query (`… and (min-width:900px)`). */
+  function gatedSpans(css) {
+    const spans = [];
+    const open = /@media[^{]*hover\s*:\s*hover[^{]*\{/g;
+    let m;
+    while ((m = open.exec(css))) {
+      let i = m.index + m[0].length;
+      let depth = 1;
+      while (depth && i < css.length) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}') depth--;
+        i++;
+      }
+      spans.push([m.index, i]);
+    }
+    return spans;
+  }
+
+  /* A hover rule that only changes colour is harmless when it sticks. One that
+     MOVES or ANIMATES is what leaves a card tilted and shimmering with nothing
+     able to end it, so that is the set this sweeps. Same predicate as the
+     homepage's, deliberately — two different answers to "what counts as loud"
+     would be worse than one imperfect one. */
+  const LOUD = /transform|animation|box-shadow/;
+
+  const ungated = [];
+  const perPage = {};
+  let hoverSeen = 0;
+  let loudSeen = 0;
+
+  for (const f of HOVER_PAGES) {
+    /* Line endings normalised — git checks these out as CRLF on Windows.
+       Comments stripped both ways: this repo documents the traps it avoids, so
+       an un-stripped sweep can match the warning telling you not to write the
+       thing. */
+    const css = stripCss(stripHtml(readRepo(f).replace(/\r\n/g, '\n')));
+    const spans = gatedSpans(css);
+    perPage[f] = 0;
+    for (const m of css.matchAll(/([^\n{}]*:hover[^{}]*)\{([^{}]*)\}/g)) {
+      hoverSeen++;
+      perPage[f]++;
+      if (!LOUD.test(m[2])) continue;              // colour-only: fine either way
+      loudSeen++;
+      if (!spans.some(([a, b]) => m.index >= a && m.index < b)) {
+        ungated.push(`${f}: ${m[1].trim().slice(0, 50)}`);
+      }
+    }
+  }
+
+  check('no page has a hover rule that moves or animates outside (hover:hover)',
+    ungated.length === 0, ungated.join(' | '));
+
+  /* ⚠️ THE SWEEP ABOVE PASSES BEAUTIFULLY OVER AN EMPTY SET. A broken stripper,
+     a regex that stops matching, a readRepo returning '' — all of them report
+     "no ungated rules" and mean "I read nothing". This repo has hit that in
+     three separate disguises. So the set is floored, per page and in total. */
+  for (const f of HOVER_PAGES) {
+    check(`${f}: the sweep found hover rules to check`, perPage[f] >= 1,
+      `${perPage[f]} found — 0 means this page was not really read`);
+  }
+  check('…and the sweep saw the whole site\'s hover rules', hoverSeen >= 25,
+    `${hoverSeen} seen (31 at 1c26612)`);
+  check('…and it saw rules that actually move or animate', loudSeen >= 7,
+    `${loudSeen} seen (9 at 1c26612, all on the homepage, all gated)`);
+
+  /* ⚠️ NAMED SEPARATELY BECAUSE THE SWEEP CANNOT CATCH THIS ONE. app.html is
+     the only non-homepage page with a pointer gate today, and its hover rules
+     are colour-only — so removing the gate does not make anything "loud" and
+     the sweep stays green. Nothing asserted this until now; the gate was right
+     by somebody's good habit, not by a check. */
+  {
+    const app = stripCss(stripHtml(readRepo('app.html').replace(/\r\n/g, '\n')));
+    const spans = gatedSpans(app);
+    check('the match-day app\'s hover rules stay behind a pointer gate',
+      spans.length >= 1 && /\.mrow:hover|\.pill:hover/.test(app.slice(spans[0] ? spans[0][0] : 0,
+        spans[0] ? spans[0][1] : 0)),
+      `${spans.length} pointer-gated block(s) found in app.html`);
+  }
+}
+
 summary('test-design-polish.js');
 }
 

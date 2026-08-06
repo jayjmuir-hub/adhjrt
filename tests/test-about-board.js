@@ -1000,9 +1000,25 @@ check('the phone animation is scoped to the OPEN attribute, not to .hdr-nav',
    transform leaves the panel invisible and shifted — a menu that does not open
    is worse than a menu that opens plainly. */
 const RMB = (PAGE.match(/@media \(prefers-reduced-motion:reduce\)\{[\s\S]*?\n  \}/) || [''])[0];
-check('reduced motion still lets the menus appear',
-  /\.hdr-menu-panel[\s\S]{0,200}opacity:1!important;transform:none!important/.test(RMB),
-  'animation:none alone would strand them at the from-state');
+/* ⚠️ REVISED, AND THE OLD VERSION IS WHY. This used to require the animation
+   to be killed and opacity snapped to 1 — which is a defensible reading of the
+   preference, and it is exactly what Jay was looking at when he said "i see
+   nothing". Reproduced by sampling the pixels every frame with `reduce` on:
+   opacity read 1, 1, 1, 1 across 500ms. One value. Nothing to see.
+
+   The preference is about MOVEMENT — a slide or a scale is what makes somebody
+   motion-sick, a cross-fade is not. So under `reduce` the panels still fade,
+   with no translate and no scale. Both halves are asserted, because dropping
+   either one is a real bug: no fade is what Jay saw, and no transform reset
+   leaves the panel open 22px out of place. */
+check('reduced motion still lets the menus appear — as a fade',
+  /animation:hdrFadeOnly [\d.]+s ease both!important/.test(RMB),
+  'not "animation:none", which is what made it invisible');
+check('…and the fade keyframe moves nothing at all',
+  /@keyframes hdrFadeOnly\{from\{opacity:0\}to\{opacity:1\}\}/.test(HDRCSS),
+  'no translate, no scale — that is the part the preference is about');
+check('…with the transform still reset, or `both` strands it out of place',
+  /\.hdr-menu-panel[\s\S]{0,240}transform:none!important/.test(RMB));
 
 /* ⚠️⚠️ IT HAS TO BE PERCEPTIBLE, AND THAT IS A REAL ASSERTION. The first
    version ran for .18s and moved 8px. It worked — verified on the deployed

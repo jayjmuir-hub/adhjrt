@@ -5468,8 +5468,8 @@ const FAULTS = [
     /* ⚠️ ANCHOR REPOINTED — it carried the .18s timing that was replaced when
        the animation was made perceptible. A fault that cannot be injected is a
        failed run, not a pass. */
-    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s cubic-bezier(.16,1,.3,1) both;transform-origin:top right}',
-      '.hdr-menu-panel{transition:opacity .32s ease,transform .32s ease;transform-origin:top right}'),
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .42s cubic-bezier(.16,1,.3,1) both;transform-origin:top right}',
+      '.hdr-menu-panel{transition:opacity .42s ease,transform .42s ease;transform-origin:top right}'),
     expect: ['animates rather than transitions'],
   },
   {
@@ -5494,11 +5494,15 @@ const FAULTS = [
     /* ⚠️ `both` holds the FROM state. Killing the animation without resetting
        opacity and transform leaves the panel invisible and shifted - a menu
        that never opens, for exactly the people who asked for less motion. */
-    name: 'reduced motion strands the menus at their from-state',
+    /* ⚠️ REPOINTED. The old fault removed an `opacity:1!important` that no
+       longer exists — the reduced-motion path is a fade now, not a snap. The
+       rule it guards is unchanged: somebody who asked for less motion must
+       still SEE the menu open. This restores the version Jay could not see. */
+    name: 'reduced motion goes back to killing the animation outright',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '      animation:none!important;opacity:1!important;transform:none!important}',
-      '      animation:none!important}'),
-    expect: ['reduced motion still lets the menus appear'],
+    apply: () => patch(HOME, '      animation:hdrFadeOnly .2s ease both!important;transform:none!important}',
+      '      animation:none!important;opacity:1!important;transform:none!important}'),
+    expect: ['appear — as a fade'],
   },
   {
     /* ⚠️ THE FAULT THAT MATTERS MOST HERE: back to the timing Jay could not
@@ -5506,7 +5510,7 @@ const FAULTS = [
        the feature is not there as far as a human is concerned. */
     name: 'the menu animation is shortened back to a duration nobody can perceive',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s', '.hdr-menu-panel{animation:hdrMenuIn .18s'),
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .42s', '.hdr-menu-panel{animation:hdrMenuIn .18s'),
     expect: ['long enough to be seen'],
   },
   {
@@ -5514,7 +5518,7 @@ const FAULTS = [
        invisible. Duration checks pass; nothing moves enough to notice. */
     name: 'the panels travel 8px again, which reads as no movement',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-14px)}',
+    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-20px)}',
       '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-4px)}'),
     expect: ['travel far enough to register'],
   },
@@ -5523,8 +5527,19 @@ const FAULTS = [
        middle of it and the open visibly stutters. */
     name: 'the open animation is stretched long enough for a re-render to interrupt it',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s', '.hdr-menu-panel{animation:hdrMenuIn 1.2s'),
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .42s', '.hdr-menu-panel{animation:hdrMenuIn 1.2s'),
     expect: ['long enough to be interrupted by a re-render'],
+  },
+  {
+    /* ⚠️ The other half of the reduced-motion rule: keep the fade but let the
+       movement back in. That is the actual accessibility failure — somebody
+       who asked not to be moved gets slid 22px anyway — and it renders
+       perfectly, so nothing else would catch it. */
+    name: 'reduced motion keeps the fade but lets the movement back in',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes hdrFadeOnly{from{opacity:0}to{opacity:1}}',
+      '@keyframes hdrFadeOnly{from{opacity:0;transform:translateY(-22px)}to{opacity:1;transform:none}}'),
+    expect: ['fade keyframe moves nothing at all'],
   },
   {
     /* Animating height would move the sticky header mid-animation - which is
@@ -5533,7 +5548,7 @@ const FAULTS = [
     suite: 'test-about-board.js',
     /* ⚠️ ANCHOR REPOINTED — the travel distance changed from 6px to 14px when
        the animation was made perceptible. */
-    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}',
+    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}',
       '@keyframes hdrPanelIn{from{opacity:0;height:0}to{opacity:1;height:auto}}'),
     expect: ['opacity and transform only'],
   },

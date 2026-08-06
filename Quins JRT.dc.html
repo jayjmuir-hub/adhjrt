@@ -240,14 +240,25 @@
     /* ⚠️ The bat stops AND hides. Not just `animation:none` — parked mid-flight
        it would sit somewhere out over the photos looking like a stray image. */
     .crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}
-    /* ⚠️ The menus must still APPEAR. `animation:none` on a rule using
-       `both` would leave the panel stuck at its from-state — invisible and
-       shifted — so the opacity and transform are reset explicitly. A menu that
-       does not open is a worse outcome than a menu that opens without flair. */
+    /* ⚠️ THE MENUS FADE, THEY DO NOT VANISH INTO NOTHING (revised 6 Aug 2026).
+       This block used to kill the animation outright and snap the panel to
+       opacity 1. That is a defensible reading of the preference and it is what
+       Jay was looking at: "i see nothing", reproduced exactly — with `reduce`
+       on, the opacity samples over 500ms were 1, 1, 1, 1. One value. Nothing
+       to see.
+
+       **The preference is about MOVEMENT.** A slide or a scale is what makes
+       somebody motion-sick; a cross-fade is not, and the common reading is to
+       drop the movement rather than every trace of change. So under `reduce`
+       the panels still fade in — no translate, no scale, and quicker.
+
+       ⚠️ `transform:none!important` is still doing the real work here. Without
+       it the `both` fill-mode holds the from-state's translate and the panel
+       opens 22px out of place. */
     .hdr-menu-panel,.hdr-menu-panel > *,
     .hdr-row[data-nav-open="true"] .hdr-nav,
     .hdr-row[data-nav-open="true"] .hdr-nav > *{
-      animation:none!important;opacity:1!important;transform:none!important}
+      animation:hdrFadeOnly .2s ease both!important;transform:none!important}
     /* The hero shards and hover sweeps stop too — the crest already honoured
        this preference; the rest of the page now extends the same courtesy
        (design audit, Aug 2026). Scroll reveals land instantly. */
@@ -489,13 +500,17 @@
      doubled the time. Still capped at ~.32s: the engine re-renders the header
      after first paint, and a restart part-way through a long animation is a
      visible stutter rather than a smooth open. */
-  @keyframes hdrMenuIn{from{opacity:0;transform:translateY(-16px) scale(.93)}to{opacity:1;transform:none}}
-  @keyframes hdrPanelIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
-  .hdr-menu-panel{animation:hdrMenuIn .32s cubic-bezier(.16,1,.3,1) both;transform-origin:top right}
+  @keyframes hdrMenuIn{from{opacity:0;transform:translateY(-22px) scale(.90)}to{opacity:1;transform:none}}
+  @keyframes hdrPanelIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:none}}
+  /* ⚠️ MOTION-FREE FALLBACK, used under prefers-reduced-motion. See the note in
+     that media query: the preference is about MOVEMENT, and killing the fade
+     as well leaves somebody with nothing to look at. */
+  @keyframes hdrFadeOnly{from{opacity:0}to{opacity:1}}
+  .hdr-menu-panel{animation:hdrMenuIn .42s cubic-bezier(.16,1,.3,1) both;transform-origin:top right}
   /* The links arrive a beat after the panel, so it reads as a panel opening
      rather than a block appearing. Staggered by nth-child; the delays are
      small enough that the whole thing is done inside 300ms. */
-  .hdr-menu-panel > *{animation:hdrPanelIn .3s cubic-bezier(.16,1,.3,1) both}
+  .hdr-menu-panel > *{animation:hdrPanelIn .38s cubic-bezier(.16,1,.3,1) both}
   .hdr-menu-panel > *:nth-child(1){animation-delay:.05s}
   .hdr-menu-panel > *:nth-child(2){animation-delay:.075s}
   .hdr-menu-panel > *:nth-child(3){animation-delay:.1s}
@@ -659,8 +674,8 @@
       display:flex!important;flex-direction:column!important;align-items:stretch!important;
       width:100%!important;gap:2px!important;margin-top:10px!important;
       border-top:1px solid rgba(255,255,255,0.12)!important;padding-top:10px!important;
-      animation:hdrPanelIn .32s cubic-bezier(.16,1,.3,1) both}
-    .hdr-row[data-nav-open="true"] .hdr-nav > *{animation:hdrPanelIn .3s cubic-bezier(.16,1,.3,1) both}
+      animation:hdrPanelIn .42s cubic-bezier(.16,1,.3,1) both}
+    .hdr-row[data-nav-open="true"] .hdr-nav > *{animation:hdrPanelIn .38s cubic-bezier(.16,1,.3,1) both}
     .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(1){animation-delay:.06s}
     .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(2){animation-delay:.1s}
     .hdr-row[data-nav-open="true"] .hdr-nav > *:nth-child(3){animation-delay:.14s}

@@ -1004,6 +1004,30 @@ check('reduced motion still lets the menus appear',
   /\.hdr-menu-panel[\s\S]{0,200}opacity:1!important;transform:none!important/.test(RMB),
   'animation:none alone would strand them at the from-state');
 
+/* ⚠️⚠️ IT HAS TO BE PERCEPTIBLE, AND THAT IS A REAL ASSERTION. The first
+   version ran for .18s and moved 8px. It worked — verified on the deployed
+   preview at currentTime 200/200, opacity 0 -> 1, no errors — and Jay still
+   said "I don't see any animation in the drop down menu", because he could
+   not. **A change nobody can perceive has not been made.** The temptation was
+   to reply that it was working; the honest reading is that "technically runs"
+   and "is an animation" are different claims.
+
+   So the floor is asserted, not left to taste: long enough and far enough to
+   register. The ceiling matters too — the engine re-renders the header after
+   first paint, and a restart part-way through a long animation is a visible
+   stutter rather than a smooth open. */
+const menuDur = parseFloat((HDRCSS.match(/\.hdr-menu-panel\{animation:hdrMenuIn ([\d.]+)s/) || [])[1]);
+const navDur = parseFloat((HDRCSS.match(/\[data-nav-open="true"\] \.hdr-nav\{[^}]*animation:hdrPanelIn ([\d.]+)s/) || [])[1]);
+const menuTravel = Math.abs(parseFloat((HDRCSS.match(/@keyframes hdrMenuIn\{from\{opacity:0;transform:translateY\((-?[\d.]+)px/) || [])[1]));
+const navTravel = Math.abs(parseFloat((HDRCSS.match(/@keyframes hdrPanelIn\{from\{opacity:0;transform:translateY\((-?[\d.]+)px/) || [])[1]));
+check('both open durations were found', !!menuDur && !!navDur, `${menuDur}s / ${navDur}s`);
+check('the desktop menu runs long enough to be seen', menuDur >= 0.25, `${menuDur}s`);
+check('the phone panel runs long enough to be seen', navDur >= 0.25, `${navDur}s`);
+check('…and neither is long enough to be interrupted by a re-render',
+  menuDur <= 0.45 && navDur <= 0.45, `${menuDur}s / ${navDur}s`);
+check('both travel far enough to register as movement', menuTravel >= 10 && navTravel >= 10,
+  `${menuTravel}px / ${navTravel}px — 8px was invisible`);
+
 /* Nothing here may touch layout: the sticky header changing height under its
    own scroll handler is the loop fixed at the top of this block. */
 check('the open animations move opacity and transform only',

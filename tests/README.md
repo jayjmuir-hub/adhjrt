@@ -65,7 +65,7 @@ claiming to guard that behaviour**. A suite that dies with an exception "fails"
 for every fault and proves nothing.
 
 Run it after changing either the code under test or the tests themselves. Every
-fault has to be caught by name — **600 of them as of 6 Aug 2026**, and the number
+fault has to be caught by name — **603 of them as of 6 Aug 2026**, and the number
 climbs with every feature. Trust the run's own last line over this sentence; it
 prints `N/N faults caught` and the count of suites clean on an undamaged copy.
 
@@ -94,8 +94,8 @@ first place. See step 1 above.
 | `test-intake.js` | the sheet column order, the round trip between the writer and the two readers, the allow-list, the validation rules, the rate limit, the whole submission flow and the thinness of the function itself — 468 checks |
 | `test-functions-load.js` | loads and CALLS every Netlify function, signed out and signed in — the only test that executes them at all — 170 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 600 faults, all caught by the named check, 31 suites clean undamaged |
-| `test-about-board.js` | the About-section photo ring: the encodeCase trap that broke it live, the ring geometry, the `sizes` attribute, the photo files, the three CSS traps and the two boot bugs, plus (on the Compare branch) the crest/bat pairing, the header condense loop and the two drop-down animations — 195 checks |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. 603 faults, all caught by the named check, 31 suites clean undamaged |
+| `test-about-board.js` | the About-section photo ring: the encodeCase trap that broke it live, the ring geometry, the `sizes` attribute, the photo files, the three CSS traps and the two boot bugs, plus (on the Compare branch) the crest/bat pairing, the header condense loop and the two drop-down animations — 200 checks |
 | `test-doc-claims.js` | the claims in `CLAUDE.md` that give instructions and that nothing else would contradict: what a deploy actually costs, that a branch deploy outlives its branch and reads production's data, and the four earlier corrections that had nothing holding them in place. Two checks are DERIVED so the two copies of the deploy cost cannot drift apart, and the retracted advice is asserted to survive *as a tombstone* — presence and absence both pass on the broken file, so only its POSITION discriminates — 31 checks |
 | `runall.ps1` | the explicit list — **the whole suite**. It names **36 test files** (6 Aug 2026); the rows above are a selection, not all of them. A file not named in `runall.ps1` never runs again and nothing will tell you. |
 

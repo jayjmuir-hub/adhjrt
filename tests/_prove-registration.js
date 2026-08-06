@@ -5465,8 +5465,11 @@ const FAULTS = [
     /* The obvious wrong instinct, and it renders as nothing at all. */
     name: 'the desktop menu is given a transition instead of an animation',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .18s cubic-bezier(.2,.8,.2,1) both;transform-origin:top right}',
-      '.hdr-menu-panel{transition:opacity .18s ease,transform .18s ease;transform-origin:top right}'),
+    /* ⚠️ ANCHOR REPOINTED — it carried the .18s timing that was replaced when
+       the animation was made perceptible. A fault that cannot be injected is a
+       failed run, not a pass. */
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s cubic-bezier(.16,1,.3,1) both;transform-origin:top right}',
+      '.hdr-menu-panel{transition:opacity .32s ease,transform .32s ease;transform-origin:top right}'),
     expect: ['animates rather than transitions'],
   },
   {
@@ -5498,11 +5501,39 @@ const FAULTS = [
     expect: ['reduced motion still lets the menus appear'],
   },
   {
+    /* ⚠️ THE FAULT THAT MATTERS MOST HERE: back to the timing Jay could not
+       see. It runs, it completes, every other check in the block passes, and
+       the feature is not there as far as a human is concerned. */
+    name: 'the menu animation is shortened back to a duration nobody can perceive',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s', '.hdr-menu-panel{animation:hdrMenuIn .18s'),
+    expect: ['long enough to be seen'],
+  },
+  {
+    /* The other half: keep the duration, shrink the travel to the 8px that was
+       invisible. Duration checks pass; nothing moves enough to notice. */
+    name: 'the panels travel 8px again, which reads as no movement',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-14px)}',
+      '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-4px)}'),
+    expect: ['travel far enough to register'],
+  },
+  {
+    /* And the opposite failure: so long that a header re-render lands in the
+       middle of it and the open visibly stutters. */
+    name: 'the open animation is stretched long enough for a re-render to interrupt it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.hdr-menu-panel{animation:hdrMenuIn .32s', '.hdr-menu-panel{animation:hdrMenuIn 1.2s'),
+    expect: ['long enough to be interrupted by a re-render'],
+  },
+  {
     /* Animating height would move the sticky header mid-animation - which is
        the feedback loop this same commit fixed, arriving by another door. */
     name: 'the open animation is changed to move height instead of transform',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}',
+    /* ⚠️ ANCHOR REPOINTED — the travel distance changed from 6px to 14px when
+       the animation was made perceptible. */
+    apply: () => patch(HOME, '@keyframes hdrPanelIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}',
       '@keyframes hdrPanelIn{from{opacity:0;height:0}to{opacity:1;height:auto}}'),
     expect: ['opacity and transform only'],
   },

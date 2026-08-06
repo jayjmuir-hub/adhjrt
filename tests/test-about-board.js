@@ -478,40 +478,138 @@ const ABOUT = (PAGE_CODE.match(/<section id="about"[\s\S]*?<\/section>/) || ['']
 check('the About section was located', ABOUT.length > 500,
   `matched ${ABOUT.length} chars`);
 
-/* ⚠️ REPOINTED, NOT DELETED (5 Aug 2026, evening). This used to assert that the
-   About badge was `crest.png` and not the bat-holed `crest-shield.png`. Jay
-   removed the badge, so that check's SUBJECT is gone — but its RULE is not, and
-   a check whose subject dies must be repointed if the rule is still alive.
+/* ⚠️⚠️ REVERSED ON THE `Compare` BRANCH (Jay, 6 Aug 2026) — AND REVERSED IS NOT
+   DELETED. On `main` this block asserts the opposite: that the About section
+   carries NO crest, and that `crest-shield.png` is never a live element
+   anywhere. Both were right for `main`. Jay asked for the badge and the bat
+   back on the rotating picture, so the subject flipped and the checks flip with
+   it — but **the rule underneath them did not change, and it is the rule that
+   matters**: the badge in this section must be the file that PAIRS with the bat
+   that is actually present.
 
-   The rule splits in two, and both halves are worth having:
-     - the crest is ABSENT from this section, deliberately, and stays absent;
-     - `crest-shield.png` is never a live image ANYWHERE, which is a page-wide
-       rule that never depended on this section in the first place. */
-check('the About section carries no crest image',
-  !/<img[^>]+assets\/crest[^>]*>/.test(ABOUT),
-  'removed at Jay\'s request 5 Aug 2026 — see the tombstone in the markup');
-check('…and the dead .m-crestrow rule went with it',
+   That rule has two live failure modes and this branch can hit either:
+     - `crest.png` + bat  →  TWO bats, one of them motionless. crest.png has a
+       bat printed on it already.
+     - `crest-shield.png` + no bat  →  a crest with a BAT-SHAPED HOLE in it,
+       which is what went live on 5 Aug and sat there until Jay spotted it.
+   So the checks below are not "is the shield there" — they assert the PAIRING,
+   in both directions. Deleting them and asserting presence alone would pass on
+   a page with the shield and no bat, which is the exact bug that shipped. */
+check('the About section carries the crest again',
+  /<img[^>]+assets\/crest-shield\.png[^>]*>/.test(ABOUT),
+  'restored at Jay\'s request 6 Aug 2026 on the Compare branch');
+check('…and it is the SHIELD, the one with the bat-shaped hole',
+  /class="cbase"[^>]*assets\/crest-shield\.png/.test(ABOUT));
+check('…NOT the complete crest, which would put two bats on screen',
+  !/<img[^>]+assets\/crest\.png[^>]*>/.test(ABOUT),
+  'crest.png already has a bat printed on it');
+
+/* ⚠️ THE PAIRING, ASSERTED BOTH WAYS. The shield is only correct while a real
+   bat is present to fill its hole; the bat is only correct while it has the
+   holed shield to fly out of. Either alone is a bug that renders without
+   erroring, so neither is allowed to exist without the other. */
+const HAS_SHIELD = /crest-shield\.png/.test(ABOUT);
+const HAS_BAT = /crest-bat\.png/.test(ABOUT) && /crest-bat-real\.png/.test(ABOUT);
+check('both bat images are present', HAS_BAT,
+  'crest-bat.png is the flat silhouette, crest-bat-real.png the photographic one');
+eq('the holed shield and the bat stand or fall together', HAS_SHIELD, HAS_BAT);
+
+/* ⚠️ AND PAGE-WIDE, because the pairing rule has a hole in it otherwise. The
+   shield is legitimate in exactly ONE place — here, with the bat to fill it.
+   Anywhere else on the page (header, footer) there is no bat, so it is just a
+   crest with a piece missing, which is precisely what went live on 5 Aug.
+   Counted, not merely "is it in the About section": a second copy elsewhere
+   satisfies every check above.
+
+   ⚠️ AND THE COUNT RUNS ON CODE WITH *BOTH* COMMENT SYNTAXES STRIPPED. First
+   attempt used PAGE_CODE — HTML comments gone, CSS comments not — and returned
+   3 against an expected 1, because this file DOCUMENTS the shield/bat pairing
+   in a stylesheet comment and again in a markup comment. A bare count matches
+   the warning telling you what to do and reports a bug that is not there.
+   Fourth time this exact trap has been hit in this repo; the difference is that
+   this time the check failed loudly instead of passing quietly. */
+const PAGE_NOCOMMENTS = stripCssComments(stripJsComments(PAGE_CODE));
+eq('the holed shield appears ONCE on the whole page, and this is the place',
+  (PAGE_NOCOMMENTS.match(/crest-shield\.png/g) || []).length, 1);
+
+/* ⚠️ THE ARGUMENT AGAINST THIS SURVIVES IN THE PAGE. The crest was taken out of
+   here on 5 Aug because a badge pinned over photos rotating underneath it read
+   as "a sticker stuck on a moving thing". The bat weakens that argument; it does
+   not delete it. A decision recorded without the case against it is one that
+   gets re-argued from scratch by whoever comes next — this repo's own rule about
+   tombstones, applied to a restoration rather than a removal. */
+check('the argument against putting it back survives in the markup',
+  /RECORDED AGAINST ITSELF/.test(PAGE),
+  'the sticker-on-a-moving-thing objection, kept on the record');
+
+/* The dead .m-crestrow rule stays dead. The crest is back in the PHOTO BOX, not
+   in the heading row it briefly occupied, so that rule has no more to select
+   now than it did before. */
+check('the dead .m-crestrow rule is still gone',
   !/\.m-crestrow\s*\{/.test(stripCssComments(PAGE)),
-  'CSS that selects nothing reads as if something still uses it');
-check('the tombstone explaining the removal is still there',
-  /TOMBSTONE: THE CREST WAS HERE/.test(PAGE),
-  'a deletion with no trace is an invitation to re-add it');
+  'the crest came back to the photo box, not to the heading row');
 
-/* The crest is still in the header and the footer — the page is not short of
-   one, and asserting an absence without asserting the presence it is measured
-   against is how a whole logo quietly disappears. */
+/* The crest is also still in the header and the footer. Asserting a presence in
+   one place without the others is how a logo quietly disappears from two. */
 check('the crest is still on the page elsewhere',
   (PAGE_CODE.match(/assets\/crest\.png/g) || []).length >= 2,
   'header and footer');
 
-/* assets/crest-shield.png is the crest with a BAT-SHAPED HOLE in it. It exists
-   only as the backdrop the mothballed animation's bat flew out of, and it went
-   live as the About badge once already, sitting there with a piece missing
-   until Jay spotted it. Comments are stripped: the mothball note names the file
-   on purpose and must stay legal to write. */
-check('crest-shield.png is not referenced by any live element',
-  !/crest-shield\.png/.test(PAGE_CODE),
-  'if the flying bat is ever restored, swap the badge back IN THE SAME CHANGE');
+/* ---- the bat itself ------------------------------------------------------ */
+
+/* ⚠️ .cstage IS LOAD-BEARING, NOT DECORATION. batfly carries the bat to 410%
+   right and 180% down — outside the photo box. Without an overflow:hidden stage
+   that is a horizontal scrollbar on the whole page, reported by nothing. */
+const CSTAGE = (stripCssComments(PAGE).match(/\.cstage\{[^}]*\}/) || [''])[0];
+check('the flight path is clipped by .cstage', /overflow:\s*hidden/.test(CSTAGE), CSTAGE);
+check('…and the stage cannot swallow clicks meant for the page',
+  /pointer-events:\s*none/.test(CSTAGE));
+check('the stage is in the markup, wrapping the crest',
+  /<div class="cstage">[\s\S]{0,400}class="crest-anim"/.test(ABOUT));
+
+/* All three keyframe sets, because the animation is three layers: the flight
+   path, the wing flap, and the crossfade between the flat and real bat. */
+['batfly', 'batflap', 'batmorph'].forEach((k) =>
+  check(`@keyframes ${k} is present`, new RegExp('@keyframes\\s+' + k + '\\b').test(PAGE)));
+
+/* ⚠️ IT MUST STOP FOR REDUCED MOTION, AND IT MUST HIDE. `animation:none` alone
+   parks the bat wherever it happened to be — out over the photos, looking like
+   a stray image rather than a design. */
+const RM = (PAGE.match(/@media \(prefers-reduced-motion:reduce\)\{[\s\S]*?\n  \}/) || [''])[0];
+check('the bat honours prefers-reduced-motion', /\.crest-anim \.cf/.test(RM), RM.slice(0, 200));
+check('…by hiding, not just by freezing mid-flight', /animation:none;opacity:0/.test(RM));
+
+/* ⚠️⚠️ THE BOOT PATTERN. This is the single most important check in the block.
+   The script that was mothballed on 5 Aug used find-it-once — scan, else watch
+   with a MutationObserver and disconnect on the first hit. The component engine
+   re-renders the body after first paint and does it MORE THAN ONCE, so the
+   element that gets armed is thrown away and replaced by one nobody arms. It
+   works perfectly from a local file and does NOTHING on the deployed site —
+   exactly the bug the photo board shipped with the same day, and the removing
+   commit wrote the warning down. This asserts the warning was acted on. */
+const BAT_CODE = (stripJsComments(PAGE).match(/\(function\(\)\{\s*function arm\(host\)[\s\S]*?\}\)\(\);/) || [''])[0];
+check('the bat script was located', BAT_CODE.length > 200, `${BAT_CODE.length} chars`);
+check('it RE-SCANS rather than finding the element once',
+  /setInterval\(/.test(BAT_CODE) && /scan\(\)/.test(BAT_CODE));
+check('…and does not use the find-it-once MutationObserver that was mothballed',
+  !/MutationObserver/.test(BAT_CODE),
+  'that pattern is why this animation would be dead on the deployed site');
+check('…arming every match, not just the first',
+  /querySelectorAll\('\.crest-anim'\)/.test(BAT_CODE));
+check('…and re-scanning on resize, for a phone turned past the 760px hide',
+  /addEventListener\('resize'/.test(BAT_CODE));
+/* ⚠️ THIS CHECK WAS TOO WEAK FIRST TIME AND THE PROVER SAID SO. It asserted
+   only that `host.__armed=1` appears after `io.observe(host)` — which stays
+   true when a SECOND assignment is added on entry, because the later one is
+   still sitting there. The fault injected exactly that and walked straight
+   past. It counts occurrences now: exactly one, and it must be the one after
+   the observer. Same failure and same fix as the stuck-hover sweep. */
+eq('the armed flag is assigned exactly once', (BAT_CODE.match(/__armed=/g) || []).length, 1);
+check('…and AFTER the observer is attached, never on entry',
+  /io\.observe\(host\);[\s\S]{0,120}host\.__armed=1/.test(BAT_CODE),
+  'a flag set on entry marks a half-built element as done for ever');
+check('the whole arming is wrapped so a throw leaves a static crest',
+  /\}catch\(e\)\{\}/.test(BAT_CODE));
 
 /* ---- and the wording, which moved with the columns ---------------------- */
 section('the heading size, which is what the column width is really about');
@@ -830,6 +928,37 @@ check('the button is centred with margin auto', /margin:30px auto 0/.test(RULESB
 check('…inside a wrapper that shrinks to the pair\'s width',
   /<div style="width:fit-content">\s*<div style="display:flex;gap:36px;margin-top:36px">/.test(PAGE),
   'without fit-content the auto margin centres on the whole column instead');
+
+/* ⚠️ THE GLOW IS RED ON THE `Compare` BRANCH (Jay, 6 Aug 2026: "the tournament
+   rules button should glow red not green"). On `main` it is #17A34A, matching
+   `Register player`.
+
+   ⚠️ DERIVED, NOT PINNED, and that is the whole value of this check. It does
+   not assert the literal #E11B22 — it reads the red off `Register a team` and
+   requires this button to match it. A pinned hex would pass happily while the
+   two drifted apart, and "two copies of one rule drift invisibly" is this
+   repo's most-repeated lesson. The point of the ask was a RED button, not a
+   particular red, and the page already has exactly two button glows; a third
+   would be a third. */
+const teamGlow = (PAGE.match(/onClick="\{\{ onClickRegisterTeam \}\}"[^>]*--glow:(#[0-9A-Fa-f]{6})/) || [])[1];
+const rulesGlow = (RULESBTN.match(/--glow:(#[0-9A-Fa-f]{6})/) || [])[1];
+check('the Register-a-team glow was found', !!teamGlow, teamGlow);
+check('the rules-button glow was found', !!rulesGlow, rulesGlow);
+eq('the rules button glows the SAME red as Register a team', rulesGlow, teamGlow);
+
+/* And the inverse, because "is it red" and "is it not green" are different
+   questions and only the pair of them rules out a third colour creeping in. */
+const playerGlow = (PAGE.match(/onClick="\{\{ onClickRegisterPlayer \}\}"[^>]*--glow:(#[0-9A-Fa-f]{6})/) || [])[1];
+check('…and NOT the Register-player green it used to wear',
+  !!playerGlow && rulesGlow.toUpperCase() !== playerGlow.toUpperCase(),
+  `player is ${playerGlow}`);
+
+/* ⚠️ The bar underneath still runs red->green, from .reg-btn, and that is not
+   an inconsistency to "fix". `--glow` is the hover border/shadow only, so a red
+   glow over a red->green bar is the same arrangement `Register a team` already
+   has. Asserted so nobody harmonises them and quietly changes three buttons. */
+check('the shared bar gradient is untouched by the glow change',
+  /\.reg-btn-bar\{/.test(HDRCSS) || /reg-btn-bar/.test(PAGE));
 
 /* An anchor, not a button: it goes somewhere, and a coach can send it. */
 check('it is still a link rather than a button', RULESBTN.startsWith('<a href="/rules"'));

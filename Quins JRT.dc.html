@@ -149,27 +149,47 @@
      click anywhere opens the picker, not just the small default icon area
      (pseudo-element sizing can't be expressed as an inline style). */
   input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer}
-  /* about-section crest: static badge.
-     ⚠️ MOTHBALLED 5 Aug 2026 — the bat used to fly a loop out of the crest
-     and land back in it when the section scrolled into view. Jay parked it;
-     it is not gone. assets/crest-bat.png and assets/crest-bat-real.png are
-     still in the repo, and the animation was .cf / .cfl / .bflat / .breal
-     plus the batfly, batflap and batmorph keyframes. Retrieve them from the
-     commit that removed this if it is ever wanted back. */
-  /* ⚠️ REMOVED 5 Aug 2026 when the crest moved out of the photo box and up
-     beside the heading. It is now a plain <img> with inline styles, so there
-     is nothing to select here any more. What was here:
-       .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
-       .crest-anim img{position:absolute;inset:0;width:100%;height:100%;
-                       object-fit:contain}
-       .crest-anim .cbase{z-index:1}
-       .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);
-               height:calc(100% + 30px);overflow:hidden;pointer-events:none;
-               z-index:2}
-     .cstage existed to clip the mothballed bat's flight path so it could never
-     add a page scrollbar. If the animation ever comes back, it needs both of
-     these and a container to live in again. */
+  /* about-section crest: the badge AND the flying bat, both restored on the
+     `Compare` branch (Jay, 6 Aug 2026) — "put the quins logo and moving bat
+     back on the rotating picture".
+
+     ⚠️ THE BADGE IS `crest-shield.png`, AND THAT IS NOT INTERCHANGEABLE WITH
+     `crest.png`. crest-shield.png is the crest with a BAT-SHAPED HOLE cut out
+     of it: it exists precisely to be the backdrop this bat flies out of and
+     lands back into. crest.png is the complete logo with a bat already printed
+     on it — use that here and you get TWO bats, one of them motionless.
+     (CLAUDE.md once claimed the shield "reads as a complete club crest on its
+     own". That was false, and it is what put a crest with a hole in it live on
+     5 Aug. With the bat back, the shield is correct again.)
+
+     ⚠️ .cstage IS NOT DECORATION. It clips the bat's flight path. The batfly
+     keyframes carry the bat up to 410% of its own width to the right and 180%
+     down, which lands well outside the photo box — without an overflow:hidden
+     stage around it, that adds a horizontal scrollbar to the whole page at
+     some widths and nothing errors.
+
+     ⚠️ AND IT SITS OVER THE ROTATING RING, WHICH IS WHY IT WAS REMOVED BEFORE.
+     Pinned on top of photos that turn underneath it, a static badge was judged
+     to read "as a sticker stuck on a moving thing" (5 Aug). That argument has
+     not gone away — it is just no longer a static badge. Recorded so the next
+     person weighing it has both readings rather than rediscovering one. */
+  .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
+  .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .crest-anim .cbase{z-index:1}
+  .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}
+  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 13s cubic-bezier(.45,.05,.4,1) .5s infinite;animation-play-state:paused}
+  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 13s ease-in-out .5s infinite;animation-play-state:paused}
+  .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
+  @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}7%{transform:scaleX(1) scaleY(1)}9%{transform:scaleX(1) scaleY(1)}12.2%{transform:scaleX(.72) scaleY(1.16)}15.4%{transform:scaleX(1) scaleY(1)}18.6%{transform:scaleX(.72) scaleY(1.16)}21.8%{transform:scaleX(1) scaleY(1)}25%{transform:scaleX(.72) scaleY(1.16)}28.2%{transform:scaleX(1) scaleY(1)}31.4%{transform:scaleX(.72) scaleY(1.16)}34.6%{transform:scaleX(1) scaleY(1)}37.8%{transform:scaleX(.72) scaleY(1.16)}41%{transform:scaleX(1) scaleY(1)}44%{transform:scaleX(1) scaleY(1)}57%{transform:scaleX(1) scaleY(1)}59%{transform:scaleX(1) scaleY(1)}62.2%{transform:scaleX(.72) scaleY(1.16)}65.4%{transform:scaleX(1) scaleY(1)}68.6%{transform:scaleX(.72) scaleY(1.16)}71.8%{transform:scaleX(1) scaleY(1)}75%{transform:scaleX(.72) scaleY(1.16)}78.2%{transform:scaleX(1) scaleY(1)}81.4%{transform:scaleX(.72) scaleY(1.16)}84.6%{transform:scaleX(1) scaleY(1)}87.8%{transform:scaleX(.72) scaleY(1.16)}94%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
+  @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}7%{transform:translate(0%,0%) rotate(0deg) scale(1)}9.16%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}12.76%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}18.88%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}25%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}29.68%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}34%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}37.96%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}40.84%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}43%{transform:translate(0%,0%) rotate(0deg) scale(1)}57%{transform:translate(0%,0%) rotate(0deg) scale(1)}59.16%{transform:translate(4%,6%) rotate(2deg) scale(1.01)}62.76%{transform:translate(40%,90%) rotate(10deg) scale(1.02)}68.88%{transform:translate(170%,150%) rotate(6deg) scale(0.95)}75%{transform:translate(330%,120%) rotate(-14deg) scale(0.9)}79.68%{transform:translate(410%,20%) rotate(-10deg) scale(0.88)}84%{transform:translate(320%,-20%) rotate(8deg) scale(0.9)}87.96%{transform:translate(140%,-18%) rotate(10deg) scale(0.93)}90.84%{transform:translate(26%,-6%) rotate(5deg) scale(0.97)}93%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
+  .crest-anim .cfl img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+  .crest-anim .breal{opacity:0;animation:batmorph 13s linear .5s infinite;animation-play-state:paused}
+  .crest-anim.play .breal{animation-play-state:running}
+  @keyframes batmorph{0%{opacity:0}7%{opacity:0}11%{opacity:1}41%{opacity:1}44%{opacity:0}56%{opacity:0}60%{opacity:1}90%{opacity:1}93%{opacity:0}100%{opacity:0}}
   @media (prefers-reduced-motion:reduce){
+    /* ⚠️ The bat stops AND hides. Not just `animation:none` — parked mid-flight
+       it would sit somewhere out over the photos looking like a stray image. */
+    .crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}
     /* The hero shards and hover sweeps stop too — the crest already honoured
        this preference; the rest of the page now extends the same courtesy
        (design audit, Aug 2026). Scroll reveals land instantly. */
@@ -754,17 +774,69 @@
 }
 </style>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
-<!-- ⚠️ MOTHBALLED 5 Aug 2026. The script that armed the crest bat animation
-     lived here. It added a `play` class to .crest-anim when the About section
-     scrolled into view, which started the batfly/batflap/batmorph keyframes.
-     Removed with the CSS and the markup in the same commit; the bat images are
-     still in assets/. Retrieve the whole thing from that commit if it is ever
-     wanted back.
+<script>
+  /* Arms the About-section crest bat: adds `play` to .crest-anim when the
+     section scrolls into view, which starts the batfly/batflap/batmorph
+     keyframes. Restored 6 Aug 2026 on the `Compare` branch.
 
-     Footnote worth keeping: that script used the find-it-once boot pattern,
-     which is the exact bug the photo board below hit — it worked locally and
-     did nothing deployed. If the bat comes back, it needs the re-scanning
-     boot the board now uses, not the version that was here. -->
+     ⚠️ THIS IS NOT THE SCRIPT THAT WAS MOTHBALLED, AND THE DIFFERENCE IS THE
+     WHOLE POINT. The 5 Aug version used a find-it-once boot: scan, and if the
+     element is not there yet, watch for it with a MutationObserver and
+     disconnect on the first hit. That is EXACTLY the bug the photo board below
+     shipped with on the same day — the component engine re-renders the page
+     body after first paint and does it MORE THAN ONCE, so the element you found
+     and armed is thrown away and replaced by one nobody arms. It works
+     perfectly from a local file and does nothing on the deployed site. The
+     commit that removed this said so in as many words; this is that note being
+     acted on rather than read.
+
+     So: the same re-scanning boot the board uses. Keep looking for 20 seconds,
+     arm any .crest-anim that is not armed yet, and re-scan on resize because a
+     phone turned sideways crosses the 760px line where this section is hidden.
+     arm() is idempotent per element, so re-scanning costs nothing.
+
+     ⚠️ Locals are all lowercase ON PURPOSE. `encodeCase()` in support.js
+     rewrites whitespace + camelCase + `=` into an `sc-camel-…` attribute name
+     ANYWHERE in this file, including inside a <script>. That is what broke the
+     board's `onScreen` flag and threw a SyntaxError on every page load while
+     the page still looked fine. Do not introduce a camelCase local here.
+
+     Fails safe: if anything throws, the crest simply sits there complete and
+     static, which is what it did before this branch. */
+  (function(){
+    function arm(host){
+      if(host.__armed) return;
+      /* Flagged only AFTER the observer is attached — the board's other boot
+         bug was a flag set on entry, which marked a half-built element as done
+         and made the re-scan skip it for ever. */
+      try{
+        if('IntersectionObserver' in window){
+          var io=new IntersectionObserver(function(es){
+            for(var i=0;i<es.length;i++){
+              if(es[i].isIntersecting){ host.classList.add('play'); io.disconnect(); break; }
+            }
+          },{threshold:0.35});
+          io.observe(host);
+        } else {
+          /* No IntersectionObserver: play immediately rather than never. */
+          host.classList.add('play');
+        }
+        host.__armed=1;
+      }catch(e){}
+    }
+    function scan(){
+      var list=document.querySelectorAll('.crest-anim');
+      for(var i=0;i<list.length;i++) arm(list[i]);
+    }
+    function boot(){
+      scan();
+      var tries=0;
+      var t=setInterval(function(){ scan(); if(++tries>40) clearInterval(t); },500);
+      window.addEventListener('resize', function(){ scan(); }, {passive:true});
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  })();
+</script>
 <script>
   /* Rotating photo RING in the About section (5 Aug 2026). A cylinder of
      photo panels turning on its vertical axis, clipped by the box.
@@ -1387,8 +1459,18 @@
              and it is the .reg-btn CLASS ITSELF, not a copy of its rules: the
              dark body, the red->green bar, the holo sweep and the hover
              glow/tilt all come from one place, so the three buttons cannot
-             drift apart. `--glow` is the green, which is what the lower
-             Register pair uses.
+             drift apart.
+
+             ⚠️ `--glow` IS RED ON THIS BRANCH (Jay, 6 Aug 2026: "the tournament
+             rules button should glow red not green"). It was #17A34A, matching
+             `Register player`. It is now #E11B22 — the SAME red as `Register a
+             team` and as the brand, not a new red invented for this button.
+             That is deliberate: the page already has exactly two button glows
+             and a third would be a third. Note the button's own bar gradient
+             still runs red->green, from .reg-btn — the glow is the hover
+             border/shadow colour only, so red glow on a red->green bar is not
+             an inconsistency, it is the same arrangement `Register a team`
+             already has.
 
              ⚠️ It is an <a>, not a <button>, because it GOES SOMEWHERE — a
              real page a coach can send to a parent. .reg-btn is written
@@ -1399,7 +1481,7 @@
              ⚠️ AND IT IS DELIBERATELY SMALLER than the hero pair (14px against
              18px). The Register buttons are the page's call to action; this
              must read as the same family without competing with them. -->
-        <a href="/rules" class="reg-btn rules-btn" style="--glow:#17A34A;font-size:14px;padding:13px 26px;margin:30px auto 0;display:flex;width:fit-content">
+        <a href="/rules" class="reg-btn rules-btn" style="--glow:#E11B22;font-size:14px;padding:13px 26px;margin:30px auto 0;display:flex;width:fit-content">
           <span class="reg-btn-bar"></span><span class="holo"></span>
           <span class="reg-btn-label">Tournament rules
             <span aria-hidden="true" style="margin-left:8px;display:inline-block">&rarr;</span>
@@ -1408,24 +1490,33 @@
       </div>
     </div>
     <div class="about-media" style="position:relative" data-reveal>
-      <!-- ⚠️ THE CREST USED TO BE HERE, pinned over the top-left corner of the
-           photo box by .cstage / .crest-anim, and before that it was the anchor
-           for the bat animation. Both are gone as of 5 Aug 2026 — it now sits
-           beside the "Rugby the way it should be" heading in the text column,
-           because a static badge on top of photos that move underneath it read
-           as a sticker rather than a design.
+      <!-- ⚠️ THE CREST AND THE BAT ARE BACK HERE (Jay, 6 Aug 2026, `Compare`
+           branch): "put the quins logo and moving bat back on the rotating
+           picture". Both were removed on 5 Aug — the bat mothballed in c6f3871
+           and the badge taken out of this section entirely in 19e8f5d.
 
-           The mothballed bat animation used to hang off it:
-             <div class="cf"><div class="cfl">
-               <img class="bflat" src="assets/crest-bat.png" alt="">
-               <img class="breal" src="assets/crest-bat-real.png" alt="">
-             </div></div>
-           plus .cstage / .crest-anim / .cf / .cfl / .breal in the stylesheet and
-           the batfly, batflap and batmorph keyframes. assets/crest-bat.png and
-           crest-bat-real.png are still in the repo. If the animation ever comes
-           back it needs its own home again, and the badge has to go back to
-           crest-shield.png at the same time — crest.png already has a bat
-           printed on it, so you would otherwise get two. -->
+           ⚠️ `crest-shield.png`, NOT `crest.png`. The shield is the crest with a
+           bat-shaped HOLE in it — it is the backdrop this bat flies out of and
+           lands back into. crest.png has a bat printed on it already, so using
+           it here gives you two bats and one of them never moves. This pairing
+           is the whole reason the shield asset exists.
+
+           ⚠️ .cstage clips the flight path. The bat travels to 410% right and
+           180% down at its extremes, which is outside this box; without the
+           overflow:hidden stage it puts a horizontal scrollbar on the page.
+
+           ⚠️ RECORDED AGAINST ITSELF: the reason this was taken out was that a
+           badge pinned over photos which rotate underneath it read as "a sticker
+           stuck on a moving thing". That objection was about a STATIC badge and
+           the bat changes it, but it has not evaporated — this is the whole
+           point of the branch, so look at it before merging rather than
+           re-litigating it later. -->
+      <div class="cstage">
+        <div class="crest-anim">
+          <img class="cbase" src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest">
+          <div class="cf"><div class="cfl"><img class="bflat" src="assets/crest-bat.png" alt=""><img class="breal" src="assets/crest-bat-real.png" alt=""></div></div>
+        </div>
+      </div>
       <div class="about-photo">
         <!-- Rotating photo RING. Was a single static assets/action-lineout.jpg
              until 5 Aug 2026, then briefly a two-sided flip, now a cylinder of

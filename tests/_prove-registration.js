@@ -5003,7 +5003,11 @@ const FAULTS = [
   {
     name: 'the rules button grows to match the hero pair and competes with them',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '--glow:#17A34A;font-size:14px;padding:13px 26px', '--glow:#17A34A;font-size:18px;padding:13px 26px'),
+    /* ⚠️ ANCHOR REPOINTED 6 Aug 2026 — it carried the old #17A34A glow, which
+       this branch changed to red, so the fault could no longer be injected.
+       A fault that cannot be injected is a failed run, not a pass. It now
+       anchors on the size alone, which is what it was always about. */
+    apply: () => patch(HOME, 'font-size:14px;padding:13px 26px', 'font-size:18px;padding:13px 26px'),
     expect: ['smaller than the Register buttons'],
   },
   {
@@ -5100,31 +5104,41 @@ const FAULTS = [
     expect: ['boot loop keeps re-scanning'],
   },
   {
-    /* ⚠️ REPOINTED 5 Aug 2026 (evening). This used to patch `class="m-crestrow"`,
-       the About badge's own row, which Jay has since removed. The rule it guards
-       — the bat-holed shield is never a live image — is page-wide and very much
-       alive, so the fault moved to the footer crest rather than being deleted
-       with its old subject. */
-    name: 'the holed crest-shield is used as a live image',
+    /* ⚠️ REPOINTED TWICE NOW, AND STILL THE SAME RULE. It began on the About
+       badge's own row, moved to the footer crest on 5 Aug when that row was
+       deleted, and the RULE it guards has now inverted rather than died: the
+       holed shield is legitimate in exactly one place — paired with the bat in
+       the About section — and nowhere else. A shield in the FOOTER is still a
+       crest with a piece missing, and there is no bat there to fill it. */
+    name: 'the holed crest-shield is used somewhere the bat cannot fill it',
     suite: 'test-about-board.js',
     apply: () => patch(HOME, '<img src="assets/crest.png" alt="Abu Dhabi Harlequins crest" style="width:100%',
       '<img src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest" style="width:100%'),
-    expect: ['crest-shield.png is not referenced'],
+    expect: ['the holed shield appears ONCE'],
   },
   {
     /* The crest was removed from this section deliberately and the tombstone
        says so. Putting it back is the tidy-up somebody makes without reading. */
-    name: 'a crest creeps back into the About section',
+    /* ⚠️ INVERTED WITH ITS SUBJECT, NOT DELETED. On `main` this injected a
+       crest into a section that must not have one. Here the section SHOULD have
+       one — so the fault becomes a SECOND crest, the complete one, which is the
+       two-bats bug arriving by a different door than swapping the badge. */
+    name: 'a second, complete crest creeps into the About section',
     suite: 'test-about-board.js',
     apply: () => patch(HOME, '<div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>',
       '<img src="assets/crest.png" alt="crest" style="width:96px;height:96px"><div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">About the festival</div>'),
-    expect: ['About section carries no crest image'],
+    expect: ['NOT the complete crest'],
   },
   {
-    name: 'the tombstone recording the removed crest is tidied away',
+    /* ⚠️ REPOINTED, SAME RULE: a decision must carry its argument. On `main`
+       that was the tombstone for the removed crest. Here it is the note
+       recording the argument AGAINST putting it back — that a badge over
+       rotating photos read as a sticker. Losing that is how the same debate
+       gets had twice with nobody remembering the first round. */
+    name: 'the argument against the crest being here is tidied away',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'TOMBSTONE: THE CREST WAS HERE', 'NOTE: nothing here'),
-    expect: ['tombstone explaining the removal'],
+    apply: () => patch(HOME, 'RECORDED AGAINST ITSELF', 'A note'),
+    expect: ['the argument against putting it back survives'],
   },
   {
     /* ⚠️ THE ONE THAT MATTERS. Widening the photo column again without moving
@@ -5160,7 +5174,7 @@ const FAULTS = [
     suite: 'test-about-board.js',
     apply: () => patch(HOME, '/* Anyone who has asked their OS to cut animation',
       '.m-crestrow{flex-direction:column}\n/* Anyone who has asked their OS to cut animation'),
-    expect: ['dead .m-crestrow rule went with it'],
+    expect: ['dead .m-crestrow rule is still gone'],
   },
   {
     /* The rule that pointed at itself. Netlify DROPS a self-referential
@@ -5309,6 +5323,95 @@ const FAULTS = [
       '(from the Netlify pricing page)'),
     expect: ['cite Netlify'],
   },
+  /* ---- the Compare branch: crest + bat restored, red glow ---------------
+     These faults exist because this branch REVERSES two live assertions. A
+     reversed check that nobody breaks on purpose is a check nobody has proven,
+     and the two failure modes here both render perfectly and look finished. */
+
+  {
+    /* ⚠️ THE ONE THAT SHIPPED FOR REAL, in the other direction. crest.png has a
+       bat printed on it; with the flying bat present that is TWO bats, one of
+       them motionless. Nothing errors. */
+    name: 'the About badge becomes the complete crest, putting two bats on screen',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<img class="cbase" src="assets/crest-shield.png"',
+      '<img class="cbase" src="assets/crest.png"'),
+    expect: ['it is the SHIELD, the one with the bat-shaped hole'],
+  },
+  {
+    /* ⚠️ AND THE MIRROR OF IT — the bug that DID go live on 5 Aug. Remove the
+       bat and the shield is a crest with a hole in it, sitting there looking
+       like artwork until somebody notices. This is why the pairing is asserted
+       both ways rather than just "is the shield present". */
+    name: 'the bat is removed but the holed shield is left behind',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<div class="cf"><div class="cfl"><img class="bflat" src="assets/crest-bat.png" alt=""><img class="breal" src="assets/crest-bat-real.png" alt=""></div></div>', ''),
+    expect: ['stand or fall together'],
+  },
+  {
+    /* ⚠️ THE BOOT BUG, INJECTED. Swapping the re-scan for the find-it-once
+       pattern the mothballed script used. Works from a local file, dead on the
+       deployed site — the exact bug the photo board shipped with. */
+    name: 'the bat script reverts to the find-it-once boot that is dead when deployed',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'var t=setInterval(function(){ scan(); if(++tries>40) clearInterval(t); },500);',
+      'var mo=new MutationObserver(function(){ scan(); mo.disconnect(); }); mo.observe(document.documentElement,{childList:true,subtree:true});'),
+    expect: ['RE-SCANS rather than finding the element once'],
+  },
+  {
+    /* The other half of the same lesson: a flag set on entry marks a
+       half-built element as done and the re-scan skips it for ever. */
+    name: 'the armed flag goes back to being set on entry',
+    suite: 'test-about-board.js',
+    /* ⚠️ THE EXPECTATION MOVED, AND THAT IS THE FINDING. This was first
+       expected to trip "set AFTER the observer is attached" — and it does not,
+       because adding an assignment on entry leaves the later one in place and
+       the position check still matches. The prover reported "caught, WRONG
+       CHECK", which is exactly the distinction it exists to make: the fault was
+       caught, but by luck rather than by the check claiming to guard it. The
+       count check is the one that actually discriminates. */
+    apply: () => patch(HOME, '      if(host.__armed) return;\n', '      if(host.__armed) return;\n      host.__armed=1;\n'),
+    expect: ['assigned exactly once'],
+  },
+  {
+    /* ⚠️ THE SILENT ONE. Losing the clip does not break the animation — it
+       adds a horizontal scrollbar to the whole page when the bat is at the far
+       end of its flight, and nothing anywhere reports it. */
+    name: 'the flight path stops being clipped, so the bat can scroll the page sideways',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}',
+      '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);pointer-events:none;z-index:2}'),
+    expect: ['clipped by .cstage'],
+  },
+  {
+    /* Freezing is not hiding: parked mid-flight the bat sits out over the
+       photos looking like a stray image. */
+    name: 'reduced motion freezes the bat mid-flight instead of hiding it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}',
+      '.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none}'),
+    expect: ['by hiding, not just by freezing mid-flight'],
+  },
+  {
+    /* ⚠️ THE DRIFT FAULT for the glow, and the reason that check is DERIVED.
+       This moves the rules button to a DIFFERENT red — still red, still not
+       green, so a check asserting "is it reddish" would pass. Only requiring
+       it to equal Register-a-team's own value catches it. */
+    name: 'the rules button drifts to its own red instead of the brand one',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'class="reg-btn rules-btn" style="--glow:#E11B22',
+      'class="reg-btn rules-btn" style="--glow:#C41230'),
+    expect: ['SAME red as Register a team'],
+  },
+  {
+    /* And the straight revert, back to the green Jay asked to change. */
+    name: 'the rules button glow reverts to green',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'class="reg-btn rules-btn" style="--glow:#E11B22',
+      'class="reg-btn rules-btn" style="--glow:#17A34A'),
+    expect: ['NOT the Register-player green'],
+  },
+
   {
     /* ⚠️ THE COVER FAULT. Section 5 asserts the FOUR earlier corrections that
        had nothing holding them in place. This re-introduces the dead preview

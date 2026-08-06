@@ -650,6 +650,66 @@ check('the focus outline is outside the pointer query',
   /\.hdr-nav a:focus-visible\{outline:2px solid #3bd070/.test(HDRCSS),
   'inside ANY hover query, a keyboard user with no pointer loses the outline');
 
+/* ⚠️ AND THE SAME GATE ON EVERY OTHER COMPONENT THAT MOVES ON HOVER (5 Aug
+   2026, second pass). The header fix went out alone first; Jay then asked for
+   the rest — "push it to go live so we get it off our plate".
+
+   `.fmt-grp` (age-group cards) and `.reg-btn` (Register buttons) carried the
+   identical `infinite` rule with no pointer query, and are where the header
+   inherited the bug from. Measured on a 390px touch viewport, 2.5s after a tap:
+   both still shimmering, glowing and tilted, indefinitely. The Register button
+   is the worst of them — tapping it opens the registration modal AND leaves the
+   button lit up behind it.
+
+   ⚠️ THE DESKTOP LOOK IS DELIBERATELY UNCHANGED. `infinite` stays for a mouse:
+   it is right for a card you brush past, and Jay is happy with it. Only the
+   stuck state goes. Verified against the DEPLOYED page in the same harness —
+   hovered, both still report `holoShift/infinite` at opacity .7 with the tilt
+   applied, exactly as before.
+
+   This is a SWEEP rather than four literals, because the next component to grow
+   a hover effect will not be called .fmt-grp. */
+section('nothing that moves on hover can stick on a touch screen');
+
+const HOVER_QUERIES = HDRCSS.match(/@media \(hover:hover\)\{[\s\S]*?\n  \}/g) || [];
+check('the page has pointer-gated blocks at all', HOVER_QUERIES.length >= 4,
+  `${HOVER_QUERIES.length} found`);
+
+/* A hover rule that only changes colour is harmless when it sticks. One that
+   MOVES or ANIMATES is what leaves a card tilted and shimmering with nothing
+   able to end it, so that is the set this sweeps. */
+const LOUD = /transform|animation|box-shadow/;
+const stuckable = [];
+for (const m of HDRCSS.matchAll(/([^\n{}]*:hover[^{}]*)\{([^}]*)\}/g)) {
+  const [whole, sel, body] = m;
+  if (!LOUD.test(body)) continue;                    // colour-only: fine either way
+  if (sel.includes('@media')) continue;              // the query line itself
+  if (!HOVER_QUERIES.some((q) => q.includes(whole))) stuckable.push(sel.trim().slice(0, 60));
+}
+check('every hover rule that moves or animates is behind (hover:hover)',
+  stuckable.length === 0,
+  stuckable.join(' | ') || '');
+check('…and the sweep actually found rules to check',
+  (HDRCSS.match(/:hover[^{}]*\{[^}]*(transform|animation)/g) || []).length >= 5,
+  'if this drops to nothing the sweep above is passing on an empty set');
+
+/* Named individually as well, because these four are the ones measured on a
+   real touch viewport and a sweep that silently stopped covering them would
+   still pass. */
+[['.fmt-grp', 'the age-group cards'], ['.reg-btn', 'the Register buttons'],
+ ['.fmt-day', 'the day cards'], ['.rules-btn', 'the rules button']].forEach(([sel, label]) => {
+  check(`${label} (${sel}) are gated`,
+    HOVER_QUERIES.some((q) => q.includes(sel + ':hover')),
+    'measured stuck on a 390px touch viewport before this');
+});
+
+/* ⚠️ THE DESKTOP BEHAVIOUR IS PART OF THE CONTRACT. Gating is not an excuse to
+   quietly drop the effect: the loop must still be there for a mouse. */
+check('the cards still shimmer for a real pointer',
+  /\.fmt-grp:hover \.holo\{opacity:\.7;animation:holoShift 2\.2s ease-in-out infinite\}/.test(HDRCSS));
+check('…and so do the Register buttons',
+  /\.reg-btn:hover \.holo\{opacity:\.7;animation:holoShift 2\.2s ease-in-out infinite\}/.test(HDRCSS));
+
 /* ⚠️ THE NAV GOT WIDER AND THE HEADER OVERFLOWED — twice, and the second time
    it turned out to have been live already.
 

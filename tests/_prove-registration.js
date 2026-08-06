@@ -4902,6 +4902,44 @@ const FAULTS = [
     expect: ['exactly one nav element'],
   },
 
+  {
+    /* The bug Jay reported on the header, in the place it came FROM. Measured
+       still shimmering and tilted 2.5s after a tap on a 390px viewport. */
+    name: 'the age-group cards lose their pointer gate and stick on touch again',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME,
+      "  @media (hover:hover){\n    .fmt-grp:hover{transform:perspective(400px)",
+      "  @media (min-width:1px){\n    .fmt-grp:hover{transform:perspective(400px)"),
+    expect: ['age-group cards', 'behind (hover:hover)'],
+  },
+  {
+    /* The worst of them: a tap opens the modal AND leaves the button lit up,
+       tilted and shimmering behind it. */
+    name: 'the Register buttons lose their pointer gate',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME,
+      "  @media (hover:hover){\n    .reg-btn:hover{transform:perspective(400px)",
+      "  @media (min-width:1px){\n    .reg-btn:hover{transform:perspective(400px)"),
+    expect: ['Register buttons', 'behind (hover:hover)'],
+  },
+  {
+    /* ⚠️ Gating is not an excuse to drop the effect. A mouse must still get it -
+       otherwise "fixed on touch" quietly means "deleted everywhere". */
+    name: 'the card shimmer is deleted rather than gated',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "    .fmt-grp:hover .holo{opacity:.7;animation:holoShift 2.2s ease-in-out infinite}\n", ""),
+    expect: ['still shimmer for a real pointer'],
+  },
+  {
+    /* A new component grows a hover effect outside the gate - which is exactly
+       how this bug spread from the cards to the header in the first place. */
+    name: 'a new hover effect is added outside the pointer gate',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  .rules-btn{transition:background .22s ease',
+      '  .spon-tile:hover{transform:translateY(-3px)}\n  .rules-btn{transition:background .22s ease'),
+    expect: ['moves or animates is behind'],
+  },
+
   /* ---- the tournament rules page ---------------------------------------- */
   {
     name: 'the /rules rewrite is removed, so the button 404s',

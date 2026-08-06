@@ -5580,7 +5580,7 @@ const FAULTS = [
        number" version. */
     name: 'the bleed is simplified to a fixed value and overshoots the viewport',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'margin-right: calc(-1 * max(32px, 50vw - 568px));',
+    apply: () => patch(HOME, 'margin-right: calc(-1 * max(32px, (100vw - var(--sbw, 0px)) / 2 - 568px));',
       'margin-right: -200px;'),
     expect: ['bleeds to the right edge with the derived formula'],
   },
@@ -5593,6 +5593,24 @@ const FAULTS = [
     apply: () => patch(HOME, 'max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:70px',
       'max-width:1320px;margin:0 auto;padding:100px 48px;display:grid;grid-template-columns:1fr 1fr;gap:70px'),
     expect: ['still 1200px wide with 32px padding'],
+  },
+  {
+    /* ⚠️ THE 8px THAT SHIPPED. Dropping the scrollbar term is the "simpler"
+       version of this line and it overshoots the content edge by half a
+       scrollbar on every Windows browser - invisible locally, because headless
+       Chromium has overlay scrollbars, and invisible live because an ancestor
+       clips it. */
+    name: 'the bleed stops subtracting the scrollbar and overshoots by half of it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'max(32px, (100vw - var(--sbw, 0px)) / 2 - 568px)', 'max(32px, 50vw - 568px)'),
+    expect: ['with the scrollbar subtracted'],
+  },
+  {
+    /* The formula stays and the number it needs stops arriving. */
+    name: 'the scrollbar width stops being published to the CSS',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "    window.addEventListener('resize', sbw, {passive:true});\n    sbw();", ''),
+    expect: ['recomputed on resize'],
   },
   {
     name: 'the right-hand corners are rounded again, against the edge of the screen',

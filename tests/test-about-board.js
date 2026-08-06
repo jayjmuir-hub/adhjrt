@@ -261,8 +261,33 @@ if (cwClamp) {
    failing a check — a test file that cannot load reports nothing at all. */
 const CSSNC = stripCssComments(PAGE);
 check('the carousel bleeds to the right edge with the derived formula',
-  /margin-right:\s*calc\(-1 \* max\(32px,\s*50vw - 568px\)\)/.test(CSSNC),
+  /margin-right:\s*calc\(-1 \* max\(32px,\s*\(100vw - var\(--sbw, 0px\)\) \/ 2 - 568px\)\)/.test(CSSNC),
   'sized off the section max-width and padding, not eyeballed');
+
+/* ⚠️⚠️ THE SCROLLBAR, AND IT SHIPPED WRONG ONCE. `100vw` INCLUDES the classic
+   scrollbar; the centred section does not. Measured on the deployed preview at
+   a 1387px window: 15px scrollbar, 1372px of content, and the box finished at
+   1380 — EIGHT PIXELS PAST THE EDGE, exactly half the scrollbar.
+
+   It produced no visible scrollbar only because an ancestor carries
+   overflow-x:hidden and was clipping it: a fallback hiding a fault in the very
+   thing it covers for.
+
+   ⚠️ AND NO LOCAL RENDER COULD HAVE CAUGHT IT. Headless Chromium uses OVERLAY
+   scrollbars, so 100vw and the content width are identical and the width sweep
+   reported flush everywhere. The only reading that found this was taken in a
+   real browser on Windows. */
+check('…with the scrollbar subtracted, or it overshoots by half of it',
+  /\(100vw - var\(--sbw, 0px\)\)/.test(CSSNC),
+  '100vw counts the scrollbar and the centred section does not');
+check('…and --sbw is actually published by the head script',
+  /window\.innerWidth - document\.documentElement\.clientWidth/.test(stripJsComments(PAGE))
+  && /setProperty\('--sbw'/.test(stripJsComments(PAGE)));
+check('…onto <html>, which the engine does not re-render',
+  /document\.documentElement\.style\.setProperty\('--sbw'/.test(stripJsComments(PAGE)),
+  'anything written onto a rendered element is destroyed by the next render');
+check('…and recomputed on resize, since a scrollbar can appear or go',
+  /addEventListener\('resize', sbw/.test(stripJsComments(PAGE)));
 check('…and the section it is derived from is still 1200px wide with 32px padding',
   /id="about"[^>]*max-width:1200px[^>]*padding:100px 32px/.test(PAGE),
   'change either and the bleed formula has to be redone by hand');

@@ -114,6 +114,18 @@
       }catch(e){ /* leave the header alone */ }
     }
 
+    /* The width of the classic scrollbar, published to the CSS. innerWidth
+       counts it, documentElement.clientWidth does not, so the difference is
+       exactly the number the About carousel's bleed has to subtract. 0 on
+       overlay scrollbars, which is the right answer there. Written to <html>
+       because the engine re-renders the body. */
+    function sbw(){
+      try{
+        var w = window.innerWidth - document.documentElement.clientWidth;
+        document.documentElement.style.setProperty('--sbw', (w > 0 ? w : 0) + 'px');
+      }catch(e){}
+    }
+
     function onscroll(){
       if(ticking) return;
       ticking = true;
@@ -124,6 +136,8 @@
        browser scroll without waiting to find out. */
     window.addEventListener('scroll', onscroll, {passive:true});
     window.addEventListener('resize', onscroll, {passive:true});
+    window.addEventListener('resize', sbw, {passive:true});
+    sbw();
     /* Run once on arrival: a reload part-way down the page, or a link straight
        to #venue, must not start with the bar full-size and nothing underlined. */
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', measure);
@@ -846,7 +860,29 @@
      error away from putting a horizontal scrollbar on the WHOLE PAGE. It is
      swept every 20px from 1440 to 761 and asserted - the header shipped a
      6-12px overflow at 762-770px that was live for days and nobody saw it. */
-  margin-right: calc(-1 * max(32px, 50vw - 568px));
+  /* ⚠️ `100vw` INCLUDES THE SCROLLBAR AND `100%` DOES NOT, AND THAT 8px COST
+     A LIVE BUG. Measured on the deployed preview at a 1387px window: the
+     scrollbar is 15px, the page's content is 1372px, and this box finished at
+     1380 - EIGHT PIXELS PAST THE CONTENT EDGE, exactly half the scrollbar,
+     because the section is centred in 1372 while 50vw is computed from 1387.
+
+     It did not produce a scrollbar only because an ancestor <div> carries
+     overflow-x:hidden and was quietly clipping it. **A fallback hiding a fault
+     in the thing it covers for** - so the box looked right, measured wrong,
+     and would have shipped that way.
+
+     ⚠️ AND THE LOCAL RENDER COULD NOT HAVE CAUGHT IT. Headless Chromium uses
+     OVERLAY scrollbars, so 100vw and the content width are identical there and
+     the sweep reported flush at every width. Any future measurement of this
+     line has to be taken in a browser with a classic scrollbar, or it is
+     measuring a case that does not exist on Windows.
+
+     --sbw is set on <html> by the head script - on <html> because the
+     component engine re-renders the body and anything written onto a rendered
+     element is destroyed. It falls back to 0px, which is correct on overlay
+     scrollbars and merely reinstates the old 8px on a classic one with
+     JavaScript off - clipped, as it was before, rather than broken. */
+  margin-right: calc(-1 * max(32px, (100vw - var(--sbw, 0px)) / 2 - 568px));
 
   /* A rounded corner hard against the edge of the screen reads as a mistake,
      so the right-hand corners are square and the left-hand ones are not. */

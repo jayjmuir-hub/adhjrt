@@ -2806,8 +2806,9 @@ there.
    tiles only work because the light/dark split is exactly even.
 4. **Deploy cost** — every production deploy costs 15 Netlify credits
    (3,000/month Pro), whatever its size. Batch changes into one commit; iterate
-   on a branch/preview (free), merge to `main` once. (Full deploy-credit and
-   working-agreement rules live in the project instructions.)
+   on a branch/preview (**genuinely free — 0 credits, not "cheap"; see the
+   credit table in "Three kinds of preview URL"**), merge to `main` once. (Full
+   deploy-credit and working-agreement rules live in the project instructions.)
 
 (Done and removed from this list: pitch scheduling — data entry completed
 1 Aug; the rehearsal-data cleanup — done and verified 2 Aug, see the tombstone
@@ -2961,10 +2962,47 @@ now answers 200.** Both live checks, 5 Aug 2026:
 matters, read the deploy id from the Netlify MCP rather than inferring
 existence from a status code.
 
-Consequence worth knowing: branch deploys are **enabled**, so every push to
-`dev` triggers a build. That is what makes the stable URL work. If Netlify
-credits ever look higher than expected, that is the first place to look —
-`main` is not the only branch building.
+Consequence worth knowing: branch deploys are enabled **for `dev` only** as of
+6 Aug 2026, so a push to `dev` triggers a build. That is what makes the stable
+URL work, and it is free.
+
+⚠️ **THIS PARAGRAPH USED TO END: "If Netlify credits ever look higher than
+expected, that is the first place to look — `main` is not the only branch
+building." THAT IS FALSE and was corrected on 6 Aug 2026.** A branch build
+cannot move the credit number, because it does not cost any. Netlify's
+credit-based plans do not meter build minutes at all:
+
+| | credits |
+|---|---|
+| **Production deploy** | **15 each** |
+| **Branch deploy / Deploy Preview** | **0 — free** |
+| Failed deploy | 0 |
+| Rolling back production | 0 |
+
+(Compute is 10 credits per GB-hour, bandwidth 20 per GB, web requests 2 per
+10,000 — so a heavily-crawled branch deploy is not literally zero, but it is
+nowhere near a build.) The point of the correction is that the old sentence
+sent the next person hunting in the one place that could never be the cause.
+**Only a successful production deploy spends credits.**
+https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/
+
+⚠️ **AND A BRANCH DEPLOY OUTLIVES ITS BRANCH.** Deleting the git branch does
+NOT take the `<branch>--adhquins-jrt.netlify.app` site down — confirmed against
+Netlify's own support, and measured here: `club-manager-page` was deleted from
+`origin` on 6 Aug and its site was still answering 200, with its functions
+running, minutes later. **This matters more than it sounds:** functions on a
+branch deploy read the SAME environment variables and the SAME Blobs stores as
+production, so a stale branch site serves old code against live data. The
+`club-manager-page` deploy was 68 commits behind and therefore had no
+`c5df5fa`, i.e. **no rate limiting on `manager-signup`**, while production had
+it — the throttle was bypassable by changing the hostname. Restricting branch
+deploys to `dev` stops the NEXT one; it does not retract one already published.
+
+⚠️ **AND DO NOT REPEAT THE MISTAKE THAT FOUND THIS.** A `404` on a branch
+subdomain was read as "my delete worked" when a branch name that never existed
+returns 404 too. **A 404 with no before-reading proves nothing.** Take the
+baseline BEFORE the change, and probe more than once — a single `000` from a
+transient connection failure reads exactly like "the site is gone".
 4. Verify a live deploy reached `ready` (Netlify site id
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 
@@ -2977,8 +3015,8 @@ file finds the clone itself, so any checkout on any machine can run them.
 It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
-photo ring — **35 files** — plus `_prove-registration.js`, the fault-injection
-script (**571 faults** as of 5 Aug 2026, all of which must be caught by the
+photo ring and the doc-claim suite — **36 files** — plus `_prove-registration.js`, the fault-injection
+script (**582 faults** as of 6 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

@@ -64,7 +64,8 @@ $tests = @(
   'test-light-mode.js',
   'test-design-polish.js',
   'test-back-office-links.js',
-  'test-about-board.js'
+  'test-about-board.js',
+  'test-doc-claims.js'
 )
 
 Write-Host ''

@@ -5210,6 +5210,117 @@ const FAULTS = [
       'const ageGroupId = (event.headers && event.headers["x-age-group"]) || null;'),
     expect: ['derives the age group from the matched KEY NAME'],
   },
+
+  /* ---- doc claims that give instructions (test-doc-claims.js) ------------
+     A wrong sentence in CLAUDE.md does not fail, does not error, and is only
+     discovered by somebody acting on it. Five have been found this way. These
+     faults are the only thing standing between the corrections and a quiet
+     revert. */
+
+  {
+    /* THE ONE THIS SUITE WAS BUILT FOR. Restoring the false advice as live
+       text, by demoting its tombstone marker. The SENTENCE IS UNCHANGED — only
+       its context moves — which is precisely why presence and absence checks
+       both pass here and only the position check catches it. */
+    name: 'the false "look at branch builds for credits" advice is restored as live text',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'THIS PARAGRAPH USED TO END', 'Worth remembering'),
+    expect: ['sits INSIDE its tombstone, not standing as advice'],
+  },
+  {
+    /* The quieter revert: keep the tombstone, delete the reasoning. A verdict
+       with no argument behind it gets overturned by the next person who
+       re-derives the wrong answer from the same true premise. */
+    name: 'the tombstone keeps the verdict but loses the reason',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'A branch build\ncannot move the credit number, because it does not cost any.',
+      'This is no longer accurate.'),
+    expect: ['with the reason, not just the verdict'],
+  },
+  {
+    /* The figure itself going wrong. */
+    name: 'a branch deploy is documented as costing credits after all',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', '| **Branch deploy / Deploy Preview** | **0 — free** |',
+      '| **Branch deploy / Deploy Preview** | **15 each** |'),
+    expect: ['recorded as costing ZERO, explicitly'],
+  },
+  {
+    /* ⚠️ THE DRIFT FAULT, and the reason those two checks are DERIVED rather
+       than pinned to 15. This edits ONE of the two copies of the production
+       cost. A pair of checks that each asserted "15" would both still pass on
+       the other copy and report green while the file contradicted itself. */
+    name: 'the two copies of the production deploy cost drift apart',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', '| **Production deploy** | **15 each** |',
+      '| **Production deploy** | **10 each** |'),
+    expect: ['two copies of the production cost agree'],
+  },
+  {
+    /* Overclaiming in the other direction: "free" with nothing qualifying it.
+       Bandwidth and requests ARE metered, and a correction that quietly
+       overstates its case is the next thing somebody has to correct. */
+    name: 'the credit correction drops the meters that are NOT free',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'Compute is 10 credits per GB-hour, bandwidth 20 per GB',
+      'Nothing else is metered'),
+    expect: ['so "free" is not overclaimed'],
+  },
+  {
+    /* The security half. Losing this turns a live finding back into tidiness. */
+    name: 'the warning that a branch deploy outlives its branch is tidied away',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'AND A BRANCH DEPLOY OUTLIVES ITS BRANCH', 'A note on branch deploys'),
+    expect: ['warning is recorded'],
+  },
+  {
+    /* Keeping the warning but dropping WHY it matters — which is the only part
+       that distinguishes "untidy" from "the production rate limit is
+       bypassable by changing the hostname". */
+    name: 'the branch-deploy warning loses the fact that it reads production data',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'read the SAME environment variables and the SAME Blobs stores as\nproduction',
+      'run in their own context'),
+    expect: ['same env vars and the same stores as production'],
+  },
+  {
+    /* Recording a partial fix as a fix is how the next person stops looking. */
+    name: 'restricting branch deploys to dev is written up as if it closed the hole',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published.',
+      'Restricting branch deploys to `dev` fixes this.'),
+    expect: ['not retracting what is published'],
+  },
+  {
+    /* The measurement lesson. Deleting this is how the same false all-clear
+       gets reported again. */
+    name: 'the no-baseline lesson is dropped from the doc',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', '**A 404 with no before-reading proves nothing.**',
+      'Check the URL afterwards.'),
+    expect: ['no-baseline trap is recorded'],
+  },
+  {
+    /* The source. A figure nobody can re-check is how the 401 test survived
+       the password being switched off. */
+    name: 'the credit figures lose their source link',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/',
+      '(from the Netlify pricing page)'),
+    expect: ['cite Netlify'],
+  },
+  {
+    /* ⚠️ THE COVER FAULT. Section 5 asserts the FOUR earlier corrections that
+       had nothing holding them in place. This re-introduces the dead preview
+       host as a live instruction — the exact bug that cost a round of 404s —
+       while leaving its tombstone elsewhere intact, so a naive "is the dead
+       host mentioned" check passes. Only the per-mention flag test catches it. */
+    name: 'the dead preview host creeps back as a live instruction',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', '### 5. The tests',
+      'Preview a branch at https://<branch>--serene-gingersnap-1d0eb6.netlify.app\n\n### 5. The tests'),
+    expect: ['every mention of the dead host is flagged as dead'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

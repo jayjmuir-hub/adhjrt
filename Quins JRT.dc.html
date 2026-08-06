@@ -226,11 +226,17 @@
      own". That was false, and it is what put a crest with a hole in it live on
      5 Aug. With the bat back, the shield is correct again.)
 
-     ⚠️ ONE FLIGHT EVERY 30 SECONDS (Jay, 6 Aug 2026: "lets have the bat fly
-     around less often"). It was a 13s cycle carrying TWO flights — a bat
-     crossing the screen roughly every 6 seconds, which reads as a loop rather
-     than a surprise. The cycle is 30s now and holds ONE flight: 5.59s of
-     flying, then 24.4s of the crest sitting still.
+     ⚠️ ONE FLIGHT, EVER (Jay, 6 Aug 2026: "have the bat only fly once"). It was
+     a 13s cycle carrying TWO flights, then a 30s cycle carrying one; it now
+     runs a single iteration and stops. The bat flies when the section first
+     scrolls into view and then sits in the crest for good.
+
+     ⚠️ `forwards` IS NOT OPTIONAL. Without it the animation snaps back to its
+     0% frame when it ends — which happens to be the same place, so it would
+     LOOK fine today and break the moment anybody edits the last keyframe. The
+     30s duration is kept as-is: the flight occupies the first 18.6% and the
+     rest is inert, which costs nothing and avoids re-deriving forty
+     percentages across three keyframe sets for no visible gain.
 
      ⚠️ THE FLIGHT ITSELF IS NOT SLOWED DOWN, and that is the point. Stretching
      the same keyframes over 30s would have given a bat drifting in slow motion,
@@ -255,14 +261,19 @@
   .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
   .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
   .crest-anim .cbase{z-index:1}
-  .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}
-  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s infinite;animation-play-state:paused}
-  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 30s ease-in-out .5s infinite;animation-play-state:paused}
+  /* ⚠️ z-index 6 BEATS THE PHOTO BOX AS A WHOLE, which is what keeps the crest
+     in front of the gradient border (Jay: "make sure the quins logo is still in
+     front of it"). It does NOT have to beat the border's own z-index of 50 —
+     that one lives inside .about-photo's stacking context and cannot escape it.
+     Comparing the two numbers directly is the mistake to avoid here. */
+  .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:6}
+  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s 1 forwards;animation-play-state:paused}
+  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 30s ease-in-out .5s 1 forwards;animation-play-state:paused}
   .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
   @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}3.033%{transform:scaleX(1) scaleY(1)}3.9%{transform:scaleX(1) scaleY(1)}5.287%{transform:scaleX(.72) scaleY(1.16)}6.673%{transform:scaleX(1) scaleY(1)}8.06%{transform:scaleX(.72) scaleY(1.16)}9.447%{transform:scaleX(1) scaleY(1)}10.833%{transform:scaleX(.72) scaleY(1.16)}12.22%{transform:scaleX(1) scaleY(1)}13.607%{transform:scaleX(.72) scaleY(1.16)}14.993%{transform:scaleX(1) scaleY(1)}16.38%{transform:scaleX(.72) scaleY(1.16)}17.767%{transform:scaleX(1) scaleY(1)}19.067%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
   @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}3.033%{transform:translate(0%,0%) rotate(0deg) scale(1)}3.969%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}5.529%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}8.181%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}10.833%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}12.861%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}14.733%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}16.449%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}17.697%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}18.633%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
   .crest-anim .cfl img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .crest-anim .breal{opacity:0;animation:batmorph 30s linear .5s infinite;animation-play-state:paused}
+  .crest-anim .breal{opacity:0;animation:batmorph 30s linear .5s 1 forwards;animation-play-state:paused}
   .crest-anim.play .breal{animation-play-state:running}
   @keyframes batmorph{0%{opacity:0}3.033%{opacity:0}4.767%{opacity:1}17.767%{opacity:1}19.067%{opacity:0}100%{opacity:0}}
   @media (prefers-reduced-motion:reduce){
@@ -902,6 +913,45 @@
   /* A rounded corner hard against the edge of the screen reads as a mistake,
      so the right-hand corners are square and the left-hand ones are not. */
   border-radius:18px 0 0 18px;
+
+  /* ⚠️ A STACKING CONTEXT, ON PURPOSE, AND THE BORDER BELOW DOES NOT WORK
+     WITHOUT IT. The carousel cards carry z-index 7..12 from the slot table. A
+     border drawn inside this box has to sit above all of them or the cards
+     paint over it as they swing past — but raising it to 99 in the PAGE's
+     stacking context would also raise it above the crest, which is a sibling
+     at z-index 2. `isolation:isolate` traps every z-index inside this box, so
+     the border can outrank the cards while the whole box still loses to the
+     crest. Both halves of what Jay asked for depend on this one line. */
+  isolation:isolate;
+}
+
+/* ⚠️ GRADIENT BORDER ON THREE SIDES ONLY (Jay, 6 Aug 2026: "top, bottom, and
+   left, the right side would still be the same"). The right edge runs off the
+   screen, so a border there would be a line hanging in the scrollbar gutter.
+
+   ⚠️ WHY A MASKED PSEUDO-ELEMENT AND NOT `border-image`. The obvious version is
+   `border-width:3px 0 3px 3px; border-image:linear-gradient(...) 1` — three
+   sides, one line, no pseudo-element. It renders SQUARE CORNERS: border-image
+   ignores border-radius entirely, so the gradient would cut across the 18px
+   rounding on the left and look like a mistake. The padding-plus-mask recipe
+   below is the one that follows a rounded corner.
+
+   The trick: a box the size of the parent, padded by the border widths, filled
+   with the gradient, then masked so only the padding band survives —
+   `mask-composite:exclude` subtracts the content box from the whole box. With
+   `padding-right:0` there is no band on the right, which is exactly the ask.
+
+   ⚠️ pointer-events:none, or it would sit over the carousel and swallow
+   anything that ever needs to be clickable in there. */
+.about-photo::before{
+  content:"";position:absolute;inset:0;z-index:50;pointer-events:none;
+  border-radius:inherit;
+  padding:3px 0 3px 3px;
+  background:linear-gradient(160deg,#E11B22 0%,#E11B22 18%,#17A34A 52%,#E11B22 88%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
 }
 /* ⚠️ 760px, NOT 700px. That is the breakpoint where .m-stack collapses this
    section to one column — see the @media(max-width:760px) block above. Getting

@@ -1171,6 +1171,73 @@ section('the carousel can be driven, and driving it does not break the page');
    760px. The people it protects are on tablets at 761px+. That instruction is
    written at both the CSS and the script, and this note is the third copy. */
 
+section('the three-sided gradient border, and what keeps the crest in front');
+
+/* ⚠️ THREE SIDES, NOT FOUR (Jay, 6 Aug 2026: "top, bottom, and left, the right
+   side would still be the same"). The right edge runs off the screen, so a
+   border there would be a line hanging in the scrollbar gutter.
+   `padding-right:0` is the whole mechanism: the mask keeps only the padding
+   band, so a side with no padding gets no band. */
+const BORDER = (CSSNC.match(/\.about-photo::before\{[\s\S]*?\n\}/) || [''])[0];
+check('the border pseudo-element was located', BORDER.length > 100, `${BORDER.length} chars`);
+check('…and it has NO band on the right', /padding:3px 0 3px 3px/.test(BORDER),
+  'a fourth side would hang in the scrollbar gutter');
+check('…drawn as a gradient', /background:linear-gradient\(/.test(BORDER));
+
+/* ⚠️ THE MASK IS WHAT MAKES IT A BORDER RATHER THAN A FILL. Without
+   mask-composite the gradient covers the entire box and the photos vanish
+   behind a coloured slab — very visible, but nothing would fail. */
+check('…and masked so only the band survives, not the whole box',
+  /mask-composite:exclude/.test(BORDER) && /-webkit-mask-composite:xor/.test(BORDER),
+  'without this the gradient fills the box and hides the photos');
+check('…following the rounded corner, which border-image cannot do',
+  /border-radius:inherit/.test(BORDER),
+  'border-image ignores border-radius and would cut a square corner');
+check('…and not swallowing clicks', /pointer-events:none/.test(BORDER));
+
+/* ⚠️⚠️ THE LAYERING, AND IT IS THE PART THAT LOOKS ARBITRARY AND IS NOT. Two
+   requirements pull in opposite directions: the border must sit ABOVE the
+   carousel cards (z-index 7..12 from the slot table) or they paint over it as
+   they swing past, and BELOW the crest, which Jay asked to stay in front.
+
+   `isolation:isolate` on the box is what makes both possible: it traps every
+   z-index inside .about-photo, so the border can be 50 in there while the box
+   as a whole still loses to .cstage in the page's stacking context. Remove it
+   and the border's 50 beats the crest's 6 — the numbers stop being comparable
+   in the way they look like they are. */
+check('the photo box isolates its own stacking context',
+  /isolation:isolate/.test(BORDER + CSSNC),
+  'without it the border outranks the crest instead of the cards');
+const borderZ = Number((BORDER.match(/z-index:(\d+)/) || [])[1]);
+const cardZs = [...(stripJsComments(PAGE).matchAll(/zi:(\d+)/g))].map((m) => Number(m[1]));
+check('the border outranks every carousel card', cardZs.length > 0 && borderZ > Math.max(...cardZs),
+  `border ${borderZ} against a highest card of ${Math.max(...cardZs)}`);
+const cstageZ = Number((CSSNC.match(/\.cstage\{[^}]*z-index:(\d+)/) || [])[1]);
+check('…and the crest outranks the whole box, so it stays in front',
+  cstageZ > 0, `.cstage is z-index ${cstageZ}`);
+check('…with the reason recorded, because the two numbers look comparable and are not',
+  /It does NOT have to beat the border's own z-index/.test(PAGE));
+
+section('the bat flies once, and then never again');
+
+/* ⚠️ ONE FLIGHT, EVER (Jay, 6 Aug 2026: "have the bat only fly once"). All
+   three animations or none — the flight, the wing flap and the crossfade are
+   separate animations on separate elements, and one left looping means wings
+   flapping on a bat that has landed. */
+const batDecls = [...(CSSNC.matchAll(/animation:bat(fly|flap|morph) [^;}]+/g))].map((m) => m[0]);
+check('all three bat animations were located', batDecls.length === 3, batDecls.length + ' found');
+check('none of them loops', batDecls.every((d) => !/infinite/.test(d)),
+  batDecls.filter((d) => /infinite/.test(d)).join(' | '));
+check('…each runs exactly once', batDecls.every((d) => /\s1\s/.test(d)));
+
+/* ⚠️ `forwards` IS NOT DECORATION. Without it the animation snaps back to its
+   0% frame on ending — which happens to be the same place the bat lands, so it
+   would look correct today and break silently the moment anybody edits the
+   last keyframe. */
+check('…and holds its final frame rather than snapping back',
+  batDecls.every((d) => /forwards/.test(d)),
+  'it looks fine today only because 0% and 100% agree');
+
 section('purely automatic — and what that costs, and how it is paid');
 
 /* ⚠️ NO MANUAL CONTROL AT ALL (Jay, 6 Aug 2026: "purely automatic"). Drag went

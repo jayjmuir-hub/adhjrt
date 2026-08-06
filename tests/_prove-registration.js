@@ -5399,7 +5399,7 @@ const FAULTS = [
        end of its flight, and nothing anywhere reports it. */
     name: 'the flight path stops being clipped, so the bat can scroll the page sideways',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:2}',
+    apply: () => patch(HOME, '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:6}',
       '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);pointer-events:none;z-index:2}'),
     expect: ['clipped by .cstage'],
   },
@@ -5737,6 +5737,82 @@ const FAULTS = [
     suite: 'test-about-board.js',
     apply: () => patch(HOME, '--focal:50%;margin-right:0;border-radius:12px}', '--focal:50%;border-radius:12px}'),
     expect: ['cancels the bleed'],
+  },
+
+  /* ---- the three-sided border and the single flight (6 Aug 2026) -------- */
+
+  {
+    /* The whole point of the ask: no line hanging in the scrollbar gutter. */
+    name: 'the gradient border grows a fourth side, on the edge that runs off screen',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  padding:3px 0 3px 3px;', '  padding:3px;'),
+    expect: ['NO band on the right'],
+  },
+  {
+    /* ⚠️ VERY VISIBLE, AND NOTHING WOULD FAIL. Without the composite the
+       gradient is not a border at all — it fills the box and the photos
+       disappear behind a coloured slab. */
+    name: 'the mask composite goes and the gradient fills the whole box',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  mask-composite:exclude;\n}', '}'),
+    expect: ['masked so only the band survives'],
+  },
+  {
+    /* border-image is the obvious one-liner and it cuts a square corner across
+       the 18px rounding. */
+    name: 'the border stops following the rounded corner',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  border-radius:inherit;\n  padding:3px 0 3px 3px;', '  padding:3px 0 3px 3px;'),
+    expect: ['following the rounded corner'],
+  },
+  {
+    /* ⚠️⚠️ THE LAYERING FAULT, AND THE ONE WORTH THE MOST. Removing
+       isolation:isolate lets the border's z-index 50 escape into the page's
+       stacking context, where it beats the crest at 6 — so the border paints
+       OVER the Quins logo, which is the exact thing Jay asked to prevent. The
+       numbers still look sensible; only the context changed. */
+    name: 'the photo box stops isolating and the border paints over the crest',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '  isolation:isolate;\n}', '}'),
+    expect: ['isolates its own stacking context'],
+  },
+  {
+    /* And the mirror: the crest dropped below the box. */
+    name: 'the crest is dropped behind the photo box',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'pointer-events:none;z-index:6}', 'pointer-events:none;z-index:0}'),
+    expect: ['crest outranks the whole box'],
+  },
+  {
+    /* A border under the cards is a border you see flicker as they swing past. */
+    name: 'the border drops below the carousel cards',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'inset:0;z-index:50;pointer-events:none;', 'inset:0;z-index:2;pointer-events:none;'),
+    expect: ['outranks every carousel card'],
+  },
+  {
+    name: 'the bat goes back to looping for ever',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s 1 forwards',
+      'animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s infinite'),
+    expect: ['none of them loops'],
+  },
+  {
+    /* ⚠️ ONE LEFT LOOPING IS WORSE THAN ALL THREE: wings flapping on a bat that
+       has landed. */
+    name: 'the wing flap keeps looping after the flight has stopped',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'animation:batflap 30s ease-in-out .5s 1 forwards',
+      'animation:batflap 30s ease-in-out .5s infinite'),
+    expect: ['none of them loops'],
+  },
+  {
+    /* Looks fine today only because 0% and 100% happen to agree. */
+    name: 'the bat stops holding its final frame',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.5s 1 forwards;animation-play-state:paused}\n  .crest-anim .cfl',
+      '.5s 1;animation-play-state:paused}\n  .crest-anim .cfl'),
+    expect: ['holds its final frame'],
   },
 
   {

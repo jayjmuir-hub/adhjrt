@@ -286,8 +286,19 @@ check('…and --sbw is actually published by the head script',
 check('…onto <html>, which the engine does not re-render',
   /document\.documentElement\.style\.setProperty\('--sbw'/.test(stripJsComments(PAGE)),
   'anything written onto a rendered element is destroyed by the next render');
-check('…and recomputed on resize, since a scrollbar can appear or go',
+/* ⚠️ AND MEASURING IT ONCE IS WORSE THAN NOT MEASURING IT. On the deployed
+   page --sbw published `0px` while the real scrollbar was 15px: it ran before
+   the body was tall enough to need one, nobody resized the window, and the
+   stale 0 sat there for the life of the page — quietly reinstating the exact
+   overshoot it exists to remove. A ResizeObserver on <html> is the real signal,
+   because clientWidth changes at the instant a scrollbar appears or goes. */
+check('…recomputed on resize, since a scrollbar can appear or go',
   /addEventListener\('resize', sbw/.test(stripJsComments(PAGE)));
+check('…and on load, for a page that is already long by then',
+  /addEventListener\('load', sbw\)/.test(stripJsComments(PAGE)));
+check('…and watched, or a first measurement of 0 sits there for ever',
+  /new ResizeObserver\(sbw\)\.observe\(document\.documentElement\)/.test(stripJsComments(PAGE)),
+  'clientWidth changes the moment a scrollbar appears — that is the event');
 check('…and the section it is derived from is still 1200px wide with 32px padding',
   /id="about"[^>]*max-width:1200px[^>]*padding:100px 32px/.test(PAGE),
   'change either and the bleed formula has to be redone by hand');

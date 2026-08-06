@@ -5609,8 +5609,18 @@ const FAULTS = [
     /* The formula stays and the number it needs stops arriving. */
     name: 'the scrollbar width stops being published to the CSS',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, "    window.addEventListener('resize', sbw, {passive:true});\n    sbw();", ''),
+    apply: () => patch(HOME, "    window.addEventListener('resize', sbw, {passive:true});\n    window.addEventListener('load', sbw);", ''),
     expect: ['recomputed on resize'],
+  },
+  {
+    /* ⚠️ THE SECOND HALF OF THE SAME BUG, AND THE ONE THAT SHIPPED. The
+       measurement is taken, once, before the page is long enough to have a
+       scrollbar - so it publishes 0 and never corrects. Everything else about
+       the line is right and the overshoot is fully back. */
+    name: 'the scrollbar is measured once and a stale 0 is never corrected',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, "      try{ new ResizeObserver(sbw).observe(document.documentElement); }catch(e){}", ''),
+    expect: ['a first measurement of 0 sits there for ever'],
   },
   {
     name: 'the right-hand corners are rounded again, against the edge of the screen',

@@ -136,7 +136,22 @@
        browser scroll without waiting to find out. */
     window.addEventListener('scroll', onscroll, {passive:true});
     window.addEventListener('resize', onscroll, {passive:true});
+    /* ⚠️ RESIZE IS NOT ENOUGH, AND MEASURING ONCE IS WORSE THAN NOT MEASURING.
+       On the deployed page this published `0px` while the real scrollbar was
+       15px: it ran before the body had grown tall enough to need one, the
+       window was never resized, and the stale 0 sat there for the life of the
+       page - reinstating the exact 8px overshoot it exists to remove. A number
+       that is only correct at a moment nobody is looking is not a measurement.
+
+       A ResizeObserver on <html> is the right signal: clientWidth changes at
+       the instant a scrollbar appears or goes, which is precisely the event.
+       `load` covers the case where the content is already long by then, and
+       the two together mean it cannot be left stale. */
     window.addEventListener('resize', sbw, {passive:true});
+    window.addEventListener('load', sbw);
+    if('ResizeObserver' in window){
+      try{ new ResizeObserver(sbw).observe(document.documentElement); }catch(e){}
+    }
     sbw();
     /* Run once on arrival: a reload part-way down the page, or a link straight
        to #venue, must not start with the bar full-size and nothing underlined. */

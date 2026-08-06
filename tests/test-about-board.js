@@ -800,8 +800,41 @@ const TOML_R = TOML;
 check('rules.html exists and is a full page', RULES.includes('<!DOCTYPE html>') && RULES.length > 3000);
 check('it is served at /rules', /from = "\/rules"\n  to = "\/rules\.html"\n  status = 200/.test(TOML_R));
 check('the About section links to it',
-  /<a href="\/rules" class="rules-btn"/.test(PAGE),
+  /<a href="\/rules" class="reg-btn rules-btn"/.test(PAGE),
   'Jay asked for a button in the About section');
+
+/* ⚠️ IT WEARS .reg-btn ITSELF, not a copy of its rules (Jay, 5 Aug 2026:
+   "themed similar to the register a team and register a player buttons"). One
+   class, three buttons, so they cannot drift apart — the alternative is a
+   fourth definition of what a button looks like on this site, and this repo
+   already has a lesson about two copies of one rule drifting invisibly. */
+const RULESBTN = (PAGE.match(/<a href="\/rules"[\s\S]*?<\/a>/) || [''])[0];
+check('the rules button wears the Register buttons\' own class', /class="reg-btn rules-btn"/.test(RULESBTN));
+check('…including their gradient bar', /<span class="reg-btn-bar">/.test(RULESBTN));
+check('…and their holo sweep', /<span class="holo">/.test(RULESBTN));
+check('…and the label element they style', /<span class="reg-btn-label">/.test(RULESBTN));
+
+/* ⚠️ SMALLER THAN THE HERO PAIR ON PURPOSE. The Register buttons are the page's
+   call to action; this must read as the same family without competing. The
+   quiet outline version it replaced had that merit and nothing else, which is
+   why the size is pinned rather than left to drift back up. */
+const rulesSize = (RULESBTN.match(/font-size:(\d+)px/) || [])[1];
+check('the rules button is smaller than the Register buttons',
+  Number(rulesSize) < 18, `${rulesSize}px against the hero pair's 18px`);
+
+/* ⚠️ CENTRED UNDER THE PAIR, NOT UNDER THE COLUMN, and the wrapper is what
+   does it. Measured at 1400 / 900 / 390px: 0px from the Tag/UAERF pair's
+   centre, and 91 / 39 / 22px left of the column's — so centring on the column
+   would have been visibly wrong at every width, not just arguably wrong. */
+check('the button is centred with margin auto', /margin:30px auto 0/.test(RULESBTN));
+check('…inside a wrapper that shrinks to the pair\'s width',
+  /<div style="width:fit-content">\s*<div style="display:flex;gap:36px;margin-top:36px">/.test(PAGE),
+  'without fit-content the auto margin centres on the whole column instead');
+
+/* An anchor, not a button: it goes somewhere, and a coach can send it. */
+check('it is still a link rather than a button', RULESBTN.startsWith('<a href="/rules"'));
+check('…with the underline killed, which .reg-btn never had to do',
+  /\.rules-btn\{text-decoration:none\}/.test(HDRCSS));
 check('…and the footer does too', /<a href="\/rules" style="color:#8a8f99">Tournament rules<\/a>/.test(PAGE));
 
 /* ⚠️ INDEXABLE ON PURPOSE, unlike /register-club. Parents and coaches should be

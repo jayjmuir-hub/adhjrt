@@ -366,18 +366,26 @@
     transition:padding .22s ease,width .22s ease,height .22s ease,
                font-size .22s ease,letter-spacing .22s ease}
 
-  /* The About section's rules button. Deliberately quiet - an outline that
-     fills on hover, not another red button. The arrow nudges right, which is
-     the cheapest possible way to say "this leaves the page you are on".
-     !important on the colour because the anchor is styled inline and an
-     ordinary rule loses to that (the same trap as .hdr-partner). */
-  .rules-btn{transition:background .22s ease,border-color .22s ease,color .22s ease}
-  .rules-btn span{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+  /* The About section's rules button. It wears .reg-btn - the same class as the
+     two Register buttons, not a copy of their rules - so all three share one
+     definition of what a button on this site looks like and cannot drift.
+     ⚠️ REPLACED an outline-style button (5 Aug 2026, Jay: "themed similar to
+     the register a team and register a player buttons"). The quiet version had
+     one merit worth recording, since it is the argument for going back: it did
+     not compete with the Register pair. Keeping it SMALLER is what preserves
+     that while looking like the same family.
+     Only two things are added here, both because .reg-btn was written for a
+     <button> and this is an <a>: kill the underline, and stop the arrow
+     inheriting the label's letter-spacing gap on the right. */
+  .rules-btn{text-decoration:none}
+  .rules-btn:hover{text-decoration:none}
+  .rules-btn .reg-btn-label{display:inline-flex;align-items:center}
+  /* The arrow slides on hover - the cheapest way to say "this leaves the page
+     you are on". Inside the pointer query with everything else that moves. */
+  .rules-btn .reg-btn-label span{transition:transform .22s cubic-bezier(.2,.8,.2,1)}
   @media (hover:hover){
-    .rules-btn:hover{background:#0C0C0E;border-color:#0C0C0E;color:#fff!important;text-decoration:none}
-    .rules-btn:hover span{transform:translateX(4px)}
+    .rules-btn:hover .reg-btn-label span{transform:translateX(4px)}
   }
-  .rules-btn:focus-visible{outline:3px solid #17A34A;outline-offset:3px}
 
   /* Age-group trading cards (design handoff: design_handoff_age_group_cards).
      --glow is set per-card from the group's own AGE_GROUP_CARDS.tint (red for
@@ -1341,17 +1349,24 @@
            bigger, 40px Anton pushed both onto three lines - "Tag &" / "contact"
            stacked, 120px tall. Reduced to 28px so they sit on one line again.
            If the column ever goes back to 1fr 1fr, these can go back up. -->
-      <div style="display:flex;gap:36px;margin-top:36px">
-        <div>
-          <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">Tag &amp; contact</div>
-          <div style="color:#7c786f;font-weight:600">mini to youth</div>
+      <!-- ⚠️ width:fit-content IS WHAT CENTRES THE BUTTON (Jay, 5 Aug 2026:
+           "centered under the two text boxes above it"). The wrapper shrinks to
+           the width of the Tag/UAERF pair, so `margin:0 auto` on the button
+           below centres it under THAT PAIR rather than under the whole text
+           column — which is wider, and would have put the button noticeably
+           right of where he asked for it. Measured either way before choosing. -->
+      <div style="width:fit-content">
+        <div style="display:flex;gap:36px;margin-top:36px">
+          <div>
+            <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">Tag &amp; contact</div>
+            <div style="color:#7c786f;font-weight:600">mini to youth</div>
+          </div>
+          <div style="width:1px;background:#d8d4cc"></div>
+          <div>
+            <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">UAERF rules</div>
+            <div style="color:#7c786f;font-weight:600">age-grade format</div>
+          </div>
         </div>
-        <div style="width:1px;background:#d8d4cc"></div>
-        <div>
-          <div style="font-family:'Anton';font-size:clamp(20px,2.2vw,28px);color:#0C0C0E">UAERF rules</div>
-          <div style="color:#7c786f;font-weight:600">age-grade format</div>
-        </div>
-      </div>
 
       <!-- Tournament rules (Jay, 5 Aug 2026). A REAL PAGE at /rules, the same
            shape as /legal - not a modal and not an in-page jump, because a coach
@@ -1368,15 +1383,29 @@
            buttons are the page's calls to action and this must not compete with
            them. It sits under the two stat blocks above, which is where somebody
            reading about the format is already looking. -->
-      <a href="/rules" class="rules-btn"
-         style="display:inline-flex;align-items:center;gap:10px;margin-top:30px;
-                padding:13px 22px;border:1px solid #cfcabf;border-radius:100px;
-                font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;
-                text-transform:uppercase;letter-spacing:.06em;font-size:14px;
-                color:#14151A;background:transparent">
-        Tournament rules
-        <span aria-hidden="true" style="font-size:16px;line-height:1">&rarr;</span>
-      </a>
+        <!-- ⚠️ THE SAME TREATMENT AS THE REGISTER BUTTONS (Jay, 5 Aug 2026),
+             and it is the .reg-btn CLASS ITSELF, not a copy of its rules: the
+             dark body, the red->green bar, the holo sweep and the hover
+             glow/tilt all come from one place, so the three buttons cannot
+             drift apart. `--glow` is the green, which is what the lower
+             Register pair uses.
+
+             ⚠️ It is an <a>, not a <button>, because it GOES SOMEWHERE — a
+             real page a coach can send to a parent. .reg-btn is written
+             against a <button> but styles nothing that depends on the tag;
+             `text-decoration:none` is the one thing an anchor needs and the
+             rules-btn rule below adds it.
+
+             ⚠️ AND IT IS DELIBERATELY SMALLER than the hero pair (14px against
+             18px). The Register buttons are the page's call to action; this
+             must read as the same family without competing with them. -->
+        <a href="/rules" class="reg-btn rules-btn" style="--glow:#17A34A;font-size:14px;padding:13px 26px;margin:30px auto 0;display:flex;width:fit-content">
+          <span class="reg-btn-bar"></span><span class="holo"></span>
+          <span class="reg-btn-label">Tournament rules
+            <span aria-hidden="true" style="margin-left:8px;display:inline-block">&rarr;</span>
+          </span>
+        </a>
+      </div>
     </div>
     <div class="about-media" style="position:relative" data-reveal>
       <!-- ⚠️ THE CREST USED TO BE HERE, pinned over the top-left corner of the

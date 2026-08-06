@@ -4935,8 +4935,13 @@ const FAULTS = [
        how this bug spread from the cards to the header in the first place. */
     name: 'a new hover effect is added outside the pointer gate',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '  .rules-btn{transition:background .22s ease',
-      '  .spon-tile:hover{transform:translateY(-3px)}\n  .rules-btn{transition:background .22s ease'),
+    /* ⚠️ REPOINTED: the anchor was the rules button's old outline styling,
+       which was replaced when it took the .reg-btn treatment. The RULE this
+       guards - a new hover effect must not be added outside the pointer gate -
+       is unchanged, so the fault follows it to a stable line rather than being
+       deleted with the CSS it happened to sit next to. */
+    apply: () => patch(HOME, '  .rules-btn{text-decoration:none}',
+      '  .spon-tile:hover{transform:translateY(-3px)}\n  .rules-btn{text-decoration:none}'),
     expect: ['moves or animates is behind'],
   },
 
@@ -4984,8 +4989,38 @@ const FAULTS = [
   {
     name: 'the About section loses its rules button',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '<a href="/rules" class="rules-btn"', '<a href="#about" class="rules-btn"'),
+    apply: () => patch(HOME, '<a href="/rules" class="reg-btn rules-btn"', '<a href="#about" class="reg-btn rules-btn"'),
     expect: ['About section links to it'],
+  },
+  {
+    /* Dropping .reg-btn is how a fourth definition of "a button on this site"
+       gets born, and the three then drift apart invisibly. */
+    name: 'the rules button stops wearing the Register buttons\' class',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<a href="/rules" class="reg-btn rules-btn"', '<a href="/rules" class="rules-btn"'),
+    expect: ['wears the Register buttons'],
+  },
+  {
+    name: 'the rules button grows to match the hero pair and competes with them',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '--glow:#17A34A;font-size:14px;padding:13px 26px', '--glow:#17A34A;font-size:18px;padding:13px 26px'),
+    expect: ['smaller than the Register buttons'],
+  },
+  {
+    /* ⚠️ Without the fit-content wrapper the auto margin centres on the whole
+       text column, which measured 91px right of the pair's centre at 1400px -
+       visibly wrong, and exactly what Jay asked to have fixed. */
+    name: 'the centring wrapper is removed, so the button centres on the column',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '      <div style="width:fit-content">\n        <div style="display:flex;gap:36px;margin-top:36px">',
+      '      <div>\n        <div style="display:flex;gap:36px;margin-top:36px">'),
+    expect: ['wrapper that shrinks to the pair'],
+  },
+  {
+    name: 'the auto margin is dropped and the button falls back to the left edge',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'margin:30px auto 0;display:flex', 'margin:30px 0 0;display:flex'),
+    expect: ['centred with margin auto'],
   },
   {
     /* Indexable ON PURPOSE - it is the opposite of the club form. */

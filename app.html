@@ -150,21 +150,32 @@ main{padding:16px}
    the DAY - the one thing that halves the list - was visible only as the
    colour of the pill you had ALREADY chosen.
    Nothing scrolls sideways now, so nothing is hidden. */
-.ag-day{display:flex;align-items:center;gap:9px;margin:2px 0 9px}
-.ag-rule{height:3px;width:20px;border-radius:2px;background:var(--red);flex:none}
+.ag-day{border-top:1px solid var(--line)}
+.ag-day:last-of-type{border-bottom:1px solid var(--line)}
+/* ⚠️ COLLAPSIBLE, ONE DAY OPEN AT A TIME (6 Aug 2026). Two open blocks was
+   still the tallest thing above the fixtures on a phone, and you only ever
+   need one day at a time - the other is a different weekend morning. */
+.ag-h{display:flex;align-items:center;gap:9px;width:100%;padding:11px 2px;
+      background:none;border:none;cursor:pointer;text-align:left;font:inherit}
+.ag-rule{height:3px;width:18px;border-radius:2px;background:var(--red);flex:none}
 .ag-day.sun .ag-rule{background:var(--green)}
-.ag-d{font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
-.ag-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.ag-d{font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text)}
+/* ⚠️ A CLOSED DAY THAT HOLDS THE CURRENT PICK SAYS SO. Without it, opening the
+   other day hides what you chose and the picker starts lying about where you
+   are. A closed day that does NOT hold it shows a count instead. */
+.ag-sel{margin-left:auto;font-weight:700;font-size:11px;color:var(--muted);
+        background:rgba(0,0,0,.05);padding:3px 9px;border-radius:100px;white-space:nowrap}
+.ag-sel.on{background:var(--red);color:#fff}
+.ag-day.sun .ag-sel.on{background:var(--green);color:#fff}
+.ag-x{margin-left:8px;flex:none;color:var(--muted);font-size:11px;transition:transform .18s ease}
+.ag-day.open .ag-x{transform:rotate(180deg)}
+.ag-chips{display:none}
+.ag-day.open .ag-chips{display:flex;flex-wrap:wrap;gap:7px;padding:2px 0 13px}
 .ag-chip{padding:6px 12px 7px;border-radius:12px;font-weight:700;
          border:1.5px solid var(--line);background:#fff;text-align:left;line-height:1.05}
-/* Two facts, two lines: you scan for the age band, the format is there for
-   whoever wants it. Glued together they made every chip a different width. */
 .ag-age{display:block;font-weight:800;font-size:14.5px;color:var(--text);letter-spacing:.2px}
 .ag-fmt{display:block;font-weight:600;font-size:9.5px;letter-spacing:.9px;
         text-transform:uppercase;color:var(--muted);margin-top:3px}
-/* Red for day one, green for day two - the same coding the homepage format
-   cards use for Saturday and Sunday, and now on the block rule as well, so it
-   means something BEFORE you choose rather than only after. */
 .ag-chip.on{background:var(--red);border-color:var(--red)}
 .ag-chip.on.sun{background:var(--green);border-color:var(--green)}
 .ag-chip.on .ag-age{color:#fff}
@@ -495,6 +506,7 @@ const S = {
   view:'today', session:null, ageGroups:[],
   ageId:null, team:null,        // what you follow
   browseId:null,                // what Fixtures/Tables are showing
+  agopen:null,                  // pinned open day in the picker; null = follow browseId
   fixtures:null, standings:null,// the BROWSED age group
   followFx:null,                // the FOLLOWED age group — what Today reports on
   onlyMine:true,                // Fixtures/Results filter when a team is followed
@@ -640,6 +652,7 @@ $('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
    They are held separately now. */
 async function load(agId){
   S.browseId = agId;
+  S.agopen = null;              // a new pick releases the pin, so the open day follows it
   S.fixtures = null; S.standings = null; S.loadError = false;
   render();
   /* Stadium wifi drops. Without the catch, one failed fetch left this promise
@@ -705,13 +718,31 @@ function ageparts(name){
    it between these blocks with no deploy. This app once carried
    `const SATURDAY = [...]` and had U12G and both U18 groups on the wrong day,
    on the public site, with registration open. Do not reintroduce a list. */
+/* ⚠️ WHICH DAY IS OPEN IS DERIVED FROM THE SELECTION UNLESS THE USER SAYS
+   OTHERWISE. S.agopen is null by default, meaning "follow whatever is picked",
+   so arriving on the app always shows the block your own group is in rather
+   than whichever day happens to be first. Tapping a heading pins it; picking a
+   group clears the pin so it follows again. A pinned day that never released
+   would strand somebody on the wrong morning after they changed group. */
+function openday(){
+  if (S.agopen === 1 || S.agopen === 2) return S.agopen;
+  return isSat(S.browseId) ? 1 : 2;
+}
+
 function pills(){
-  return [true, false].map(sat => {
+  const open = openday();
+  return [1, 2].map(day => {
+    const sat = day === 1;
     const list = (S.ageGroups || []).filter(a => isSat(a.id) === sat);
     if (!list.length) return '';                 // a day with no groups draws nothing
     /* The heading comes from the layout too, off the first group in the block,
        so the date cannot drift from the one the countdown uses. */
     const label = api.dayLabelOfAgeGroup(list[0].id);
+    const isopen = open === day;
+    const holds = list.some(a => a.id === S.browseId);
+    const picked = holds ? ageparts((list.find(a => a.id === S.browseId) || {}).name || '').band : '';
+    const badge = (!isopen && holds) ? `<span class="ag-sel on">${esc(picked)}</span>`
+      : (isopen ? '' : `<span class="ag-sel">${list.length} groups</span>`);
     const chips = list.map(a => {
       const p = ageparts(a.name);
       return `<button class="ag-chip ${a.id===S.browseId?'on':''} ${sat?'':'sun'}" data-age="${a.id}">`
@@ -719,9 +750,11 @@ function pills(){
         + (p.fmt ? `<span class="ag-fmt">${esc(p.fmt)}</span>` : '')
         + `</button>`;
     }).join('');
-    return `<div class="ag-day ${sat?'':'sun'}"><span class="ag-rule"></span>`
-      + `<span class="ag-d">${esc(label)}</span></div>`
-      + `<div class="ag-chips">${chips}</div>`;
+    return `<div class="ag-day ${sat?'':'sun'} ${isopen?'open':''}">`
+      + `<button class="ag-h" data-agday="${day}"><span class="ag-rule"></span>`
+      + `<span class="ag-d">${esc(label)}</span>${badge}`
+      + `<span class="ag-x">\u25BC</span></button>`
+      + `<div class="ag-chips">${chips}</div></div>`;
   }).join('');
 }
 
@@ -1071,6 +1104,10 @@ function viewMore(){
 
 function wire(){
   document.querySelectorAll('[data-age]').forEach(b => b.onclick = () => load(b.dataset.age));
+  /* Opening a day is a view change, not a data change - no fetch, just redraw. */
+  document.querySelectorAll('[data-agday]').forEach(b => b.onclick = () => {
+    S.agopen = Number(b.dataset.agday); render();
+  });
   document.querySelectorAll('[data-match]').forEach(b => b.onclick = () => openMatch(b.dataset.match));
   document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });

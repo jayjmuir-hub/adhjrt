@@ -4998,8 +4998,12 @@ const FAULTS = [
        most of the list off the right edge and no scrollbar to say so. */
     name: 'the chips stop wrapping and go back to a hidden horizontal scroller',
     suite: 'test-age-group-picker.js',
-    apply: () => patch('app.html', '.ag-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}',
-      '.ag-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin-bottom:14px}'),
+    /* ⚠️ ANCHOR REPOINTED 6 Aug 2026 — the chips moved behind `.ag-day.open`
+       when the blocks became collapsible, so the old flat rule was gone. The
+       rule is unchanged and is the original complaint: the chips must WRAP,
+       never scroll sideways behind a hidden scrollbar. */
+    apply: () => patch('app.html', '.ag-day.open .ag-chips{display:flex;flex-wrap:wrap;gap:7px;padding:2px 0 13px}',
+      '.ag-day.open .ag-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:7px;padding:2px 0 13px}'),
     expect: ['the chips wrap instead'],
   },
   {
@@ -5034,9 +5038,13 @@ const FAULTS = [
        would be satisfied by a picker that had lost the day entirely. */
     name: 'the day disappears from the picker altogether, not just from the duplicate',
     suite: 'test-age-group-picker.js',
+    /* ⚠️ ANCHOR REPOINTED 6 Aug 2026 — the heading gained a badge and a caret
+       when the blocks became collapsible, so the old one-line literal no
+       longer existed. The rule is unchanged: emptying the heading must fail,
+       or "dayTag is gone" is satisfied by the day vanishing altogether. */
     apply: () => patch('app.html',
-      '      + `<span class="ag-d">${esc(label)}</span></div>`',
-      '      + `<span class="ag-d"></span></div>`'),
+      '      + `<span class="ag-d">${esc(label)}</span>${badge}`',
+      '      + `<span class="ag-d"></span>${badge}`'),
     expect: ['the day is still on screen, in the block heading'],
   },
   {
@@ -5047,6 +5055,66 @@ const FAULTS = [
     suite: 'test-age-group-picker.js',
     apply: () => patch('app.html', '/* ⚠️ TOMBSTONE - centreActivePill() lived here', '/* Nothing to see here'),
     expect: ['recorded, not silently dropped'],
+  },
+
+  /* ---- the picker collapses, and there are THREE of them (6 Aug 2026) ---
+     The first version of this work covered /app and /scores and shipped, while
+     the homepage Fixtures section kept its flat list — so one page carried two
+     pickers that disagreed. These faults exist so the third can never be the
+     forgotten one again, and so the accordion cannot quietly stop working. */
+  {
+    /* ⚠️ The obvious "consistency" tidy-up, and it is wrong. /scores drops U6
+       and U7 because a STANDINGS tab for them can only say "no standings are
+       kept". The homepage picker is for FIXTURES, which they do have. */
+    name: 'the homepage picker drops the festival groups to match /scores',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('Quins JRT.dc.html',
+      '      const list = (this.state.fxAgeGroups || []).filter((a) => !!(fxApiRef && fxApiRef.isDayOne(a.id)) === isDay1);',
+      "      const list = (this.state.fxAgeGroups || []).filter((a) => a.id !== 'u6' && a.id !== 'u7').filter((a) => !!(fxApiRef && fxApiRef.isDayOne(a.id)) === isDay1);"),
+    expect: ['keeps the festival groups'],
+  },
+  {
+    /* Both blocks open again — the wall of chips this replaced. */
+    name: 'both day blocks open at once, so nothing is actually collapsed',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '    const isopen = open === day;', '    const isopen = true;'),
+    expect: ['exactly ONE day open'],
+  },
+  {
+    /* ⚠️ THE WHOLE SAFETY OF COLLAPSING. Open a FIXED day and half the readers
+       arrive looking at a list that does not contain their own group, with
+       theirs hidden behind a heading — worse than the wall of chips. */
+    name: 'the open day is fixed to day one instead of following the pick',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '  return isSat(S.browseId) ? 1 : 2;', '  return 1;'),
+    expect: ['and day two for U12G'],
+  },
+  {
+    /* Tapping a heading stops doing anything: the accordion becomes decoration. */
+    name: 'the pinned day is ignored, so the headings are not really clickable',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '  if (S.agopen === 1 || S.agopen === 2) return S.agopen;', ''),
+    expect: ['pinning a day overrides'],
+  },
+  {
+    /* ⚠️ THE OTHER HALF OF THE PIN. Stored WITH the selection it was made
+       under, so a new pick releases it. A pin that outlived the pick would
+       strand a reader on a day their group is not on. */
+    name: 'the pinned day outlives the pick that was made after it',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('Scores & Standings.dc.html',
+      '    const pinned = (s.agPin && s.agPin.sel === s.selectedAgeId) ? s.agPin.day : null;',
+      '    const pinned = s.agPin ? s.agPin.day : null;'),
+    expect: ['releases the pin'],
+  },
+  {
+    /* ⚠️ A closed day that holds the pick must say so, or opening the other day
+       hides the selection and the picker starts lying about where you are. */
+    name: 'a closed day stops naming the pick it is hiding',
+    suite: 'test-age-group-picker.js',
+    apply: () => patch('app.html', '    const badge = (!isopen && holds) ?',
+      '    const badge = (false && holds) ?'),
+    expect: ['closed day holding the pick names it'],
   },
 
   /* ---- switching age group while a write is in flight (6 Aug 2026) ------

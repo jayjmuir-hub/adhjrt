@@ -61,7 +61,12 @@ function fakeScoresApi(overrides) {
     canPublishNow: () => false,
     supportsSpiritAward: () => false,
     pitchesForAgeGroup: () => [],
-    dayLabelOfAgeGroup: () => '',
+    dayLabelOfAgeGroup: () => 'Saturday 7 November',
+    /* The Fixtures picker groups by day, so renderVals asks the layout.
+       ⚠️ When code-under-test starts calling a new api function, every stub
+       gains it in the same commit - otherwise the file dies on the first
+       call and its faults report as caught while proving nothing. */
+    isDayOne: () => true,
     dayStartMins: () => 480,
     slotLengthMins: () => 20,
     poolEndMins: () => 480,

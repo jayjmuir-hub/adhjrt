@@ -1228,7 +1228,7 @@ match-day guard, typed confirmation) live on in that tool and in git history
 
 ## The age-group picker (rebuilt 6 Aug 2026)
 
-**Two DAY blocks of wrapped chips, on `/app` and `/scores`, one design.** Spec:
+**Two DAY blocks of wrapped chips, ONE OPEN AT A TIME, on THREE surfaces.** Spec:
 `claude/specs/spec-age-group-selector.md`. Jay asked for the age-group
 selection in Fixtures and Results to be "cleaner".
 
@@ -1255,10 +1255,40 @@ whole string as the band and renders no format line, so a future `U20` degrades
 rather than disappearing. Asserted against all fifteen real names, read out of
 `_agegroups.js` rather than typed.
 
-- **Two implementations, one design** — `pills()` in `app.html` (vanilla) and
-  `ageDayBlocks` in `Scores & Standings.dc.html` (nested `<sc-for>`). They share
-  no code and there is no build step, so the test reads BOTH and asserts the
-  parts that must agree.
+⚠️⚠️ **THERE ARE THREE PICKERS, AND THE THIRD WAS MISSED ON THE FIRST PASS.**
+
+| | |
+|---|---|
+| `/app` | `pills()` in `app.html` (vanilla template strings) |
+| `/scores` | `ageDayBlocks` in `Scores & Standings.dc.html` (nested `<sc-for>`) |
+| **homepage Fixtures** | **`fixtureAgeDayBlocks` in `Quins JRT.dc.html`** |
+
+The first version did the first two and shipped — so the homepage's Fixtures
+section sat in a flat wrap of fifteen while the Results section **directly
+beneath it on the same page** (the embedded scores component) had day blocks.
+One page, two pickers, disagreeing, live. Jay spotted it. **The count is now
+asserted**: a fourth picker fails `tests/test-age-group-picker.js`.
+
+⚠️ **THE HOMEPAGE KEEPS ALL FIFTEEN GROUPS AND `/scores` DOES NOT, DELIBERATELY.**
+`/scores` filters on `hasStandings` because a standings tab for U6 can only ever
+say "no standings are kept" — but U6 and U7 **do have fixtures**, and the
+homepage picker is the fixtures picker. Confirmed by Jay, 6 Aug, and asserted
+from both ends so nobody "makes them consistent" into one wrong answer.
+
+⚠️ **ONE DAY OPEN AT A TIME, AND THE OPEN DAY FOLLOWS THE SELECTION.** Both
+blocks open was still a wall of chips. The open day is derived from whichever
+day holds the current pick — **open a fixed day instead and half the readers
+arrive looking at a list that does not contain their own group**, which is worse
+than the wall it replaced. Tapping a heading pins a day; the pin is stored
+**with the selection it was made under**, so a new pick releases it on its own
+and nobody is stranded on a morning their group is not on.
+
+⚠️ **A CLOSED DAY THAT HOLDS THE PICK NAMES IT** (a coloured badge); a closed day
+that does not shows a count. Without that, opening the other day hides the
+selection and the picker starts lying about where you are.
+
+- **Three implementations, one design.** They share no code and there is no
+  build step, so the test reads ALL THREE and asserts the parts that must agree.
 - ⚠️ **`pills()` is shared by Fixtures, Results AND Tables** on `/app`.
 - ⚠️ **`onSelect` still reports upward through `props.onAgeChange`** — that is
   the homepage embed contract, and a regroup that dropped it would look perfect
@@ -3094,7 +3124,7 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring, the doc-claim suite and the age-group picker — **37 files** — plus `_prove-registration.js`, the fault-injection
-script (**647 faults** as of 6 Aug 2026, all of which must be caught by the
+script (**653 faults** as of 6 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and

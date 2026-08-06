@@ -122,11 +122,15 @@
            The day split is DERIVED from the venue layout, never typed. -->
       <div style="margin-bottom:28px">
         <sc-for list="{{ ageDayBlocks }}" as="d" hint-placeholder-count="2">
-          <div style="display:flex;align-items:center;gap:9px;margin:2px 0 10px">
+          <button onClick="{{ d.onToggle }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:11px 2px;background:none;border:none;border-top:1px solid rgba(255,255,255,0.14);cursor:pointer;text-align:left;font:inherit">
             <span style="{{ d.ruleStyle }}"></span>
             <span style="font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#fff">{{ d.label }}</span>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+            <sc-if value="{{ d.hasBadge }}" hint-placeholder-val="{{ false }}">
+              <span style="{{ d.badgeStyle }}">{{ d.badge }}</span>
+            </sc-if>
+            <span style="{{ d.caretStyle }}">&#9660;</span>
+          </button>
+          <div style="{{ d.chipsStyle }}">
             <sc-for list="{{ d.tabs }}" as="a" hint-placeholder-count="4">
               <button onClick="{{ a.onSelect }}" style="{{ a.style }}">
                 <span style="{{ a.bandStyle }}">{{ a.band }}</span>
@@ -391,6 +395,11 @@ class Component extends DCLogic {
      no login exists here, and the page works signed out for everyone. */
   state = {
     view: 'public', api: null, ageGroups: [], selectedAgeId: null,
+    /* Which day block is pinned open, and WHICH SELECTION it was pinned
+       under. Storing the selection alongside it means a new pick invalidates
+       the pin on its own — so onSelect needs no extra field, and a pinned day
+       can never strand somebody on the wrong morning after they change group. */
+    agPin: null,
     standings: null,
     showTeamKey: false,
   };
@@ -442,6 +451,11 @@ class Component extends DCLogic {
   toggleTeamKey() {
     this.setState((s) => ({ showTeamKey: !s.showTeamKey }));
   }
+  /* Opening a day is a view change, not a data change: no fetch, no reload. */
+  toggleAgeDay(day) {
+    this.setState({ agPin: { day, sel: this.state.selectedAgeId } });
+  }
+
   renderVals() {
     const s = this.state;
 
@@ -490,6 +504,14 @@ class Component extends DCLogic {
        group in the block, so it cannot drift from the date anything else
        shows. Selected chips keep the day's colour: red for day one, green for
        day two, the same coding the homepage format cards use. */
+    /* ⚠️ ONE DAY OPEN AT A TIME (6 Aug 2026). Both blocks open was still a wall
+       of chips, and you only ever want one day - the other is a different
+       morning. The open day FOLLOWS THE SELECTION unless the reader has pinned
+       one, so arriving always shows the block holding your own group rather
+       than whichever day happens to be first. */
+    const pinned = (s.agPin && s.agPin.sel === s.selectedAgeId) ? s.agPin.day : null;
+    const openDay = pinned || (s.api && s.selectedAgeId && !s.api.isDayOne(s.selectedAgeId) ? 2 : 1);
+
     const ageDayBlocks = [true, false].map((isDay1) => {
       /* s.api, not a bare api - renderVals() has only `s`. It can also run
          before the module has loaded (state starts `api: null`), which is safe
@@ -497,13 +519,36 @@ class Component extends DCLogic {
          this callback never runs and the block is dropped below. */
       const tabs = ageTabs.filter((t) => !!s.api.isDayOne(t.id) === isDay1);
       if (!tabs.length) return null;             // a day with no groups draws nothing
+      const day = isDay1 ? 1 : 2;
+      const isOpen = openDay === day;
+      const holds = tabs.some((t) => t.id === s.selectedAgeId);
+      /* ⚠️ A CLOSED DAY THAT HOLDS THE CURRENT PICK SAYS SO, by name. Without
+         that, opening the other day hides what you chose and the picker starts
+         lying about where you are. A closed day that does NOT hold it shows a
+         count, which is a useful thing to know and not a lie. */
+      const badgeText = isOpen ? ''
+        : (holds ? (tabs.find((t) => t.id === s.selectedAgeId) || {}).band
+                 : `${tabs.length} groups`);
       return {
         id: isDay1 ? 'day1' : 'day2',
         label: s.api.dayLabelOfAgeGroup(tabs[0].id),
+        isOpen,
+        hasBadge: !!badgeText,
+        badge: badgeText || '',
+        badgeStyle: 'margin-left:auto;font-weight:700;font-size:11px;padding:3px 9px;border-radius:100px;white-space:nowrap;'
+          + (holds
+            ? `color:#fff;background:${isDay1 ? '#E11B22' : '#17A34A'}`
+            : 'color:#8b9099;background:rgba(255,255,255,0.09)'),
+        caretStyle: 'margin-left:8px;flex:none;color:#8b9099;font-size:11px;display:inline-block;'
+          + (isOpen ? 'transform:rotate(180deg)' : ''),
+        chipsStyle: isOpen
+          ? 'display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 16px'
+          : 'display:none',
+        onToggle: () => this.toggleAgeDay(day),
         tabs: tabs.map((t) => (t.id === s.selectedAgeId && !isDay1
           ? { ...t, style: t.style.replace(/#E11B22;background:#E11B22/, '#17A34A;background:#17A34A') }
           : t)),
-        ruleStyle: 'height:3px;width:20px;border-radius:2px;flex:none;background:'
+        ruleStyle: 'height:3px;width:18px;border-radius:2px;flex:none;background:'
           + (isDay1 ? '#E11B22' : '#17A34A'),
       };
     }).filter(Boolean);

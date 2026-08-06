@@ -1,6 +1,6 @@
 /* tests/test-age-group-picker.js
    ------------------------------------------------------------------------
-   THE AGE-GROUP PICKER, ON BOTH SURFACES — 6 Aug 2026.
+   THE AGE-GROUP PICKER, ON ALL THREE SURFACES — 6 Aug 2026.
 
    Jay: the age group selection in Fixtures and Results should be "cleaner".
    Spec: claude/specs/spec-age-group-selector.md.
@@ -33,10 +33,20 @@
    is the first thing that has ever made that list tempting again, so the
    checks below go after a hardcoded list specifically.
 
-   ONE DESIGN, TWO IMPLEMENTATIONS. The surfaces share no code — app.html is
-   vanilla template strings, /scores is a DC component — and there is no build
-   step, so the only thing that can keep them agreeing is a test that reads
-   both. That is why this is one file rather than two sections in two files. */
+   ONE DESIGN, THREE IMPLEMENTATIONS. They share no code and there is no build
+   step, so the only thing that can keep them agreeing is a test that reads all
+   three. That is why this is one file rather than three sections in three.
+
+   ⚠️⚠️ AND THERE ARE THREE, WHICH IS THE MISTAKE THIS FILE NOW EXISTS TO STOP
+   REPEATING. The first version of this work did /app and /scores and shipped —
+   because the question asked was "which surfaces", and the answer given was
+   "both", and nobody checked whether "both" was the right NUMBER. The homepage
+   Fixtures section has its OWN picker in its own file, and the Results section
+   directly beneath it on the same page is the embedded scores component, which
+   HAD been changed. One page, two pickers, disagreeing with each other, live.
+   Jay spotted it. `CLAUDE.md` documented the third picker the whole time.
+
+   The count is asserted below. If a fourth is ever added it fails here. */
 
 const { readRepo, section, check, eq, summary } = require('./_lib');
 
@@ -84,9 +94,9 @@ const APP_GROUPS = [
   { id: 'u18b', name: 'U18B Contact' },
 ];
 
-function appPicker(groups, selected) {
+function appPicker(groups, selected, agopen) {
   const sandbox = {
-    S: { ageGroups: groups, browseId: selected },
+    S: { ageGroups: groups, browseId: selected, agopen: agopen === undefined ? null : agopen },
     api: {
       isDayOne: (id) => DAY2.indexOf(id) < 0,
       dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 7 November' : 'Sunday 8 November'),
@@ -96,7 +106,7 @@ function appPicker(groups, selected) {
   sandbox.isSat = (id) => sandbox.api.isDayOne(id);
   // eslint-disable-next-line no-new-func
   const fn = new Function('S', 'api', 'esc', 'isSat',
-    `${lift('ageparts')}\n${lift('pills')}\nreturn pills();`);
+    `${lift('ageparts')}\n${lift('openday')}\n${lift('pills')}\nreturn pills();`);
   return fn(sandbox.S, sandbox.api, sandbox.esc, sandbox.isSat);
 }
 
@@ -134,6 +144,37 @@ function scoresComponent() {
     ],
     selectedAgeId: 'u9',
     view: 'public',
+  };
+  return c;
+}
+
+/* ---- the homepage Fixtures picker: its own component, its own file -------- */
+const HOME = readRepo('Quins JRT.dc.html').replace(/\r\n/g, '\n');
+const HOME_CODE = stripJs(HOME);
+
+function homeComponent(selected) {
+  const m = HOME.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) throw new Error('no x-dc script in Quins JRT.dc.html');
+  // eslint-disable-next-line no-new-func
+  const C = new Function('DCLogic', 'window', 'document', `${m[1]}\n;return Component;`)(
+    DCLogic,
+    { addEventListener() {}, matchMedia: () => ({ matches: false, addListener() {} }), scrollTo() {}, setInterval() {}, clearInterval() {} },
+    { addEventListener() {}, getElementById: () => null, querySelectorAll: () => [], body: { style: {} }, baseURI: 'https://adhjrt.com/' },
+  );
+  const c = new C();
+  c.props = {};
+  c.state = {
+    ...c.state,
+    fxApi: {
+      isDayOne: (id) => DAY2.indexOf(id) < 0,
+      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 7 November' : 'Sunday 8 November'),
+      teamKey: () => [],
+    },
+    fxAgeGroups: [
+      { id: 'u6', name: 'U6 Tag' }, { id: 'u9', name: 'U9 Mixed Contact' },
+      { id: 'u12g', name: 'U12G QR' }, { id: 'u14b', name: 'U14B Contact' },
+    ],
+    fxSelectedId: selected || 'u9',
   };
   return c;
 }
@@ -369,6 +410,151 @@ section('The day is stated ONCE — dayTag() went with the regroup');
   eq('…and said exactly once per day, not twice',
     (html.match(/Sunday 8 November/g) || []).length, 1);
   eq('…same for the other day', (html.match(/Saturday 7 November/g) || []).length, 1);
+}
+
+/* ====================================================================== */
+section('⚠️ THERE ARE THREE PICKERS — the homepage Fixtures one is the third');
+{
+  /* The count itself, because the failure this guards was not a bad
+     implementation, it was a MISSED surface. A fourth picker appearing without
+     this list being updated is the same mistake again. */
+  const surfaces = [
+    ['/app', /function pills\(\)/.test(APP_CODE)],
+    ['/scores', /const ageDayBlocks =/.test(SCORES_CODE)],
+    ['homepage Fixtures', /const fixtureAgeDayBlocks =/.test(HOME_CODE)],
+  ];
+  surfaces.forEach(([name, present]) => check(`${name} has a day-grouped picker`, present));
+  check('no age-group picker is left ungrouped',
+    surfaces.every(([, p]) => p), surfaces.filter(([, p]) => !p).map(([n]) => n).join(', '));
+  check('the old flat homepage tab list is gone',
+    !/const fixtureAgeTabs =/.test(HOME_CODE));
+
+  const blocks = homeComponent().renderVals().fixtureAgeDayBlocks || [];
+  eq('the homepage picker draws two day blocks', blocks.length, 2);
+  eq('…day one first', blocks[0].label, 'Saturday 7 November');
+  eq('…then day two', blocks[1].label, 'Sunday 8 November');
+
+  /* ⚠️ ALL FIFTEEN STAY ON THE HOMEPAGE — it is the FIXTURES picker, and U6/U7
+     have fixtures even though they have no standings. /scores filters them out
+     for a different and correct reason. Jay confirmed 6 Aug. Asserted so the
+     two lists are never "made consistent" into one wrong answer. */
+  const homeIds = blocks.reduce((all, d) => all.concat(d.tabs.map((t) => t.id)), []);
+  check('the homepage keeps the festival groups — they have fixtures',
+    homeIds.indexOf('u6') >= 0, homeIds.join(','));
+  const scoreIds = (scoresComponent().renderVals().ageDayBlocks || [])
+    .reduce((all, d) => all.concat(d.tabs.map((t) => t.id)), []);
+  check('…while /scores still drops them — they have no standings',
+    scoreIds.indexOf('u6') < 0, scoreIds.join(','));
+
+  /* Same split rule as the other two. */
+  const u9 = blocks[0].tabs.find((t) => t.id === 'u9') || {};
+  eq('the homepage splits the label the same way — band', u9.band, 'U9');
+  eq('…and format', u9.fmt, 'Mixed Contact');
+  check('…and it derives the day from the layout, never a typed list',
+    /isDayOne\(/.test(HOME_CODE) && !/\b(SATURDAY|SUNDAY)\s*=\s*\[/i.test(HOME_CODE));
+}
+
+/* ====================================================================== */
+section('One day open at a time, and it follows the pick rather than a default');
+{
+  /* ⚠️ THE WHOLE SAFETY OF COLLAPSING IS THAT THE OPEN DAY FOLLOWS THE
+     SELECTION. Open a fixed day instead and half the readers arrive looking at
+     a list that does not contain their own group, with theirs hidden behind a
+     heading — which is worse than the wall of chips this replaced. */
+  /* Parse the rendered blocks properly rather than sniffing for the substring
+     "open" — which appears in the markup regardless and would make the check
+     unfailable. A check that cannot fail is worse than no check. */
+  const appBlocks = (html) => [...html.matchAll(/<div class="ag-day ([^"]*)">/g)].map((m) => ({
+    sun: /\bsun\b/.test(m[1]),
+    open: /\bopen\b/.test(m[1]),
+  }));
+
+  const satOpen = appPicker(APP_GROUPS, 'u9');       // U9 is day one
+  const sunOpen = appPicker(APP_GROUPS, 'u12g');     // U12G is day two
+
+  eq('/app renders both days, always', appBlocks(satOpen).length, 2);
+  eq('/app has exactly ONE day open, never both and never none',
+    appBlocks(satOpen).filter((b) => b.open).length, 1);
+  check('/app opens the day holding the pick — day one for U9',
+    appBlocks(satOpen).find((b) => b.open).sun === false);
+  check('…and day two for U12G',
+    appBlocks(sunOpen).find((b) => b.open).sun === true);
+
+  /* ⚠️ THE PIN. Tapping a heading has to actually override the derived day, or
+     the accordion is decorative. */
+  const pinned = appPicker(APP_GROUPS, 'u9', 2);     // pick on day one, pin day two
+  check('/app: pinning a day overrides the one derived from the pick',
+    appBlocks(pinned).find((b) => b.open).sun === true);
+  eq('…and still only one is open', appBlocks(pinned).filter((b) => b.open).length, 1);
+
+  /* ⚠️ A CLOSED DAY THAT HOLDS THE PICK SAYS SO. Otherwise opening the other
+     day hides the selection and the picker lies about where you are. */
+  check('/app: the closed day holding the pick names it',
+    /<span class="ag-sel on">U9<\/span>/.test(pinned), pinned.slice(0, 400));
+  check('/app: a closed day that does NOT hold the pick shows a count instead',
+    /<span class="ag-sel">\d+ groups<\/span>/.test(satOpen), satOpen.slice(0, 400));
+  check('/app: an OPEN day shows neither badge — it is showing its chips',
+    (satOpen.match(/ag-sel/g) || []).length === 1,
+    `${(satOpen.match(/ag-sel/g) || []).length} badges rendered`);
+}
+
+/* ====================================================================== */
+section('…and the same collapse behaviour on the other two surfaces');
+{
+  const c = scoresComponent();                       // selection u9, day one
+  let blocks = c.renderVals().ageDayBlocks;
+  check('/scores opens the day holding the pick',
+    blocks[0].chipsStyle.indexOf('display:flex') === 0
+    && blocks[1].chipsStyle.indexOf('display:none') === 0);
+  eq('…and the closed day shows a count', blocks[1].badge, '2 groups');
+
+  blocks[1].onToggle();                              // pin day two open
+  blocks = c.renderVals().ageDayBlocks;
+  check('/scores: pinning opens day two and closes day one',
+    blocks[1].chipsStyle.indexOf('display:flex') === 0
+    && blocks[0].chipsStyle.indexOf('display:none') === 0);
+  eq('…and the now-closed day one names the pick rather than a count',
+    blocks[0].badge, 'U9');
+
+  /* ⚠️ AND THE PIN MUST NOT SURVIVE A NEW PICK — it is stored WITH the
+     selection it was made under, so choosing another group releases it. A pin
+     that outlived the pick would strand a reader on a day their group is not
+     on.
+
+     ⚠️ THE PIN AND THE NEW PICK MUST BE ON DIFFERENT DAYS OR THIS PROVES
+     NOTHING. Pinning day two and then picking a day-two group gives the same
+     answer whether the pin survives or not — the first version of this check
+     did exactly that and passed against the fault. Pin day ONE, then pick on
+     day TWO: released it opens day two, stuck it stays on day one. */
+  blocks[0].onToggle();                              // pin day ONE
+  blocks = c.renderVals().ageDayBlocks;
+  check('/scores: the pin is on day one and day two is closed',
+    blocks[0].chipsStyle.indexOf('display:flex') === 0
+    && blocks[1].chipsStyle.indexOf('display:none') === 0);
+  blocks[1].tabs.find((t) => t.id === 'u16b').onSelect();   // …now pick on day TWO
+  blocks = c.renderVals().ageDayBlocks;
+  check('/scores: a new pick on the other day releases the pin and follows it',
+    blocks[1].chipsStyle.indexOf('display:flex') === 0
+    && blocks[0].chipsStyle.indexOf('display:none') === 0,
+    JSON.stringify(blocks.map((b) => b.chipsStyle)));
+
+  const h = homeComponent('u9');
+  let hb = h.renderVals().fixtureAgeDayBlocks;
+  check('the homepage opens the day holding the pick',
+    hb[0].chipsStyle.indexOf('display:flex') === 0
+    && hb[1].chipsStyle.indexOf('display:none') === 0);
+  hb[1].onToggle();
+  hb = h.renderVals().fixtureAgeDayBlocks;
+  check('the homepage pin opens the other day', hb[1].chipsStyle.indexOf('display:flex') === 0);
+  eq('…and the closed day names the pick', hb[0].badge, 'U9');
+  /* Same discrimination rule: pin day ONE, then pick on day TWO. */
+  hb[0].onToggle();
+  hb = h.renderVals().fixtureAgeDayBlocks;
+  hb[1].tabs.find((t) => t.id === 'u14b').onSelect();
+  hb = h.renderVals().fixtureAgeDayBlocks;
+  check('the homepage releases the pin when the new pick is on the other day',
+    hb[1].chipsStyle.indexOf('display:flex') === 0
+    && hb[0].chipsStyle.indexOf('display:none') === 0);
 }
 
 summary('test-age-group-picker.js');

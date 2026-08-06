@@ -1985,9 +1985,28 @@
       <h2 style="font-family:'Anton';font-size:clamp(36px,5.9vw,72px);line-height:0.95;text-transform:uppercase;color:#0C0C0E">Pools, semis &amp; finals</h2>
       <p style="max-width:600px;margin:18px auto 0;color:#5d5a54;font-size:17px">Every team plays every team in its pool. Matches are 20-minute slots (two 7-minute halves, 3-minute half-time, 3 minutes to the next kick-off). Pools kick off 8:00am — pitches TBD.</p>
     </div>
-    <div data-reveal style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px 0 30px">
-      <sc-for list="{{ fixtureAgeTabs }}" as="fa" hint-placeholder-count="6">
-        <button onClick="{{ fa.onSelect }}" style="{{ fa.style }}">{{ fa.name }}</button>
+    <!-- The Fixtures age-group picker: day blocks, one open at a time, matching
+         /app and the Results section directly below this one. -->
+    <div data-reveal style="max-width:760px;margin:34px auto 30px">
+      <sc-for list="{{ fixtureAgeDayBlocks }}" as="fd" hint-placeholder-count="2">
+        <button onClick="{{ fd.onToggle }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:11px 2px;background:none;border:none;border-top:1px solid #e2ded4;cursor:pointer;text-align:left;font:inherit">
+          <span style="{{ fd.ruleStyle }}"></span>
+          <span style="font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#14151A">{{ fd.label }}</span>
+          <sc-if value="{{ fd.hasBadge }}" hint-placeholder-val="{{ false }}">
+            <span style="{{ fd.badgeStyle }}">{{ fd.badge }}</span>
+          </sc-if>
+          <span style="{{ fd.caretStyle }}">&#9660;</span>
+        </button>
+        <div style="{{ fd.chipsStyle }}">
+          <sc-for list="{{ fd.tabs }}" as="fa" hint-placeholder-count="6">
+            <button onClick="{{ fa.onSelect }}" style="{{ fa.style }}">
+              <span style="{{ fa.bandStyle }}">{{ fa.band }}</span>
+              <sc-if value="{{ fa.hasFmt }}" hint-placeholder-val="{{ false }}">
+                <span style="{{ fa.fmtStyle }}">{{ fa.fmt }}</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
       </sc-for>
     </div>
 
@@ -3123,6 +3142,10 @@ function sanitizeUaePhone(val) { return val.replace(/\D/g, '').slice(0, 9); }
 class Component extends DCLogic {
   state = {
     days: '--', hours: '--', mins: '--', secs: '--', statsP: 0, fxApi: null, fxAgeGroups: [], fxSelectedId: null, fxSchedule: null, fxTeamFilter: '',
+    /* Which day block is pinned open in the Fixtures picker, and which
+       selection it was pinned under - a new pick invalidates the pin on its
+       own, so nobody is stranded on the wrong morning after changing group. */
+    fxAgPin: null,
     /* The PITCHES stat. 18 is Saturday's count in the 2025 layout and is only a
        starting value: componentDidMount replaces it with the live count from the
        venue layout, so changing the pitches in the back office changes this number
@@ -3717,14 +3740,76 @@ class Component extends DCLogic {
     return api.registrationCopy(this.state.reg, this.state.regNow || Date.now());
   }
 
+  /* Every age-group name is "<band> <format>" - "U6 Tag", "U9 Mixed Contact".
+     Split on the FIRST space, the same rule /app and /scores use; a name with
+     no space keeps the whole string as the band and shows no format line. */
+  fxBand(name) { const t = String(name || ''); const i = t.indexOf(' '); return i < 0 ? t : t.slice(0, i); }
+  fxFormat(name) { const t = String(name || ''); const i = t.indexOf(' '); return i < 0 ? '' : t.slice(i + 1); }
+
+  /* Opening a day is a view change, not a data change: no fetch, no reload. */
+  toggleFxDay(day) { this.setState({ fxAgPin: { day, sel: this.state.fxSelectedId } }); }
+
   renderVals() {
     const accent = this.props.accentColor ?? '#E11B22';
-    const fixtureAgeTabs = this.state.fxAgeGroups.map((a) => ({
-      name: a.name,
+    /* ⚠️ THE HOMEPAGE HAS ITS OWN AGE-GROUP PICKER, AND IT WAS MISSED WHEN THE
+       OTHER TWO WERE REGROUPED ON 6 Aug 2026 — so the Fixtures section sat in a
+       flat wrap of fifteen while the Results section directly beneath it (the
+       embedded scores component) had day blocks. One page, two pickers,
+       disagreeing. If a fourth ever appears, it joins this list of three.
+
+       ⚠️ ALL FIFTEEN GROUPS STAY HERE, deliberately, and this is NOT the same
+       list /scores shows. /scores filters on hasStandings because a standings
+       tab for U6 can only ever say "no standings are kept" — but U6 and U7 do
+       have FIXTURES, and this is the fixtures picker. Jay confirmed 6 Aug. */
+    const fxSel = this.state.fxSelectedId;
+    const fxApiRef = this.state.fxApi;
+    const fxChip = (a) => ({
+      id: a.id,
+      band: this.fxBand(a.name), fmt: this.fxFormat(a.name), hasFmt: !!this.fxFormat(a.name),
       onSelect: () => this.setState({ fxSelectedId: a.id, fxSchedule: null, fxTeamFilter: '' }, () => this.loadSchedule(a.id)),
-      style: 'font-weight:700;font-size:13px;padding:8px 16px;border-radius:100px;cursor:pointer;border:1.5px solid ' +
-        (a.id === this.state.fxSelectedId ? '#E11B22;background:#E11B22;color:#fff' : '#e2ded4;background:#fff;color:#5d5a54'),
-    }));
+      bandStyle: 'display:block;font-weight:800;font-size:14.5px;line-height:1.05;color:'
+        + (a.id === fxSel ? '#fff' : '#14151A'),
+      fmtStyle: 'display:block;font-weight:600;font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;margin-top:3px;color:'
+        + (a.id === fxSel ? 'rgba(255,255,255,0.82)' : '#77726e'),
+      style: 'font-weight:700;padding:7px 13px 8px;border-radius:12px;cursor:pointer;text-align:left;border:1.5px solid '
+        + (a.id === fxSel
+          ? (fxApiRef && !fxApiRef.isDayOne(a.id) ? '#17A34A;background:#17A34A' : '#E11B22;background:#E11B22')
+          : '#e2ded4;background:#fff'),
+    });
+
+    /* The open day follows the selection unless the reader has pinned one. */
+    const fxPinned = (this.state.fxAgPin && this.state.fxAgPin.sel === fxSel) ? this.state.fxAgPin.day : null;
+    const fxOpenDay = fxPinned || (fxApiRef && fxSel && !fxApiRef.isDayOne(fxSel) ? 2 : 1);
+
+    const fixtureAgeDayBlocks = [true, false].map((isDay1) => {
+      /* ⚠️ DERIVED FROM THE VENUE LAYOUT, NEVER TYPED. Same rule as the other
+         two pickers: a group is on Saturday because that is where it holds
+         pitches. A written-out list here is what once put U12G and both U18
+         groups on the wrong day on this very page. */
+      const list = (this.state.fxAgeGroups || []).filter((a) => !!(fxApiRef && fxApiRef.isDayOne(a.id)) === isDay1);
+      if (!list.length) return null;
+      const day = isDay1 ? 1 : 2;
+      const isOpen = fxOpenDay === day;
+      const holds = list.some((a) => a.id === fxSel);
+      const badgeText = isOpen ? ''
+        : (holds ? this.fxBand((list.find((a) => a.id === fxSel) || {}).name || '') : `${list.length} groups`);
+      return {
+        id: isDay1 ? 'day1' : 'day2',
+        label: fxApiRef ? fxApiRef.dayLabelOfAgeGroup(list[0].id) : '',
+        hasBadge: !!badgeText,
+        badge: badgeText || '',
+        badgeStyle: 'margin-left:auto;font-weight:700;font-size:11px;padding:3px 9px;border-radius:100px;white-space:nowrap;'
+          + (holds ? `color:#fff;background:${isDay1 ? '#E11B22' : '#17A34A'}` : 'color:#77726e;background:rgba(0,0,0,0.05)'),
+        caretStyle: 'margin-left:8px;flex:none;color:#77726e;font-size:11px;display:inline-block;'
+          + (isOpen ? 'transform:rotate(180deg)' : ''),
+        chipsStyle: isOpen
+          ? 'display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 14px;justify-content:center'
+          : 'display:none',
+        ruleStyle: 'height:3px;width:18px;border-radius:2px;flex:none;background:' + (isDay1 ? '#E11B22' : '#17A34A'),
+        onToggle: () => this.toggleFxDay(day),
+        tabs: list.map(fxChip),
+      };
+    }).filter(Boolean);
     const fxSchedule = this.state.fxSchedule;
     const isU16BFixtures = ['u16b', 'u16g'].includes(this.state.fxSelectedId);
     const fxFilter = this.state.fxTeamFilter;
@@ -3879,7 +3964,7 @@ class Component extends DCLogic {
         if (!grp) return;
         this.setState({ fxSelectedId: id, fxSchedule: null, fxTeamFilter: '' }, () => this.loadSchedule(id));
       },
-      fixtureAgeTabs, fixturePools,
+      fixtureAgeDayBlocks, fixturePools,
       isU16BFixtures, fixtureKnockout,
       /* Veil for the fixture grid only. It fails closed — while the schedule
          is still loading the veil stays up, so placeholder pools can never

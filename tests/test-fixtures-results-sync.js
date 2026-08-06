@@ -156,7 +156,8 @@ section('Homepage: onScoresAgeChange (Results/Manager -> Fixtures)');
       // an extra marker so the "did it actually reload" checks below can tell
       // this original object apart from whatever loadSchedule's stub returns.
       fxSchedule: { awaitingPublication: false, pools: [], knockout: [], _sentinel: true },
-      fxApi: { getSchedule: async (id) => { scheduleCalls.push(id); return { id, pools: [], knockout: [], awaitingPublication: false }; } },
+      fxApi: { getSchedule: async (id) => { scheduleCalls.push(id); return { id, pools: [], knockout: [], awaitingPublication: false }; },
+        isDayOne: () => true, dayLabelOfAgeGroup: () => 'Saturday 7 November' },
     };
     return c;
   }

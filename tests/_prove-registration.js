@@ -392,6 +392,57 @@ const FAULTS = [
   },
   /* ---- the venue schematic ---- */
   {
+    /* THE TAB BAR — regrouped 7 Aug 2026 at Jay's request. Nothing asserted
+       its order before that date: the pre-existing "there is a Clubs tab
+       button" check matches wherever that button sits, so it survives any
+       shuffle. These five faults are the whole guard. */
+    name: 'the tab order reverts - Clubs falls back behind Teams',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch('Organizer.dc.html',
+      '<button onClick="{{ showClubs }}" style="{{ tabClubsStyle }}">Clubs',
+      '<button onClick="{{ showNothing }}" style="{{ tabClubsStyle }}">Clubs'),
+    expect: ['the bar carries showClubs'],
+  },
+  {
+    /* the swap is in the MIDDLE on purpose. A fault that moved the FIRST or
+       LAST tab would be caught by a lazy "Clubs is first, Accounts is last"
+       check; this one is only caught by the pairwise sweep, which is why the
+       sweep exists rather than two spot checks. */
+    name: 'Venue & days and Tournament swap inside their group',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch('Organizer.dc.html',
+      '<button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>',
+      '<button onClick="{{ showZzTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>'),
+    expect: ['the bar carries showTournament'],
+  },
+  {
+    name: 'a group label is dropped - the middle block loses its name',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch('Organizer.dc.html',
+      '>Tournament configuration</div>', '></div>'),
+    expect: ['Tournament configuration'],
+  },
+  {
+    /* A missing rule looks fine on a wide screen and reads as one long
+       undifferentiated row on a laptop - no error anywhere. */
+    name: 'one of the two break marks is removed',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch('Organizer.dc.html',
+      '<div style="width:1px;background:rgba(0,0,0,0.13);align-self:stretch;margin:0 6px"></div>',
+      '<div></div>'),
+    expect: ['two break marks'],
+  },
+  {
+    /* THE TIDY-UP THAT LOOKS RIGHT. Clubs is leftmost, so making it the
+       landing tab reads as consistency - and it is not what Jay chose. Until
+       October the Clubs tab shows 0 registered for every club. */
+    name: 'the default tab follows the leftmost button to Clubs',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch('Organizer.dc.html',
+      "tab: 'teams', search: '',", "tab: 'clubs', search: '',"),
+    expect: ['the default tab is still Teams'],
+  },
+  {
     /* Replaces an earlier fault that swapped the greedy `.*` for a lazy one.
        That was NOT caught — and it should not have been, because backtracking
        makes the two forms identical when the tail is one anchored letter. The

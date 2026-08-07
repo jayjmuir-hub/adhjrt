@@ -336,6 +336,78 @@ section('The tab exists and is wired');
   check('the tab panel is gated on isClubs', /<sc-if value="\{\{ isClubs \}\}"/.test(src));
 }
 
+section('The tab bar is grouped, in Jay’s order');
+{
+  /* ⚠️ NOTHING GUARDED TAB ORDER UNTIL 7 AUG 2026. The check above it —
+     "there is a Clubs tab button" — matches wherever that button sits, so it
+     survives any reorder and cannot catch one. The bar was regrouped at Jay's
+     request into three labelled blocks, and without this the next edit to that
+     markup silently puts it back with nobody the wiser.
+
+     ⚠️ THE ORDER IS ASSERTED BY POSITION, NOT BY PRESENCE. "All seven buttons
+     exist" passes against the old flat row, i.e. against the very thing this
+     replaced. What is asserted is the INDEX of each button's handler in the
+     source, which is the only thing that changes when somebody shuffles them. */
+  const src = readRepo('Organizer.dc.html');
+
+  /* The tab bar only — sliced so a handler named again further down the file
+     (a panel's own button, say) cannot satisfy a position check up here. */
+  const barStart = src.indexOf('<!-- tabs');
+  const barEnd = src.indexOf('<!-- 30 Jul:', barStart);
+  check('the tab bar was found', barStart > -1 && barEnd > barStart);
+
+  /* ⚠️ COMMENTS STRIPPED BEFORE ANY OF THIS IS COUNTED, AND THAT IS NOT
+     housekeeping — it was caught by this very check on its first run. The
+     block comment above the bar EXPLAINS the separator and therefore contains
+     the string "align-self:stretch", so counting the rules found THREE where
+     the markup has two. This repo documents the traps it avoids, which makes
+     every absence-or-count check on its source vulnerable to matching its own
+     warning. Written down here for the fourth time; hit anyway. */
+  const bar = src.slice(barStart, barEnd).replace(/<!--[\s\S]*?-->/g, '');
+
+  const ORDER = ['showClubs', 'showTeams', 'showPlayers',
+                 'showTournament', 'showVenue', 'showRegistration',
+                 'showAccounts'];
+
+  const at = (h) => bar.indexOf('onClick="{{ ' + h + ' }}"');
+  ORDER.forEach((h) => check('the bar carries ' + h, at(h) > -1));
+
+  /* Strictly increasing positions === exactly this order. A pairwise sweep,
+     not a spot check on the first and last — a swap in the middle passes
+     "Clubs is first and Accounts is last" perfectly. */
+  let ordered = true;
+  for (let i = 1; i < ORDER.length; i++) if (at(ORDER[i]) < at(ORDER[i - 1])) ordered = false;
+  check('the seven tabs are in Jay’s order, left to right', ordered,
+    ORDER.map((h) => h + '@' + at(h)).join(' '));
+
+  /* ⚠️ THE COUNT IS ASSERTED TOO. An eighth tab added without a decision about
+     which group it belongs to would slot in anywhere and pass the order sweep,
+     because the sweep only knows about the seven it names. This is the same
+     lesson as the age-group picker: when a rule is "everywhere X appears",
+     write the COUNT into the check. The Documents tab is coming — when it
+     lands it joins ORDER and this number goes to 8, deliberately. */
+  const buttons = (bar.match(/onClick="\{\{ show/g) || []).length;
+  eq('there are exactly seven tabs', buttons, 7);
+
+  /* The three group labels, each read as its own claim. "A label exists"
+     would pass on a bar that had lost two of them. */
+  ['Registrations', 'Tournament configuration', 'Site admin'].forEach((label) => {
+    check('the group label "' + label + '" is on the bar',
+      bar.indexOf('>' + label + '</div>') > -1);
+  });
+
+  /* Two separators, three groups. Asserted because a missing rule is exactly
+     the kind of thing that looks fine on a wide screen and reads as one long
+     undifferentiated row on a laptop. */
+  const seps = (bar.match(/align-self:stretch/g) || []).length;
+  eq('there are two break marks between the three groups', seps, 2);
+
+  /* ⚠️ CLUBS IS LEFTMOST AND TEAMS IS STILL THE DEFAULT — asserted from BOTH
+     ends, because "Clubs is first" and "Clubs opens" are different claims and
+     somebody tidying one into the other is the predictable next change. */
+  eq('the default tab is still Teams', build({}).state.tab, 'teams');
+}
+
 section('The declarations reach the page at all');
 {
   /* The three halves that have to agree, asserted where they can be READ

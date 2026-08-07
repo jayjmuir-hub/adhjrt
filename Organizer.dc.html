@@ -108,15 +108,66 @@
         </div>
       </div>
 
-      <!-- tabs -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%">
-        <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
-        <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
-        <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
-        <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
-        <button onClick="{{ showClubs }}" style="{{ tabClubsStyle }}">Clubs<sc-if value="{{ hasFlaggedClubs }}" hint-placeholder-val="{{ false }}"> ({{ flaggedClubCount }} to chase)</sc-if></button>
-        <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
-        <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
+      <!-- tabs — THREE LABELLED GROUPS, Jay's order, 7 Aug 2026.
+
+           Order is REGISTRATIONS (Clubs, Teams, Players) | TOURNAMENT
+           CONFIGURATION (Tournament, Venue & days, Registration) | SITE ADMIN
+           (Accounts). Before this the seven buttons sat in one flat row in the
+           order they happened to be ADDED, which is not an order anybody chose.
+
+           ⚠️ CLUBS IS LEFTMOST BUT TEAMS IS STILL THE DEFAULT TAB. Leftmost and
+           default are separate decisions and Jay kept them apart deliberately —
+           until October the Clubs tab reads "0 registered" for every club, so
+           landing there would open on a screen of Short badges that mean
+           nothing yet. `tab: 'teams'` in state is what sets the default; do not
+           "tidy" it to match the visual order.
+
+           ⚠️ EACH GROUP IS A COLUMN — label above its OWN row of buttons — and
+           the whole group wraps as one unit. The obvious alternative (labels in
+           a separate row above the bar) breaks the moment the bar wraps: a
+           label ends up over the wrong buttons, and nothing errors.
+
+           ⚠️ THE SEPARATOR USES align-self:stretch, never a pinned height. The
+           groups' height changes with the font and with the badge text
+           ("(3 to chase)" wraps at some widths); a fixed px height leaves the
+           rule short or overhanging with no error anywhere.
+
+           ⚠️ THE WORD "Registration" APPEARS IN TWO GROUPS MEANING TWO
+           DIFFERENT THINGS — the REGISTRATIONS group is the submitted data, the
+           Registration tab is the window SETTINGS. Kept as-is at Jay's order.
+           If it ever confuses someone, the fix is renaming the tab to
+           "Registration window", not moving it between groups. -->
+      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%;align-items:flex-end">
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Registrations</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ showClubs }}" style="{{ tabClubsStyle }}">Clubs<sc-if value="{{ hasFlaggedClubs }}" hint-placeholder-val="{{ false }}"> ({{ flaggedClubCount }} to chase)</sc-if></button>
+            <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
+            <button onClick="{{ showPlayers }}" style="{{ tabPlayersStyle }}">Players ({{ playerCount }})</button>
+          </div>
+        </div>
+
+        <div style="width:1px;background:rgba(0,0,0,0.13);align-self:stretch;margin:0 6px"></div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Tournament configuration</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
+            <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
+            <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
+          </div>
+        </div>
+
+        <div style="width:1px;background:rgba(0,0,0,0.13);align-self:stretch;margin:0 6px"></div>
+
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Site admin</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
+          </div>
+        </div>
+
       </div>
 
       <!-- 30 Jul: a failed load used to leave teams/players/accounts as empty

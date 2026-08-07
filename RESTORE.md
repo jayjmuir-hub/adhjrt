@@ -388,7 +388,7 @@ dates ever change, this image carries them and must be re-rendered.
 
 ---
 
-## HSBC — the principal partner (added 2 Aug 2026)
+## HSBC — the principal partner
 
 HSBC are the tournament's **principal partner**. ⚠️ **They are no longer the
 only confirmed sponsor** — eighteen supporters shipped in the grid on
@@ -470,7 +470,7 @@ have been spread into the middle of the bar. As a side effect the wrapper's
 `min-width:0` also fixed a pre-existing ~42px horizontal overflow of the header
 just above the mobile breakpoint.
 
-## The supporters grid (added 5 Aug 2026)
+## The supporters grid
 
 Eighteen sponsors under **With the support of**, below the HSBC card in
 `<section id="sponsors">`. Spec: `claude/specs/spec-sponsors-grid.md`.
@@ -484,7 +484,7 @@ supporters. Folding the two into one wall is the obvious visual tidy-up and it
 demotes the tournament's only confirmed partner. Asserted three ways, with a
 fault that injects exactly that merge.
 
-### ⚠️ NOTHING IN THIS GRID IS RECOLOURED (5 Aug 2026)
+### ⚠️ NOTHING IN THIS GRID IS RECOLOURED
 
 Jay: *"put them on the black background, anything that was changed can just go
 in a white box."* Every file is the sponsor's own artwork in their own colours.
@@ -554,7 +554,7 @@ HSBC card above it is legitimately `background:#151517`, so a section-wide
 negative check fails on the principal-partner card. The slice asserts it is
 non-empty first — *"no hardcoded colour in nothing"* would pass for ever.
 
-### ⚠️ EVERY LOGO LINKS TO ITS SPONSOR (5 Aug 2026)
+### ⚠️ EVERY LOGO LINKS TO ITS SPONSOR
 
 Each `SPONSORS` row carries a `url`, and **every one was checked for a 200
 before it went in.** A sponsor's own mark pointing at a dead domain — or at
@@ -820,7 +820,7 @@ JRT palette, Anton + Barlow.
 
 ---
 
-## Accounts and passwords (rewritten 27 Jul 2026)
+## Accounts and passwords
 
 ### Making a login
 
@@ -873,7 +873,7 @@ following the docs would have got a broken account and no error message
 anywhere. Nothing validates these key names against the real age-group ids
 either, so an ordinary typo fails the same silent way.
 
-### One sign-in for everything (Aug 2026)
+### One sign-in for everything
 
 **Sign-in lives at `/signin`, and only there.** `Signin.dc.html` carries
 password sign-in, the Google button and BOTH signup flows. After sign-in it
@@ -919,7 +919,7 @@ each endpoint had a role filter. The unified endpoint has none — one call,
 the account's own role decides where you land. test-signin-page.js,
 test-session-migration.js and test-unified-login.js hold all of this.
 
-### The signup role picker is GONE (Aug 2026)
+### The signup role picker is GONE
 
 **Both signup flows on `/signin` — password and Google — now create an
 age-group manager, and nothing else.** The picker that chose between Manager
@@ -945,7 +945,7 @@ Accounts → Create a login → Organiser. `test-signin-page.js` asserts the
 closure on the page source rather than on state — a check that drives a state
 the UI cannot reach proves nothing about what anyone can actually do.
 
-### My account (added Aug 2026)
+### My account
 
 Design: `claude/specs/spec-my-account.md`. **One card, two modes**, rendered on
 both `/organizer` and `/manager`.
@@ -1007,7 +1007,7 @@ Google code there is the LINK button. A widened check is a check with less to
 say, so the linking machinery got its own assertions rather than being covered
 by silence.
 
-### Last sign in (added Aug 2026)
+### Last sign in
 
 The My account card shows when each account last signed in, under *Member
 since*. On your own it is trivia; on somebody else's it answers the question an
@@ -1116,7 +1116,7 @@ parent contact details.
 
 ---
 
-## Results storage (changed 25 Jul 2026 — the old layout is gone)
+## Results storage (the old layout is gone)
 
 Match results live in the `results` Blobs store, **one JSON object per age
 group**, key `ag:<ageGroupId>`, results keyed by match id inside it. All of it
@@ -1152,7 +1152,7 @@ else should touch the store directly.
 
 ---
 
-## Clearing the rehearsal data — DONE, panel deleted (Aug 2026)
+## Clearing the rehearsal data — the panel is DELETED
 
 The tournament rehearsal (255 invented teams, 3,825 invented players, 415+
 invented results, all 15 groups published — later re-run at 452 results on
@@ -1177,7 +1177,7 @@ match-day guard, typed confirmation) live on in that tool and in git history
 
 ---
 
-## The age-group picker (rebuilt 6 Aug 2026)
+## The age-group picker
 
 **Two DAY blocks of wrapped chips, ONE OPEN AT A TIME, on THREE surfaces.** Spec:
 `claude/specs/spec-age-group-selector.md`. Jay asked for the age-group
@@ -1319,7 +1319,7 @@ is the PUBLISHED copy and the only thing the public sees.
   `teamNamesFromRegistrations()` is the single source of the naming rule and the
   import review table reads it too, so the two cannot drift.
 
-## The sheet columns — one copy, at last (added 28 Jul 2026)
+## The sheet columns — one copy, at last
 
 `netlify/functions/_intake.js` holds the column order for both registration
 sheets, the row builders, and the two mappers that turn a row back into what
@@ -1350,7 +1350,7 @@ emergency-contact box. The sheet is what somebody rings from at a tournament.
   makes a typed `=` a live formula in a sheet holding children's names, dates of
   birth and medical notes, and eats the `+` off every phone number.
 
-### The allow-list (added 28 Jul 2026)
+### The allow-list
 
 `cleanSubmission(form, data)` in `_intake.js` decides what a submission may
 contain at all. Until the gateway, Netlify Forms decided that. From the gateway
@@ -1377,7 +1377,7 @@ from `admin@adhjrt.com` to an address taken out of that same body.
   A field with no column is silently thrown away after validation passes; a
   column with no field is permanently empty and nobody notices.
 
-## Club-level registration is BACK, behind a silent link (3 August 2026)
+## Club-level registration is BACK, behind a silent link
 
 **Jay, 3 Aug: a link he can email to clubs that does not appear anywhere on
 adhjrt.com.** The feature he had removed on 2 Aug is restored — recovered by
@@ -1390,7 +1390,7 @@ describes the removal, not the current state.
 homepage modal: that stayed deleted, and a test asserts the club form has not
 crept back onto the public page.
 
-### The `/organizer` Clubs tab — declared vs registered (4 Aug 2026)
+### The `/organizer` Clubs tab — declared vs registered
 
 The seventh tab, and the reason declarations exist at all. One row per club:
 declared total, registered total, a **Short / Over / On track** badge, and the
@@ -1443,7 +1443,7 @@ as a club that silently under-registered.
 `tests/test-organizer-clubs.js` drives the real component (113 checks), sweeps
 the name pairs BOTH ways, and sweeps all fifteen age groups. Thirteen faults.
 
-### ⚠️ THE CLUB FORM IS EXEMPT FROM THE REGISTRATION WINDOW (4 Aug 2026)
+### ⚠️ THE CLUB FORM IS EXEMPT FROM THE REGISTRATION WINDOW
 
 **A declaration is not an entry.** It is *"we expect to bring three U12 teams"*,
 collected WEEKS BEFORE registration opens so pools, the draw and pitch
@@ -1534,42 +1534,7 @@ readable in the Google Sheet only. Deferred deliberately on 3 Aug — with no re
 registrations until October it would show "declared 3, registered 0" for every
 club — and recorded in `claude/parked-requests.md` with the reasoning.
 
-## Club-level registration was REMOVED (2 August 2026) — superseded, kept for the reasoning
-
-**Jay asked for the "Register your club" feature to be removed entirely**, and
-it was — the button, the modal, the whole `club-registration` form. It had
-shipped on 1 Aug (`1cdc521`), was live on `adhjrt.com`, and never worked,
-because `GOOGLE_SHEET_ID_CLUBS` was never set.
-
-Removed from all four files that referenced it: the button and modal in
-`Quins JRT.dc.html`; `CLUB_COLUMNS`, `CLUB_OUT`, `CLUB_RANGE`, `clubRow`,
-`mapClubRow`, `clubCountKey`, `MAX_TEAMS_PER_GROUP`, the `FORMS` entry, the
-validation branch and the `handleSubmission` branch in `_intake.js`;
-`clubEmail()` and its dispatch in `_email.js` (along with the `AGE_GROUPS`
-import that then had no other caller); and the club assertions in
-`test-intake.js`.
-
-⚠️ **`club-registration` is now an UNKNOWN FORM, and that is the real guarantee.**
-`cleanSubmission()` returns `null` for it, so the gateway refuses it before
-anything else — there is no half-removed path where the button is gone but the
-endpoint still accepts a POST. `test-intake.js` asserts exactly that, and
-asserts `FORMS` holds exactly the two remaining forms, hardcoded, so a third
-arriving unnoticed fails.
-
-**What was deliberately NOT touched:** the `club` FIELD on the team and player
-forms (a registration names its club — unrelated), and the Teams/Players
-grouping-by-club in `/organizer`.
-
-**Two inert leftovers outside the repo**, harmless and Jay's to clear whenever:
-a Google Sheet called *Club Registrations*, and `GOOGLE_SHEET_ID_CLUBS` in
-Netlify. Nothing reads either any more.
-
-⚠️ **A related design exists and is PARKED, not pending** —
-`claude/specs/spec-club-manager-page.md`, a Google-login club page on branch
-`club-manager-page`. Jay decided against it the same day. Do not raise it and
-do not treat this removal as a step towards it.
-
-## Netlify Forms is GONE (28 July 2026)
+## Netlify Forms is GONE
 
 Registrations do not touch Netlify Forms at any point any more. `POST` goes
 straight to `/.netlify/functions/submit-registration`, which validates, writes
@@ -1590,7 +1555,7 @@ But read `claude/plans/plan-submission-gateway.md` first — going back means gi
 the age checks, the squad cap, the registration window and the rate limit, all
 of which only exist because our code is the front door.
 
-### ⚠️ Nothing tested these functions until 28 July 2026
+### ⚠️ Nothing tested these functions until
 
 `tests/test-functions-load.js` loads **and calls** every file in
 `netlify/functions/`. It is the only test that executes them at all. It exists
@@ -1626,7 +1591,7 @@ handler's own catch turned it into a 500, and a 500 looks to a user exactly like
 Every text-based check in this repo that says a file does not contain something
 should be paired with one that runs it.
 
-### The page posts to us now (added 28 Jul 2026)
+### The page posts to us now
 
 `postRegistration(form, data)` in `Quins JRT.dc.html` posts JSON to
 `/.netlify/functions/submit-registration`. It used to POST to `/`, where
@@ -1662,7 +1627,7 @@ page submitted the form names `_intake.js` knows — by looking for the Netlify
 Forms field. That field no longer exists, so the check broke, and the
 fault-run's baseline caught it. That baseline exists for exactly this.
 
-### The gateway function, and _sheets.js (added 28 Jul 2026)
+### The gateway function, and _sheets.js
 
 `netlify/functions/submit-registration.js` is the front door. It builds the real
 Google client, mailer and blob store, hands them to `handleSubmission()`, and
@@ -1696,7 +1661,7 @@ first looked for `MAX_BODY_BYTES` appearing before `JSON.parse` — which the
 `const` declaration at the top satisfies by itself, so deleting the actual size
 check passed. It asserts `Buffer.byteLength(` before `JSON.parse` now.
 
-### The submission flow (added 28 Jul 2026)
+### The submission flow
 
 `handleSubmission(body, deps)` in `_intake.js`. Every dependency is injected —
 not for tidiness, but because a fresh clone has no `node_modules`, so anything
@@ -1737,7 +1702,7 @@ the parking. It passed against a fault that logged the entire submission as
 JSON. It now poisons only free-text fields and asserts the poisoned submission
 still returns 200 before relying on it.
 
-### Rate limiting (added 28 Jul 2026)
+### Rate limiting
 
 `netlify/functions/_ratelimit.js`. **Twenty submissions per address per hour**,
 counted in a blob under `ratelimit/<address>`.
@@ -1761,7 +1726,7 @@ and far short of anything useful to an abuser.
 - A window stamped in the **future** is treated as stale. Clock skew between
   instances must not lock somebody out for longer than the window.
 
-### Signup attempts are rate limited too (added 3 Aug 2026)
+### Signup attempts are rate limited too
 
 `SIGNUP_RATE_OPTS` / `checkSignupRate()` / `tooManyResponse()` in
 `_ratelimit.js`. **Ten attempts per address per 15 minutes, in ONE
@@ -1809,7 +1774,7 @@ one.** The first rollover test did exactly that and missed a fault that pushed
 the window start forward on every write. The check that catches it spreads the
 hits out and asserts the window still starts at the first.
 
-### Validation (added 28 Jul 2026)
+### Validation
 
 `validateSubmission(form, clean)` in `_intake.js`. **No new rules** — every one
 is already applied in the browser. What is new is that the browser was the ONLY
@@ -1851,7 +1816,7 @@ enforced at its own number, checked across all fifteen.
 caught, correctly. The real mistake is adding a column *and* leaving the range
 behind; the fault had to do both before it meant anything.
 
-## Age groups, server side (added 28 Jul 2026)
+## Age groups, server side
 
 `netlify/functions/_agegroups.js` carries the fifteen age groups — id, name,
 `ages` at the UAERF cut-off, format, `squad` cap. It is a **second copy** of
@@ -1875,7 +1840,7 @@ server-side.
   drift there silently detaches a registration from the day it plays.
   `test-agegroups.js` asserts that too.
 
-### Age validation on the roster (added 28 Jul 2026 — sub-project 2)
+### Age validation on the roster (sub-project 2)
 
 **The team registration form never checked a player's date of birth against
 the age group they were entered into.** All the age logic lived on the
@@ -1933,7 +1898,7 @@ unknown-group fallback (18) — so a lookup made case-insensitive returned the s
 answer either way and the check passed on the fault. It uses U16G (12) now. Only
 injecting the fault found it.
 
-### The wide (two-year) girls' play-up allowance (added 28 Jul 2026)
+### The wide (two-year) girls' play-up allowance
 
 **Real registration found a real gap.** A parent tried to register a genuine
 12-year-old girl (Mike Yohotu, DOB 1 Sep 2013) for U14G QR (age 13) and was
@@ -1974,7 +1939,7 @@ is not something a team email can attribute to any one parent's consent.
 `tests/test-email.js` is the first test file to actually render these
 templates rather than mocking `sendConfirmation()` out whole.
 
-## The Teams/Players tables are grouped by club and age group (added 28 Jul 2026)
+## The Teams/Players tables are grouped by club and age group
 
 **Jay asked whether filtering `/organizer`'s Teams or Players tab by one age
 group groups the results per club, and whether filtering by one club groups
@@ -2090,7 +2055,7 @@ was allowed to play up) is a separate, materially larger piece of work
 (reusing/duplicating that age-check logic here) that was intentionally left
 for a later decision, not built silently alongside this.
 
-## Documents shared with managers (added 7 Aug 2026)
+## Documents shared with managers
 
 **An organiser uploads a PDF; the fifteen age-group managers see it on their
 own dashboard.** Spec: `claude/specs/spec-documents.md`. Replaces a WhatsApp
@@ -2180,7 +2145,7 @@ which is what they are for.
 
 ---
 
-## Venue — pitches and days (added 26 Jul 2026)
+## Venue — pitches and days
 
 **Which day an age group plays is derived from where it has pitches.** It is not
 a separate list, and it must never become one again.
@@ -2213,7 +2178,7 @@ Read off `Pitch maps_Final.pdf` (Sat 25 / Sun 26 Oct 2025), confirmed by Jay on
   homepage PITCHES stat comes from the layout" below). Saturday runs 18
   surfaces, Sunday 10.
 
-### Main pitches and splits (added 27 Jul 2026)
+### Main pitches and splits
 
 Zayed Sports City has **fifteen main pitches** and that list does not change:
 
@@ -2318,7 +2283,7 @@ and U18B/U18G on Sunday — both the opposite of the truth, on the public site,
 with registration open.** The array is gone. If you find yourself typing a list
 of age groups next to a day, stop.
 
-### Editing it — the Venue & days tab (added 26 Jul 2026)
+### Editing it — the Venue & days tab
 
 `/organizer` has a fourth tab beside Teams / Players / Accounts. **Organisers
 only**: which day a group plays and which pitches it owns affect every other age
@@ -2379,7 +2344,7 @@ Managers are refused server-side with a 403 that explains why.
   was eighteen identical-looking boxes. Only pitches **in use that day** are
   offered — the rest are on "Not used" in the day card above and have no surfaces.
 
-### A pool is a pitch's day (added 26 Jul 2026)
+### A pool is a pitch's day
 
 A pool is already a run of matches `SLOT_MINS` apart, which is what one pitch does
 for a stretch of the day. So the Fixture Editor sets the pitch and the first
@@ -2436,7 +2401,7 @@ since the public section has its own loop also named `pool` — and asserts the 
 card objects carry them. Proven against four injected faults, including a renamed
 binding.
 
-### The whole-weekend clash check (added 26 Jul 2026)
+### The whole-weekend clash check
 
 `weekendClashes(drawsByAge, ageNames)` in `scores-data.js` — **pure and
 synchronous** on purpose: no fetching, no session, no clock, so it can be tested
@@ -2490,7 +2455,7 @@ of repeating the three-shape session test. There are three session shapes and th
 file already records that missing one silently hid the Publish button; a second copy
 was one more place for that to happen again.
 
-### The homepage PITCHES stat comes from the layout (added 26 Jul 2026)
+### The homepage PITCHES stat comes from the layout
 
 The headline stat used to be a literal, `Math.round(16 * sp)`, against a real
 Saturday count of 18. Wrong in the one place a club is most likely to read it, and
@@ -2512,7 +2477,7 @@ change the fallback with it.
 alone. A, B, C and D are the real block letters at Zayed Sports City (A1x, B1x,
 C4/C5, D1–D5), so that line is wayfinding, not a count.
 
-### Dialogs in the Venue & days panel (added 26 Jul 2026)
+### Dialogs in the Venue & days panel
 
 `Organizer.dc.html` had three `window.confirm()` calls. It now has the same
 `confirmModal(message, onConfirm, opts)` the Scores page uses — confirm-only, no
@@ -2525,7 +2490,7 @@ than `OK`, and nothing reaches the server until the dialog is answered — which
 `doResetVenue()` is now a pair, the handler that asks and `reallyResetVenue()` that
 does it.
 
-### Where each group plays — two views (added 27 Jul 2026)
+### Where each group plays — two views
 
 At the top of the Venue & days tab, with a toggle. Both are built from the
 **working copy**, so both redraw as you tick boxes further down the tab, before
@@ -2566,7 +2531,7 @@ behaviour directly so nobody re-learns it.
 - **Dragging is locked by default.** The screen is mostly read; blocks sliding
   under a mis-click would be worse than one deliberate unlock.
 
-#### Making the chips readable (added 27 Jul 2026)
+#### Making the chips readable
 
 Jay: *"the labels over the map are a little difficult to read."* The cause was
 not the font size. The chips were the age-group tint at **88% opacity with white
@@ -2649,7 +2614,7 @@ tooltip, which also lists every surface name on the block.
 Organiser-only, deliberately. It shows draft state and unallocated groups, which
 are not things the public should see.
 
-### The registration window (added 27 Jul 2026)
+### The registration window
 
 **When the entry forms are open is a setting, not a deploy.** It used to be
 `registrationOpen`, a hardcoded editor prop on the homepage defaulting to
@@ -2847,115 +2812,5 @@ Confirmation emails go from `registrations@adhjrt.com` via Microsoft Graph
   venue layout's pitches for that age group.
 
 
----
-
-## Design refresh (merged to `main` 24 Jul 2026 — live)
-
-A visual pass, now live. To preview a branch before merging, **open a PR** — that
-triggers a free, password-protected Netlify **deploy-preview** at
-`deploy-preview-<N>--adhquins-jrt.netlify.app` (only merging to
-`main` spends the 15 credits). **There is also a permanent branch URL —
-`https://dev--adhquins-jrt.netlify.app` — which always serves the
-latest `dev` build and never changes.** Use that in preference to a PR
-preview; see "Three kinds of preview URL" below.
-
-⚠️ **THIS PARAGRAPH USED TO END "the whole site is also behind a site-wide
-Netlify password, so previews prompt for it too." THAT IS NO LONGER TRUE and
-was corrected on 5 Aug 2026.** The password was verified OFF on the live
-project on 3 Aug (`projectAccessControls.requiresPassword: false`) and again on
-5 Aug, and the correction reached `state-of-play.md` at the time but not this
-file — so the claim went on giving instructions here for two more days, in two
-separate places (see §6 Traps, corrected in the same pass). **adhjrt.com and
-every preview URL are publicly reachable.** When you reason about whether
-something is safe, check what is actually protecting it; this gate is not
-there.
-
-- **Logo** is now transparent `assets/crest.png` (white background + the white
-  badge circles behind the nav/about/organiser crests removed), from a high-def
-  original.
-- **Format section** rebuilt as two day-cards ("Day 01/02" watermark, date
-  pills, MINI & MIDI / YOUTH, age chips still driven by `groupsSaturday/Sunday`).
-- **About-section crest is a static badge, beside the heading.** It is a plain
-  96px `<img>` of `assets/crest.png` sitting to the LEFT of the eyebrow and the
-  `<h2>` together, inside `.m-crestrow`, so "About the festival" and "Rugby the
-  way it should be" share one left edge. On a phone the row stacks and the crest
-  goes above.
-
-  It has moved twice, and the reasons are worth keeping:
-  1. It was pinned over the top-left corner of the photo box by `.cstage` /
-     `.crest-anim`. Once the photos underneath started rotating it read as a
-     sticker stuck on a moving thing.
-  2. It was then beside the `<h2>` only, which pushed the heading right and left
-     it out of line with the eyebrow above it.
-
-  ⚠️ **It cannot hang in the left margin.** Putting it left of the heading while
-  keeping the heading at the column's left edge needs ~116px outside the content
-  column. The section caps at 1200px with 32px padding, so below roughly 1430px
-  viewport there is no margin to hang in and it would be clipped. That is why the
-  eyebrow moved inside the row instead.
-
-  ⚠️⚠️ **THE TWO PARAGRAPHS BELOW ARE WRONG. THE BAT IS LIVE ON PRODUCTION AND
-  THERE IS NO `.m-crestrow` (verified 7 Aug 2026).** Read this correction, not
-  them.
-
-  Measured on adhjrt.com, comments stripped so only live code counted:
-  `@keyframes batfly`, `@keyframes batflap`, `@keyframes batmorph`,
-  `.cstage`, `<div class="cstage">` and the `.play` boot script are **all
-  present and serving**. `assets/crest-shield.png` is the About badge and
-  answers 200. `m-crestrow` appears **zero** times.
-
-  So the "mothballed in one commit, pull it from git history" instruction was
-  never true, or was reverted and nobody recorded it. **Acting on it would do
-  real damage**: a session told the bat is gone would "restore" it and put
-  **two bats on screen**, or swap the badge to `crest.png` — which already has
-  a bat printed on it — on top of a bat that is already flying.
-
-  ⚠️ **The shield/bat pairing on production is CORRECT as it stands**:
-  `crest-shield.png` is the crest with a bat-shaped hole, and the animated bat
-  fills that hole. Shield + bat = a complete crest. Do not "fix" either half
-  on its own.
-
-  (Kept below, struck through in meaning, because the REASONING about the
-  animation is still accurate and useful — only its claim about current state
-  is false.)
-
-  ⚠️ **The bat animation was described as MOTHBALLED (5 Aug 2026)** — Jay was
-  said to have parked it when the rotating photo board went into the same
-  section. **It is not parked; it runs.** What it used to
-  do: at rest the flat logo bat; on scroll-into-view it cross-faded to a shaded
-  realistic version (`crest-bat-real.png`) and flew a two-direction loop across
-  the photo, then landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on
-  `.cf` / `.cfl` / `.breal`, plus a small head-script that added `.play` via
-  IntersectionObserver; a local `.cstage` clip stopped the flight ever adding a
-  page scrollbar.
-
-  **`assets/crest-bat.png` and `assets/crest-bat-real.png` are still in the
-  repo** and must stay — the whole point of mothballing is that this comes back
-  cheaply. The CSS, the markup and the script all came out in one commit, each
-  with a comment where it was; pull them from there.
-
-  ⚠️ **Restoring it also means swapping the badge back to `crest-shield.png`.**
-  `crest.png` already has a bat printed on it, so leaving both would put two bats
-  on screen. See the crest-shield warning earlier in this file — an earlier
-  version of this very note claimed the shield "reads as a complete club crest on
-  its own", which is FALSE and caused a live bug; it is the crest with a
-  bat-shaped hole in it.
-
-  If it does come back: the script used the **find-it-once boot pattern**, which
-  is precisely the bug the photo board hit on the same day — worked from a local
-  file, did nothing deployed, because the component engine re-renders the body
-  after first paint. Use the re-scanning boot the board now has, not the old one.
-- **Results follows Fixtures.** Homepage passes `age="{{ fxSelectedId }}"` to the
-  embedded `<dc-import name="Scores & Standings">`; the scores component syncs its
-  public `selectedAgeId` in `componentDidUpdate` (public view + groups that have
-  standings only; never overrides a manual pick).
-- **Single-pool Fixtures width fix.** `fixturePoolsGridStyle` caps a lone pool at
-  `minmax(0,560px)` and centres it, instead of one `1fr` column stretching the
-  full section; two-or-more pools unchanged.
-- **Organisers photo is now `assets/organisers.jpg`**, referenced by filename —
-  it used to be a ~168 KB inline base64 `data:` blob that bloated
-  `Quins JRT.dc.html` to ~300 KB. Extracted, the homepage is ~133 KB.
-  **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/`
-  files. It keeps the page light and the `.dc.html` fast to load.
 ---
 

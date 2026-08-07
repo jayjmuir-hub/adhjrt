@@ -2313,3 +2313,119 @@ the framework-level cause.
 in the browser's interaction with the deployed site, not in a testable unit
 of source, and none of the three affect what a parent/coach actually sees
 (the published/live copies were correct throughout).
+
+---
+
+# The design refresh — moved out of `RESTORE.md`, 7 Aug 2026
+
+Merged to `main` 24 Jul 2026 and live. It sat in the durable file describing a
+change that had already landed, which is a changelog's job.
+
+A visual pass, now live. To preview a branch before merging, **open a PR** — that
+triggers a free, password-protected Netlify **deploy-preview** at
+`deploy-preview-<N>--adhquins-jrt.netlify.app` (only merging to
+`main` spends the 15 credits). **There is also a permanent branch URL —
+`https://dev--adhquins-jrt.netlify.app` — which always serves the
+latest `dev` build and never changes.** Use that in preference to a PR
+preview; see "Three kinds of preview URL" below.
+
+⚠️ **THIS PARAGRAPH USED TO END "the whole site is also behind a site-wide
+Netlify password, so previews prompt for it too." THAT IS NO LONGER TRUE and
+was corrected on 5 Aug 2026.** The password was verified OFF on the live
+project on 3 Aug (`projectAccessControls.requiresPassword: false`) and again on
+5 Aug, and the correction reached `state-of-play.md` at the time but not this
+file — so the claim went on giving instructions here for two more days, in two
+separate places (see §6 Traps, corrected in the same pass). **adhjrt.com and
+every preview URL are publicly reachable.** When you reason about whether
+something is safe, check what is actually protecting it; this gate is not
+there.
+
+- **Logo** is now transparent `assets/crest.png` (white background + the white
+  badge circles behind the nav/about/organiser crests removed), from a high-def
+  original.
+- **Format section** rebuilt as two day-cards ("Day 01/02" watermark, date
+  pills, MINI & MIDI / YOUTH, age chips still driven by `groupsSaturday/Sunday`).
+- **About-section crest is a static badge, beside the heading.** It is a plain
+  96px `<img>` of `assets/crest.png` sitting to the LEFT of the eyebrow and the
+  `<h2>` together, inside `.m-crestrow`, so "About the festival" and "Rugby the
+  way it should be" share one left edge. On a phone the row stacks and the crest
+  goes above.
+
+  It has moved twice, and the reasons are worth keeping:
+  1. It was pinned over the top-left corner of the photo box by `.cstage` /
+     `.crest-anim`. Once the photos underneath started rotating it read as a
+     sticker stuck on a moving thing.
+  2. It was then beside the `<h2>` only, which pushed the heading right and left
+     it out of line with the eyebrow above it.
+
+  ⚠️ **It cannot hang in the left margin.** Putting it left of the heading while
+  keeping the heading at the column's left edge needs ~116px outside the content
+  column. The section caps at 1200px with 32px padding, so below roughly 1430px
+  viewport there is no margin to hang in and it would be clipped. That is why the
+  eyebrow moved inside the row instead.
+
+  ⚠️⚠️ **THE TWO PARAGRAPHS BELOW ARE WRONG. THE BAT IS LIVE ON PRODUCTION AND
+  THERE IS NO `.m-crestrow` (verified 7 Aug 2026).** Read this correction, not
+  them.
+
+  Measured on adhjrt.com, comments stripped so only live code counted:
+  `@keyframes batfly`, `@keyframes batflap`, `@keyframes batmorph`,
+  `.cstage`, `<div class="cstage">` and the `.play` boot script are **all
+  present and serving**. `assets/crest-shield.png` is the About badge and
+  answers 200. `m-crestrow` appears **zero** times.
+
+  So the "mothballed in one commit, pull it from git history" instruction was
+  never true, or was reverted and nobody recorded it. **Acting on it would do
+  real damage**: a session told the bat is gone would "restore" it and put
+  **two bats on screen**, or swap the badge to `crest.png` — which already has
+  a bat printed on it — on top of a bat that is already flying.
+
+  ⚠️ **The shield/bat pairing on production is CORRECT as it stands**:
+  `crest-shield.png` is the crest with a bat-shaped hole, and the animated bat
+  fills that hole. Shield + bat = a complete crest. Do not "fix" either half
+  on its own.
+
+  (Kept below, struck through in meaning, because the REASONING about the
+  animation is still accurate and useful — only its claim about current state
+  is false.)
+
+  ⚠️ **The bat animation was described as MOTHBALLED (5 Aug 2026)** — Jay was
+  said to have parked it when the rotating photo board went into the same
+  section. **It is not parked; it runs.** What it used to
+  do: at rest the flat logo bat; on scroll-into-view it cross-faded to a shaded
+  realistic version (`crest-bat-real.png`) and flew a two-direction loop across
+  the photo, then landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on
+  `.cf` / `.cfl` / `.breal`, plus a small head-script that added `.play` via
+  IntersectionObserver; a local `.cstage` clip stopped the flight ever adding a
+  page scrollbar.
+
+  **`assets/crest-bat.png` and `assets/crest-bat-real.png` are still in the
+  repo** and must stay — the whole point of mothballing is that this comes back
+  cheaply. The CSS, the markup and the script all came out in one commit, each
+  with a comment where it was; pull them from there.
+
+  ⚠️ **Restoring it also means swapping the badge back to `crest-shield.png`.**
+  `crest.png` already has a bat printed on it, so leaving both would put two bats
+  on screen. See the crest-shield warning earlier in this file — an earlier
+  version of this very note claimed the shield "reads as a complete club crest on
+  its own", which is FALSE and caused a live bug; it is the crest with a
+  bat-shaped hole in it.
+
+  If it does come back: the script used the **find-it-once boot pattern**, which
+  is precisely the bug the photo board hit on the same day — worked from a local
+  file, did nothing deployed, because the component engine re-renders the body
+  after first paint. Use the re-scanning boot the board now has, not the old one.
+- **Results follows Fixtures.** Homepage passes `age="{{ fxSelectedId }}"` to the
+  embedded `<dc-import name="Scores & Standings">`; the scores component syncs its
+  public `selectedAgeId` in `componentDidUpdate` (public view + groups that have
+  standings only; never overrides a manual pick).
+- **Single-pool Fixtures width fix.** `fixturePoolsGridStyle` caps a lone pool at
+  `minmax(0,560px)` and centres it, instead of one `1fr` column stretching the
+  full section; two-or-more pools unchanged.
+- **Organisers photo is now `assets/organisers.jpg`**, referenced by filename —
+  it used to be a ~168 KB inline base64 `data:` blob that bloated
+  `Quins JRT.dc.html` to ~300 KB. Extracted, the homepage is ~133 KB.
+  **Do NOT re-inline images into any `.dc.html`** — keep them as `assets/`
+  files. It keeps the page light and the `.dc.html` fast to load.
+---
+

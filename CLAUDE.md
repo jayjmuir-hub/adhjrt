@@ -95,12 +95,25 @@ rules for the codebase are these.
 
 ## What is specific to THIS project
 
-**A production deploy costs 15 credits**, whatever its size. `[skip ci]` on a
-docs-only commit costs nothing — verify by the deploy id not moving.
-⚠️ **Branch deploys and deploy previews are FREE — 0 credits.** Netlify's
-credit plans do not meter build minutes. This file claimed the opposite for
-months and sent a session looking at branch builds for a credit overspend,
-which is the one place it could never be.
+**Deploy cost** — every production deploy costs 15 Netlify credits
+(3,000/month Pro), whatever its size. Batch changes into one commit; iterate
+on a branch/preview (**genuinely free — 0 credits, not "cheap"; see the credit
+table in "Three kinds of preview URL"**), merge to `main` once.
+
+`[skip ci]` on a docs-only commit costs nothing — verify by the deploy id not
+moving. ⚠️ **Branch deploys and deploy previews are FREE — 0 credits.**
+Netlify's credit plans do not meter build minutes. This file claimed the
+opposite for months and sent a session looking at branch builds for a credit
+overspend, which is the one place it could never be.
+
+⚠️ **THE TWO COPIES OF THE 15 ARE DELIBERATE AND ARE ASSERTED TO AGREE.**
+`tests/test-doc-claims.js` reads the number out of the credit table AND out of
+the paragraph above, and requires them to be the same — **derived, not pinned**,
+so they cannot drift apart. Do not "tidy" either copy away.
+⚠️ **This anchor rotted once already**, on 7 Aug 2026, when the docs
+restructure moved the second copy out of this file into `claude/decisions/`.
+Four checks went red and the suite shipped broken. **If you move this
+paragraph, repoint the test in the same commit.**
 
 **The repo root IS the deployed site.** There is no build step — `netlify.toml`
 rewrites URLs straight onto the `.dc.html` source files. Anything committed to
@@ -217,6 +230,80 @@ git push origin dev
   or `write_file`, or the `mcp__remote-devices__Filesystem__*` tools. Prefer
   `edit_block` over retyping a whole file.
 - Verify with `git log`/`git ls-remote`, not `raw.githubusercontent.com`.
+
+### 1b. Getting BYTES into the repo — three ways, all proven
+
+⚠️ **THIS SECTION IS THE ONLY COPY.** Until 7 Aug 2026 these rules existed in
+three files — here, `claude/state-of-play.md`, and
+`claude/writing-to-github-from-claude.md` — all partial, none identical. The
+other two are gone. **Do not start a fourth.**
+
+**Bytes do not survive being re-emitted through the model — not even base64.**
+Four routes were tried and all four failed the same way: *something transcribed
+the content.* The routes that work are the ones where nothing reads the bytes
+and writes them again.
+
+| Size of change | Method |
+|---|---|
+| **Small, surgical** | `Filesystem__edit_file` straight against the PC's clone. ⚠️ Atomic across its whole `edits` array — one bad `oldText` and NOTHING is applied |
+| **Large, or binary** | `SendUserFile` → `device_commit_files`. Content never passes through the model, so any size and any file type |
+| **A branch, or several commits** | **`git bundle`** — the default for anything beyond a file or two |
+
+**The bundle method, start to finish:**
+
+```
+# in the sandbox
+git bundle create x.bundle origin/main..main
+git bundle list-heads x.bundle          # ⚠️ check the ref NAME before writing the refspec
+
+# ship it: SendUserFile -> device_commit_files into the scratch folder
+
+# on the PC
+git bundle verify <path>\x.bundle
+git fetch <path>\x.bundle main:main
+git rev-parse 'main^{tree}'             # must equal the sandbox's
+```
+
+⚠️ **The tree hash is the proof, and it is cheap.** `git bundle verify` says
+the bundle is intact; the **tree hash** says the checkout is the one that was
+built and tested. A tree hash covers every byte of every file — same parent
+plus same tree means identical content, with no sampling and no trust. **Take
+both.**
+
+⚠️ **A bundle made with `origin/main..HEAD` names its ref `HEAD`, not the
+branch.** Run `git bundle list-heads` first.
+⚠️ **`git fetch <bundle> dev:dev` is REFUSED while `dev` is checked out** —
+*fatal: refusing to fetch into branch 'refs/heads/dev'*. Fetch without a
+destination refspec and `git merge --ff-only FETCH_HEAD` instead.
+⚠️ **Put the scratch folder OUTSIDE the repo** — a SIBLING of the clone, never
+a child, because the repo root is the served site. `C:\Users\jayjm\GitHub\_scratch`
+is the one used; it needs a folder grant on `C:\Users\jayjm\GitHub`, not on the
+clone. **Delete its contents afterwards.**
+⚠️ **Prefer the bundle even for three text files.** A file written directly
+into the clone lands LF where the checkout is CRLF, and *"line endings broke a
+check that was right"* is already on the list in `claude/lessons.md`.
+
+**Git in the sandbox can READ `origin` but never write to it** — a push returns
+403, *"not in this session's authorized repository set."* Every push happens on
+a PC.
+
+**Routes that do NOT work — do not retry them:**
+
+| Route | Why not |
+|---|---|
+| Account-level GitHub connector | OAuth, **403s on every write** to a public repo. Reading only, and it fails after all the work is done |
+| Local GitHub MCP with a token | Worked, but parked a **live write token in a plain-text config file**. Removed deliberately — see §2 below |
+| `raw.githubusercontent.com` | **Serves stale commits with no signal.** You reason confidently about code that is gone |
+| Base64-chunked transfer | **Corrupted on four attempts out of four** — about one character per 10 KB |
+
+**Why the other routes failed, and it is one reason.** All four failed the
+same way: **something transcribed the content.** The connector re-encoded it,
+base64 flipped characters in it, find-and-replace re-derived it from anchors
+that did not quite match. The routes that work are the ones where **nothing
+reads the bytes and writes them again.**
+
+⚠️ **When a transfer keeps corrupting, stop improving the error correction and
+find a path that needs none.**
 
 ### 2. The removed GitHub MCP server — do not re-add or use it
 
@@ -428,6 +515,175 @@ against a deliberately injected fault before it is trusted. It has caught two
 tests that passed with the real code deleted, a regex matching a comment instead
 of the code, a section check that scanned too wide a block, and three assertions
 that were simply wrong about what the code should do.
+
+### The two machines
+
+`jay-pc`: `C:\Users\jayjm\GitHub\adhjrt`. `cafnet`: `C:\Users\Jay\GitHub\adhjrt`
+— username `Jay`, not `jayjm`.
+
+- **Check every clone on every machine, every session.** cafnet was 38 commits
+  behind on 3 Aug and nothing said so. A clone that is behind looks exactly like
+  a clone that is fine. ⚠️ **cafnet has STILL not been touched — assume it is
+  behind until fetched.** It has not been checked since 3 Aug.
+- ⚠️ **jay-pc's local branches were pruned 6 Aug.** Six fully-merged `fix/*`
+  branches were deleted with `git branch -d` (which refuses anything unmerged).
+  **`club-manager-page` was deliberately KEPT as a local branch** even though it
+  was deleted from `origin` — that is the only copy on disk of thirteen
+  finished, unmerged commits, plus a full-history bundle Jay was sent. Do not
+  tidy it away. Confirmed still present 6 Aug.
+- jay-pc's checked-out branch is **`dev`**; `Compare` exists locally and is at
+  `6c429b9`.
+- The GitHub MCP token on cafnet is dead and stays dead (above).
+- cafnet's Filesystem MCP allows `C:\`, so its clone is readable and writable
+  without a connected folder. `device_commit_files` still needs a folder grant,
+  per session.
+- ⚠️ **A folder grant is per session AND per folder, and the dialog TIMES OUT.**
+  Granting the repo folder is not enough to write a bundle, because a scratch
+  folder must be a SIBLING of the clone, not a child — so `C:\Users\jayjm\GitHub`
+  is the grant to ask for. The dialog timed out once on 6 Aug and simply had to
+  be asked for again; there is no way round it and inventing one is worse.
+- cafnet does not have `adhjrt-sim` and does not need it.
+
+
+### `Compare` IS THE STANDING PREVIEW BRANCH — KEPT ON PURPOSE
+
+Jay, 6 Aug: *"we will keep compare to use for edits, its fine."* It is not
+clutter to be cleaned up; it is the workflow. Build on `Compare`, look at it at
+`compare--adhquins-jrt.netlify.app` for **nothing**, then merge to `main` for
+one 15-credit deploy when it is right.
+
+It stays in the Netlify branch-deploy allow-list (`dev, Compare`) and is
+password-gated with every other non-production deploy, so it is not the
+exposure that `club-manager-page` was.
+
+⚠️ **ONE RULE MAKES IT SAFE, AND IGNORING IT IS HOW `club-manager-page`
+HAPPENED: `Compare` MUST NEVER BE LEFT BEHIND `main`.** A long-lived branch
+that lags is a branch somebody eventually looks at thinking it is current, or
+merges without noticing what it is missing — 68 commits behind, in that case,
+which is how a rate limit ended up bypassable.
+
+**So after every land, fast-forward it in the same breath:**
+
+    git checkout Compare && git merge --ff-only main && git push origin Compare
+
+and before starting new work on it:
+
+    git fetch origin && git rev-list --count origin/Compare..origin/main
+
+**must be 0.** If it is not, fast-forward before writing a line — a feature
+branch based on the wrong thing is already on this page's list of mistakes.
+
+⚠️ **AND `[skip ci]` NEVER GOES ON A COMMIT MADE ON `Compare`.** It survives
+the fast-forward into `main` and silently suppresses the production build for
+everything behind it — which happened on 6 Aug and left `main` merged but
+undeployed. `[skip ci]` is only for a docs commit pushed straight to `main` on
+its own.
+
+**State now: `main`, `dev` and `Compare` are ALL `5f55217` — 0 ahead, 0
+behind.** The three commits went to production together on 6 Aug, and `Compare`
+was fast-forwarded in the same breath, which is the rule that keeps it safe.
+⚠️ **Batching worked exactly as intended: three commits, two of them touching
+served files, ONE 15-credit deploy instead of three.**
+
+### ⚠️ THE STOP HOOK WAS EDITED, AND THE EDIT DOES NOT SURVIVE THIS SESSION
+
+The Stop hook fired **on every turn** with *"There are uncommitted changes in
+the repository. Please commit and push these changes to the remote branch."*
+Its two working-tree gates (uncommitted changes, untracked files) were removed
+on 6 Aug; the gate on **commits that are on no remote** was kept, because that
+one describes real unlanded work. Proven both ways against injected state: dirty
+tree + untracked file → exit 0; a real local-only commit → exit 2.
+
+**The kept gate fired correctly later the same day** — one unpushed commit on
+`Compare` in the sandbox, which was exactly true. It was answered by landing the
+commit properly, not by pushing to quieten it. ⚠️ **The sandbox cannot push
+anyway** (403), so a hook asking for a push there is asking for something only
+jay-pc can do.
+
+**Why the other two were wrong here:** on this project a dirty tree is the normal
+mid-task state — work is written in the cloud container, committed there, carried
+to jay-pc as a `git bundle` and pushed from the PC. A hook that is always red is
+a hook nobody reads, and this one was asking for a push on a repo where a push
+to `main` costs 15 credits and needs Jay's explicit yes.
+
+⚠️ **The file is `~/.claude/stop-hook-git-check.sh` IN THE EPHEMERAL CLOUD
+CONTAINER**, registered from `~/.claude/launcher-settings.json`. Both are
+root-owned and both are re-provisioned by Anthropic's launcher at the start of
+every session, and the container is reclaimed when the session ends. **It is not
+on jay-pc** — there is no such file under `C:\Users\jayjm\.claude\`. A
+project-level `.claude/settings.json` cannot help either: hook sources are
+additive, so a project cannot switch off a user-level hook.
+
+**So if the nagging is back, that is why.** Reapplying the same edit takes about
+a minute. The durable fix is at the provisioning end, outside this project.
+**Never push to silence it.** Detail in `claude/changelog-2026-08-06.md`.
+
+
+### 5b. PowerShell and bridge traps — all hit for real
+
+⚠️ **These came from `claude/writing-to-github-from-claude.md` when it was
+consolidated on 7 Aug 2026.** The line-level loss check caught them being
+dropped; the bold-span version had already reported all-clear.
+
+- ⚠️ **The bridge STRIPS `$` from a PowerShell `-Command` string.** `$var`,
+  `$env:`, `$_` and `$p.Id` all vanish and the line dies on a parse error like
+  *"An empty pipe element is not allowed."* **Write a `.ps1` and run it with
+  `-ExecutionPolicy Bypass`**, or use literal paths and
+  `Select-Object -ExpandProperty`. Hit again on 7 Aug while reading a test log.
+- ⚠️ **`git push` / `git checkout` / `git fetch` write to stderr on SUCCESS**,
+  and the bridge renders that as a red `NativeCommandError`. **Read the
+  payload, not the colour** — `abc123..def456  main -> main` means it worked.
+  Confirm with `git rev-list --left-right --count origin/<branch>...HEAD`
+  returning `0	0`.
+- ⚠️ **`git commit -m` with a multi-line or apostrophe'd message silently does
+  NOT commit** — the message is shredded into pathspecs — and the push then
+  creates an *empty branch*. Use `commit -F <file>`. ⚠️ `git commit -F` does
+  **not** stage anything.
+- ⚠️ **`Write-Output` inside a function becomes part of its return value.**
+  This once wrote progress messages into line 1 of an HTML file, ahead of
+  `<!DOCTYPE html>`. Caught only because the diffstat was 14/3 instead of 13/2.
+  **Use `Write-Host`.**
+- ⚠️ **`[IO.File]::` ignores `Set-Location`** — it uses the *process* working
+  directory, so relative paths land in `C:\Windows\System32`. Pass absolute paths.
+- ⚠️ **`git diff | Out-String` mangles UTF-8** — em dashes become mojibake and
+  byte comparisons fail for no reason. Redirect via `cmd /c "... > file"`.
+- ⚠️ **A `.ps1` shipped through the bridge must be PURE ASCII.** PowerShell 5.1
+  reads an un-BOM'd file as ANSI and an em dash breaks parsing.
+  `grep -n "[^ -~]"` before sending.
+- ⚠️ **`$ErrorActionPreference = 'Stop'` makes a native command's first stderr
+  line fatal.** Land scripts run under `'Continue'` and gate on `$LASTEXITCODE`.
+- ⚠️ **An MCP `start_process` call caps out around 60s but the process keeps
+  running.** The full suite takes about seven minutes on jay-pc — use
+  `Start-Process` with `-RedirectStandardOutput` and poll the log.
+- **PowerShell 5.1 has no `&&`** (use `;`), no heredoc, and
+  `-Encoding utf8NoBOM` throws. `-like '??*'` — `?` is a single-character
+  **wildcard**, not a literal; it once inflated a file count.
+- **`git checkout -- <file>` reverts to the last COMMIT**, not to "before my
+  last edit". It has wiped uncommitted work. ⚠️ **Commit or stash BEFORE
+  switching branches**, and a reflexive `git reset --hard origin/x` after a
+  dirty checkout erases what the checkout carried across.
+- **The bridge dies mid-session** with a ~4-minute silent timeout and sometimes
+  returns; `RefreshMcpTools({"server":"remote-devices"})` re-registers its
+  tools. It also hits transient Cloudflare 502s — retry once.
+  ⚠️ **Two failed retries means stop and tell Jay.**
+- **`git` in the sandbox is read-only but is the RELIABLE reader.** If a branch
+  tip looks wrong:
+  `git fetch origin '+refs/heads/*:refs/remotes/origin/*' --force`, or check
+  `git ls-remote origin`. ⚠️ **PowerShell eats `^{tree}` unless quoted** —
+  `git rev-parse 'dev^{tree}'`; unquoted it reads `^{tree}` as
+  `-encodedCommand` and git fails on a base64 string.
+- Other shell traps: `cmd /c "... && ..."` breaks on parentheses and on the
+  space in `Quins JRT.dc.html` · `findstr` double-`/C:` misparses ·
+  `Select-String -SimpleMatch` treats regex escapes literally · piping through
+  `start_process` truncates · a `grep -c` returning 0 kills an `&&` chain.
+
+**If you must fall back to base64 (no folder granted).** Verify a SHA-256
+**before** applying. Bake per-chunk hashes into the decode script so one run
+names the bad chunk; for multiple files use `tar | gzip | base64`, where one
+hash covers the lot. ⚠️ **A *dropped* character makes every later chunk report
+bad** — splice the correct 100-character window back in (the damaged one will
+be 99, so replacing it restores alignment). **Resending from that point does
+not work.** This is a fallback, not a route: it corrupted four attempts of four.
 
 ### 6. Traps
 

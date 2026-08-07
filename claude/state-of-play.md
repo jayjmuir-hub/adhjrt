@@ -1,7 +1,103 @@
-# ADH JRT — state of play, 6 August 2026
+# ADH JRT — state of play, 7 August 2026
 
-> **If you are picking this up:** read `CLAUDE.md` from a fresh clone first — it
-> is the technical source of truth. Then `git fetch origin`. This page has been
+> **If you are picking this up:** read `CLAUDE.md` from a fresh clone first —
+> it is **the rules**. Then `RESTORE.md` for how the code behaves. Then this
+> page. Then `git fetch origin`.
+
+## ⚠️ `cfcac4f` — THE DOCS MOVED INTO THE REPO AND `CLAUDE.md` WAS SPLIT (7 Aug, LIVE on all three branches)
+
+**Docs-only, `[skip ci]`, deploy id did NOT move — 0 credits.** Verified by
+reading `get-project` before and after: `6a75bf018a29730008db8490` both times.
+
+**What changed.** `CLAUDE.md` was 3,379 lines doing four jobs and pointed at
+**fourteen `claude/*.md` paths that were not in the repo** — they lived only in
+the Claude project, so a bare clone got one file and fourteen dead pointers.
+
+| File | Role |
+|---|---|
+| `CLAUDE.md` (462 lines) | the rules, precedence, git route, verification standards |
+| `RESTORE.md` (2,961) | durable — how the code actually behaves |
+| **this file** | volatile — rots by design |
+| `claude/decisions/` | rulings; first entry is the `/rules` deferral |
+| `claude/{specs,plans,runbooks,archive}/` | history, not instruction |
+
+⚠️ **Precedence is now written down: the code wins, then `RESTORE.md`, then
+this page, then `CLAUDE.md`.** Before this there was no tie-breaker and a
+session arbitrated by whichever file it happened to read last.
+
+⚠️ **THE `/claude/*` 404 RULE IN `netlify.toml` IS UNVERIFIED.** It points at
+`/404.html` (not at itself — the mistake that left the `tests/` rule broken for
+months), but **reading the toml proves nothing.** No deploy has run since the
+commit, so the docs are not in the deployed snapshot and a 404 on
+`adhjrt.com/claude/state-of-play.md` today means "the file is not there", not
+"the rule caught it" — a nonexistent path 404s identically. **On the next
+production deploy, fetch that URL and confirm 404.** The docs and the rule land
+on the same deploy, so they cannot get out of sync — but if the rule is wrong,
+the docs get served.
+
+⚠️ **THE REPO IS PUBLIC AND THE 404 RULE DOES NOT CHANGE THAT.** Every file in
+`claude/` is readable on github.com regardless of what Netlify serves. All 51
+documents were scanned file by file before the commit: **zero secrets** (11
+patterns, control-paired) and **zero children's data** — the rehearsal fixtures
+are verifiably invented. **Eight redactions** were made: one real phone number,
+a third party's name and personal email (4 files), two production account
+usernames, one real name tied to a live sheet row, two Drive backup filenames,
+one unlisted preview domain. ⚠️ **Rule 11 in `CLAUDE.md` now covers this: if
+real data turns up in a doc or a fixture, say so and STOP — do not sanitise it
+quietly.**
+
+**Doc claims corrected, each checked against the code or a live API rather than
+against another document:**
+
+- ⚠️ **`CLAUDE.md` rule 1 forbids `git add -A` and line 3114 handed a session a
+  copy-paste command containing it.** That command published `_commitmsg.txt`
+  to adhjrt.com on 27 Jul. **A rule contradicted by an example in the same file
+  is not a rule.**
+- ⚠️ **THE PASSWORD CLAIM WAS WRONG FOR THE FOURTH TIME.** The bullet written
+  on 7 Aug and flagged *"READ THIS ONE"* said `requiresPassword: true` /
+  `non_production`. Measured the same day: **`false` / `null` — off
+  everywhere.** All three bullets are gone, replaced by one that **refuses to
+  answer** and sends you to the Netlify MCP, plus a dated table of all four
+  recordings. **Do not write this fact down again.**
+- The functions table listed `submission-created.js` (deleted 28 Jul with
+  Netlify Forms) and omitted **14 real functions**.
+- The env-var list omitted `GOOGLE_CLIENT_ID` and `ORGANIZER_INVITE_CODE`.
+  ⚠️ The latter is **deleted in Netlify on purpose** — its absence is what
+  closes organiser self-signup, verified in `organizer-signup.js`. "Fixing" the
+  missing variable re-opens the door.
+- The URL table omitted `/rules`, live and in the sitemap.
+- *"HSBC are the principal partner and the only confirmed sponsor"* — false
+  since 5 Aug, and contradicted by the supporters-grid section **120 lines
+  below it in the same file.**
+- ⚠️ **Dead pointers removed.** `~/GitHub/claude-rules/rules.md` and
+  `~/.claude/CLAUDE.md` were cited as where "the full rules" live. **Neither
+  has ever existed on either PC.** The block called itself "ten lines" while
+  holding six. It holds eleven now and says it is the whole set.
+
+⚠️ **THE LOSS CHECK'S FIRST RUN WAS ITSELF BROKEN, AND THAT IS THE LESSON.** It
+stripped backticks from the search key but not from the files, so four surviving
+claims reported as lost. Re-run with both sides normalised and a control that
+had to be FOUND. Of twelve flagged: four false alarms, four correctly dead, and
+**four genuinely lost** — rescued into
+`claude/decisions/2026-08-07-rules-page-deferred.md`, including *"repoint, never
+delete, the checks that pin the placeholder"*, which would have gone silently.
+**A verification tool needs a control as much as the thing it verifies.**
+
+## ⚠️ The suite was RUN, not quoted — 719/719, 33 clean, 38 files (7 Aug)
+
+`powershell tests/runall.ps1` on jay-pc at `5bb5f1e`: **719/719 faults caught,
+33 suites clean on an undamaged copy, `All green.`, zero `FAILED:` lines, 39
+`--- ` headers** (38 test files + the prover's own).
+
+⚠️ **Three files carried three different numbers and none was right:**
+`tests/README.md` said 630/31, `CLAUDE.md` said 672/33, this page said 653/32.
+All three now carry the measured figure and a note that they disagreed.
+**Nothing asserts a number in prose — trust `runall.ps1`'s own output over any
+sentence, including this one.**
+
+---
+
+> **The older entries below are from 6 August and earlier.** Then `git fetch origin`. This page has been
 > wrong about merge status three times and was **twelve commits stale within a
 > day** the last time somebody trusted it.
 >

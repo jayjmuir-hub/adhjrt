@@ -357,6 +357,13 @@
                   <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
                     <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
                     <sc-if value="{{ row.notHidden }}" hint-placeholder-val="{{ false }}">
+                      <!-- ⚠️ THIS BUTTON WAS MISSING UNTIL 7 AUG 2026 and the
+                           whole path behind it already existed — documents.js
+                           action:'edit' and organizer-data's editDocument,
+                           with NOTHING calling either. Dead published code,
+                           and the only way to re-share a document was delete
+                           and re-upload, which loses the upload date. -->
+                      <button onClick="{{ row.onEditRow }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Change sharing</button>
                       <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete</button>
                     </sc-if>
                     <sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}">
@@ -365,6 +372,35 @@
                     </sc-if>
                   </div>
                 </div>
+
+                <!-- The editor opens INSIDE the row it belongs to, so there is
+                     never any doubt about which document is being changed.
+                     Only one can be open at a time — a second open editor is a
+                     second unsaved change nobody can see.
+                     ⚠️ The FILE is deliberately not editable here: the bytes,
+                     the upload date and the uploader are the record of what
+                     was shared and when. Replacing a file is delete + upload. -->
+                <sc-if value="{{ row.isEditing }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.10)">
+                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
+                    <input value="{{ docEditTitle }}" onInput="{{ onDocEditTitle }}" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+
+                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description</label>
+                    <input value="{{ docEditDesc }}" onInput="{{ onDocEditDesc }}" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+
+                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+                      <sc-for list="{{ docEditTagChips }}" as="echip" hint-placeholder-count="4">
+                        <button onClick="{{ echip.toggle }}" style="{{ echip.style }}">{{ echip.name }}</button>
+                      </sc-for>
+                    </div>
+
+                    <div style="display:flex;gap:8px">
+                      <button onClick="{{ onSaveEditDoc }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save sharing</button>
+                      <button onClick="{{ onCancelEditDoc }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
+                    </div>
+                  </div>
+                </sc-if>
               </div>
             </sc-for>
           </div>
@@ -1567,7 +1603,12 @@ class Component extends DCLogic {
        and "could not load" are different facts and must read differently.
        Third time this codebase has needed that distinction. */
     docs: [], docsLoaded: false, docsUnavailable: false, docsBusy: false, docsMsg: '',
-    docsShowDeleted: false, docEditId: '', docTitle: '', docDesc: '', docTags: ['*'],
+    docsShowDeleted: false, docTitle: '', docDesc: '', docTags: ['*'],
+    /* Editing an EXISTING document — its own fields, deliberately separate
+       from the upload form's. Sharing one set would mean opening the editor
+       silently discarded a half-typed upload, which is the kind of loss
+       nobody attributes to the right cause. */
+    docEditId: '', docEditTitle: '', docEditDesc: '', docEditTags: [],
     docFileName: '', docFileType: '', docFileB64: '', docFileSize: 0,
     docPurgeId: '', docPurgeText: '',
     teams: [], players: [], accounts: [], dataError: '', dataLoading: false,
@@ -1866,10 +1907,32 @@ class Component extends DCLogic {
     this.loadDocuments();
   }
 
-  /* Soft, and deliberately WITHOUT a confirmation -- that is the whole point
-     of soft-delete, and a dialog on a reversible action just trains people to
-     click through dialogs, which is what makes the irreversible one dangerous. */
-  onDeleteDoc(id) { this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers.'); }
+  /* ⚠️ THIS ASKS FIRST, AND THE FIRST VERSION DID NOT. Jay, 7 Aug: "a confirm
+     delete instead of just push delete and its gone".
+
+     The original reasoning was that delete is SOFT, so a dialog on a
+     reversible action only trains people to click through dialogs -- which is
+     what makes the irreversible one dangerous. That argument is still true in
+     general and it was WRONG HERE, because the row VANISHES from the default
+     list the moment it is hidden. Recoverable and "looks recoverable" are not
+     the same thing, and nothing on screen said the document could be brought
+     back. So it read as destructive whether or not it was.
+
+     The dialog therefore does the job the missing affordance should have done:
+     it names the document, says what managers see, and says how to undo it.
+     ⚠️ Do NOT "simplify" this into a bare "Are you sure?" -- the sentence
+     about Show deleted is the entire reason this is not just friction. */
+  onDeleteDoc(id) {
+    const row = (this.state.docs || []).filter((d) => d.id === id)[0];
+    const title = (row && row.title) || 'this document';
+    this.confirmModal(
+      'Hide "' + title + '" from managers?\n\nIt disappears from every manager\u2019s Documents tab straight away. '
+      + 'Nothing is destroyed \u2014 it stays on your shelf under \u201cShow deleted\u201d and you can restore it at any time. '
+      + 'To remove the file itself, use \u201cDelete for good\u201d after hiding it.',
+      () => this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers. You can restore it under Show deleted.'),
+      { okLabel: 'Hide it', wide: true }
+    );
+  }
 
   onRestoreDoc(id) { this.docAction(this.state.api.restoreDocument, id, 'Restored.'); }
 
@@ -1883,6 +1946,75 @@ class Component extends DCLogic {
     const id = this.state.docPurgeId;
     this.setState({ docPurgeId: '', docPurgeText: '' });
     this.docAction(this.state.api.purgeDocument, id, 'Deleted for good.');
+  }
+
+  /* ---- CHANGING WHO A DOCUMENT IS SHARED WITH (7 Aug 2026) -------------
+     Jay: "if i have a document uploaded and selected to share with everyone,
+     should i have a way to then change that sharing".
+
+     Yes — and the whole path already existed server-side (documents.js
+     action:'edit') and in organizer-data.js. NOTHING CALLED IT. That is dead
+     published code on a public repo, and the same shape as the two password
+     features that opened a dialog and silently did nothing. The test asserted
+     the export EXISTED, which proves nothing about whether anyone can reach
+     it — see the reverse sweep in tests/test-documents.js.
+
+     ⚠️ EDITING NEVER TOUCHES THE FILE. Only title, description and tags. The
+     bytes, the upload date and who uploaded it are the record of what was
+     shared and when; a re-share must not quietly rewrite them. Replacing a
+     file is a different job (delete and upload), and versioning is explicitly
+     out of scope for v1. */
+  startEditDoc(id) {
+    const row = (this.state.docs || []).filter((d) => d.id === id)[0];
+    if (!row) return;
+    this.setState({
+      docEditId: id,
+      docEditTitle: row.title || '',
+      docEditDesc: row.description || '',
+      /* A copy, not the row's own array — editing must be abandonable, and
+         mutating the loaded row would leave the list showing the edit after
+         a cancel. */
+      docEditTags: (row.tags || []).slice(),
+      docsMsg: '',
+    });
+  }
+
+  cancelEditDoc() {
+    this.setState({ docEditId: '', docEditTitle: '', docEditDesc: '', docEditTags: [] });
+  }
+
+  /* Same mutually-exclusive rule as the upload form: '*' and specific groups
+     cannot both be chosen, so the ambiguous ['*','u12'] is unbuildable here
+     too. Two copies of this rule would drift; it is small enough that the
+     duplication is cheaper than a shared helper across two shapes of state,
+     but if a third appears, extract it. */
+  toggleEditTag(id) {
+    const cur = this.state.docEditTags || [];
+    if (id === '*') { this.setState({ docEditTags: ['*'] }); return; }
+    const without = cur.filter((t) => t !== '*' && t !== id);
+    this.setState({ docEditTags: cur.indexOf(id) > -1 ? without : without.concat([id]) });
+  }
+
+  async saveEditDoc() {
+    const s = this.state;
+    if (!String(s.docEditTitle || '').trim()) { this.setState({ docsMsg: 'Please give the document a title.' }); return; }
+    /* ⚠️ REFUSED IN THE PAGE AS WELL AS THE SERVER. An empty selection is not
+       "everyone" — it is a document nobody can see, and on the server it is a
+       400. Saying so before the round trip means the organiser is told what
+       is wrong rather than that something went wrong. */
+    if (!(s.docEditTags || []).length) { this.setState({ docsMsg: 'Please choose who this document is for.' }); return; }
+    this.setState({ docsBusy: true, docsMsg: '' });
+    const r = await s.api.editDocument(s.docEditId, {
+      title: s.docEditTitle,
+      description: s.docEditDesc,
+      tags: s.docEditTags,
+    });
+    if (r && r.ok) {
+      this.setState({ docsBusy: false, docsMsg: 'Sharing updated.', docEditId: '', docEditTitle: '', docEditDesc: '', docEditTags: [] });
+      this.loadDocuments();
+    } else {
+      this.setState({ docsBusy: false, docsMsg: (r && r.error) || 'That change did not save.' });
+    }
   }
 
   docVals(s) {
@@ -1936,10 +2068,29 @@ class Component extends DCLogic {
         rowStyle: d.hidden
           ? 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#F6F6F7;opacity:0.72'
           : 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF',
+        isEditing: s.docEditId === d.id,
+        onEditRow: () => this.startEditDoc(d.id),
         onDownload: () => s.api.downloadDocument(d.id),
         onDelete: () => this.onDeleteDoc(d.id),
         onRestore: () => this.onRestoreDoc(d.id),
         onPurge: () => this.askPurgeDoc(d.id),
+      })),
+      /* The edit form. Bound at the top level rather than per row because
+         only ONE document is editable at a time — a second open editor is a
+         second unsaved change nobody can see. */
+      docEditTitle: s.docEditTitle,
+      docEditDesc: s.docEditDesc,
+      onDocEditTitle: (e) => this.setState({ docEditTitle: e.target.value }),
+      onDocEditDesc: (e) => this.setState({ docEditDesc: e.target.value }),
+      onSaveEditDoc: () => this.saveEditDoc(),
+      onCancelEditDoc: () => this.cancelEditDoc(),
+      docEditTagChips: [{ id: '*', name: 'Everyone' }].concat(MANAGER_AGE_GROUPS).map((g) => ({
+        id: g.id,
+        name: g.name,
+        style: (s.docEditTags || []).indexOf(g.id) > -1
+          ? 'padding:5px 10px;border-radius:8px;border:1px solid #E11B22;background:#E11B22;color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
+          : 'padding:5px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
+        toggle: () => this.toggleEditTag(g.id),
       })),
       isPurging: !!s.docPurgeId,
       purgeTitle: purgerow ? purgerow.title : '',

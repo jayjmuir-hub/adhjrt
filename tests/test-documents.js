@@ -408,12 +408,79 @@ section('The manager page lists documents and cannot change them');
     /docsEmpty: s\.docsLoaded && !s\.docsUnavailable/.test(readRepo('Organizer.dc.html')));
 }
 
+section('⚠️ Every tab panel is a SIBLING, not nested inside another tab');
+{
+  /* ⚠️ THIS SHIPPED BROKEN TOO, 7 Aug 2026 — the second render bug in one
+     feature, from the same root cause: the panel was inserted BY LINE NUMBER
+     and landed before the wrong closing tag, so /manager's Documents panel
+     sat INSIDE <sc-if value="{{ isRegistrations }}">.
+
+     It could therefore only render while the Registrations tab was open —
+     which is never true when Documents is selected. Tag balance stayed
+     EQUAL, `node --check` passed, every source check passed, and the tab
+     drew nothing. Jay found it by uploading a document and looking.
+
+     A panel nested inside another panel's conditional is unreachable by
+     construction. That is checkable, so it is checked — on both dashboards,
+     for every tab, by structure rather than by eye. */
+  const PANELS = {
+    'Manager.dc.html': ['isFixtures', 'isResults', 'isTables', 'isDraw',
+                        'isRegistrations', 'isDocuments'],
+    'Organizer.dc.html': ['isTeams', 'isPlayers', 'isAccounts', 'isVenue',
+                          'isRegistration', 'isTournament', 'isDocuments', 'isClubs'],
+  };
+
+  Object.keys(PANELS).forEach((file) => {
+    const src = readRepo(file).replace(/<!--[\s\S]*?-->/g, '');
+    const enclosers = (tab) => {
+      const at = src.indexOf('<sc-if value="{{ ' + tab + ' }}"');
+      if (at < 0) return null;
+      const open = [];
+      const re = /<(sc-if|sc-for)\b[^>]*>|<\/(sc-if|sc-for)>/g;
+      let m;
+      while ((m = re.exec(src)) && m.index < at) {
+        if (m[0].charAt(1) === '/') open.pop(); else open.push(m[0]);
+      }
+      return open.map((t) => (t.match(/\{\{ ([\w.]+)/) || [])[1]).filter(Boolean);
+    };
+
+    const depths = {};
+    PANELS[file].forEach((tab) => {
+      const enc = enclosers(tab);
+      check(`${file}: the ${tab} panel exists`, enc !== null);
+      if (enc === null) return;
+      depths[tab] = enc.length;
+      /* The decisive one: no tab panel may sit inside ANOTHER tab's flag. */
+      const insideAnotherTab = enc.filter((e) => PANELS[file].indexOf(e) > -1);
+      check(`⚠️ ${file}: ${tab} is not nested inside another tab's panel`,
+        insideAnotherTab.length === 0, 'inside ' + insideAnotherTab.join(','));
+    });
+
+    /* And they must all be at the SAME depth — a panel one level deeper is
+       inside something, even if that something is not itself a tab flag. */
+    const seen = Object.keys(depths).map((t) => depths[t]);
+    const allSame = seen.every((d) => d === seen[0]);
+    check(`${file}: every tab panel sits at the same nesting depth`, allSame,
+      JSON.stringify(depths));
+  });
+}
+
 section('The organiser page has the shelf');
 {
   const org = readRepo('Organizer.dc.html');
   check('there is a Documents tab button', /showDocuments \}\}" style="\{\{ tabDocumentsStyle \}\}">Documents/.test(org));
   check('the panel is gated on isDocuments', /<sc-if value="\{\{ isDocuments \}\}"/.test(org));
   check('it can upload', /api\.uploadDocument/.test(org));
+  check('it can change sharing on an existing document', /api\.editDocument/.test(org));
+  check('…from a button on the row', /onClick="\{\{ row\.onEditRow \}\}"/.test(org));
+  check('…opening an editor inside that row', /<sc-if value="\{\{ row\.isEditing \}\}"/.test(org));
+  check('…with its own tag chips', /<sc-for list="\{\{ docEditTagChips \}\}" as="echip"/.test(org));
+  /* ⚠️ THE EDITOR MUST NOT TOUCH THE FILE. The bytes, the upload date and the
+     uploader are the record of what was shared and when; a re-share that
+     quietly rewrote them would destroy that. Asserted as the absence of a
+     file input inside the edit block. */
+  check('⚠️ the editor cannot replace the file',
+    !/isEditing[\s\S]{0,1600}type="file"/.test(org));
   check('it can soft-delete', /api\.deleteDocument/.test(org));
   check('it can restore', /api\.restoreDocument/.test(org));
   check('it can purge', /api\.purgeDocument/.test(org));
@@ -428,12 +495,39 @@ section('The organiser page has the shelf');
      "there is a text box" would pass on a box nothing reads. */
   check('…and the typed word must equal that document’s title',
     /docPurgeText\.trim\(\) === String\(purgerow\.title/.test(org));
-  /* ⚠️ AND DELETE DELIBERATELY HAS NO CONFIRMATION. That is the whole point
-     of soft-delete: a dialog on a reversible action trains people to click
-     through dialogs, which is exactly what makes the irreversible one
-     dangerous. Asserted as the absence of a purge-style gate on delete. */
-  check('…while soft delete goes straight through',
-    /onDeleteDoc\(id\) \{ this\.docAction/.test(org));
+  /* ⚠️ DELETE ASKS FIRST TOO, SINCE 7 AUG 2026 — Jay: "a confirm delete
+     instead of just push delete and its gone". The original had none, on the
+     argument that a dialog on a REVERSIBLE action only trains people to click
+     through dialogs. That was wrong here: the row VANISHES from the default
+     list, so it reads as destructive whether or not it is, and nothing said
+     it could be brought back.
+
+     ⚠️ ASSERTED ON THE SENTENCE, NOT JUST THE DIALOG. "There is a confirm"
+     would pass on a bare "Are you sure?", which is pure friction — the whole
+     value is telling the organiser it is recoverable and how. */
+  /* "confirmModal APPEARS SOMEWHERE IN THE METHOD" IS NOT A CHECK ON THE GATE.
+     The first version matched confirmModal within 400 characters of the method
+     opening, which an injected docAction(...) + return at the very top
+     satisfies perfectly -- the dialog code is still there, just unreachable.
+     Proven by injecting exactly that. So the METHOD BODY is sliced out and the
+     ORDER asserted: nothing may delete before the question is asked. */
+  const delAt = org.indexOf('  onDeleteDoc(id) {');
+  const delBody = delAt > -1 ? org.slice(delAt, org.indexOf('\n  }', delAt)) : '';
+  check('the delete handler was found', delBody.length > 0);
+  check('deleting asks first', delBody.indexOf('confirmModal(') > -1);
+  check('nothing deletes BEFORE the question is asked',
+    delBody.indexOf('confirmModal(') > -1 &&
+    delBody.indexOf('confirmModal(') < delBody.indexOf('docAction('));
+  check('…and the dialog names the document', /Hide "' \+ title \+ '"|Hide \\"/.test(org) || /'Hide "' \+ title/.test(org));
+  check('…and says it can be restored', /Show deleted\u201d and you can restore it|can restore it at any time/.test(org));
+  check('…and still calls the SOFT delete, not the purge',
+    /okLabel: 'Hide it'/.test(org) && /deleteDocument, id/.test(org));
+
+  /* Purge stays the heavier one: it keeps the TYPED confirmation on top of a
+     dialog, so the two are not the same weight. If they ever become the same,
+     the typed step has stopped meaning anything. */
+  check('⚠️ purge is still heavier than delete — typed, not just a dialog',
+    /purgeArmed/.test(org));
 
   check('the shelf can show deleted rows', /showDeletedDocs|deleted=1|docsShowDeleted/.test(org));
   check('empty and broken are different sentences here too',
@@ -495,6 +589,30 @@ section('The data layer exports everything the pages call');
   const sd = readRepo('scores-data.js');
   ['listDocuments', 'downloadDocument']
     .forEach((f) => check('scores-data exports ' + f + ' (for /manager)', exportsName(sd, f)));
+
+  /* ⚠️ THE REVERSE SWEEP — EVERY EXPORTED DOCUMENT FUNCTION MUST BE CALLED.
+     Added 7 Aug 2026 because editDocument shipped to production fully built,
+     all the way down (documents.js action:'edit', organizer-data's
+     editDocument) with NO BUTTON ANYWHERE. Dead published code on a public
+     repo, and the only way to re-share a document was delete and re-upload,
+     which loses the upload date.
+
+     The existing sweep in test-accounts.js runs the OTHER way — every api.X
+     the page CALLS must be exported — and it is what caught the two dead
+     password features. It cannot catch this, because nothing was calling
+     anything. An export with no caller is the mirror image and needs its own
+     check: this repo has now shipped that failure in BOTH directions.
+
+     ⚠️ The check is "called by some page", not "called by /organizer" —
+     listDocuments and downloadDocument are reached from /manager. */
+  const org = readRepo('Organizer.dc.html');
+  const mgr = readRepo('Manager.dc.html');
+  ['listDocuments', 'uploadDocument', 'downloadDocument', 'editDocument',
+   'deleteDocument', 'restoreDocument', 'purgeDocument'].forEach((f) => {
+    check('⚠️ ' + f + ' is actually CALLED by a page, not just exported',
+      org.indexOf('api.' + f) > -1 || mgr.indexOf('api.' + f) > -1,
+      'exported and unreachable — dead code, published');
+  });
 
   /* And the re-export is asserted as a re-export, so nobody "helpfully"
      pastes a second implementation into organizer-data.js later. */

@@ -399,6 +399,91 @@ const FAULTS = [
   },
   /* ---- the venue schematic ---- */
   {
+    /* THE SECOND RENDER BUG IN ONE FEATURE, 7 Aug 2026. The manager's
+       Documents panel was inserted BY LINE NUMBER and landed inside
+       the isRegistrations panel, so it could only render while a different
+       tab was open. Tag balance stayed EQUAL and node --check passed. */
+    name: 'the manager Documents panel is nested inside another tab panel',
+    suite: 'test-documents.js',
+    apply: () => patch('Manager.dc.html',
+      '      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">',
+      '      <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">\n      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">'),
+    expect: ['is not nested inside another tab'],
+  },
+  {
+    /* ⚠️ SHIPPED DEAD, 7 Aug 2026. editDocument existed all the way down —
+       documents.js action:'edit', organizer-data's editDocument — with no
+       button anywhere. The api.* sweep in test-accounts.js runs the other
+       way (every CALL must be exported) and cannot see this; an export with
+       no caller is the mirror image. This repo has now shipped that failure
+       in BOTH directions. */
+    name: 'the Change sharing button is removed, leaving editDocument dead again',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<button onClick="{{ row.onEditRow }}"', '<button onClick="{{ row.onNothing }}"'),
+    expect: ['from a button on the row'],
+  },
+  {
+    /* THE ACTUAL DEAD-CODE FAULT: the handler stops calling the data layer, so
+       editDocument is exported and reachable by nothing -- exactly the state
+       this feature shipped in. The button fault above breaks the BINDING;
+       this one breaks the CALL. Different failures, both silent. */
+    name: 'saveEditDoc stops calling editDocument, so the export goes dead again',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      'const r = await s.api.editDocument(s.docEditId, {',
+      'const r = { ok: true }; const skip = (s.docEditId, {'),
+    expect: ['editDocument is actually CALLED by a page'],
+  },
+  {
+    name: 'the sharing editor loses its tag chips, so only the title is editable',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ docEditTagChips }}" as="echip" hint-placeholder-count="4">',
+      '<sc-for list="{{ docTagChips }}" as="echip" hint-placeholder-count="4">'),
+    expect: ['with its own tag chips'],
+  },
+  {
+    /* ⚠️ THE EDITOR MUST NOT TOUCH THE FILE. The bytes, the upload date and
+       the uploader are the record of what was shared and when. */
+    name: 'the sharing editor grows a file picker and can silently replace the file',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"',
+      '<input type="file" onChange="{{ onPickDocFile }}" />\n                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"'),
+    expect: ['the editor cannot replace the file'],
+  },
+  {
+    /* Jay asked for this on 7 Aug after pressing Delete and watching the row
+       vanish. Recoverable and "looks recoverable" are not the same thing. */
+    name: 'delete goes back to no confirmation at all',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '  onDeleteDoc(id) {\n    const row =',
+      '  onDeleteDoc(id) {\n    this.docAction(this.state.api.deleteDocument, id, "Hidden.");\n    return;\n    const row ='),
+    expect: ['nothing deletes BEFORE the question is asked'],
+  },
+  {
+    /* ⚠️ A BARE "ARE YOU SURE?" IS PURE FRICTION. The whole value of this
+       dialog is the sentence saying it is recoverable and how. */
+    name: 'the delete confirmation stops saying the document can be restored',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      'Nothing is destroyed \\u2014 it stays on your shelf under \\u201cShow deleted\\u201d and you can restore it at any time. ',
+      ''),
+    expect: ['says it can be restored'],
+  },
+  {
+    /* If delete and purge become the same weight, the typed step has stopped
+       meaning anything. */
+    name: 'delete is escalated to call the purge instead of the soft hide',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      "() => this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers. You can restore it under Show deleted.'),",
+      "() => this.docAction(this.state.api.purgeDocument, id, 'Gone.'),"),
+    expect: ['still calls the SOFT delete, not the purge'],
+  },
+  {
     /* ⚠️ THE ONE THAT ACTUALLY SHIPPED BROKEN, 7 Aug 2026. The Documents tab
        went to production rendering an empty list, and all 121 checks in
        test-documents.js passed, because they read the SOURCE for handler

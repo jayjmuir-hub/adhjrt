@@ -473,6 +473,44 @@
           </div>
         </div>
       </sc-if>
+      <!-- documents tab (Aug 2026) — spec claude/specs/spec-documents.md.
+           READ ONLY. A manager lists and downloads; upload, rename and
+           delete are organiser jobs and the function refuses them with a
+           403 regardless of what this page shows.
+
+           ⚠️ THE FILTERING IS THE SERVER'S. This list is whatever the
+           function returned for THIS manager's signed token — documents
+           tagged for everyone, plus their own age group. Nothing is hidden
+           here, because a client-side filter is not a filter. -->
+      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;max-width:820px">
+          <p style="color:#5A626E;font-size:13px;margin:0 0 14px;line-height:1.5">Documents the organisers have shared with you &mdash; for everyone, or for your age group.</p>
+
+          <!-- ⚠️ THREE STATES, THREE SENTENCES. "No documents yet" and "could
+               not load" are different facts and must never render the same
+               way; this codebase has conflated them three times. -->
+          <sc-if value="{{ docsUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px solid #F0C36D;background:#FDF6E3;border-radius:10px;font-size:13px;color:#7A5C00">Documents could not load just now. That is not the same as there being none &mdash; please try again in a moment.</div>
+          </sc-if>
+          <sc-if value="{{ docsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px dashed rgba(0,0,0,0.18);border-radius:10px;font-size:13px;color:#5A626E">No documents yet. Anything the organisers share with your age group will appear here.</div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ docRows }}" as="row" hint-placeholder-count="2">
+              <div style="padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:14px">{{ row.title }}</div>
+                  <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
+                  <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
+                </div>
+                <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start">Download</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ isRegistrations }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Registrations</div>
@@ -526,43 +564,6 @@
           </div>
           </sc-if>
 
-      <!-- documents tab (Aug 2026) — spec claude/specs/spec-documents.md.
-           READ ONLY. A manager lists and downloads; upload, rename and
-           delete are organiser jobs and the function refuses them with a
-           403 regardless of what this page shows.
-
-           ⚠️ THE FILTERING IS THE SERVER'S. This list is whatever the
-           function returned for THIS manager's signed token — documents
-           tagged for everyone, plus their own age group. Nothing is hidden
-           here, because a client-side filter is not a filter. -->
-      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;max-width:820px">
-          <p style="color:#5A626E;font-size:13px;margin:0 0 14px;line-height:1.5">Documents the organisers have shared with you &mdash; for everyone, or for your age group.</p>
-
-          <!-- ⚠️ THREE STATES, THREE SENTENCES. "No documents yet" and "could
-               not load" are different facts and must never render the same
-               way; this codebase has conflated them three times. -->
-          <sc-if value="{{ docsUnavailable }}" hint-placeholder-val="{{ false }}">
-            <div style="padding:14px;border:1px solid #F0C36D;background:#FDF6E3;border-radius:10px;font-size:13px;color:#7A5C00">Documents could not load just now. That is not the same as there being none &mdash; please try again in a moment.</div>
-          </sc-if>
-          <sc-if value="{{ docsEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="padding:14px;border:1px dashed rgba(0,0,0,0.18);border-radius:10px;font-size:13px;color:#5A626E">No documents yet. Anything the organisers share with your age group will appear here.</div>
-          </sc-if>
-
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <sc-for list="{{ docRows }}" as="row" hint-placeholder-count="2">
-              <div style="padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
-                <div style="min-width:0">
-                  <div style="font-weight:700;font-size:14px">{{ row.title }}</div>
-                  <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
-                  <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
-                </div>
-                <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start">Download</button>
-              </div>
-            </sc-for>
-          </div>
-        </div>
-      </sc-if>
         </div>
       </sc-if>
     </div>

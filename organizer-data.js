@@ -371,3 +371,68 @@ export async function resetRegistrationWindow() {
   if (r.real) return r.json;
   return { ok: false, error: 'Resetting the registration window needs the deployed site (not available in local preview).' };
 }
+
+/* ===================================================================
+   DOCUMENTS — the organiser-only half
+   ===================================================================
+   Spec: claude/specs/spec-documents.md
+
+   listDocuments and downloadDocument are RE-EXPORTED from scores-data.js
+   rather than reimplemented — /manager needs those two and reads that file
+   only, and a second copy here would be a second copy of the rules. Same
+   trade already paid for myAccount and the registration window. */
+export { listDocuments, downloadDocument } from './scores-data.js';
+
+/* Every write goes through one poster, so the token handling, the
+   local-preview answer and the refusal shape cannot drift between five
+   call sites. */
+async function documentsPost(payload, offlineMsg) {
+  const session = currentSession();
+  if (!session || !session.token) return { ok: false, error: 'Please sign in.' };
+  const r = await tryFetchJson('/.netlify/functions/documents', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: offlineMsg };
+}
+
+/* Upload. The file is base64'd into JSON because the function needs a Bearer
+   token and a multipart form would need its own parser.
+
+   ⚠️ THE SIZE IS CHECKED IN THE PAGE BEFORE THIS IS EVER CALLED. Netlify's
+   413 above ~6 MiB carries an EMPTY BODY — no JSON, no sentence — so there is
+   nothing to show the organiser at that size. Measured 7 Aug 2026; see
+   MAX_DOC_BYTES in Organizer.dc.html and MAX_FILE_BYTES in _documents.js,
+   which tests/test-documents.js asserts are the same number. */
+export async function uploadDocument(doc) {
+  return documentsPost(Object.assign({ action: 'upload' }, doc),
+    'Uploading needs the deployed site (not available in local preview).');
+}
+
+export async function editDocument(id, fields) {
+  return documentsPost(Object.assign({ action: 'edit', id }, fields),
+    'Editing needs the deployed site (not available in local preview).');
+}
+
+/* SOFT — this hides the document. Managers lose it immediately; the bytes
+   stay until an explicit purge. Jay, 7 Aug: a misclick at 8am on the
+   Saturday has no undo otherwise. */
+export async function deleteDocument(id) {
+  return documentsPost({ action: 'delete', id },
+    'Deleting needs the deployed site (not available in local preview).');
+}
+
+export async function restoreDocument(id) {
+  return documentsPost({ action: 'restore', id },
+    'Restoring needs the deployed site (not available in local preview).');
+}
+
+/* ⚠️ THE IRREVERSIBLE ONE, and a SEPARATE deliberate action from delete —
+   which is the whole reason delete can be soft and quiet. The panel asks for
+   the document's title to be typed, the way Simulate and Reset already do. */
+export async function purgeDocument(id) {
+  return documentsPost({ action: 'purge', id },
+    'Purging needs the deployed site (not available in local preview).');
+}

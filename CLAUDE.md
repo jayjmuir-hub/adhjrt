@@ -2139,6 +2139,96 @@ was allowed to play up) is a separate, materially larger piece of work
 (reusing/duplicating that age-check logic here) that was intentionally left
 for a later decision, not built silently alongside this.
 
+## Documents shared with managers (added 7 Aug 2026)
+
+**An organiser uploads a PDF; the fifteen age-group managers see it on their
+own dashboard.** Spec: `claude/specs/spec-documents.md`. Replaces a WhatsApp
+message, which means the file lives in fifteen phones and the newest version
+is whichever one somebody scrolled to.
+
+⚠️ **THIS IS A DISTRIBUTION PROBLEM, NOT A STORAGE ONE.** The measure of
+success is a manager opening `/manager` on the Saturday morning and seeing the
+current documents for their group without asking anybody.
+
+| | |
+|---|---|
+| `netlify/functions/_documents.js` | every decision — dependency-free, so tests can drive it |
+| `netlify/functions/documents.js` | the HTTP door — auth, blob stores, no decisions |
+| `documents` blob store, key `list` | the index |
+| `docfiles` blob store, key `<id>` | the bytes, one key per document |
+| `/organizer` → Documents | the shelf: upload, tag, delete, restore, purge |
+| `/manager` → Documents | list and download, nothing else |
+
+### ⚠️ The size cap was MEASURED, and the two earlier numbers were both wrong
+
+The spec first said **10 MB** (invented), then **~4.4 MB** (inferred from AWS
+Lambda's 6 MB cap rather than stated by Netlify — Netlify publishes no
+request-body limit at all). Neither was measured. So it was measured, against
+the live registration gateway, which refuses an oversize body **before** it
+parses, rate-limits, writes a sheet or sends mail — so the probe could not
+write anything:
+
+| body | result |
+|---|---|
+| 5,242,880 B (5.00 MiB) | reached our code |
+| 6,242,304 B (5.95 MiB) | reached our code |
+| **6,279,168 B (5.988 MiB)** | **reached our code — last confirmed pass** |
+| **6,285,312 B (5.994 MiB)** | **413, refused by the platform** |
+| 6,291,456 B (6.00 MiB) | 413 |
+
+**The ceiling is ~6,282,000 bytes** — 6 MiB minus ~9 KB of Lambda event
+envelope. A reading that FAILS as well as one that passes, because a size that
+succeeds proves nothing about where the edge is.
+
+Base64 costs 4/3, so the largest file that physically fits is ~4.7 MiB.
+**`MAX_FILE_BYTES` is 4 MiB**, and `MAX_DOC_BYTES` in `Organizer.dc.html` is
+the same number — `test-documents.js` asserts they match, the same way the
+password floor is asserted across the two dashboards.
+
+⚠️ **THE 413 CARRIES AN EMPTY BODY.** No JSON, no sentence — the platform kills
+the request before the function runs. So the picker MUST check the size
+client-side and refuse in its own words; there is nothing to display
+otherwise. This is the "a refusal and a network failure must stay different"
+rule from the registration gateway: a 413 with no body parses as neither.
+
+### The rules that matter
+
+- ⚠️ **THE TAG FILTER RUNS SERVER-SIDE, ON THE LIST AND ON EVERY DOWNLOAD.** A
+  client-side filter is not a filter — already learned here on the pool
+  dropdown. The age group comes from the verified token and there is
+  deliberately no code path reading one off the request.
+- ⚠️ **A SOFT-DELETED DOCUMENT IS REFUSED BY THE DOWNLOAD PATH**, not merely
+  absent from the list. Those are different claims and only one is the
+  guarantee: a manager who kept the URL would otherwise still have a withdrawn
+  file, which is exactly what the button exists to prevent.
+- ⚠️ **AN EMPTY TAG SELECTION IS REFUSED, NEVER READ AS "EVERYONE".**
+  Defaulting a blank box to `*` publishes to all fifteen groups, and the
+  failure is SILENT because the organiser's own shelf shows everything
+  regardless of tags — so the one person who could catch it sees what they
+  expected.
+- ⚠️ **THE TYPE CHECK IS ON THE BYTES.** `draw.pdf` is a filename. XLSX and
+  DOCX are both zips and cannot be told apart by magic bytes; the check is
+  "the bytes are a zip AND the declared type is one we allow", which still
+  refuses a renamed executable. Do not "fix" it by trusting the filename.
+- **Fail SOFT on read** (a documents outage must not take out fixtures and
+  scoring) and **fail CLOSED on write**. Not to be made consistent.
+- **Delete is soft and has no confirmation; PURGE has a typed one** naming the
+  document — and the typed word is the document's **own title**, not a fixed
+  word like DELETE, which is muscle memory after the second time.
+- ⚠️ **The index is one blob rewritten whole, so it has the accounts-list
+  race.** Two organisers uploading in the same second lose one upload with no
+  error. Accepted knowingly (uploads are rare and deliberate); the FILE BYTES
+  are per key from the start, which is not negotiable. If documents ever become
+  something people add during a tournament, split the metadata per key.
+- ⚠️ **Uploads go to Blobs and NEVER the repo.** The root is the deployed site;
+  a document naming a child, committed here, cannot be un-published.
+
+⚠️ **`/organizer`'s tab count went 7 → 8** and `MANAGER_TABS` went 5 → 6.
+Both are asserted with the exact list, and both checks fired on this change —
+which is what they are for.
+
+---
+
 ## Venue — pitches and days (added 26 Jul 2026)
 
 **Which day an age group plays is derived from where it has pitches.** It is not
@@ -2917,6 +3007,45 @@ there.
    on a branch/preview (**genuinely free — 0 credits, not "cheap"; see the
    credit table in "Three kinds of preview URL"**), merge to `main` once. (Full
    deploy-credit and working-agreement rules live in the project instructions.)
+5. **The tournament rules for `/rules` — DATED, NOT PENDING. ⏸️ DEFERRED BY JAY
+   TO MID-SEPTEMBER 2026 (7 Aug 2026).** ⚠️ **DO NOT RAISE THIS BEFORE THEN.**
+   Jay's words: *"mark rules to be uploaded in mid September … so you stop
+   reminding me about it until then."* It is not blocked, not forgotten and does
+   not need chasing — **a job with a date is an answer, not an open question**,
+   and listing it as outstanding every session is nagging him about something he
+   has already decided.
+
+   ⚠️ **NOTHING ON THE PUBLIC SITE NEEDS CHANGING AND NO DEPLOY IS OWED.**
+   `rules.html` promises the rules *"before registration opens in October"*, and
+   mid-September is before October, so that sentence is still true. Rewriting it
+   to name September was offered on 7 Aug and **declined** — it costs a 15-credit
+   production deploy, it needs a test edit and a fault repoint (see below), and
+   it converts a promise that cannot go stale into a dated one that goes
+   publicly wrong if the rules slip a fortnight.
+
+   **When the rules do arrive, the whole job is already scoped:**
+   - Replace the ONE marked block in `rules.html` — its comment reads
+     `⚠️ REPLACE THIS BLOCK when the real rules arrive`. **Nothing else on that
+     page moves**; the topbar, hero, footer and styling are the finished article.
+   - Add the **"Last updated"** line under the `h1` in the hero in the same
+     change. The markup is left in place, commented, in `rules.html`, and the
+     `.updated` CSS rule can be copied from `legal.html`. ⚠️ **A rules page with
+     no date is one nobody can trust mid-tournament.**
+   - **Repoint, never delete, the checks that pin the placeholder:**
+     `test-about-board.js` asserts the `Coming soon` badge and the string
+     `before registration opens in October`, and `_prove-registration.js` carries
+     two faults anchored on that same text. **A fault that cannot be injected is
+     a failed run, not a pass.**
+   - It is a docs-shaped change to one marked block, so **it should ride with
+     another commit** rather than buying its own 15-credit deploy.
+
+   ⚠️ **The four items under "What is already settled" on that page are stated
+   ELSEWHERE ON THE SITE TOO.** If the real rules contradict any of them, the
+   contradiction is live in more than one place — grep before assuming the
+   `/rules` copy is the only one.
+
+   The full entry, including why it was recorded here and not on the site, is
+   `claude/parked-requests.md` item 8. A scheduled task fires on 15 Sep 2026.
 
 (Done and removed from this list: pitch scheduling — data entry completed
 1 Aug; the rehearsal-data cleanup — done and verified 2 Aug, see the tombstone
@@ -3123,8 +3252,9 @@ file finds the clone itself, so any checkout on any machine can run them.
 It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
-photo ring, the doc-claim suite and the age-group picker — **37 files** — plus `_prove-registration.js`, the fault-injection
-script (**653 faults** as of 6 Aug 2026, all of which must be caught by the
+photo ring, the doc-claim suite, the age-group picker and the documents
+shelf — **38 files** — plus `_prove-registration.js`, the fault-injection
+script (**672 faults** as of 7 Aug 2026, all of which must be caught by the
 check that claims to guard them, and none of which may be "caught" by the suite
 throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
 output over this sentence — it has been written down here as 17, 171, 333 and
@@ -3134,7 +3264,14 @@ output over this sentence — it has been written down here as 17, 171, 333 and
 `N/N faults caught by the named check; M suite(s) clean on an undamaged copy`.
 **When you add a test file, M must go UP.** A suite that fails undamaged fails
 for every fault too, so all of its faults report "caught" while proving
-nothing. M was 29 before `test-about-board.js` and is 30 with it.
+nothing. M was 29 before `test-about-board.js`, 30 with it, 32 by 6 Aug and
+**33 as of 7 Aug 2026** with `test-documents.js`.
+
+⚠️ **`runall.ps1` prints 38 `--- <file>` headers now, not 37.** That is 38
+test files; the prover's own header makes the raw count one higher again.
+This file said 37 while there were 36 files and nobody noticed, which is the
+same class of stale-number-in-prose the paragraph above warns about — trust
+`runall.ps1`'s own output, never this sentence.
 
 **A test file must not fall over on a fault.** Reaching blind into a lookup that
 a fault makes `undefined` throws, kills the process, and every check after that
@@ -3176,7 +3313,38 @@ that were simply wrong about what the code should do.
   (`design/meet-organisers` PR #4, `fix/single-pool-width` PR #5 are both done).
 - **`raw.githubusercontent.com` serves stale copies for minutes** and ignores
   cache-busting params. Verify with plain `git`.
-- ⚠️ **THE SITE-WIDE PASSWORD IS OFF — corrected 5 Aug 2026.** This bullet used
+- ⚠️⚠️ **THE PASSWORD CLAIM HAS NOW BEEN WRONG IN BOTH DIRECTIONS. READ THIS
+  ONE, NOT THE TWO BELOW IT (7 Aug 2026).** Netlify currently reports
+  `requiresPassword: true` with
+  `whichProjectsRequirePassword: "non_production"`. So:
+
+  | | |
+  |---|---|
+  | **adhjrt.com (production)** | **open — no password.** |
+  | **`dev--` / `compare--` and every branch deploy** | **PASSWORD PROTECTED.** |
+
+  Measured 7 Aug: `compare--adhquins-jrt.netlify.app` → **401 ×3**,
+  `dev--` → **401 ×3**, a branch name that never existed → **404 ×3**.
+
+  **So on a BRANCH URL, 401 means the deploy exists and 404 means it does
+  not** — the old trick is alive again, having been declared dead on 5 Aug.
+  On **production** an existing page is 200. The two bullets below say the
+  password is off everywhere and that a branch deploy answers 200; that was
+  true on 5 Aug and is not true now.
+
+  ⚠️ **The practical consequence: a branch preview cannot be checked by a
+  script without the password**, and the measurement that found this was only
+  possible because it ran against PRODUCTION, where the gateway refuses an
+  oversize body before it touches anything. Do not plan a "just probe it on
+  Compare" verification without checking this first.
+
+  ⚠️ **And nothing may rest on it either way.** This is the THIRD recorded
+  flip. Read `projectAccessControls` from the Netlify MCP at the time you
+  need the answer; do not believe any sentence in this file about it,
+  including this one.
+
+- ⚠️ **THE SITE-WIDE PASSWORD IS OFF — corrected 5 Aug 2026. ⚠️ SUPERSEDED BY
+  THE BULLET ABOVE, 7 Aug — it is off for PRODUCTION ONLY.** This bullet used
   to say the whole site sat behind one and that previews prompted for it. It
   was verified off on the live project on 3 Aug and again on 5 Aug. Nothing
   prompts, and nothing may be left resting on it. The 401-means-it-exists trick

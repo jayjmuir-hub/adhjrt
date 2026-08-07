@@ -71,12 +71,56 @@ section('The backend has an action behind each of those calls');
   const data = readRepo('organizer-data.js');
 
   /* A data-layer function that posts an action nothing handles is the same
-     silent failure one layer further down. */
-  const actionsSent = [...new Set([...data.matchAll(/action:\s*'([a-zA-Z]+)'/g)].map((m) => m[1]))].sort();
-  check('the data layer sends some actions', actionsSent.length >= 5, actionsSent.join(','));
-  actionsSent.forEach((a) =>
-    check(`accounts-admin.js handles action '${a}'`, new RegExp(`action === '${a}'`).test(admin) || new RegExp(`'${a}'`).test(admin),
-      `sent by organizer-data.js, not handled`));
+     silent failure one layer further down.
+   *
+   * ⚠️ THIS SWEEP IS ENDPOINT-AWARE SINCE 7 AUG 2026, AND IT HAD TO BECOME SO.
+   * It used to collect EVERY `action: '…'` in organizer-data.js and demand
+   * that accounts-admin.js handle it — which was true only while
+   * accounts-admin was the single endpoint this file posts to. Documents
+   * added a second one, and the old sweep reported five perfectly correct
+   * actions ('upload', 'edit', 'delete', 'restore', 'purge') as unhandled.
+   *
+   * The lazy repair is to exclude the new names. That would leave a check
+   * that silently stops covering whichever endpoint is added next, which is
+   * the failure this whole section exists to prevent. So each action is now
+   * matched to the endpoint it is actually POSTed to — the nearest preceding
+   * `/.netlify/functions/<name>` — and checked against THAT file. The sweep
+   * got wider, not narrower. */
+  const fnAt = (idx) => {
+    const before = data.slice(0, idx);
+    const hits = [...before.matchAll(/\/\.netlify\/functions\/([a-zA-Z-]+)/g)];
+    return hits.length ? hits[hits.length - 1][1] : null;
+  };
+
+  const pairs = [...data.matchAll(/action:\s*'([a-zA-Z]+)'/g)]
+    .map((m) => ({ action: m[1], fn: fnAt(m.index) }))
+    .filter((p) => p.fn);
+
+  check('the data layer sends some actions', pairs.length >= 5,
+    pairs.map((p) => `${p.fn}:${p.action}`).join(','));
+  /* Every action must have found an endpoint. One that did not means the
+     poster was written in a shape this sweep cannot read, and a check that
+     quietly skips what it cannot parse is worse than no check. */
+  eq('every action posted was traced to an endpoint',
+    [...data.matchAll(/action:\s*'([a-zA-Z]+)'/g)].length, pairs.length);
+
+  const seen = new Set();
+  pairs.forEach((p) => {
+    const key = `${p.fn}:${p.action}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const src = readRepo(path.join('netlify', 'functions', `${p.fn}.js`));
+    check(`${p.fn}.js handles action '${p.action}'`,
+      new RegExp(`action === '${p.action}'`).test(src) || new RegExp(`'${p.action}'`).test(src),
+      'sent by organizer-data.js, not handled by the endpoint it is sent to');
+  });
+
+  /* And the endpoints themselves are named, so a poster silently retargeted
+     at a file that does not exist fails here rather than at 3am. */
+  check('accounts actions go to accounts-admin.js',
+    pairs.some((p) => p.fn === 'accounts-admin' && p.action === 'approve'));
+  check('document actions go to documents.js',
+    pairs.some((p) => p.fn === 'documents' && p.action === 'upload'));
 
   /* changeMine left this list on 3 Aug 2026 when it moved to my-account.js —
      see test-my-account.js, which drives it. */

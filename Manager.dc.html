@@ -525,6 +525,44 @@
             </sc-for>
           </div>
           </sc-if>
+
+      <!-- documents tab (Aug 2026) — spec claude/specs/spec-documents.md.
+           READ ONLY. A manager lists and downloads; upload, rename and
+           delete are organiser jobs and the function refuses them with a
+           403 regardless of what this page shows.
+
+           ⚠️ THE FILTERING IS THE SERVER'S. This list is whatever the
+           function returned for THIS manager's signed token — documents
+           tagged for everyone, plus their own age group. Nothing is hidden
+           here, because a client-side filter is not a filter. -->
+      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;max-width:820px">
+          <p style="color:#5A626E;font-size:13px;margin:0 0 14px;line-height:1.5">Documents the organisers have shared with you &mdash; for everyone, or for your age group.</p>
+
+          <!-- ⚠️ THREE STATES, THREE SENTENCES. "No documents yet" and "could
+               not load" are different facts and must never render the same
+               way; this codebase has conflated them three times. -->
+          <sc-if value="{{ docsUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px solid #F0C36D;background:#FDF6E3;border-radius:10px;font-size:13px;color:#7A5C00">Documents could not load just now. That is not the same as there being none &mdash; please try again in a moment.</div>
+          </sc-if>
+          <sc-if value="{{ docsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px dashed rgba(0,0,0,0.18);border-radius:10px;font-size:13px;color:#5A626E">No documents yet. Anything the organisers share with your age group will appear here.</div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for value="{{ docRows }}" alias="row">
+              <div style="padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:14px">{{ row.title }}</div>
+                  <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
+                  <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
+                </div>
+                <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start">Download</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
         </div>
       </sc-if>
     </div>
@@ -737,6 +775,11 @@ const MANAGER_TABS = [
   { id: 'tables', label: 'Tables' },
   { id: 'draw', label: 'Draw' },
   { id: 'registrations', label: 'Registrations' },
+  /* Documents (Aug 2026) -- spec claude/specs/spec-documents.md. READ ONLY
+     here: a manager can list and download, never upload, rename or delete.
+     tests/test-documents.js asserts the absent verbs BY NAME rather than
+     trusting that this page simply does not happen to call them. */
+  { id: 'documents', label: 'Documents' },
 ];
 
 /* Mirrors MIN_PASSWORD_LENGTH in netlify/functions/_auth.js, which is the
@@ -749,6 +792,9 @@ const MIN_PASSWORD_LENGTH = 10;
 class Component extends DCLogic {
   state = {
     api: null, session: null, ageGroups: [], ageId: '', tab: 'fixtures',
+    /* docsUnavailable is SEPARATE from an empty list: "none yet" and
+       "could not load" are different facts and must read differently. */
+    docs: [], docsLoaded: false, docsUnavailable: false,
     fixtures: null, standings: null, spiritAward: null,
     /* draw is `undefined` before the first fetch, `null` both while a fetch is
        in flight AND after a settled fetch that legitimately found no draw
@@ -973,6 +1019,25 @@ class Component extends DCLogic {
     if (leavingDraw) this.clearDrawTransientState();
     if (tab === 'draw' && s.drawLoadedFor !== s.ageId && !s.drawDirty) this.loadDraw(s.ageId);
     if (tab === 'registrations' && s.regs === undefined) this.loadRegistrations();
+    if (tab === 'documents' && !s.docsLoaded) this.loadDocuments();
+  }
+
+  /* Documents the SERVER says this manager may see. Nothing is filtered
+     here: the function checks the signed token's age group against each
+     document's tags, on the list AND on every download. A client-side
+     filter is not a filter.
+
+     FAILS SOFT -- documents are useful, they are not the tournament, and a
+     documents outage must not take out fixtures and scoring. */
+  async loadDocuments() {
+    const api = this.state.api;
+    if (!api || !api.listDocuments) return;
+    const r = await api.listDocuments();
+    this.setState({
+      docsLoaded: true,
+      docs: (r && r.documents) || [],
+      docsUnavailable: !!(r && r.unavailable),
+    });
   }
 
   /* Organiser-only (the header select that calls this is itself gated on
@@ -2123,6 +2188,19 @@ class Component extends DCLogic {
       isFixtures: s.tab === 'fixtures',
       isResults: s.tab === 'results', isTables: s.tab === 'tables',
       isDraw: s.tab === 'draw', isRegistrations: s.tab === 'registrations',
+      isDocuments: s.tab === 'documents',
+      docsUnavailable: s.docsUnavailable,
+      /* Stays FALSE while unavailable -- "no documents yet" is a LIE when
+         the truth is that we could not ask. */
+      docsEmpty: s.docsLoaded && !s.docsUnavailable && (s.docs || []).length === 0,
+      docRows: (s.docs || []).map((d) => ({
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        meta: d.typeLabel + ' \u00b7 ' + Math.max(1, Math.round((d.bytes || 0) / 1024)) + ' KB \u00b7 ' + (d.uploadedBy || ''),
+        when: String(d.uploadedAt || '').slice(0, 10),
+        onDownload: () => s.api.downloadDocument(d.id),
+      })),
 
       comingSoonBlurb: `The draw for ${this.ageName(s.ageId)} hasn't been released yet.`,
 

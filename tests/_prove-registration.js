@@ -40,6 +40,13 @@ const NEEDED = [
   'organizer-data.js',
   'Quins JRT.dc.html',
   'Organizer.dc.html',
+  /* Documents (7 Aug 2026). ⚠️ FIFTH TIME A NEW MODULE HAS HAD TO BE ADDED
+     HERE — the symptom of forgetting is always the same and always
+     misleading: the test file dies on ENOENT and every fault it should have
+     caught gets blamed on something else. _documents.js is required directly
+     by test-documents.js; documents.js is read as text by it. */
+  'netlify/functions/_documents.js',
+  'netlify/functions/documents.js',
   'Scores & Standings.dc.html',
   /* test-manager-dc-draw.js drives the Manager Dashboard — added Aug 2026
      with the withTeamNames faults. Absent from this list, any test reading it
@@ -391,6 +398,143 @@ const FAULTS = [
     expect: ['does not define its own registrationState'],
   },
   /* ---- the venue schematic ---- */
+  {
+    /* DOCUMENTS (7 Aug 2026) -- spec claude/specs/spec-documents.md.
+       ⚠️ THE ONE THAT MATTERS MOST. Every manager seeing every group's
+       documents is not a crash and not an error: it is a longer list. The
+       feature's whole purpose is that a manager can FIND their own draw. */
+    name: 'the tag filter lets every session see every document',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      '  if (list.indexOf(ALL_GROUPS) > -1) return true;\n  if (ageGroupId === ALL_GROUPS) return true;',
+      '  if (list.indexOf(ALL_GROUPS) > -1) return true;\n  return true;'),
+    expect: ['no group sees a document tagged only for another group'],
+  },
+  {
+    /* ⚠️ A FILTER APPLIED ONLY TO THE LIST IS NOT A FILTER. Without the
+       hidden check in canRead, a manager who kept the URL still has a
+       withdrawn document -- the exact failure the delete button exists to
+       prevent -- while the LIST looks perfectly correct. */
+    name: 'a soft-deleted document is still downloadable by anyone who kept the link',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      '  if (doc.hidden) return false;                 // withdrawn: gone for managers immediately\n', ''),
+    expect: ['a manager cannot read a hidden document'],
+  },
+  {
+    /* Silent, and it publishes to all fifteen groups. The organiser's own
+       shelf shows everything regardless of tags, so the one person who could
+       have caught it sees exactly what they expected. */
+    name: 'an empty tag selection quietly means "everyone"',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      "  if (!tags.length) return 'Please choose who this document is for.';",
+      "  if (!tags.length) return null;"),
+    expect: ['no tags is refused'],
+  },
+  {
+    /* `draw.pdf` is a filename and anybody can call anything that. */
+    name: 'the type check trusts the declared type instead of the bytes',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      '  const actual = sniff(buf);',
+      '  const actual = allowed.family;'),
+    expect: ['an executable renamed to .pdf is REFUSED'],
+  },
+  {
+    /* ⚠️ THE WHOLE FEATURE UNDONE IN ONE LINE. An age group off the request
+       body means anybody can ask for anybody's documents. */
+    name: 'the age group is taken from the request instead of the verified token',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/documents.js',
+      "    const ageGroupId = isOrganizer ? D.ALL_GROUPS : (session.ageGroupId || '');",
+      "    const ageGroupId = isOrganizer ? D.ALL_GROUPS : ((event.body && body.ageGroupId) || session.ageGroupId || '');"),
+    expect: ['it never reads an age group off the request'],
+  },
+  {
+    name: 'a signed-out request reaches the store before the session is checked',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/documents.js',
+      "    if (!session) return fail(401, 'Please sign in.');",
+      "    if (!session && false) return fail(401, 'Please sign in.');"),
+    expect: ['refused, by a real early return'],
+  },
+  {
+    /* Hiding the button is not a permission. */
+    name: 'the organiser-only gate on writing is removed',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/documents.js',
+      "    if (!isOrganizer) return fail(403, 'Only organisers can change documents.');", ''),
+    expect: ['writing is organiser-only, in the function'],
+  },
+  {
+    /* ⚠️ THE CLIENT CAP DRIFTS ABOVE THE SERVER'S. The organiser picks a
+       5 MB file, waits for the whole upload, and bounces off a refusal --
+       or worse, off the platform's 413, which carries NO BODY at all and so
+       shows them nothing. */
+    name: 'the page’s upload cap drifts away from the server’s',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      'const MAX_DOC_BYTES = 4 * 1024 * 1024;',
+      'const MAX_DOC_BYTES = 8 * 1024 * 1024;'),
+    expect: ['it is the same number as the server'],
+  },
+  {
+    /* ⚠️ "NO DOCUMENTS YET" IS A LIE WHEN THE TRUTH IS "WE COULD NOT ASK".
+       Conflated three times in this codebase already. */
+    name: 'a failed load renders as "no documents yet"',
+    suite: 'test-documents.js',
+    apply: () => patch('Manager.dc.html',
+      'docsEmpty: s.docsLoaded && !s.docsUnavailable && (s.docs || []).length === 0,',
+      'docsEmpty: s.docsLoaded && (s.docs || []).length === 0,'),
+    expect: ['is suppressed when the load failed'],
+  },
+  {
+    /* The list must fail SOFT: a documents outage must not take out a
+       manager's fixtures and scoring. */
+    name: 'the document list stops reporting that it could not load',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/documents.js',
+      'return json(200, { ok: true, documents: [], unavailable: true });',
+      'return json(200, { ok: true, documents: [] });'),
+    expect: ['the list fails SOFT, with a flag the page can read'],
+  },
+  {
+    /* A manager page that can upload is a permission model with two answers. */
+    name: 'the manager page gains an upload button',
+    suite: 'test-documents.js',
+    apply: () => patch('Manager.dc.html',
+      "  { id: 'documents', label: 'Documents' },",
+      "  { id: 'documents', label: 'Documents' }, // api.uploadDocument"),
+    expect: ['a manager cannot uploadDocument'],
+  },
+  {
+    /* ['*','u12'] has two readings that are the same set -- a row that says
+       something ambiguous for ever. */
+    name: '"*" is merged with specific groups instead of winning outright',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      "  if (tags.indexOf(ALL_GROUPS) > -1) return [ALL_GROUPS];", ''),
+    expect: ['"*" beats a mixed selection'],
+  },
+  {
+    /* A filename that can choose its own blob key, or break out of a
+       Content-Disposition header. */
+    name: 'the filename is no longer sanitised before becoming a key',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      "    .replace(/[/:*?<>|]/g, '-')", '    '),
+    expect: ['a slash cannot choose its own blob key'],
+  },
+  {
+    /* An index row written before its bytes shows the shelf a document that
+       was never stored. */
+    name: 'the index row is written before the file bytes',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/documents.js',
+      '        await files.set(id, buf);', '        if (buf) { /* moved below */ }'),
+    expect: ['the bytes are written before the index row'],
+  },
   {
     /* THE TAB BAR — regrouped 7 Aug 2026 at Jay's request. Nothing asserted
        its order before that date: the pre-existing "there is a Clubs tab
@@ -4516,7 +4660,11 @@ const FAULTS = [
     suite: 'test-manager-dc.js',
     apply: () => patch('Manager.dc.html', "const MANAGER_TABS = [\n  { id: 'fixtures', label: 'Fixtures & scoring' },",
       "const MANAGER_TABS = [\n  { id: 'today', label: 'Today' },\n  { id: 'fixtures', label: 'Fixtures & scoring' },"),
-    expect: ['all five tabs are offered'],
+    /* Repointed 7 Aug 2026: the check became "all six tabs are offered" when
+       Documents joined MANAGER_TABS. ⚠️ REPOINTED, NOT DELETED — a fault
+       that can no longer be injected, or that lands on no named check, is a
+       failed run rather than a pass. */
+    expect: ['tabs are offered'],
   },
   {
     name: 'the landing tab drifts off Fixtures & scoring',

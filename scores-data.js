@@ -2070,3 +2070,77 @@ export async function submitResult(matchId, data, session) {
    exist purely so a test isn't limited to asserting through the network-
    backed async wrappers. */
 export { buildBracket, computeAutoKnockout };
+
+/* ===================================================================
+   DOCUMENTS SHARED WITH MANAGERS (Aug 2026)
+   ===================================================================
+   Spec: claude/specs/spec-documents.md
+
+   These two live HERE, and organizer-data.js re-exports them, because
+   /manager reads scores-data.js only. The organiser-only actions (upload,
+   edit, delete, restore, purge) live in organizer-data.js instead — a
+   manager page must not even carry the function names, which
+   tests/test-documents.js asserts BY NAME.
+
+   ⚠️ THE SERVER IS THE AUTHORITY ON WHO SEES WHAT. Nothing here filters by
+   age group: the function does it from the verified token. A client-side
+   filter is not a filter — that is written down in this project already,
+   about the pool dropdown, where narrowing the options in the page did
+   nothing because the server never validated the value. */
+
+/* The list this session is allowed to see, newest first.
+
+   ⚠️ IT RETURNS `unavailable` RATHER THAN AN EMPTY LIST ON FAILURE, and the
+   pages render a different sentence for each. "No documents yet" and "could
+   not load documents" are different facts, and this codebase has conflated
+   them three times — clubsUnavailable on the Clubs tab is the same lesson. */
+export async function listDocuments(opts) {
+  const session = currentSession();
+  if (!session || !session.token) return { ok: false, documents: [], unavailable: true };
+  const qs = (opts && opts.deleted) ? '?action=list&deleted=1' : '?action=list';
+  const r = await tryFetchJson(`/.netlify/functions/documents${qs}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${session.token}` },
+  });
+  if (r.real) return r.json;
+  return { ok: false, documents: [], unavailable: true };
+}
+
+/* Fetch one document's bytes and hand the browser a download.
+
+   The function answers base64 inside JSON rather than raw bytes, because the
+   request has to carry a Bearer token and an <a download> cannot set a
+   header. The alternative — a signed one-time URL — is a second permission
+   mechanism to get wrong, and the whole point of the download going through
+   a function is that the tags are checked EVERY time. */
+export async function downloadDocument(id) {
+  const session = currentSession();
+  if (!session || !session.token) return { ok: false, error: 'Please sign in.' };
+  const r = await tryFetchJson(
+    `/.netlify/functions/documents?action=download&id=${encodeURIComponent(id)}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${session.token}` },
+    });
+  if (!r.real) return { ok: false, error: 'Downloading needs the deployed site (not available in local preview).' };
+  if (!r.json || !r.json.ok) return r.json || { ok: false, error: 'That document is not available.' };
+
+  /* Turn the base64 back into a file and click it. The object URL is revoked
+     on a timer rather than immediately — revoking it in the same tick
+     cancels the download in Safari. */
+  try {
+    const bin = atob(r.json.base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: r.json.contentType || 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = r.json.filename || 'document';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: 'That file could not be opened.' };
+  }
+}

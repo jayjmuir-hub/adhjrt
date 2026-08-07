@@ -236,12 +236,20 @@ section('Tab bar');
   const c = buildManager();
   await c.boot();
   const vals = c.renderVals();
-  /* Five tabs since Aug 2026 — the Today tab (next match + recent results)
-     was a subset of Fixtures & scoring and was removed at Jay's call. */
-  check('all five tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
-    ['fixtures', 'results', 'tables', 'draw', 'registrations']));
+  /* SIX tabs since 7 Aug 2026. It was five — the Today tab (next match plus
+     recent results) was a subset of Fixtures & scoring and was removed at
+     Jay's call — and Documents joined on 7 Aug.
+
+     ⚠️ THE EXACT LIST IS ASSERTED, NOT THE COUNT, and that is the stronger
+     form: a count passes when one tab is swapped for another, which is
+     exactly how a manager loses Registrations and gains something nobody
+     asked for. Both the ids and the labels are pinned, because a tab that
+     works perfectly under a renamed label is still a manager who cannot
+     find it. Add a tab, add it here in the same commit. */
+  check('all six tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
+    ['fixtures', 'results', 'tables', 'draw', 'registrations', 'documents']));
   check('their labels are the agreed ones', eq('tab labels', vals.tabs.map((t) => t.label),
-    ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations']));
+    ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations', 'Documents']));
   check('Fixtures & scoring is the tab you land on', vals.isFixtures === true && c.state.tab === 'fixtures');
   check('the selected tab uses Organizer\'s red pill style',
     vals.tabs[0].style.includes('background:#E11B22;color:#fff;'));

@@ -366,7 +366,7 @@ section('The tab bar is grouped, in Jay’s order');
   const bar = src.slice(barStart, barEnd).replace(/<!--[\s\S]*?-->/g, '');
 
   const ORDER = ['showClubs', 'showTeams', 'showPlayers',
-                 'showTournament', 'showVenue', 'showRegistration',
+                 'showTournament', 'showVenue', 'showRegistration', 'showDocuments',
                  'showAccounts'];
 
   const at = (h) => bar.indexOf('onClick="{{ ' + h + ' }}"');
@@ -380,14 +380,21 @@ section('The tab bar is grouped, in Jay’s order');
   check('the seven tabs are in Jay’s order, left to right', ordered,
     ORDER.map((h) => h + '@' + at(h)).join(' '));
 
-  /* ⚠️ THE COUNT IS ASSERTED TOO. An eighth tab added without a decision about
+  /* ⚠️ THE COUNT IS ASSERTED TOO. A ninth tab added without a decision about
      which group it belongs to would slot in anywhere and pass the order sweep,
-     because the sweep only knows about the seven it names. This is the same
-     lesson as the age-group picker: when a rule is "everywhere X appears",
-     write the COUNT into the check. The Documents tab is coming — when it
-     lands it joins ORDER and this number goes to 8, deliberately. */
+     because the sweep only knows about the ones it names. Same lesson as the
+     age-group picker: when a rule is "everywhere X appears", write the COUNT
+     into the check.
+
+     ⚠️ IT WENT 7 -> 8 ON 7 AUG 2026 WHEN DOCUMENTS LANDED, AND THAT IS THE
+     CHECK WORKING RATHER THAN AN OBSTACLE. The number moved in the same
+     commit as the tab, with the new handler added to ORDER above. If you are
+     reading this because the check just failed: only change the number if
+     you have ALSO added the handler to ORDER. Changing it on its own deletes
+     the only thing guarding tab order and leaves a check that still looks
+     like coverage. */
   const buttons = (bar.match(/onClick="\{\{ show/g) || []).length;
-  eq('there are exactly seven tabs', buttons, 7);
+  eq('there are exactly eight tabs', buttons, 8);
 
   /* The three group labels, each read as its own claim. "A label exists"
      would pass on a bar that had lost two of them. */

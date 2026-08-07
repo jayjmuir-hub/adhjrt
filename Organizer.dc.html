@@ -156,6 +156,7 @@
             <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
             <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
             <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
+            <button onClick="{{ showDocuments }}" style="{{ tabDocumentsStyle }}">Documents<sc-if value="{{ hasDocs }}" hint-placeholder-val="{{ false }}"> ({{ docCount }})</sc-if></button>
           </div>
         </div>
 
@@ -279,6 +280,113 @@
               </sc-if>
             </div>
           </div>
+
+        </div>
+      </sc-if>
+
+      <!-- documents tab (Aug 2026) — spec claude/specs/spec-documents.md.
+           An organiser has a PDF (the draw, a pitch map, a first-aid sheet)
+           and needs the fifteen age-group managers to have it. Today that is
+           a WhatsApp message, so the file lives in fifteen phones and the
+           newest version is whichever one somebody scrolled to.
+
+           ⚠️ THIS IS A DISTRIBUTION PROBLEM, NOT A STORAGE ONE. The measure
+           of success is a manager opening /manager on the Saturday morning
+           and seeing the current documents for their group without asking
+           anybody.
+
+           ⚠️ NOTHING HERE IS A PERMISSION. The tag chips choose who a
+           document is FOR; the function checks the session against those
+           tags on every list AND every download. A client-side filter is not
+           a filter — already learned on this site with the pool dropdown. -->
+      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px;max-width:900px">
+
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Share a document</div>
+            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Managers see these on their own dashboard. <b style="color:#454D58">Choose who each one is for</b> &mdash; a manager only sees documents tagged for everyone or for their own age group. PDF, PNG, JPG, XLSX or DOCX, up to 4&nbsp;MB. Nothing here is ever public.</p>
+
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
+            <input value="{{ docTitle }}" onInput="{{ onDocTitle }}" placeholder="Saturday draw" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input value="{{ docDesc }}" onInput="{{ onDocDesc }}" placeholder="Pools and kick-off times, updated 6 November" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+              <sc-for value="{{ docTagChips }}" alias="chip">
+                <button onClick="{{ chip.toggle }}" style="{{ chip.style }}">{{ chip.name }}</button>
+              </sc-for>
+            </div>
+
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">File</label>
+            <input type="file" onChange="{{ onPickDocFile }}" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" style="font-size:13px;margin-bottom:6px" />
+            <div style="font-size:12px;color:#5A626E;margin-bottom:14px">{{ docFileLabel }}</div>
+
+            <button onClick="{{ onUploadDoc }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer">Upload</button>
+            <sc-if value="{{ docsMsg }}" hint-placeholder-val="{{ '' }}">
+              <div style="margin-top:10px;font-size:12px;color:#454D58">{{ docsMsg }}</div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Shared documents</div>
+            <button onClick="{{ onToggleDeleted }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer">{{ docsDeletedLabel }}</button>
+          </div>
+
+          <!-- ⚠️ THREE STATES, THREE SENTENCES. "No documents yet" and "could
+               not load" are different facts; rendering one for both is a bug
+               this codebase has shipped three times. -->
+          <sc-if value="{{ docsUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px solid #F0C36D;background:#FDF6E3;border-radius:10px;font-size:13px;color:#7A5C00">Documents could not load. This is not the same as there being none &mdash; try again in a moment.</div>
+          </sc-if>
+          <sc-if value="{{ docsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px;border:1px dashed rgba(0,0,0,0.18);border-radius:10px;font-size:13px;color:#5A626E">No documents yet. Upload one above and every manager it is tagged for will see it.</div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for value="{{ docRows }}" alias="row">
+              <div style="{{ row.rowStyle }}">
+                <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <div style="min-width:0">
+                    <div style="font-weight:700;font-size:14px">{{ row.title }}<sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}"><span style="margin-left:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#B00020;border:1px solid #B00020;border-radius:6px;padding:2px 6px">Deleted</span></sc-if></div>
+                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
+                    <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
+                    <div style="font-size:11px;color:#454D58;margin-top:4px"><b>For:</b> {{ row.who }}</div>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
+                    <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
+                    <sc-if value="{{ row.notHidden }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete</button>
+                    </sc-if>
+                    <sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ row.onRestore }}" style="background:none;border:1px solid #17A34A;color:#17A34A;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Restore</button>
+                      <button onClick="{{ row.onPurge }}" style="background:none;border:1px solid #B00020;color:#B00020;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete for good</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- ⚠️ PURGE — the irreversible one, and a SEPARATE action from
+               Delete on purpose. Delete is soft and quiet precisely so that
+               this dialog stays rare enough to still be read. The typed word
+               is the document's OWN TITLE, not a fixed word like DELETE,
+               which becomes muscle memory after the second time. -->
+          <sc-if value="{{ isPurging }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;padding:16px;border:1px solid #B00020;border-radius:12px;background:#FFF5F6">
+              <div style="font-weight:700;font-size:14px;color:#B00020;margin-bottom:6px">Delete “{{ purgeTitle }}” for good?</div>
+              <p style="font-size:12px;color:#5A626E;margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Delete, which only hides it from managers. Type the document&rsquo;s title to confirm.</p>
+              <input value="{{ docPurgeText }}" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+              <div style="display:flex;gap:8px">
+                <sc-if value="{{ purgeArmed }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ onConfirmPurge }}" style="background:#B00020;color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Delete for good</button>
+                </sc-if>
+                <button onClick="{{ onCancelPurge }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
 
         </div>
       </sc-if>
@@ -1355,6 +1463,26 @@ function reconcileClubs(clubs, teams) {
    password already typed. */
 const MIN_PASSWORD_LENGTH = 10;
 
+/* ===================================================================
+   DOCUMENTS -- the upload size cap. MEASURED, not inferred, 7 Aug 2026.
+   ===================================================================
+   The spec first said 10 MB (wrong), then ~4.4 MB (inferred from AWS rather
+   than stated by Netlify). It was measured against the live gateway instead:
+   6,279,168 bytes reached our code, 6,285,312 got a 413 from the platform.
+   So the ceiling is ~6 MiB minus the Lambda event envelope, and a base64'd
+   file costs 4/3 of its size -- about 4.7 MiB of real file. 4 MiB is that
+   with headroom.
+
+   The number MUST equal MAX_FILE_BYTES in netlify/functions/_documents.js,
+   and tests/test-documents.js asserts it. A client cap HIGHER than the
+   server's means the organiser waits for an upload and bounces off a 400; a
+   client cap LOWER refuses something the server would have taken.
+
+   IT IS CHECKED HERE BEFORE POSTING, and that is not belt-and-braces: the
+   platform's 413 carries an EMPTY BODY, so above the ceiling there is no
+   server sentence to show anybody. */
+const MAX_DOC_BYTES = 4 * 1024 * 1024;
+
 const BLOCK_GRID = {
   D5: '1 / 1', D4: '1 / 2', D3: '1 / 3', D2: '1 / 4', D1: '1 / 5',
   C4: '2 / 1', C5: '2 / 2', B2: '2 / 3', B1: '2 / 4', A1: '2 / 5',
@@ -1434,6 +1562,14 @@ class Component extends DCLogic {
        /signin when there is none. */
     api: null, session: null,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
+    /* Documents (Aug 2026) -- spec claude/specs/spec-documents.md.
+       docsUnavailable is SEPARATE from an empty list on purpose: "none yet"
+       and "could not load" are different facts and must read differently.
+       Third time this codebase has needed that distinction. */
+    docs: [], docsLoaded: false, docsUnavailable: false, docsBusy: false, docsMsg: '',
+    docsShowDeleted: false, docEditId: '', docTitle: '', docDesc: '', docTags: ['*'],
+    docFileName: '', docFileType: '', docFileB64: '', docFileSize: 0,
+    docPurgeId: '', docPurgeText: '',
     teams: [], players: [], accounts: [], dataError: '', dataLoading: false,
     /* The Clubs tab (Aug 2026). `clubs` are the declarations;
        `clubsUnavailable` is the clubs sheet being unreadable, told apart from
@@ -1626,6 +1762,198 @@ class Component extends DCLogic {
      binding trap in CLAUDE.md bites hardest where a reader cannot see the whole
      set at once. Anything the markup writes as {{ x }} must be returned HERE or
      it resolves silently to empty. */
+  /* ================= DOCUMENTS =====================================
+     Spec: claude/specs/spec-documents.md. Organisers see EVERY document
+     regardless of tags -- an organiser filtered out of their own back
+     office is a support call. The SERVER enforces that; nothing here
+     filters, because a client-side filter is not a filter.
+
+     NOTE: these are class methods, NOT object properties -- Component is a
+     `class`, so there is no comma between them. Getting that wrong is a
+     parse error that takes the whole page down, and the page still LOOKS
+     fine in a diff. */
+
+  async loadDocuments() {
+    const api = this.state.api;
+    if (!api || !api.listDocuments) return;
+    this.setState({ docsBusy: true });
+    const r = await api.listDocuments({ deleted: this.state.docsShowDeleted });
+    this.setState({
+      docsBusy: false,
+      docsLoaded: true,
+      docs: (r && r.documents) || [],
+      /* FAIL SOFT on read, and keep the two failures apart. */
+      docsUnavailable: !!(r && r.unavailable),
+    });
+  }
+
+  /* Read the picked file into base64 in the browser. SIZE FIRST: above the
+     ceiling the platform answers 413 with an EMPTY BODY, so this is the only
+     place a useful sentence can ever come from. */
+  onPickDocFile(e) {
+    const f = e && e.target && e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > MAX_DOC_BYTES) {
+      const mb = Math.round(f.size / 1048576 * 10) / 10;
+      this.setState({ docsMsg: 'That file is ' + mb + ' MB. The maximum is 4 MB.', docFileB64: '', docFileName: '' });
+      return;
+    }
+    const rdr = new FileReader();
+    rdr.onload = () => {
+      const res = String(rdr.result || '');
+      const comma = res.indexOf(',');
+      this.setState({
+        docFileName: f.name,
+        docFileType: f.type,
+        docFileSize: f.size,
+        docFileB64: comma > -1 ? res.slice(comma + 1) : '',
+        docsMsg: '',
+        docTitle: this.state.docTitle || f.name.replace(/\.[^.]+$/, ''),
+      });
+    };
+    rdr.onerror = () => this.setState({ docsMsg: 'That file could not be read.' });
+    rdr.readAsDataURL(f);
+  }
+
+  /* '*' and specific groups are mutually exclusive, so the ambiguous
+     ['*','u12'] can never be built here at all. */
+  toggleDocTag(id) {
+    const cur = this.state.docTags || [];
+    if (id === '*') { this.setState({ docTags: ['*'] }); return; }
+    const without = cur.filter((t) => t !== '*' && t !== id);
+    this.setState({ docTags: cur.indexOf(id) > -1 ? without : without.concat([id]) });
+  }
+
+  async onUploadDoc() {
+    const s = this.state;
+    if (!s.docFileB64) { this.setState({ docsMsg: 'Please choose a file.' }); return; }
+    if (!String(s.docTitle || '').trim()) { this.setState({ docsMsg: 'Please give the document a title.' }); return; }
+    if (!(s.docTags || []).length) { this.setState({ docsMsg: 'Please choose who this document is for.' }); return; }
+    this.setState({ docsBusy: true, docsMsg: '' });
+    const r = await s.api.uploadDocument({
+      title: s.docTitle,
+      description: s.docDesc,
+      filename: s.docFileName,
+      contentType: s.docFileType,
+      base64: s.docFileB64,
+      tags: s.docTags,
+    });
+    if (r && r.ok) {
+      this.setState({
+        docsBusy: false,
+        docsMsg: 'Uploaded.',
+        docTitle: '',
+        docDesc: '',
+        docTags: ['*'],
+        docFileName: '',
+        docFileB64: '',
+        docFileType: '',
+        docFileSize: 0,
+      });
+      this.loadDocuments();
+    } else {
+      /* The server's OWN sentence, never a generic one -- telling an
+         organiser to check their connection when the real answer is "that
+         file type is not supported" sends them round in circles for ever. */
+      this.setState({ docsBusy: false, docsMsg: (r && r.error) || 'That upload did not work.' });
+    }
+  }
+
+  async docAction(fn, id, okmsg) {
+    this.setState({ docsBusy: true, docsMsg: '' });
+    const r = await fn(id);
+    this.setState({ docsBusy: false, docsMsg: (r && r.ok) ? okmsg : ((r && r.error) || 'That did not work.') });
+    this.loadDocuments();
+  }
+
+  /* Soft, and deliberately WITHOUT a confirmation -- that is the whole point
+     of soft-delete, and a dialog on a reversible action just trains people to
+     click through dialogs, which is what makes the irreversible one dangerous. */
+  onDeleteDoc(id) { this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers.'); }
+
+  onRestoreDoc(id) { this.docAction(this.state.api.restoreDocument, id, 'Restored.'); }
+
+  /* THE IRREVERSIBLE ONE. Typed confirmation naming the document, the way
+     Simulate and Reset already do. */
+  askPurgeDoc(id) { this.setState({ docPurgeId: id, docPurgeText: '' }); }
+
+  cancelPurgeDoc() { this.setState({ docPurgeId: '', docPurgeText: '' }); }
+
+  reallyPurgeDoc() {
+    const id = this.state.docPurgeId;
+    this.setState({ docPurgeId: '', docPurgeText: '' });
+    this.docAction(this.state.api.purgeDocument, id, 'Deleted for good.');
+  }
+
+  docVals(s) {
+    const tagnames = {};
+    MANAGER_AGE_GROUPS.forEach((g) => { tagnames[g.id] = g.name; });
+    const purgerow = (s.docs || []).filter((d) => d.id === s.docPurgeId)[0] || null;
+    const live = (s.docs || []).filter((d) => !d.hidden);
+    return {
+      docCount: live.length,
+      hasDocs: live.length > 0,
+      docsBusy: s.docsBusy,
+      docsMsg: s.docsMsg,
+      docsUnavailable: s.docsUnavailable,
+      /* EMPTY AND BROKEN ARE SEPARATE FLAGS, so the markup cannot render one
+         sentence for both. docsEmpty stays FALSE while unavailable -- "no
+         documents yet" is a lie when the truth is that we could not ask. */
+      docsEmpty: s.docsLoaded && !s.docsUnavailable && (s.docs || []).length === 0,
+      docsShowDeleted: s.docsShowDeleted,
+      docsDeletedLabel: s.docsShowDeleted ? 'Hide deleted' : 'Show deleted',
+      onToggleDeleted: () => {
+        this.setState({ docsShowDeleted: !s.docsShowDeleted }, () => this.loadDocuments());
+      },
+      docTitle: s.docTitle,
+      docDesc: s.docDesc,
+      docFileLabel: s.docFileName
+        ? (s.docFileName + ' (' + Math.max(1, Math.round(s.docFileSize / 1024)) + ' KB)')
+        : 'No file chosen',
+      onDocTitle: (e) => this.setState({ docTitle: e.target.value }),
+      onDocDesc: (e) => this.setState({ docDesc: e.target.value }),
+      onPickDocFile: (e) => this.onPickDocFile(e),
+      onUploadDoc: () => this.onUploadDoc(),
+      docTagChips: [{ id: '*', name: 'Everyone' }].concat(MANAGER_AGE_GROUPS).map((g) => ({
+        id: g.id,
+        name: g.name,
+        style: (s.docTags || []).indexOf(g.id) > -1
+          ? 'padding:5px 10px;border-radius:8px;border:1px solid #E11B22;background:#E11B22;color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
+          : 'padding:5px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
+        toggle: () => this.toggleDocTag(g.id),
+      })),
+      docRows: (s.docs || []).map((d) => ({
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        meta: d.typeLabel + ' · ' + Math.max(1, Math.round((d.bytes || 0) / 1024)) + ' KB · ' + (d.uploadedBy || ''),
+        when: String(d.uploadedAt || '').slice(0, 10),
+        who: (d.tags || []).indexOf('*') > -1
+          ? 'Everyone'
+          : (d.tags || []).map((t) => tagnames[t] || t).join(', '),
+        hidden: !!d.hidden,
+        notHidden: !d.hidden,
+        rowStyle: d.hidden
+          ? 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#F6F6F7;opacity:0.72'
+          : 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF',
+        onDownload: () => s.api.downloadDocument(d.id),
+        onDelete: () => this.onDeleteDoc(d.id),
+        onRestore: () => this.onRestoreDoc(d.id),
+        onPurge: () => this.askPurgeDoc(d.id),
+      })),
+      isPurging: !!s.docPurgeId,
+      purgeTitle: purgerow ? purgerow.title : '',
+      docPurgeText: s.docPurgeText,
+      onDocPurgeText: (e) => this.setState({ docPurgeText: e.target.value }),
+      /* The typed word is the document's OWN title -- a fixed word like
+         DELETE is muscle memory after the second time and stops being a
+         check at all. */
+      purgeArmed: !!purgerow && s.docPurgeText.trim() === String(purgerow.title || '').trim(),
+      onCancelPurge: () => this.cancelPurgeDoc(),
+      onConfirmPurge: () => this.reallyPurgeDoc(),
+    };
+  }
+
   clubVals(s) {
     const rec = reconcileClubs(s.clubs, s.teams);
     const shown = s.clubsOnlyFlagged ? rec.rows.filter((r) => r.flagged) : rec.rows;
@@ -3449,6 +3777,8 @@ class Component extends DCLogic {
       isTeams: s.tab === 'teams', isPlayers: s.tab === 'players', isAccounts: s.tab === 'accounts',
       ...this.clubVals(s),
       isVenue: s.tab === 'venue', isRegistration: s.tab === 'registration',
+      isDocuments: s.tab === 'documents',
+      ...this.docVals(s),
       isTournament: s.tab === 'tournament',
       bulkBusy: s.bulkBusy, bulkMsg: s.bulkMsg,
       onPublishAll: () => this.onPublishAll(),
@@ -3485,6 +3815,7 @@ class Component extends DCLogic {
       showClubs: () => this.setState({ tab: 'clubs' }),
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       showTournament: () => this.openTournament(),
+      showDocuments: () => { this.setState({ tab: 'documents' }); this.loadDocuments(); },
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
       tabAccountsStyle: s.tab === 'accounts' ? tabOn : tabOff,
@@ -3492,6 +3823,7 @@ class Component extends DCLogic {
       tabClubsStyle: s.tab === 'clubs' ? tabOn : tabOff,
       tabRegistrationStyle: s.tab === 'registration' ? tabOn : tabOff,
       tabTournamentStyle: s.tab === 'tournament' ? tabOn : tabOff,
+      tabDocumentsStyle: s.tab === 'documents' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
 

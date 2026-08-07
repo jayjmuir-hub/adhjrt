@@ -381,7 +381,7 @@ export async function resetRegistrationWindow() {
    rather than reimplemented — /manager needs those two and reads that file
    only, and a second copy here would be a second copy of the rules. Same
    trade already paid for myAccount and the registration window. */
-export { listDocuments, downloadDocument } from './scores-data.js';
+export { listDocuments, downloadDocument, fetchDocumentBlob } from './scores-data.js';
 
 /* Every write goes through one poster, so the token handling, the
    local-preview answer and the refusal shape cannot drift between five

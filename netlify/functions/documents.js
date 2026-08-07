@@ -74,6 +74,10 @@ function publicRow(d, isOrganizer) {
     filename: d.filename || '',
     contentType: d.contentType || '',
     typeLabel: D.typeLabel(d.contentType),
+    /* Whether the browser can show it inline. Decided server-side in
+       _documents.js so the rule is testable and both dashboards agree —
+       a page deciding for itself is two copies of one rule. */
+    previewable: D.canPreview(d.contentType),
     bytes: d.bytes || 0,
     tags: Array.isArray(d.tags) ? d.tags : [],
     uploadedBy: d.uploadedBy || '',

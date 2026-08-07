@@ -399,6 +399,93 @@ const FAULTS = [
   },
   /* ---- the venue schematic ---- */
   {
+    /* ⚠️ A CONTROL THAT DOES NOTHING IS WORSE THAN NO CONTROL. Office files
+       have no in-browser viewer that does not need a PUBLIC url, and these
+       are never public, so a View button on a spreadsheet opens an empty
+       frame and reads as broken. */
+    name: 'View is offered for spreadsheets, opening an empty frame',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      "const PREVIEW_FAMILIES = ['pdf', 'png', 'jpg'];",
+      "const PREVIEW_FAMILIES = ['pdf', 'png', 'jpg', 'zip'];"),
+    expect: ['an XLSX cannot'],
+  },
+  {
+    name: 'previewing is narrowed to PDF only, so images lose their viewer',
+    suite: 'test-documents.js',
+    apply: () => patch('netlify/functions/_documents.js',
+      "const PREVIEW_FAMILIES = ['pdf', 'png', 'jpg'];",
+      "const PREVIEW_FAMILIES = ['pdf'];"),
+    expect: ['a PNG can be previewed'],
+  },
+  {
+    /* Without preventDefault the browser NAVIGATES THE TAB to the dropped
+       file — a half-filled upload form is gone and it looks like a crash. */
+    name: 'the drop zone stops preventing the browser default',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '  onDocDragOver(e) {\n    if (e && e.preventDefault) e.preventDefault();',
+      '  onDocDragOver(e) {'),
+    expect: ['dragover prevents the browser navigating to the file'],
+  },
+  {
+    /* ⚠️ TWO COPIES OF THE SIZE CHECK IS HOW ONE ENDS UP WITHOUT IT, and
+       above the cap the platform answers 413 with an EMPTY BODY. */
+    name: 'the drop path grows its own file handling, bypassing the size check',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '    this.acceptDocFile(f);\n  }\n\n  /* ⚠️ REVOKES THE PREVIOUS URL',
+      '    const rdr2 = new FileReader();\n    rdr2.onload = () => this.setState({ docFileB64: String(rdr2.result || "").split(",")[1] });\n    rdr2.readAsDataURL(f);\n  }\n\n  /* ⚠️ REVOKES THE PREVIOUS URL'),
+    expect: ['the drop and the picker share one handler'],
+  },
+  {
+    /* Five previews at the 4 MB cap is 20 MB held until the tab closes. */
+    name: 'the viewer stops revoking its blob url on close',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      "  closeDocView() {\n    if (this.state.docViewUrl) { try { URL.revokeObjectURL(this.state.docViewUrl); } catch (err) {} }",
+      '  closeDocView() {'),
+    expect: ['closing revokes the blob url'],
+  },
+  {
+    /* A fetch landing after the viewer moved on paints over the document the
+       organiser is actually looking at — and leaks the url it just made. */
+    name: 'the viewer drops its stale-response guard',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '    if (this.state.docViewId !== id) {',
+      '    if (false) {'),
+    expect: ['a stale response is dropped'],
+  },
+  {
+    /* "Opening…" and "could not open" collapsing into one blank frame is the
+       empty-vs-broken conflation again, one level down. */
+    name: 'the viewer shows its frame while still loading',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      'docViewReady: !!s.docViewUrl && !s.docViewBusy && !s.docViewError,',
+      'docViewReady: !!s.docViewUrl,'),
+    expect: ['ready is gated on neither being true'],
+  },
+  {
+    /* A drop target on a page that cannot upload refuses everything. */
+    name: '/manager grows a drop zone it can never use',
+    suite: 'test-documents.js',
+    apply: () => patch('Manager.dc.html',
+      '<sc-if value="{{ isViewing }}" hint-placeholder-val="{{ false }}">',
+      '<div onDrop="{{ onDocDrop }}"></div>\n          <sc-if value="{{ isViewing }}" hint-placeholder-val="{{ false }}">'),
+    expect: ['/manager has no drop zone'],
+  },
+  {
+    /* Two decoders is two places to get the MIME type or the revoke wrong. */
+    name: 'organizer-data grows its own copy of the blob decoder',
+    suite: 'test-documents.js',
+    apply: () => patch('organizer-data.js',
+      "export { listDocuments, downloadDocument, fetchDocumentBlob } from './scores-data.js';",
+      "export { listDocuments, downloadDocument } from './scores-data.js';\nexport function fetchDocumentBlob(id) { return URL.createObjectURL(new Blob([id])); }"),
+    expect: ['has no decoder of its own'],
+  },
+  {
     /* THE SECOND RENDER BUG IN ONE FEATURE, 7 Aug 2026. The manager's
        Documents panel was inserted BY LINE NUMBER and landed inside
        the isRegistrations panel, so it could only render while a different

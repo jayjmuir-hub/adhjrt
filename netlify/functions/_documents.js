@@ -92,6 +92,35 @@ const ALLOWED_TYPES = {
     { family: 'zip', label: 'Word document', ext: 'docx' },
 };
 
+/* ===================================================================
+   WHAT CAN BE VIEWED IN THE BROWSER (7 Aug 2026)
+   ===================================================================
+   Jay asked for an embedded view. Three of the five types can do it and two
+   cannot, and the split is forced rather than chosen:
+
+   - PDF, PNG and JPG render natively from a blob URL.
+   - XLSX and DOCX CANNOT. The only in-browser viewers for Office files are
+     Google's and Microsoft's, and BOTH require a PUBLIC URL they can fetch
+     themselves. Ours are behind a function that checks the session against
+     the document's tags on every read, and documents are never public
+     (spec §6 rule 3) — so handing a file to a third-party viewer would mean
+     publishing it, which is the one thing this feature must not do.
+
+   ⚠️ SO THE VIEW BUTTON IS ABSENT FOR OFFICE FILES, NOT DISABLED AND NOT
+   OPENING AN EMPTY BOX. A control that does nothing is worse than no
+   control: it reads as broken rather than as unavailable. The row says to
+   download instead.
+
+   Shipping a client-side converter (SheetJS, mammoth) would be a second
+   renderer of untrusted bytes inside a page that reads children's data.
+   Not for v1. */
+const PREVIEW_FAMILIES = ['pdf', 'png', 'jpg'];
+
+function canPreview(contentType) {
+  const a = ALLOWED_TYPES[String(contentType || '').toLowerCase()];
+  return !!a && PREVIEW_FAMILIES.indexOf(a.family) > -1;
+}
+
 /* The sentinel meaning "every signed-in manager, plus organisers". It is the
    SAME sentinel `_auth.js` already uses for an all-groups manager, so the
    filter reuses machinery that is already tested rather than inventing a
@@ -263,6 +292,8 @@ module.exports = {
   MAX_TAGS,
   ALLOWED_TYPES,
   SIGNATURES,
+  PREVIEW_FAMILIES,
+  canPreview,
   ALL_GROUPS,
   sniff,
   typeProblem,

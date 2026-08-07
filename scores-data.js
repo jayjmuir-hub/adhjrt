@@ -2113,7 +2113,24 @@ export async function listDocuments(opts) {
    header. The alternative — a signed one-time URL — is a second permission
    mechanism to get wrong, and the whole point of the download going through
    a function is that the tags are checked EVERY time. */
-export async function downloadDocument(id) {
+/* Fetch one document and hand back a BLOB URL for it.
+ *
+ * ⚠️ ONE DECODER, TWO CALLERS. Download and the embedded viewer both need the
+ * same bytes; two copies of the base64 -> Blob dance would be two places to
+ * get the MIME type or the revoke wrong. This is that one place, added when
+ * the viewer landed (7 Aug 2026).
+ *
+ * The function answers base64 inside JSON rather than raw bytes, because the
+ * request has to carry a Bearer token and neither <a download> nor <iframe
+ * src> can set a header. The alternative — a signed one-time URL — is a
+ * second permission mechanism to get wrong, and the whole point of going
+ * through a function is that the tags are checked EVERY time.
+ *
+ * ⚠️ THE CALLER OWNS THE URL AND MUST REVOKE IT. An object URL holds its
+ * bytes until it is revoked or the tab closes; the viewer revokes on close
+ * and the download revokes on a timer (revoking in the same tick cancels the
+ * download in Safari). */
+export async function fetchDocumentBlob(id) {
   const session = currentSession();
   if (!session || !session.token) return { ok: false, error: 'Please sign in.' };
   const r = await tryFetchJson(
@@ -2121,26 +2138,41 @@ export async function downloadDocument(id) {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${session.token}` },
     });
-  if (!r.real) return { ok: false, error: 'Downloading needs the deployed site (not available in local preview).' };
+  if (!r.real) return { ok: false, error: 'That needs the deployed site (not available in local preview).' };
   if (!r.json || !r.json.ok) return r.json || { ok: false, error: 'That document is not available.' };
-
-  /* Turn the base64 back into a file and click it. The object URL is revoked
-     on a timer rather than immediately — revoking it in the same tick
-     cancels the download in Safari. */
   try {
     const bin = atob(r.json.base64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([bytes], { type: r.json.contentType || 'application/octet-stream' }));
+    const type = r.json.contentType || 'application/octet-stream';
+    return {
+      ok: true,
+      url: URL.createObjectURL(new Blob([bytes], { type })),
+      contentType: type,
+      filename: r.json.filename || 'document',
+    };
+  } catch (err) {
+    return { ok: false, error: 'That file could not be opened.' };
+  }
+}
+
+/* Fetch a document and click it, so the browser saves it. */
+export async function downloadDocument(id) {
+  const r = await fetchDocumentBlob(id);
+  if (!r.ok) return r;
+  try {
     const a = document.createElement('a');
-    a.href = url;
-    a.download = r.json.filename || 'document';
+    a.href = r.url;
+    a.download = r.filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    /* Revoked on a timer rather than immediately — revoking in the same tick
+       cancels the download in Safari. */
+    setTimeout(() => URL.revokeObjectURL(r.url), 10000);
     return { ok: true };
   } catch (err) {
+    URL.revokeObjectURL(r.url);
     return { ok: false, error: 'That file could not be opened.' };
   }
 }

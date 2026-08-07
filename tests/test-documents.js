@@ -296,6 +296,125 @@ section('⚠️ Documents are never public, and never in the repo');
   check('…and never writes a path', !/writeFileSync|createWriteStream/.test(fn));
 }
 
+section('What can be VIEWED in the browser, and what cannot');
+{
+  /* The split is forced, not chosen: PDF/PNG/JPG render from a blob URL;
+     XLSX/DOCX have no in-browser viewer that does not require a PUBLIC url,
+     and these files are never public. Driven, not grepped. */
+  check('a PDF can be previewed', D.canPreview('application/pdf'));
+  check('a PNG can be previewed', D.canPreview('image/png'));
+  check('a JPEG can be previewed', D.canPreview('image/jpeg'));
+  check('⚠️ an XLSX cannot',
+    !D.canPreview('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
+  check('⚠️ a DOCX cannot',
+    !D.canPreview('application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
+  check('an unlisted type cannot', !D.canPreview('application/x-msdownload'));
+  check('an empty type cannot', !D.canPreview(''));
+
+  /* Both halves asserted. "PDF previews" alone would pass on a rule that
+     said everything previews — which is the version that opens an empty box
+     for a spreadsheet. */
+  const yes = Object.keys(D.ALLOWED_TYPES).filter((t) => D.canPreview(t));
+  eq('exactly three of the five types preview', yes.length, 3);
+
+  /* The server decides and sends it — a page working it out for itself is a
+     second copy of the rule. */
+  const fn = readRepo('netlify/functions/documents.js');
+  check('the row carries previewable from the server', /previewable: D\.canPreview\(/.test(fn));
+  ['Organizer.dc.html', 'Manager.dc.html'].forEach((f) => {
+    const src = readRepo(f);
+    check(`${f}: the View button is gated on it`, /row\.previewable/.test(src));
+    check(`${f}: …and the page does not decide for itself`,
+      !/contentType\s*===\s*'application\/pdf'\s*\|\|/.test(src));
+  });
+}
+
+section('The embedded viewer');
+{
+  ['Organizer.dc.html', 'Manager.dc.html'].forEach((f) => {
+    const src = readRepo(f);
+    check(`${f}: there is a viewer panel`, /<sc-if value="\{\{ isViewing \}\}"/.test(src));
+    check(`${f}: it renders an image inline`, /<img src="\{\{ docViewUrl \}\}"/.test(src));
+    check(`${f}: it renders a PDF inline`, /<iframe src="\{\{ docViewUrl \}\}"/.test(src));
+    check(`${f}: it can be closed`, /onCloseDocView/.test(src));
+
+    /* ⚠️ FOUR STATES, FOUR SENTENCES. A viewer that shows an empty frame
+       while fetching is indistinguishable from one that failed — the same
+       lesson as empty-vs-broken in the list, one level down. */
+    check(`${f}: "opening" is its own state`, /docViewBusy/.test(src));
+    check(`${f}: a refusal is its own state`, /docViewError/.test(src));
+    check(`${f}: …and ready is gated on neither being true`,
+      /docViewReady: !!s\.docViewUrl && !s\.docViewBusy && !s\.docViewError/.test(src));
+
+    /* ⚠️ THE BLOB URL IS REVOKED. Without this every preview holds its bytes
+       until the tab is closed — five documents at the 4 MB cap is 20 MB
+       nobody can see. Asserted on close AND on re-open. */
+    check(`${f}: closing revokes the blob url`,
+      /closeDocView\(\)\s*\{[\s\S]{0,200}revokeObjectURL/.test(src));
+    check(`${f}: opening another revokes the previous one`,
+      /openDocView\(id\)[\s\S]{0,400}revokeObjectURL/.test(src));
+
+    /* A fetch that lands after the viewer moved on must not paint over it,
+       and must not leak the url it just made. */
+    check(`${f}: a stale response is dropped, and its url revoked`,
+      /if \(this\.state\.docViewId !== id\)[\s\S]{0,160}revokeObjectURL/.test(src));
+
+    /* View never REPLACED Download — on iOS an iframed PDF shows page one
+       only, so the download is the answer on a phone. */
+    check(`${f}: Download still exists beside View`, /onDownload/.test(src));
+  });
+
+  /* ⚠️ ONE DECODER. Download and the viewer both need the same bytes; two
+     copies of the base64 -> Blob dance is two places to get the MIME type or
+     the revoke wrong. */
+  const sd = readRepo('scores-data.js');
+  eq('there is exactly one createObjectURL in the data layer',
+    (sd.match(/createObjectURL/g) || []).length, 1);
+  check('downloadDocument goes through the shared fetcher',
+    /export async function downloadDocument\(id\) \{\s*const r = await fetchDocumentBlob\(id\);/.test(sd));
+  check('organizer-data re-exports it rather than copying it',
+    /export \{ listDocuments, downloadDocument, fetchDocumentBlob \}/.test(readRepo('organizer-data.js')));
+  check('…and has no decoder of its own', !/createObjectURL/.test(readRepo('organizer-data.js')));
+}
+
+section('Drag and drop');
+{
+  const org = readRepo('Organizer.dc.html');
+  check('there is a drop zone', /onDrop="\{\{ onDocDrop \}\}"/.test(org));
+  check('…that reacts while a file is over it', /onDragOver="\{\{ onDocDragOver \}\}"/.test(org));
+  check('…and stops reacting when it leaves', /onDragLeave="\{\{ onDocDragLeave \}\}"/.test(org));
+  check('…and looks different while dragging',
+    /docDropStyle: s\.docDragOver\s*\?/.test(org));
+
+  /* ⚠️ preventDefault ON dragover IS WHAT MAKES A DROP POSSIBLE AT ALL.
+     Without it the browser NAVIGATES THE TAB to the dropped file, throwing
+     away a half-filled form — which looks like the page crashing. */
+  check('⚠️ dragover prevents the browser navigating to the file',
+    /onDocDragOver\(e\) \{\s*if \(e && e\.preventDefault\) e\.preventDefault\(\);/.test(org));
+  check('⚠️ …and so does the drop itself',
+    /onDocDrop\(e\) \{\s*if \(e && e\.preventDefault\) e\.preventDefault\(\);/.test(org));
+
+  /* ⚠️ ONE FILE HANDLER FOR BOTH PATHS. Two copies of the size check is how
+     one of them ends up without it — and above the cap the platform answers
+     413 with an EMPTY BODY, so there is nothing to show anybody. */
+  check('the drop and the picker share one handler',
+    /onDocDrop\(e\)[\s\S]{0,600}this\.acceptDocFile\(/.test(org) &&
+    /onPickDocFile\(e\) \{\s*this\.acceptDocFile\(/.test(org));
+  eq('the size check exists exactly once',
+    (org.match(/\.size > MAX_DOC_BYTES/g) || []).length, 1);
+  check('…and it lives in the shared handler',
+    /acceptDocFile\(f\) \{[\s\S]{0,220}f\.size > MAX_DOC_BYTES/.test(org));
+
+  /* Only the first file — the form is one title, one description, one set of
+     tags, so a second would silently inherit the first one's metadata. */
+  check('a multi-file drop says only one was taken', /One file at a time/.test(org));
+
+  /* ⚠️ MANAGERS CANNOT UPLOAD, so there is no drop zone on /manager. A drop
+     target that refuses everything is worse than none. */
+  const mgr = readRepo('Manager.dc.html');
+  check('⚠️ /manager has no drop zone', !/onDocDrop/.test(mgr));
+}
+
 section('⚠️ Every loop uses the attributes the ENGINE understands');
 {
   /* ⚠️ THIS SECTION EXISTS BECAUSE THE DOCUMENTS TAB SHIPPED TO PRODUCTION
@@ -616,8 +735,12 @@ section('The data layer exports everything the pages call');
 
   /* And the re-export is asserted as a re-export, so nobody "helpfully"
      pastes a second implementation into organizer-data.js later. */
-  check('the two shared readers are re-exported, not re-implemented',
-    /export \{ listDocuments, downloadDocument \} from '\.\/scores-data\.js'/.test(od));
+  /* Three now, not two — fetchDocumentBlob joined when the viewer landed
+     (7 Aug 2026). The check is pinned to the exact list on purpose: a fourth
+     reader appearing without a decision is worth failing over, and this one
+     correctly fired the moment the list grew. */
+  check('the shared readers are re-exported, not re-implemented',
+    /export \{ listDocuments, downloadDocument, fetchDocumentBlob \} from '\.\/scores-data\.js'/.test(od));
   check('…so organizer-data has no second copy of the download plumbing',
     !/createObjectURL/.test(od));
 }

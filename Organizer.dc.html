@@ -320,6 +320,17 @@
             </div>
 
             <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">File</label>
+            <!-- ⚠️ THE DROP ZONE AND THE BUTTON FEED ONE HANDLER
+                 (acceptDocFile). Two copies of the size check is how one of
+                 them ends up without it, and above the cap the platform
+                 answers 413 with an EMPTY BODY — nothing to show anybody.
+                 ⚠️ onDragOver MUST preventDefault or the browser navigates
+                 the tab to the dropped file, throwing away a half-filled
+                 form; that looks like a crash, not a missing feature. -->
+            <div onDragOver="{{ onDocDragOver }}" onDragLeave="{{ onDocDragLeave }}" onDrop="{{ onDocDrop }}" style="{{ docDropStyle }}">
+              <div style="font-size:13px;color:#5A626E">{{ docDropLabel }}</div>
+              <div style="font-size:11px;color:#98A0AC;margin-top:3px">PDF, PNG, JPG, XLSX or DOCX · up to 4 MB</div>
+            </div>
             <input type="file" onChange="{{ onPickDocFile }}" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" style="font-size:13px;margin-bottom:6px" />
             <div style="font-size:12px;color:#5A626E;margin-bottom:14px">{{ docFileLabel }}</div>
 
@@ -355,6 +366,15 @@
                     <div style="font-size:11px;color:#454D58;margin-top:4px"><b>For:</b> {{ row.who }}</div>
                   </div>
                   <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
+                    <!-- ⚠️ ONLY WHEN THE SERVER SAYS IT CAN BE SHOWN. XLSX and
+                         DOCX have no in-browser viewer that does not require
+                         a PUBLIC url, and these files are never public — so
+                         they get NO button rather than one that opens an
+                         empty box. A control that does nothing reads as
+                         broken; an absent one reads as unavailable. -->
+                    <sc-if value="{{ row.previewable }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ row.onViewRow }}" style="background:#0B7285;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">View</button>
+                    </sc-if>
                     <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
                     <sc-if value="{{ row.notHidden }}" hint-placeholder-val="{{ false }}">
                       <!-- ⚠️ THIS BUTTON WAS MISSING UNTIL 7 AUG 2026 and the
@@ -404,6 +424,46 @@
               </div>
             </sc-for>
           </div>
+
+          <!-- THE EMBEDDED VIEWER (7 Aug 2026).
+               ⚠️ FOUR STATES, FOUR SENTENCES: loading, refused, an image, a
+               PDF. Collapsing any pair is the same mistake as conflating
+               "no documents yet" with "could not load" — a viewer that shows
+               an empty frame while fetching is indistinguishable from one
+               that failed.
+               ⚠️ The blob URL is revoked on close (closeDocView), or every
+               preview holds its bytes until the tab is shut. -->
+          <sc-if value="{{ isViewing }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;border:1px solid rgba(0,0,0,0.12);border-radius:12px;background:#FFFFFF;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,0.10);background:#FAFAFA">
+                <div style="font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ docViewTitle }}</div>
+                <button onClick="{{ onCloseDocView }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;flex:none">Close</button>
+              </div>
+
+              <sc-if value="{{ docViewBusy }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px;text-align:center;font-size:13px;color:#5A626E">Opening&hellip;</div>
+              </sc-if>
+
+              <sc-if value="{{ docViewError }}" hint-placeholder-val="{{ '' }}">
+                <div style="padding:20px;font-size:13px;color:#7A5C00;background:#FDF6E3">{{ docViewError }}</div>
+              </sc-if>
+
+              <sc-if value="{{ docViewReady }}" hint-placeholder-val="{{ false }}">
+                <sc-if value="{{ docViewIsImage }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px;text-align:center;background:#F3F2EF">
+                    <img src="{{ docViewUrl }}" alt="{{ docViewTitle }}" style="max-width:100%;max-height:70vh;border-radius:8px" />
+                  </div>
+                </sc-if>
+                <sc-if value="{{ docViewIsPdf }}" hint-placeholder-val="{{ false }}">
+                  <!-- ⚠️ A PDF IN AN IFRAME ONLY SHOWS PAGE ONE ON iOS SAFARI.
+                       That is a browser limitation, not a bug here — the
+                       Download button beside View is the answer on a phone,
+                       which is why View never replaced it. -->
+                  <iframe src="{{ docViewUrl }}" title="{{ docViewTitle }}" style="width:100%;height:70vh;border:0;display:block"></iframe>
+                </sc-if>
+              </sc-if>
+            </div>
+          </sc-if>
 
           <!-- ⚠️ PURGE — the irreversible one, and a SEPARATE action from
                Delete on purpose. Delete is soft and quiet precisely so that
@@ -1609,6 +1669,13 @@ class Component extends DCLogic {
        silently discarded a half-typed upload, which is the kind of loss
        nobody attributes to the right cause. */
     docEditId: '', docEditTitle: '', docEditDesc: '', docEditTags: [],
+    /* Drag-and-drop and the embedded viewer (7 Aug 2026).
+       docViewUrl is a BLOB URL and the page OWNS it -- it must be revoked
+       when the viewer closes or when another document is opened, or every
+       preview leaks its bytes until the tab is closed. */
+    docDragOver: false,
+    docViewId: '', docViewUrl: '', docViewType: '', docViewTitle: '',
+    docViewBusy: false, docViewError: '',
     docFileName: '', docFileType: '', docFileB64: '', docFileSize: 0,
     docPurgeId: '', docPurgeText: '',
     teams: [], players: [], accounts: [], dataError: '', dataLoading: false,
@@ -1828,11 +1895,15 @@ class Component extends DCLogic {
     });
   }
 
-  /* Read the picked file into base64 in the browser. SIZE FIRST: above the
-     ceiling the platform answers 413 with an EMPTY BODY, so this is the only
-     place a useful sentence can ever come from. */
-  onPickDocFile(e) {
-    const f = e && e.target && e.target.files && e.target.files[0];
+
+  /* ---- DRAG AND DROP, and the EMBEDDED VIEWER (7 Aug 2026) -------------
+     Jay: "can we add a drag and drop and also a embedded view function?"
+
+     ⚠️ THE DROP PATH AND THE PICKER PATH SHARE ONE FUNCTION. Two copies of
+     the size check is how one of them ends up missing it — and the size
+     check is the only thing standing between a big file and a 413 with an
+     EMPTY BODY, which shows the organiser nothing at all. */
+  acceptDocFile(f) {
     if (!f) return;
     if (f.size > MAX_DOC_BYTES) {
       const mb = Math.round(f.size / 1048576 * 10) / 10;
@@ -1854,6 +1925,67 @@ class Component extends DCLogic {
     };
     rdr.onerror = () => this.setState({ docsMsg: 'That file could not be read.' });
     rdr.readAsDataURL(f);
+  }
+
+  onPickDocFile(e) {
+    this.acceptDocFile(e && e.target && e.target.files && e.target.files[0]);
+  }
+
+  /* ⚠️ preventDefault ON dragover IS WHAT MAKES A DROP POSSIBLE AT ALL.
+     Without it the browser's default takes over and NAVIGATES THE TAB to the
+     dropped file — which looks exactly like the page crashing, and on this
+     page would throw away a half-filled upload form. */
+  onDocDragOver(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!this.state.docDragOver) this.setState({ docDragOver: true });
+  }
+
+  onDocDragLeave(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.state.docDragOver) this.setState({ docDragOver: false });
+  }
+
+  onDocDrop(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    this.setState({ docDragOver: false });
+    const dt = e && e.dataTransfer;
+    const f = dt && dt.files && dt.files[0];
+    /* Only the FIRST file. The form is one title, one description and one
+       set of tags, so a second file would silently inherit the first one's
+       metadata -- worse than being told only one was taken. */
+    if (dt && dt.files && dt.files.length > 1) {
+      this.setState({ docsMsg: 'One file at a time — taking the first.' });
+    }
+    this.acceptDocFile(f);
+  }
+
+  /* ⚠️ REVOKES THE PREVIOUS URL BEFORE MAKING A NEW ONE. Opening five
+     documents in a row would otherwise hold five files in memory until the
+     tab closed, and on a 4 MB cap that is 20 MB nobody can see. */
+  async openDocView(id) {
+    const row = (this.state.docs || []).filter((d) => d.id === id)[0];
+    if (!row) return;
+    if (this.state.docViewUrl) { try { URL.revokeObjectURL(this.state.docViewUrl); } catch (err) {} }
+    this.setState({ docViewId: id, docViewUrl: '', docViewBusy: true, docViewError: '', docViewTitle: row.title || '' });
+    const r = await this.state.api.fetchDocumentBlob(id);
+    /* The tab may have been closed, or another document opened, while this
+       was in flight -- the same stale-response guard the draw editor needs. */
+    if (this.state.docViewId !== id) {
+      if (r && r.ok) { try { URL.revokeObjectURL(r.url); } catch (err) {} }
+      return;
+    }
+    if (r && r.ok) {
+      this.setState({ docViewBusy: false, docViewUrl: r.url, docViewType: r.contentType });
+    } else {
+      /* The server's own sentence, so "that document is not available" is not
+         rendered as a broken viewer. */
+      this.setState({ docViewBusy: false, docViewError: (r && r.error) || 'That document could not be opened.' });
+    }
+  }
+
+  closeDocView() {
+    if (this.state.docViewUrl) { try { URL.revokeObjectURL(this.state.docViewUrl); } catch (err) {} }
+    this.setState({ docViewId: '', docViewUrl: '', docViewType: '', docViewTitle: '', docViewError: '', docViewBusy: false });
   }
 
   /* '*' and specific groups are mutually exclusive, so the ambiguous
@@ -2045,6 +2177,27 @@ class Component extends DCLogic {
       onDocTitle: (e) => this.setState({ docTitle: e.target.value }),
       onDocDesc: (e) => this.setState({ docDesc: e.target.value }),
       onPickDocFile: (e) => this.onPickDocFile(e),
+      onDocDragOver: (e) => this.onDocDragOver(e),
+      onDocDragLeave: (e) => this.onDocDragLeave(e),
+      onDocDrop: (e) => this.onDocDrop(e),
+      /* The drop zone changes colour so it is obvious it will accept. A zone
+         that looks identical while dragging reads as inert. */
+      docDropStyle: s.docDragOver
+        ? 'border:2px dashed #E11B22;background:#FDECEC;border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s'
+        : 'border:2px dashed rgba(0,0,0,0.18);background:#FAFAFA;border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s',
+      docDropLabel: s.docDragOver ? 'Drop it here' : 'Drag a file here, or use the button below',
+      /* The viewer. isViewing drives the panel; the three inner flags keep
+         "loading", "cannot show" and "here it is" apart — collapsing them is
+         the same mistake as conflating empty and broken in the list. */
+      isViewing: !!s.docViewId,
+      docViewTitle: s.docViewTitle,
+      docViewBusy: s.docViewBusy,
+      docViewError: s.docViewError,
+      docViewUrl: s.docViewUrl,
+      docViewIsImage: /^image\//.test(s.docViewType || ''),
+      docViewIsPdf: (s.docViewType || '') === 'application/pdf',
+      docViewReady: !!s.docViewUrl && !s.docViewBusy && !s.docViewError,
+      onCloseDocView: () => this.closeDocView(),
       onUploadDoc: () => this.onUploadDoc(),
       docTagChips: [{ id: '*', name: 'Everyone' }].concat(MANAGER_AGE_GROUPS).map((g) => ({
         id: g.id,
@@ -2069,6 +2222,10 @@ class Component extends DCLogic {
           ? 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#F6F6F7;opacity:0.72'
           : 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF',
         isEditing: s.docEditId === d.id,
+        /* Server-decided — see canPreview() in _documents.js. Office files
+           get no View button at all rather than one that opens nothing. */
+        previewable: !!d.previewable,
+        onViewRow: () => this.openDocView(d.id),
         onEditRow: () => this.startEditDoc(d.id),
         onDownload: () => s.api.downloadDocument(d.id),
         onDelete: () => this.onDeleteDoc(d.id),

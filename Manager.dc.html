@@ -504,10 +504,62 @@
                   <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
                   <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
                 </div>
-                <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start">Download</button>
+                <div style="display:flex;gap:6px;align-self:flex-start;flex-wrap:wrap">
+                  <!-- ⚠️ Only when the SERVER says it can be shown. Office
+                       files have no in-browser viewer that does not need a
+                       PUBLIC url, and these are never public — so no button
+                       at all rather than one that opens an empty box. -->
+                  <sc-if value="{{ row.previewable }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ row.onView }}" style="background:#0B7285;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">View</button>
+                  </sc-if>
+                  <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
+                </div>
               </div>
             </sc-for>
           </div>
+
+          <!-- THE EMBEDDED VIEWER (7 Aug 2026) — a second copy of the markup on
+               purpose: the two pages share no component system and there is no
+               build step. The DATA layer is not duplicated (fetchDocumentBlob
+               lives once, in scores-data.js).
+               ⚠️ FOUR STATES, FOUR SENTENCES: loading, refused, an image, a
+               PDF. Collapsing any pair is the same mistake as conflating
+               "no documents yet" with "could not load" — a viewer that shows
+               an empty frame while fetching is indistinguishable from one
+               that failed.
+               ⚠️ The blob URL is revoked on close (closeDocView), or every
+               preview holds its bytes until the tab is shut. -->
+          <sc-if value="{{ isViewing }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;border:1px solid rgba(0,0,0,0.12);border-radius:12px;background:#FFFFFF;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,0.10);background:#FAFAFA">
+                <div style="font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ docViewTitle }}</div>
+                <button onClick="{{ onCloseDocView }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;flex:none">Close</button>
+              </div>
+
+              <sc-if value="{{ docViewBusy }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:28px;text-align:center;font-size:13px;color:#5A626E">Opening&hellip;</div>
+              </sc-if>
+
+              <sc-if value="{{ docViewError }}" hint-placeholder-val="{{ '' }}">
+                <div style="padding:20px;font-size:13px;color:#7A5C00;background:#FDF6E3">{{ docViewError }}</div>
+              </sc-if>
+
+              <sc-if value="{{ docViewReady }}" hint-placeholder-val="{{ false }}">
+                <sc-if value="{{ docViewIsImage }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px;text-align:center;background:#F3F2EF">
+                    <img src="{{ docViewUrl }}" alt="{{ docViewTitle }}" style="max-width:100%;max-height:70vh;border-radius:8px" />
+                  </div>
+                </sc-if>
+                <sc-if value="{{ docViewIsPdf }}" hint-placeholder-val="{{ false }}">
+                  <!-- ⚠️ A PDF IN AN IFRAME ONLY SHOWS PAGE ONE ON iOS SAFARI.
+                       That is a browser limitation, not a bug here — the
+                       Download button beside View is the answer on a phone,
+                       which is why View never replaced it. -->
+                  <iframe src="{{ docViewUrl }}" title="{{ docViewTitle }}" style="width:100%;height:70vh;border:0;display:block"></iframe>
+                </sc-if>
+              </sc-if>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 
@@ -796,6 +848,10 @@ class Component extends DCLogic {
     /* docsUnavailable is SEPARATE from an empty list: "none yet" and
        "could not load" are different facts and must read differently. */
     docs: [], docsLoaded: false, docsUnavailable: false,
+    /* The embedded viewer. docViewUrl is a BLOB URL this page OWNS and must
+       revoke on close, or every preview holds its bytes until the tab shuts. */
+    docViewId: '', docViewUrl: '', docViewType: '', docViewTitle: '',
+    docViewBusy: false, docViewError: '',
     fixtures: null, standings: null, spiritAward: null,
     /* draw is `undefined` before the first fetch, `null` both while a fetch is
        in flight AND after a settled fetch that legitimately found no draw
@@ -1039,6 +1095,37 @@ class Component extends DCLogic {
       docs: (r && r.documents) || [],
       docsUnavailable: !!(r && r.unavailable),
     });
+  }
+
+  /* Open one document inline. Same shape as the organiser's, and it is a
+     SECOND COPY on purpose — the two pages share no component system and
+     there is no build step, the cost already paid by the My account card.
+     The DATA layer is not duplicated: fetchDocumentBlob lives once in
+     scores-data.js and both pages call it.
+
+     ⚠️ Revokes the previous URL before making a new one, and guards against
+     a stale response — the fetch may land after the viewer was closed or
+     another document opened. */
+  async openDocView(id) {
+    const row = (this.state.docs || []).filter((d) => d.id === id)[0];
+    if (!row) return;
+    if (this.state.docViewUrl) { try { URL.revokeObjectURL(this.state.docViewUrl); } catch (err) {} }
+    this.setState({ docViewId: id, docViewUrl: '', docViewBusy: true, docViewError: '', docViewTitle: row.title || '' });
+    const r = await this.state.api.fetchDocumentBlob(id);
+    if (this.state.docViewId !== id) {
+      if (r && r.ok) { try { URL.revokeObjectURL(r.url); } catch (err) {} }
+      return;
+    }
+    if (r && r.ok) {
+      this.setState({ docViewBusy: false, docViewUrl: r.url, docViewType: r.contentType });
+    } else {
+      this.setState({ docViewBusy: false, docViewError: (r && r.error) || 'That document could not be opened.' });
+    }
+  }
+
+  closeDocView() {
+    if (this.state.docViewUrl) { try { URL.revokeObjectURL(this.state.docViewUrl); } catch (err) {} }
+    this.setState({ docViewId: '', docViewUrl: '', docViewType: '', docViewTitle: '', docViewError: '', docViewBusy: false });
   }
 
   /* Organiser-only (the header select that calls this is itself gated on
@@ -2200,8 +2287,19 @@ class Component extends DCLogic {
         description: d.description,
         meta: d.typeLabel + ' \u00b7 ' + Math.max(1, Math.round((d.bytes || 0) / 1024)) + ' KB \u00b7 ' + (d.uploadedBy || ''),
         when: String(d.uploadedAt || '').slice(0, 10),
+        previewable: !!d.previewable,
+        onView: () => this.openDocView(d.id),
         onDownload: () => s.api.downloadDocument(d.id),
       })),
+      isViewing: !!s.docViewId,
+      docViewTitle: s.docViewTitle,
+      docViewBusy: s.docViewBusy,
+      docViewError: s.docViewError,
+      docViewUrl: s.docViewUrl,
+      docViewIsImage: /^image\//.test(s.docViewType || ''),
+      docViewIsPdf: (s.docViewType || '') === 'application/pdf',
+      docViewReady: !!s.docViewUrl && !s.docViewBusy && !s.docViewError,
+      onCloseDocView: () => this.closeDocView(),
 
       comingSoonBlurb: `The draw for ${this.ageName(s.ageId)} hasn't been released yet.`,
 

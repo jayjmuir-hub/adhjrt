@@ -208,11 +208,16 @@ Four accounts exist on production right now:
 |---|---|---|---|
 | *(your organiser login)* | organiser | 11 Jul | keep — yours |
 | *(a real person's manager login — username redacted)* | manager, u18b | 14 Jul | your call |
-| `test-u14b` | manager, u14b | 22 Jul | revoke — rehearsal login |
-| `test-u13` | manager, u13 | 22 Jul | revoke — rehearsal login |
+| ~~`test-u14b`~~ | manager, u14b | 22 Jul | **REVOKED — Jay, 7 Aug 2026** |
+| ~~`test-u13`~~ | manager, u13 | 22 Jul | **REVOKED — Jay, 7 Aug 2026** |
 
-In **/organizer → Accounts** you can revoke any of them. No urgency either way, but the
-two `test-*` logins have working passwords and no reason to exist.
+In **/organizer → Accounts** you can revoke any of them.
+
+✅ **BOTH `test-*` LOGINS ARE GONE — Jay revoked them on 7 Aug 2026.** They had
+working passwords and no reason to exist. ⚠️ **This is Jay's word, not a
+measurement** — a session cannot read the account store without signing in, the
+same basis on which the `testclub` revocation was recorded on 5 Aug. Nothing in
+the repo can verify it, and nothing should claim to.
 
 ---
 
@@ -225,7 +230,7 @@ two `test-*` logins have working passwords and no reason to exist.
 | Players sheet | header only — **done** |
 | Saved draws | none — **done, 0 of 15** |
 | Stored results | 0 — **done** |
-| Rehearsal logins | `test-u14b` and `test-u13` — **left in place, Jay's call** |
+| Rehearsal logins | ✅ **NONE — `test-u14b` and `test-u13` revoked by Jay, 7 Aug 2026** (his word; not independently checkable) |
 
 ---
 

@@ -940,6 +940,11 @@ Each of these was being read and acted on:
    403s, the link works, and the sheet is clean. `CLUB_FORM_KEY` is the only
    thing gating that form — deleting the variable in Netlify switches it off
    instantly, no deploy, and that is the off switch.
+3b. ~~Revoke the two rehearsal manager logins.~~ **DONE — `test-u14b` and
+   `test-u13` revoked by Jay on 7 Aug 2026.** They had working passwords and
+   no reason to exist; they were the last of the rehearsal accounts. Jay's
+   word, on the same basis as item 3 — not independently checkable.
+
 3. ~~Revoke the `testclub` account.~~ **DONE** (Jay's word — a session cannot
    check the account store without signing in).
 4. ~~Walk the My account card on `/manager`, `/organizer` and an Accounts row.~~

@@ -360,7 +360,7 @@
               <div style="{{ row.rowStyle }}">
                 <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
                   <div style="min-width:0">
-                    <div style="font-weight:700;font-size:14px">{{ row.title }}<sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}"><span style="margin-left:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#B00020;border:1px solid #B00020;border-radius:6px;padding:2px 6px">Deleted</span></sc-if></div>
+                    <div style="font-weight:700;font-size:14px">{{ row.title }}<sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}"><span style="margin-left:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#B00020;border:1px solid #B00020;border-radius:6px;padding:2px 6px">Not shared</span></sc-if></div>
                     <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
                     <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
                     <div style="font-size:11px;color:#454D58;margin-top:4px"><b>For:</b> {{ row.who }}</div>
@@ -384,10 +384,10 @@
                            and the only way to re-share a document was delete
                            and re-upload, which loses the upload date. -->
                       <button onClick="{{ row.onEditRow }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Change sharing</button>
-                      <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete</button>
+                      <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Stop sharing</button>
                     </sc-if>
                     <sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ row.onRestore }}" style="background:none;border:1px solid #17A34A;color:#17A34A;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Restore</button>
+                      <button onClick="{{ row.onRestore }}" style="background:none;border:1px solid #17A34A;color:#17A34A;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Share again</button>
                       <button onClick="{{ row.onPurge }}" style="background:none;border:1px solid #B00020;color:#B00020;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete for good</button>
                     </sc-if>
                   </div>
@@ -473,7 +473,7 @@
           <sc-if value="{{ isPurging }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:14px;padding:16px;border:1px solid #B00020;border-radius:12px;background:#FFF5F6">
               <div style="font-weight:700;font-size:14px;color:#B00020;margin-bottom:6px">Delete “{{ purgeTitle }}” for good?</div>
-              <p style="font-size:12px;color:#5A626E;margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Delete, which only hides it from managers. Type the document&rsquo;s title to confirm.</p>
+              <p style="font-size:12px;color:#5A626E;margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Stop sharing, which only takes it off the managers&rsquo; list. Type the document&rsquo;s title to confirm.</p>
               <input value="{{ docPurgeText }}" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
               <div style="display:flex;gap:8px">
                 <sc-if value="{{ purgeArmed }}" hint-placeholder-val="{{ false }}">
@@ -2039,8 +2039,27 @@ class Component extends DCLogic {
     this.loadDocuments();
   }
 
-  /* ⚠️ THIS ASKS FIRST, AND THE FIRST VERSION DID NOT. Jay, 7 Aug: "a confirm
-     delete instead of just push delete and its gone".
+  /* STOP SHARING. Soft: the document leaves every manager's Documents tab
+     and stays on the organiser's shelf, restorable.
+
+     ⚠️ THIS WAS CALLED "DELETE" UNTIL 7 AUG 2026 AND THE NAME WAS A LIE.
+     Jay: "need option to stop sharing but keep document in organiser
+     section" — asking for a feature he already had, because the button
+     said Delete, the badge said Deleted and the toggle said Show deleted.
+     Every one of those words promised destruction and the code did nothing
+     of the sort. A second control would have been two buttons doing one job;
+     the fix was the vocabulary.
+
+     ⚠️ THE WIRE STILL SAYS `delete`/`restore`, AND THE STORED FLAG IS STILL
+     `hidden`. Deliberate: renaming the action means changing the server
+     contract, and renaming the field means migrating rows that already
+     exist, both for zero user benefit and both risking exactly the silent
+     breakage this feature has already shipped twice. The mapping is
+     ASSERTED in test-documents.js so it stays a decision rather than a
+     puzzle for whoever reads it next.
+
+     ⚠️ AND IT ASKS FIRST. Jay, 7 Aug: "a confirm delete instead of just push
+     delete and its gone".
 
      The original reasoning was that delete is SOFT, so a dialog on a
      reversible action only trains people to click through dialogs -- which is
@@ -2058,15 +2077,15 @@ class Component extends DCLogic {
     const row = (this.state.docs || []).filter((d) => d.id === id)[0];
     const title = (row && row.title) || 'this document';
     this.confirmModal(
-      'Hide "' + title + '" from managers?\n\nIt disappears from every manager\u2019s Documents tab straight away. '
-      + 'Nothing is destroyed \u2014 it stays on your shelf under \u201cShow deleted\u201d and you can restore it at any time. '
-      + 'To remove the file itself, use \u201cDelete for good\u201d after hiding it.',
-      () => this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers. You can restore it under Show deleted.'),
-      { okLabel: 'Hide it', wide: true }
+      'Stop sharing "' + title + '"?\n\nIt disappears from every manager\u2019s Documents tab straight away. '
+      + 'The document is NOT deleted \u2014 it stays here on your shelf under \u201cShow unshared\u201d, and you can share it again at any time. '
+      + 'To remove the file itself, use \u201cDelete for good\u201d after unsharing it.',
+      () => this.docAction(this.state.api.deleteDocument, id, 'Stopped sharing. It is still on your shelf under Show unshared.'),
+      { okLabel: 'Stop sharing', wide: true }
     );
   }
 
-  onRestoreDoc(id) { this.docAction(this.state.api.restoreDocument, id, 'Restored.'); }
+  onRestoreDoc(id) { this.docAction(this.state.api.restoreDocument, id, 'Shared again.'); }
 
   /* THE IRREVERSIBLE ONE. Typed confirmation naming the document, the way
      Simulate and Reset already do. */
@@ -2165,7 +2184,7 @@ class Component extends DCLogic {
          documents yet" is a lie when the truth is that we could not ask. */
       docsEmpty: s.docsLoaded && !s.docsUnavailable && (s.docs || []).length === 0,
       docsShowDeleted: s.docsShowDeleted,
-      docsDeletedLabel: s.docsShowDeleted ? 'Hide deleted' : 'Show deleted',
+      docsDeletedLabel: s.docsShowDeleted ? 'Hide unshared' : 'Show unshared',
       onToggleDeleted: () => {
         this.setState({ docsShowDeleted: !s.docsShowDeleted }, () => this.loadDocuments());
       },
@@ -2213,9 +2232,18 @@ class Component extends DCLogic {
         description: d.description,
         meta: d.typeLabel + ' · ' + Math.max(1, Math.round((d.bytes || 0) / 1024)) + ' KB · ' + (d.uploadedBy || ''),
         when: String(d.uploadedAt || '').slice(0, 10),
-        who: (d.tags || []).indexOf('*') > -1
-          ? 'Everyone'
-          : (d.tags || []).map((t) => tagnames[t] || t).join(', '),
+        /* ⚠️ AN UNSHARED ROW MUST NOT STILL READ "For: Everyone". The tags
+           are what it WILL go back to, not who can see it now, and printing
+           them unqualified beside a "Not shared" badge is the row
+           contradicting itself. The old value is kept in brackets because it
+           is the thing the organiser needs when deciding whether to share it
+           again — dropping it would make the badge honest and the row
+           useless. */
+        who: (d.hidden ? 'Nobody right now (was: ' : '')
+          + ((d.tags || []).indexOf('*') > -1
+            ? 'Everyone'
+            : (d.tags || []).map((t) => tagnames[t] || t).join(', '))
+          + (d.hidden ? ')' : ''),
         hidden: !!d.hidden,
         notHidden: !d.hidden,
         rowStyle: d.hidden

@@ -637,10 +637,54 @@ section('The organiser page has the shelf');
   check('nothing deletes BEFORE the question is asked',
     delBody.indexOf('confirmModal(') > -1 &&
     delBody.indexOf('confirmModal(') < delBody.indexOf('docAction('));
-  check('…and the dialog names the document', /Hide "' \+ title \+ '"|Hide \\"/.test(org) || /'Hide "' \+ title/.test(org));
-  check('…and says it can be restored', /Show deleted\u201d and you can restore it|can restore it at any time/.test(org));
-  check('…and still calls the SOFT delete, not the purge',
-    /okLabel: 'Hide it'/.test(org) && /deleteDocument, id/.test(org));
+  check('…and the dialog names the document', /'Stop sharing "' \+ title \+ '"/.test(org));
+  check('…and says it is NOT deleted', /The document is NOT deleted/.test(org));
+  check('…and says it can be shared again', /share it again at any time/.test(org));
+  check('…and names where to find it', /Show unshared/.test(org));
+  check('…and still calls the SOFT action, not the purge',
+    /okLabel: 'Stop sharing'/.test(org) && /deleteDocument, id/.test(org));
+
+  /* ⚠️ THE VOCABULARY IS THE FEATURE, 7 Aug 2026. Jay asked for "option to
+     stop sharing but keep document in organiser section" — which is exactly
+     what this button already did. He could not find it because it said
+     DELETE, the badge said DELETED and the toggle said SHOW DELETED. Three
+     words all promising destruction over code that destroys nothing.
+
+     A second control would have been two buttons doing one job. The fix was
+     the words, so the words are pinned: the only user-facing "Delete" left on
+     this shelf is the one that genuinely deletes. */
+  check('⚠️ the soft action is called Stop sharing', />Stop sharing</.test(org));
+  check('⚠️ …and its undo is called Share again', />Share again</.test(org));
+  check('⚠️ …and the badge says Not shared, not Deleted', />Not shared</.test(org) && !/>Deleted</.test(org));
+  check('⚠️ …and the toggle says unshared, not deleted',
+    /'Hide unshared' : 'Show unshared'/.test(org));
+  /* ⚠️ Matched on "for good" ANYWHERE in the string, not on the exact phrase
+     "Delete for good" — the purge dialog's heading interpolates the title
+     ("Delete \u201c{{ purgeTitle }}\u201d for good?") and a literal match
+     reported it as a stray Delete. The rule is "every user-facing Delete is
+     the irreversible one", not "every Delete is spelled the same way". */
+  const deletes = org.match(/>Delete[^<]*</g) || [];
+  check('the sweep found the Delete labels', deletes.length > 0);
+  check('⚠️ the ONLY user-facing "Delete" is the irreversible one',
+    deletes.length > 0 && deletes.every((t) => /for good/.test(t)),
+    JSON.stringify(deletes));
+
+  /* ⚠️ AN UNSHARED ROW MUST NOT STILL READ "For: Everyone". The tags are what
+     it WILL go back to, not who can see it now — printing them unqualified
+     beside a "Not shared" badge is the row contradicting itself. */
+  check('⚠️ an unshared row does not claim it is still shared',
+    /d\.hidden \? 'Nobody right now \(was: ' : ''/.test(org));
+
+  /* ⚠️ THE WIRE STILL SAYS delete/restore AND THE STORED FLAG IS STILL
+     `hidden` — deliberate, because renaming the action changes the server
+     contract and renaming the field means migrating rows that already exist,
+     both for zero user benefit. Pinned so the divergence stays a recorded
+     decision rather than a puzzle. */
+  check('the wire deliberately still says delete/restore',
+    /action: 'delete', id/.test(readRepo('organizer-data.js')) &&
+    /action === 'delete'/.test(readRepo('netlify/functions/documents.js')));
+  check('…and the divergence is written down where it is made',
+    /THE WIRE STILL SAYS `delete`\/`restore`/.test(org));
 
   /* Purge stays the heavier one: it keeps the TYPED confirmation on top of a
      dialog, so the two are not the same weight. If they ever become the same,

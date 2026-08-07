@@ -541,6 +541,44 @@ const FAULTS = [
     expect: ['the editor cannot replace the file'],
   },
   {
+    /* ⚠️ THE NAME WAS THE BUG, 7 Aug 2026. Jay asked for "option to stop
+       sharing but keep document in organiser section" — a feature he already
+       had. The button said Delete, the badge said Deleted, the toggle said
+       Show deleted: three words promising destruction over code that
+       destroys nothing. A second control would have been two buttons doing
+       one job; the fix was the vocabulary, so the vocabulary is pinned. */
+    name: 'the soft action is called Delete again, so it reads as destructive',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      'font-size:12px;cursor:pointer">Stop sharing</button>',
+      'font-size:12px;cursor:pointer">Delete</button>'),
+    expect: ['the soft action is called Stop sharing'],
+  },
+  {
+    name: 'the badge says Deleted again for a document that still exists',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html', '>Not shared</span>', '>Deleted</span>'),
+    expect: ['the badge says Not shared, not Deleted'],
+  },
+  {
+    name: 'the toggle goes back to Show deleted',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      "docsDeletedLabel: s.docsShowDeleted ? 'Hide unshared' : 'Show unshared',",
+      "docsDeletedLabel: s.docsShowDeleted ? 'Hide deleted' : 'Show deleted',"),
+    expect: ['the toggle says unshared, not deleted'],
+  },
+  {
+    /* An unshared row printing its old tags unqualified beside a "Not shared"
+       badge is the row contradicting itself. */
+    name: 'an unshared row still claims it is shared with everyone',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      "        who: (d.hidden ? 'Nobody right now (was: ' : '')",
+      "        who: ('')"),
+    expect: ['an unshared row does not claim it is still shared'],
+  },
+  {
     /* Jay asked for this on 7 Aug after pressing Delete and watching the row
        vanish. Recoverable and "looks recoverable" are not the same thing. */
     name: 'delete goes back to no confirmation at all',
@@ -556,9 +594,9 @@ const FAULTS = [
     name: 'the delete confirmation stops saying the document can be restored',
     suite: 'test-documents.js',
     apply: () => patch('Organizer.dc.html',
-      'Nothing is destroyed \\u2014 it stays on your shelf under \\u201cShow deleted\\u201d and you can restore it at any time. ',
+      'The document is NOT deleted \\u2014 it stays here on your shelf under \\u201cShow unshared\\u201d, and you can share it again at any time. ',
       ''),
-    expect: ['says it can be restored'],
+    expect: ['says it can be shared again'],
   },
   {
     /* If delete and purge become the same weight, the typed step has stopped
@@ -566,9 +604,9 @@ const FAULTS = [
     name: 'delete is escalated to call the purge instead of the soft hide',
     suite: 'test-documents.js',
     apply: () => patch('Organizer.dc.html',
-      "() => this.docAction(this.state.api.deleteDocument, id, 'Hidden from managers. You can restore it under Show deleted.'),",
+      "() => this.docAction(this.state.api.deleteDocument, id, 'Stopped sharing. It is still on your shelf under Show unshared.'),",
       "() => this.docAction(this.state.api.purgeDocument, id, 'Gone.'),"),
-    expect: ['still calls the SOFT delete, not the purge'],
+    expect: ['still calls the SOFT action, not the purge'],
   },
   {
     /* ⚠️ THE ONE THAT ACTUALLY SHIPPED BROKEN, 7 Aug 2026. The Documents tab

@@ -916,6 +916,51 @@ check('both flap keyframes were found', degs(FL).length >= 2 && degs(FR).length 
 eq('the wings flap in mirror image rather than both sweeping the same way',
   degs(FL).map((d) => -d).join(','), degs(FR).join(','));
 
+/* ⚠️⚠️ THE RESTING WINGS MUST BE AT ZERO, AND THIS IS THE CHECK THIS WHOLE
+   BLOCK EXISTS FOR (Jay, 7 Aug 2026: "the bat is not sitting properly on the
+   logo, it should sit exactly as it does on the static version").
+
+   The wings shipped with 8deg / -8deg at BOTH 0% and 100%. With `both` fill
+   the 0% frame applies through the half-second delay before the flight and the
+   100% frame applies for ever after it, so the bat sat in the shield's
+   bat-shaped hole with its wings splayed 8 degrees — permanently, at both ends
+   — in a hole cut for a level bat.
+
+   ⚠️ NOTHING THAT MEASURES `.cf` CAN SEE IT. The wing layers are inset:0 inside
+   the badge box and rotate about their own shoulders, so `.cf`'s bounding
+   rectangle is 118x118 either way. Every flight-geometry check above passed on
+   the broken version, including the one asserting the resting box is
+   unrotated. It was found by rendering the resting crest and comparing it
+   against crest.png — the complete printed crest — which came out as two
+   different pictures.
+
+   The invariant is: the bat at rest must be IDENTICAL to the printed crest,
+   which means every animated layer's first and last frame is the identity
+   transform. Asserted on both wings and at both ends, because one end alone is
+   satisfied by a bat that takes off level and lands splayed. */
+const firstLast = (body) => {
+  const zero = /(?:^|\})\s*(?:0%|from)\s*(?:,\s*100%\s*)?\{([^}]*)\}/.exec(body);
+  const hund = /(?:^|\})\s*(?:0%\s*,\s*)?(?:100%|to)\s*\{([^}]*)\}/.exec(body);
+  return [zero && zero[1], hund && hund[1]];
+};
+[['left', FL], ['right', FR]].forEach(([side, body]) => {
+  const [a, b] = firstLast(body);
+  check(`the ${side} wing's first and last frames were located`, !!a && !!b, `${a} / ${b}`);
+  const flat = (f) => /rotate\(\s*-?0(?:\.0+)?deg\s*\)/.test(f || '');
+  check(`…and the ${side} wing rests at zero, not splayed, before the flight`,
+    flat(a), `0% is ${a}`);
+  check(`…and returns to zero after it, so it fits the hole it came out of`,
+    flat(b), `100% is ${b}`);
+});
+
+/* And the whole point of the above, stated once as the rule it serves: at rest
+   the crest on the page and crest.png are the same picture. Verified by pixel
+   comparison in a real browser (mean abs difference 17/765, confined to
+   anti-aliased edges); this source check is what keeps it true. */
+check('the resting crest is the printed crest, and that is why the zeros matter',
+  /it should sit exactly as it does on the static version/.test(PAGE),
+  'the rule recorded next to the keyframes that carry it');
+
 /* ⚠️ IT MUST STOP FOR REDUCED MOTION — AND IT MUST STAY VISIBLE, WHICH IS THE
    OPPOSITE OF WHAT THIS RULE USED TO DO (7 Aug 2026). The old rule also set
    opacity:0, correctly, because batfly parked the bat wherever it happened to

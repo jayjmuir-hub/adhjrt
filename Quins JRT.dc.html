@@ -352,8 +352,27 @@
      arguably what a wing joint should look like. The alternative is cut
      artwork with proper overlap, which is a design job, not a CSS one.
      Recorded so nobody spends an afternoon chasing it as a bug. */
-  @keyframes flapL{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-26deg)}}
-  @keyframes flapR{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(26deg)}}
+  /* ⚠️⚠️ 0% AND 100% MUST BE rotate(0deg), AND THAT IS THE WHOLE POINT OF THIS
+     PAIR OF KEYFRAMES (Jay, 7 Aug 2026: "the bat is not sitting properly on the
+     logo, it should sit exactly as it does on the static version").
+
+     These read 8deg / -8deg at both ends, and `both` fill means the 0% frame
+     applies during the half-second delay BEFORE the flight and the 100% frame
+     applies for ever AFTER it. So the bat sat in the shield's hole with its
+     wings splayed 8 degrees, permanently, at both ends of the animation — a
+     bat that does not fit the hole it was cut from.
+
+     ⚠️ NOTHING THAT MEASURES `.cf` CAN SEE THIS. The wing layers are inset:0
+     inside the badge box and rotate about their own shoulders, so `.cf`'s
+     bounding rectangle is 118x118 either way. The flight geometry checks all
+     passed on the broken version. What catches it is comparing the RENDERED
+     resting crest against crest.png — the complete printed crest — which is
+     what tests/test-about-board.js now asserts on the numbers below.
+
+     The sweep is unchanged at 34 degrees; it just runs from neutral instead of
+     from a splay. */
+  @keyframes flapL{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-34deg)}}
+  @keyframes flapR{0%,100%{transform:rotate(0deg)}50%{transform:rotate(34deg)}}
   .crest-anim.play .cf,.crest-anim.play .cfl,.crest-anim.play .half{animation-play-state:running}
   /* ⚠️ TOMBSTONE (7 Aug 2026). `@keyframes batfly`, `batflap` and `batmorph`
      lived here, along with `.crest-anim .breal` and `.crest-anim .cfl img`.

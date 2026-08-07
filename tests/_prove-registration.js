@@ -6728,9 +6728,35 @@ const FAULTS = [
        and both keyframe sets are present and valid. */
     name: 'both wings sweep the same way, so the bat rows instead of flapping',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '@keyframes flapR{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(26deg)}}',
-      '@keyframes flapR{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-26deg)}}'),
+    /* ⚠️ ANCHOR REPOINTED — the resting splay was removed on 7 Aug. */
+    apply: () => patch(HOME, '@keyframes flapR{0%,100%{transform:rotate(0deg)}50%{transform:rotate(34deg)}}',
+      '@keyframes flapR{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-34deg)}}'),
     expect: ['mirror image rather than both sweeping the same way'],
+  },
+  {
+    /* ⚠️⚠️ THE BUG JAY REPORTED, PUT BACK EXACTLY AS IT SHIPPED (7 Aug 2026):
+       "the bat is not sitting properly on the logo, it should sit exactly as it
+       does on the static version". 8deg at 0% and 100% with `both` fill means
+       the bat sits in the shield's hole with its wings splayed, permanently,
+       at BOTH ends of the flight. The flight is unaffected and looks perfect,
+       and every geometry check on `.cf` passes — the wing layers are inset:0
+       and rotate about their own shoulders, so the bounding box never moves. */
+    name: 'the wings rest splayed 8 degrees, so the bat does not fit its own hole',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes flapL{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-34deg)}}',
+      '@keyframes flapL{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-26deg)}}'),
+    expect: ['left wing rests at zero'],
+  },
+  {
+    /* ⚠️ THE HALF THAT IS EASIER TO MISS: level at take-off, splayed on
+       landing. A check on the 0% frame alone passes, the bat leaves the crest
+       looking right, and it is only wrong once it has stopped moving — which
+       is the state it spends the rest of the page in. */
+    name: 'the wings take off level and land splayed',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes flapR{0%,100%{transform:rotate(0deg)}50%{transform:rotate(34deg)}}',
+      '@keyframes flapR{0%{transform:rotate(0deg)}50%{transform:rotate(34deg)}100%{transform:rotate(-9deg)}}'),
+    expect: ['returns to zero after it'],
   },
   {
     /* ⚠️ THE DEAD KEYFRAMES CREEPING BACK. A revert that restores batfly

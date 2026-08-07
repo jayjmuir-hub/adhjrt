@@ -114,6 +114,40 @@
   status = 404
   force = true
 
+# --- claude docs -------------------------------------------------------
+# Same reasoning as tests/ and tools/ above. The claude/ folder holds the
+# project's own documentation — specs, plans, runbooks, status. It was moved
+# into this repo on 7 Aug 2026 so that a bare clone is self-sufficient; before
+# that, CLAUDE.md pointed at fourteen paths a clone could not see.
+#
+# No publish directory is set, so without this rule adhjrt.com/claude/state-of-play.md
+# would be served as a plain 200. Nothing in there is secret — it was scanned
+# file by file before it was committed and personal data was redacted — but
+# internal documentation is not part of the site and should not be served as
+# if it were.
+#
+# force = true because these are real files on disk and would otherwise be
+# served before this rule was consulted.
+#
+# ⚠️ to = "/404.html", NOT "/claude/:splat". A redirect that points at itself
+# is silently DROPPED by Netlify rather than applied — that mistake sat
+# unnoticed on the tests/ rule for months while the comment above it claimed
+# otherwise. See the tests/ block above.
+#
+# ⚠️ THIS RULE IS UNVERIFIED UNTIL SOMEBODY FETCHES THE URL ON A DEPLOY.
+# Reading this file proves nothing; that is exactly how tests/ went wrong.
+# After the next production deploy, fetch adhjrt.com/claude/state-of-play.md
+# and confirm 404.
+#
+# ⚠️ AND IT DOES NOT MAKE THESE DOCS PRIVATE. This repo is PUBLIC: every file
+# here is readable on github.com regardless of what Netlify serves. This rule
+# is about not serving them as part of the website, nothing more.
+[[redirects]]
+  from = "/claude/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.

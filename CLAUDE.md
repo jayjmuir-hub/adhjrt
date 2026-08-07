@@ -2943,8 +2943,34 @@ there.
   viewport there is no margin to hang in and it would be clipped. That is why the
   eyebrow moved inside the row instead.
 
-  ⚠️ **The bat animation is MOTHBALLED, not deleted (5 Aug 2026)** — Jay parked
-  it when the rotating photo board went into the same section. What it used to
+  ⚠️⚠️ **THE TWO PARAGRAPHS BELOW ARE WRONG. THE BAT IS LIVE ON PRODUCTION AND
+  THERE IS NO `.m-crestrow` (verified 7 Aug 2026).** Read this correction, not
+  them.
+
+  Measured on adhjrt.com, comments stripped so only live code counted:
+  `@keyframes batfly`, `@keyframes batflap`, `@keyframes batmorph`,
+  `.cstage`, `<div class="cstage">` and the `.play` boot script are **all
+  present and serving**. `assets/crest-shield.png` is the About badge and
+  answers 200. `m-crestrow` appears **zero** times.
+
+  So the "mothballed in one commit, pull it from git history" instruction was
+  never true, or was reverted and nobody recorded it. **Acting on it would do
+  real damage**: a session told the bat is gone would "restore" it and put
+  **two bats on screen**, or swap the badge to `crest.png` — which already has
+  a bat printed on it — on top of a bat that is already flying.
+
+  ⚠️ **The shield/bat pairing on production is CORRECT as it stands**:
+  `crest-shield.png` is the crest with a bat-shaped hole, and the animated bat
+  fills that hole. Shield + bat = a complete crest. Do not "fix" either half
+  on its own.
+
+  (Kept below, struck through in meaning, because the REASONING about the
+  animation is still accurate and useful — only its claim about current state
+  is false.)
+
+  ⚠️ **The bat animation was described as MOTHBALLED (5 Aug 2026)** — Jay was
+  said to have parked it when the rotating photo board went into the same
+  section. **It is not parked; it runs.** What it used to
   do: at rest the flat logo bat; on scroll-into-view it cross-faded to a shaded
   realistic version (`crest-bat-real.png`) and flew a two-direction loop across
   the photo, then landed. Pure CSS keyframes (`batfly`, `batflap`, `batmorph`) on

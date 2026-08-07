@@ -1,4 +1,10 @@
-# TOMBSTONE — `claude/writing-to-github-from-claude.md` was removed, 7 Aug 2026
+# ⚠️ TOMBSTONE — THIS DOC'S CONTENT MOVED TO `CLAUDE.md`, 7 Aug 2026
+
+> **If a plan or spec sent you here: the rules are now in `CLAUDE.md`
+> § "1b. Getting BYTES into the repo" and § "5b. PowerShell and bridge traps".
+> Read those, not this.** Eleven documents still point at this path, which is
+> why the tombstone sits here rather than in `claude/archive/` — **a tombstone
+> filed somewhere else is a dead pointer wearing a hat.**
 
 **What was here.** A standalone doc titled *"Writing to GitHub from Claude —
 the working method"*, settled 27 July 2026 after four wrong routes, with the

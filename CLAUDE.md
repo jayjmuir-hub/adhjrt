@@ -180,10 +180,11 @@ the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
 
 ## How Claude writes to GitHub (rewritten 25 Jul 2026)
 
-**How to write to GitHub from a cloud session:**
-`claude/writing-to-github-from-claude.md` — the bundle method, the
-tree-hash proof, and the four routes that corrupt bytes. The sandbox can
-read `origin` but never write to it (a push returns 403).
+**How to write to GitHub from a cloud session: § 1b below** — the bundle
+method, the tree-hash proof, and the four routes that corrupt bytes. The
+sandbox can read `origin` but never write to it (a push returns 403).
+⚠️ `claude/writing-to-github-from-claude.md` is now a **tombstone**, not the
+answer; older plans and specs still point at it.
 
 **The only write path: real `git` on Jay's PC, driven through the desktop
 bridge.** There is no MCP-server fallback — see the tombstone in §2 below. Never
@@ -366,6 +367,16 @@ Working shape:
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`).
 6. After merging, bring `dev` back up: `git checkout dev && git merge --ff-only
    main`. Do not delete `dev`.
+
+⚠️ **NEVER PUT `[skip ci]` ON A COMMIT THAT WILL BECOME THE TIP OF `main`.**
+It survives a fast-forward. On 6 Aug a docs-only `[skip ci]` commit made on a
+branch became `main`'s tip, Netlify skipped the production build, and `main`
+sat **merged but undeployed** while the dashboard showed the old commit as
+published. Caught only by the deploy id NOT moving — which is the check that
+exists for the opposite case. Fixing it needs **Deploys → Trigger deploy** in
+the Netlify UI; **the MCP cannot redeploy an existing commit.**
+
+`[skip ci]` is only for a docs-only commit pushed straight to `main` on its own.
 
 ### 4b. Deploy rules (unchanged, and they matter)
 

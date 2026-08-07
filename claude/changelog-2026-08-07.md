@@ -9,7 +9,13 @@
 
 ## THE ABOUT BAT REBUILT — CLIP-PATH WINGS AND AN `offset-path` FLIGHT (`db5ecfb`, LIVE)
 
-Jay pasted `claude/specs/spec-about-bat.md` scope 2 and said *"build it and
+Jay pasted the bat spec ("scope 2") and said *"build it and
+⚠️ **NOTE, 7 Aug:** that spec was pasted into chat, **never committed** —
+`claude/specs/spec-about-bat.md` does not exist and never has. Do not go
+looking for it. The design that shipped is in
+`claude/specs/spec-bat-offset-path-and-wings.md`.
+
+Original line, kept so the record reads straight:  *"build it and
 deploy"*. One 15-credit production deploy. `Compare` and `dev` carry the same
 commit.
 

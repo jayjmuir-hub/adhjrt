@@ -135,39 +135,21 @@ sentence, including this one.**
 > **The older entries below are from 6 August and earlier.** Then `git fetch origin`. This page has been
 > wrong about merge status three times and was **twelve commits stale within a
 > day** the last time somebody trusted it.
+> ⚠️ **THE 6 AUGUST STATUS BLOCK THAT SAT HERE IS GONE (7 Aug 2026).** It
+> named `main`/`dev` at `1c26612`, a deploy id that has since moved, a `Compare`
+> state that no longer holds, and — for the FIFTH and SIXTH time — a site
+> password setting that was wrong. It said *"branch deploys are now gated,
+> `requiresPassword: true`"*. **Measured 7 Aug: `false` / `null` — off
+> everywhere.**
 >
-> **`main` and `dev` are at `1c26612`, deployed and LIVE** — deploy
-> `6a747ecabee6a40008856b06`, state `ready`. **`Compare` is at `3bfd9b7`, TWO
-> COMMITS AHEAD of `main` and 0 behind.** ⚠️ **One of the two is a REAL FIX to
-> a served file** (`Manager.dc.html`, `3bfd9b7`) and is therefore waiting on a
-> 15-credit production deploy and Jay's explicit yes; the other (`6c429b9`) is
-> test-only. Nothing else that is deployed differs from `main`; the whole
-> `Compare` branch of 6 Aug landed on production earlier that day: the coverflow
-> carousel, the crest and flying bat, the red rules button, the header condense
-> fix, and the two menu animations.
+> ⚠️ **IT WAS WRONG WHILE SITTING 100 LINES BELOW A SECTION SAYING THE CLAIM
+> HAD BEEN WRONG FOUR TIMES.** Writing down that a fact keeps rotting does not
+> stop it rotting. **Deleting the copy does.**
 >
-> ⚠️ **THE MERGE DID NOT DEPLOY ON ITS OWN, AND THE REASON IS A TRAP THIS FILE
-> ALREADY WARNED ABOUT.** The tip commit carried `[skip ci]` — it was a
-> docs-only commit made on the branch — and **`[skip ci]` survives a
-> fast-forward**, so Netlify skipped the production build and `main` sat merged
-> but undeployed showing `Published main@f24ae0d`. Caught by the deploy id not
-> moving, which is the check that exists for the opposite case. Fixed with
-> **Deploys → Trigger deploy → Deploy project** in the UI; the MCP cannot
-> redeploy an existing commit.
-> **Never put `[skip ci]` on a commit that will become the tip of `main`.**
->
-> ⚠️ **THE PRODUCTION SITE PASSWORD IS STILL OFF, BUT BRANCH DEPLOYS ARE NOW
-> GATED** — changed 6 Aug 2026. The API reads
-> `requiresPassword: true, whichProjectsRequirePassword: "non_production"`.
-> **adhjrt.com is publicly reachable and must stay that way** — swept endpoint
-> by endpoint after the change: `/`, `/rules`, `/legal`, `/scores`, `/signin`,
-> `/manager`, `/organizer` all **200**, production `manager-signup` still 400.
-> Every `<branch>--adhquins-jrt.netlify.app` URL now answers **401**, including
-> `dev`. Nothing may be left resting on the production gate; it does not exist.
-> See the branch-deploy section below for why this was necessary.
->
-> ⚠️ **A NETLIFY ENV-VAR CHANGE DOES NOT TAKE EFFECT UNTIL A DEPLOY.** Proven
-> twice on `CLUB_FORM_KEY`. This page said the opposite for a week.
+> **Current branch state:** `git fetch origin` and
+> `git rev-list --left-right --count origin/main...HEAD`. **Current deploy and
+> password state:** Netlify MCP `get-project`. Neither answer belongs on this
+> page, and neither is written here.
 >
 > ⚠️ **The club form is EXEMPT from the registration window** (`4955a5a`).
 > `CLUB_FORM_KEY` is its gate. The team and player forms are still gated and
@@ -179,8 +161,8 @@ sentence, including this one.**
 |---|---|
 | Tournament | **7–8 November 2026**, Zayed Sports City |
 | Registration | not open; the link goes out ~mid-October. No real club has registered. |
-| Site password | **OFF for production — re-verified 6 Aug, ×3 per endpoint. Publicly reachable.** ⚠️ **ON for non-production**: every `<branch>--adhquins-jrt.netlify.app` answers 401. Jay holds the password; it has never been in a message or a tool call. |
-| Branch deploys | allow-list is **`dev, Compare`**, and all non-production deploys are password-gated. ⚠️ **Free — 0 credits.** ⚠️ A branch deploy outlives its branch and reads production's env vars and stores. |
+| Site password | ⚠️ **NOT RECORDED HERE, DELIBERATELY.** Read `projectAccessControls` from the Netlify MCP. This row has been wrong six times. Jay holds the password; it has never been in a message or a tool call. |
+| Branch deploys | allow-list is **`dev, Compare`**. ⚠️ **Free — 0 credits.** ⚠️ A branch deploy outlives its branch and reads production's env vars and stores. **Whether they are password-gated: read the Netlify MCP, not this page.** |
 | Teams / Players sheets | **CLEAN** (0 / 0), cleared by Jay 2 Aug |
 | Rehearsal data | **CLEARED**, verified 2 Aug |
 | Registration window | force OPEN. **Jay decides on his own — do not raise this.** |

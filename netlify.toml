@@ -148,6 +148,35 @@
   status = 404
   force = true
 
+# --- root-level docs ---------------------------------------------------
+# CLAUDE.md and RESTORE.md live in the repo ROOT, and the root IS the site.
+# ⚠️ MEASURED 7 Aug 2026: adhjrt.com/CLAUDE.md returned 200 and served the
+# whole file. It had been doing so for months, and the /claude/* rule added
+# earlier the same day does NOT cover root-level paths — so RESTORE.md was
+# about to start doing the same on the next deploy.
+#
+# Nothing in either file is secret; the repo is public and both are readable on
+# github.com regardless. This is about not serving internal documentation as
+# part of the website.
+#
+# ⚠️ THIS RULE IS THE ONE THING ON THIS SITE THAT CAN BE VERIFIED BY A REAL
+# BEFORE/AFTER. The baseline was taken BEFORE the change — production serves
+# /CLAUDE.md at 200 today — so a deploy carrying this rule must flip that same
+# path to 404. Same file, same name, only the rule differs. Every other 404
+# check here is ambiguous with "the file is not in the snapshot"; this one is
+# not.
+[[redirects]]
+  from = "/CLAUDE.md"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/RESTORE.md"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.

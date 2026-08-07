@@ -233,32 +233,30 @@
 
      ⚠️ `forwards` IS NOT OPTIONAL. Without it the animation snaps back to its
      0% frame when it ends — which happens to be the same place, so it would
-     LOOK fine today and break the moment anybody edits the last keyframe. The
-     30s duration is kept as-is: the flight occupies the first 18.6% and the
-     rest is inert, which costs nothing and avoids re-deriving forty
-     percentages across three keyframe sets for no visible gain.
+     LOOK fine today and break the moment anybody edits the last keyframe.
 
-     ⚠️ THE FLIGHT ITSELF IS NOT SLOWED DOWN, and that is the point. Stretching
-     the same keyframes over 30s would have given a bat drifting in slow motion,
-     which is a different animation, not a less frequent one. Every percentage
-     below is the ORIGINAL 13s timing multiplied by 13/30 so the bat moves at
-     exactly the speed it always did; the extra time is dead air at the end.
-     The numbers were COMPUTED, not hand-edited — there are ~40 of them across
-     three keyframe sets and they have to stay in step with each other or the
-     wings flap while the bat is parked.
+     ⚠️ THE 30s DEAD-AIR TIMELINE IS GONE (7 Aug 2026). The flight used to be
+     ~40 hand-computed percentages spread over a 30s animation of which only
+     the first 18.6% moved. `offset-path` needs exactly two — 0% and 100% —
+     so the duration IS the flight: 5s, once, then still. There is no longer
+     a set of percentages that have to be kept in step with each other, which
+     is the maintenance trap this replaced.
 
-     ⚠️ .cstage IS NOT DECORATION. It clips the bat's flight path. The batfly
-     keyframes carry the bat up to 410% of its own width to the right and 180%
-     down, which lands well outside the photo box — without an overflow:hidden
-     stage around it, that adds a horizontal scrollbar to the whole page at
-     some widths and nothing errors.
+     ⚠️ .cstage IS NOT DECORATION. It clips the bat's flight path. The path
+     carries the bat well outside the 118px badge box — without an
+     overflow:hidden stage around it, that adds a horizontal scrollbar to the
+     whole page at some widths and nothing errors. The stage was WIDENED to
+     600x583 so the flight fits inside the clip; the clip itself stays.
 
      ⚠️ AND IT SITS OVER THE ROTATING RING, WHICH IS WHY IT WAS REMOVED BEFORE.
      Pinned on top of photos that turn underneath it, a static badge was judged
      to read "as a sticker stuck on a moving thing" (5 Aug). That argument has
      not gone away — it is just no longer a static badge. Recorded so the next
      person weighing it has both readings rather than rediscovering one. */
-  .crest-anim{position:absolute;top:4px;left:4px;width:118px;height:118px}
+  /* The crest badge sits where it always has, at (4,4) of .about-media — which
+     is (101,64) inside the widened stage. The two numbers must move together;
+     tests/test-about-board.js asserts the pair. */
+  .crest-anim{position:absolute;top:64px;left:101px;width:118px;height:118px}
   .crest-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
   .crest-anim .cbase{z-index:1}
   /* ⚠️ z-index 6 BEATS THE PHOTO BOX AS A WHOLE, which is what keeps the crest
@@ -266,20 +264,118 @@
      front of it"). It does NOT have to beat the border's own z-index of 50 —
      that one lives inside .about-photo's stacking context and cannot escape it.
      Comparing the two numbers directly is the mistake to avoid here. */
-  .cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:6}
-  .crest-anim .cf{position:absolute;inset:0;z-index:5;transform-origin:50% 42%;animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s 1 forwards;animation-play-state:paused}
-  .crest-anim .cfl{position:absolute;inset:0;transform-origin:50% 42%;animation:batflap 30s ease-in-out .5s 1 forwards;animation-play-state:paused}
-  .crest-anim.play .cf,.crest-anim.play .cfl{animation-play-state:running}
-  @keyframes batflap{0%{transform:scaleX(1) scaleY(1)}3.033%{transform:scaleX(1) scaleY(1)}3.9%{transform:scaleX(1) scaleY(1)}5.287%{transform:scaleX(.72) scaleY(1.16)}6.673%{transform:scaleX(1) scaleY(1)}8.06%{transform:scaleX(.72) scaleY(1.16)}9.447%{transform:scaleX(1) scaleY(1)}10.833%{transform:scaleX(.72) scaleY(1.16)}12.22%{transform:scaleX(1) scaleY(1)}13.607%{transform:scaleX(.72) scaleY(1.16)}14.993%{transform:scaleX(1) scaleY(1)}16.38%{transform:scaleX(.72) scaleY(1.16)}17.767%{transform:scaleX(1) scaleY(1)}19.067%{transform:scaleX(1) scaleY(1)}100%{transform:scaleX(1) scaleY(1)}}
-  @keyframes batfly{0%{transform:translate(0,0) rotate(0deg) scale(1)}3.033%{transform:translate(0%,0%) rotate(0deg) scale(1)}3.969%{transform:translate(0%,4%) rotate(0deg) scale(1.01)}5.529%{transform:translate(30%,-16%) rotate(-8deg) scale(1.03)}8.181%{transform:translate(140%,-20%) rotate(10deg) scale(0.97)}10.833%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}12.861%{transform:translate(400%,30%) rotate(10deg) scale(0.88)}14.733%{transform:translate(330%,140%) rotate(-4deg) scale(0.9)}16.449%{transform:translate(150%,180%) rotate(-10deg) scale(0.93)}17.697%{transform:translate(30%,80%) rotate(-5deg) scale(0.97)}18.633%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}}
-  .crest-anim .cfl img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-  .crest-anim .breal{opacity:0;animation:batmorph 30s linear .5s 1 forwards;animation-play-state:paused}
-  .crest-anim.play .breal{animation-play-state:running}
-  @keyframes batmorph{0%{opacity:0}3.033%{opacity:0}4.767%{opacity:1}17.767%{opacity:1}19.067%{opacity:0}100%{opacity:0}}
+  /* ⚠️ THE FLIGHT CANVAS IS A FIXED 600x583 BOX, AND THAT IS THE WHOLE DESIGN
+     (7 Aug 2026). Spec: claude/specs/spec-about-bat.md.
+
+     CSS cannot measure its container and `path()` is literal pixels, so a
+     percentage-driven flight is impossible without JS. One path string
+     authored for one fixed canvas is correct at every width the bat is shown
+     at; the STAGE grows with nothing, the SECTION grows around it.
+
+     ⚠️ IT EXTENDS LEFT AND UP, NEVER RIGHT OR DOWN, AND THAT IS DELIBERATE.
+     .about-media is the RIGHT column, so a right overhang eats the section's
+     32px padding and can put a horizontal scrollbar on the page — the exact
+     bug the clip exists to prevent. Extending left puts the bat over the text
+     column, which is free room and is what "the whole About section" meant.
+     Measured at 533x523 (1466px viewport): the stage spans x -97..503 inside
+     a 533 box and y -60..523 inside a 523 box. No right or bottom overhang at
+     any width.
+
+     ⚠️ overflow:hidden STAYS. It is load-bearing: without it the flight
+     carries the bat outside the box and adds a page scrollbar. The fix for
+     the clipping was to WIDEN the box, never to remove the clip. */
+  .cstage{position:absolute;top:-60px;left:-97px;width:600px;height:583px;overflow:hidden;pointer-events:none;z-index:6}
+  .crest-anim /* ⚠️ THE FLIGHT IS ONE CONTINUOUS PATH, NOT ELEVEN WAYPOINTS (7 Aug 2026).
+     `offset-path` interpolates position AND heading along a curve, so the bat
+     banks into its own turns instead of snapping between typed rotations.
+
+     ⚠️ THE COORDINATES ARE IN .crest-anim's BOX, NOT THE STAGE'S. `.cf` is
+     inset:0 of the 118px badge, so that is its containing block and the path
+     is authored there. (59,59) is the element's own centre, which is why the
+     path STARTS there: with offset-anchor:50% 50% the bat at 0% sits exactly
+     where it sits with no animation at all — in the hole in the shield. Start
+     anywhere else and it teleports on launch.
+
+     ⚠️ THE PATH LEAVES AND ARRIVES ON THE SAME HEADING, AND THAT IS NOT
+     COSMETIC. `offset-rotate:auto` points the bat along the TANGENT, so the
+     angle it rests at is decided by the shape of the curve. The first version
+     of this path left 51 degrees between its departure and its arrival: the
+     bat took off flush in the shield's bat-shaped hole and landed nose-up-
+     left, and `forwards` held it there — a crest with a crooked bat jammed in
+     it, invisible in the source and obvious on screen. The last control point
+     (-10,86) exists ONLY to make the arrival parallel to the departure. Move
+     it and the bat lands askew; tests/test-about-board.js computes both
+     headings and refuses a mismatch.
+
+     ⚠️ AND 21.45deg IS DERIVED, NOT CHOSEN. It is exactly minus the departure
+     heading (atan2(26-59, 143-59)), so heading + offset = 0 and the resting
+     bat is level. Re-authoring the first curve segment changes this number.
+
+     Envelope, measured in a real browser at 61 points along the flight:
+     worst clearances L54 T30 R73 B141 px inside the 600x583 stage. Nothing is
+     clipped at any point — which is the bug this replaced. */
+  .cf{position:absolute;inset:0;z-index:5;
+    offset-path:path("M59,59 C143,26 243,28 329,70 C397,104 409,192 349,270 C289,348 167,366 95,308 C41,264 -10,86 59,59");
+    offset-anchor:50% 50%;
+    offset-rotate:auto 21.45deg;
+    animation:fly 5s cubic-bezier(.45,.05,.4,1) .5s 1 forwards, dive 5s ease-in-out .5s 1 forwards;
+    animation-play-state:paused}
+  /* ⚠️ SCALE IS ITS OWN PROPERTY, NOT A transform. offset-path owns the
+     element's transform; a `transform:scale()` here would fight it. The
+     standalone `scale` property composes cleanly. */
+  @keyframes fly{from{offset-distance:0%}to{offset-distance:100%}}
+  @keyframes dive{0%{scale:1}22%{scale:.92}55%{scale:.88}80%{scale:.94}100%{scale:1}}
+  .crest-anim /* ⚠️ THE WINGS ARE THREE CLIP-PATH LAYERS OVER ONE PNG — NO CUT ARTWORK.
+     crest-bat.png is a flat single-tone silhouette (measured: 620x620, 77% of
+     opaque pixels one dark tone), and that is what makes this free: on a
+     silhouette the wing root hidden behind the body is the SAME COLOUR as the
+     visible part, so three rectangles give everything cut files would.
+
+     ⚠️ THE BODY BAND IS NOT DECORATION AND MUST NEVER ROTATE. Rotating the
+     two wing layers opens a wedge at the cut line; the band is painted on top
+     and covers it. Two layers alone leave a visible notch.
+
+     ⚠️ crest-bat-real.png IS NOT FLAT (18 colour buckets, no tone above 25%),
+     so it cannot be clipped into rotating wings — the shading is drawn for a
+     wings-out pose and smears. That is why batmorph no longer runs and the
+     flat bat is used for the whole flight. The asset stays in the repo. */
+  .cfl{position:absolute;inset:0}
+  .crest-anim .half{position:absolute;inset:0;background:url(assets/crest-bat.png) center/100% no-repeat}
+  .crest-anim .half.l{clip-path:inset(0 44% 0 0);transform-origin:45% 38%;animation:flapL .42s ease-in-out .5s 11 both;animation-play-state:paused}
+  .crest-anim .half.r{clip-path:inset(0 0 0 44%);transform-origin:55% 38%;animation:flapR .42s ease-in-out .5s 11 both;animation-play-state:paused}
+  .crest-anim .half.b{clip-path:inset(0 38% 0 38%)}
+  /* ⚠️ THE JOINTS SHOW AS HAIRLINES UNDER MAGNIFICATION, AND THAT IS THE
+     PRICE OF THE TRICK. The band's edge is unrotated and the wing's outline
+     underneath it is not, so at the join the two silhouettes cannot coincide
+     and the composite is a fraction under fully opaque for about a pixel.
+     Measured at 1x it is invisible; at 4x it reads as a wing joint, which is
+     arguably what a wing joint should look like. The alternative is cut
+     artwork with proper overlap, which is a design job, not a CSS one.
+     Recorded so nobody spends an afternoon chasing it as a bug. */
+  @keyframes flapL{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-26deg)}}
+  @keyframes flapR{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(26deg)}}
+  .crest-anim.play .cf,.crest-anim.play .cfl,.crest-anim.play .half{animation-play-state:running}
+  /* ⚠️ TOMBSTONE (7 Aug 2026). `@keyframes batfly`, `batflap` and `batmorph`
+     lived here, along with `.crest-anim .breal` and `.crest-anim .cfl img`.
+     batfly was an eleven-waypoint translate/rotate flight, batflap squashed
+     the whole bat on the X axis to fake wings, and batmorph cross-faded to
+     crest-bat-real.png. All three are replaced by `fly`/`dive` on an
+     `offset-path` plus the two clip-path wing layers above. They are gone
+     rather than kept because their percentages were computed against a 30s
+     master timeline that no longer exists — leaving them would have given the
+     next person a second, contradictory set of timings to reconcile.
+     Do not re-add batmorph: crest-bat-real.png is shaded for a static
+     wings-out pose and smears when clipped (see the note above `.cfl`). */
   @media (prefers-reduced-motion:reduce){
-    /* ⚠️ The bat stops AND hides. Not just `animation:none` — parked mid-flight
-       it would sit somewhere out over the photos looking like a stray image. */
-    .crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}
+    /* ⚠️ THE BAT STOPS BUT STAYS VISIBLE, AND THAT IS A CHANGE (7 Aug 2026).
+       The old rule set `opacity:0` as well, because batfly parked the bat
+       wherever the animation happened to be and a stray bat over the photos
+       looked like a broken image. That reasoning DIED WITH batfly: with
+       `offset-path` and no animation the bat sits at offset-distance 0%,
+       which is (59,59) — its own centre, i.e. exactly the hole in
+       crest-shield.png. Hiding it now would leave a bat-shaped hole in the
+       crest for reduced-motion users. Stop the movement, keep the picture. */
+    .crest-anim .cf,.crest-anim .cfl,.crest-anim .half{animation:none}
     /* ⚠️ THE MENUS FADE, THEY DO NOT VANISH INTO NOTHING (revised 6 Aug 2026).
        This block used to kill the animation outright and snap the panel to
        opacity 1. That is a defensible reading of the preference and it is what
@@ -1075,7 +1171,7 @@
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0C0C0E"/><text x="256" y="290" font-family="Arial" font-weight="900" font-size="180" fill="#E11B22" text-anchor="middle">Q</text></svg></template>
 <script>
   /* Arms the About-section crest bat: adds `play` to .crest-anim when the
-     section scrolls into view, which starts the batfly/batflap/batmorph
+     section scrolls into view, which starts the fly/dive/flapL/flapR
      keyframes. Restored 6 Aug 2026 on the `Compare` branch.
 
      ⚠️ THIS IS NOT THE SCRIPT THAT WAS MOTHBALLED, AND THE DIFFERENCE IS THE
@@ -1842,9 +1938,16 @@
            it here gives you two bats and one of them never moves. This pairing
            is the whole reason the shield asset exists.
 
-           ⚠️ .cstage clips the flight path. The bat travels to 410% right and
-           180% down at its extremes, which is outside this box; without the
-           overflow:hidden stage it puts a horizontal scrollbar on the page.
+           ⚠️ .cstage clips the flight path. The bat's offset-path carries it
+           well outside this 118px box; without the overflow:hidden stage it
+           puts a horizontal scrollbar on the page. The stage extends LEFT and
+           UP only — .about-media is the right column, so a right overhang is
+           the scrollbar bug itself.
+
+           ⚠️ THREE SPANS, NOT AN IMG. The bat is one flat silhouette PNG
+           painted three times and clipped into left wing / right wing / body
+           band. The band is painted last and must stay: rotating the two wing
+           layers opens a wedge at the cut line and the band covers it.
 
            ⚠️ RECORDED AGAINST ITSELF: the reason this was taken out was that a
            badge pinned over photos which rotate underneath it read as "a sticker
@@ -1855,7 +1958,7 @@
       <div class="cstage">
         <div class="crest-anim">
           <img class="cbase" src="assets/crest-shield.png" alt="Abu Dhabi Harlequins crest">
-          <div class="cf"><div class="cfl"><img class="bflat" src="assets/crest-bat.png" alt=""><img class="breal" src="assets/crest-bat-real.png" alt=""></div></div>
+          <div class="cf"><div class="cfl"><span class="half l"></span><span class="half r"></span><span class="half b"></span></div></div>
         </div>
       </div>
       <div class="about-photo">

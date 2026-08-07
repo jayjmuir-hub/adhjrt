@@ -6088,7 +6088,10 @@ const FAULTS = [
        both ways rather than just "is the shield present". */
     name: 'the bat is removed but the holed shield is left behind',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '<div class="cf"><div class="cfl"><img class="bflat" src="assets/crest-bat.png" alt=""><img class="breal" src="assets/crest-bat-real.png" alt=""></div></div>', ''),
+    /* ⚠️ ANCHOR REPOINTED (7 Aug 2026) — the bat stopped being two <img>s and
+       became three clip-path spans painting one background. The old anchor no
+       longer exists in the page; the RULE it guards is unchanged. */
+    apply: () => patch(HOME, ".crest-anim .half{position:absolute;inset:0;background:url(assets/crest-bat.png) center/100% no-repeat}", '.crest-anim .half{position:absolute;inset:0}'),
     expect: ['stand or fall together'],
   },
   {
@@ -6122,18 +6125,24 @@ const FAULTS = [
        end of its flight, and nothing anywhere reports it. */
     name: 'the flight path stops being clipped, so the bat can scroll the page sideways',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);overflow:hidden;pointer-events:none;z-index:6}',
-      '.cstage{position:absolute;top:-30px;left:-30px;width:calc(100% + 30px);height:calc(100% + 30px);pointer-events:none;z-index:2}'),
+    /* ⚠️ ANCHOR REPOINTED — the stage became a fixed 600x583 canvas when the
+       flight moved to offset-path. Same fault, current geometry. */
+    apply: () => patch(HOME, '.cstage{position:absolute;top:-60px;left:-97px;width:600px;height:583px;overflow:hidden;',
+      '.cstage{position:absolute;top:-60px;left:-97px;width:600px;height:583px;'),
     expect: ['clipped by .cstage'],
   },
   {
-    /* Freezing is not hiding: parked mid-flight the bat sits out over the
-       photos looking like a stray image. */
-    name: 'reduced motion freezes the bat mid-flight instead of hiding it',
+    /* ⚠️ FAULT INVERTED, NOT REPOINTED, AND THE INVERSION IS THE POINT
+       (7 Aug 2026). This used to inject "freeze without hiding" because batfly
+       parked the bat wherever it happened to be. offset-path parks it at 0% —
+       its own centre, i.e. the hole in crest-shield.png — so the OLD CORRECT
+       BEHAVIOUR IS NOW THE BUG: hiding it leaves a bat-shaped hole in the
+       crest for reduced-motion users. Injecting the previous shipped rule. */
+    name: 'reduced motion goes back to hiding the bat, leaving a holed crest',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none;opacity:0}',
-      '.crest-anim .cf,.crest-anim .cfl,.crest-anim .breal{animation:none}'),
-    expect: ['by hiding, not just by freezing mid-flight'],
+    apply: () => patch(HOME, '.crest-anim .cf,.crest-anim .cfl,.crest-anim .half{animation:none}',
+      '.crest-anim .cf,.crest-anim .cfl,.crest-anim .half{animation:none;opacity:0}'),
+    expect: ['NOT by hiding'],
   },
   {
     /* ⚠️ THE DRIFT FAULT for the glow, and the reason that check is DERIVED.
@@ -6190,19 +6199,24 @@ const FAULTS = [
        flap while the bat is parked on the crest. */
     name: 'the wing flap is left on the old clock while the flight slows down',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'animation:batflap 30s', 'animation:batflap 13s'),
-    expect: ['flight and the wing flap run on the same clock'],
+    /* ⚠️ ANCHOR REPOINTED. The wings are now a short flap repeated 11 times,
+       so the drift is in the COUNT, not the duration: 16 flaps of .42s runs
+       6.7s inside a 5s flight and the bat flaps on the crest after landing. */
+    apply: () => patch(HOME, "animation:flapL .42s ease-in-out .5s 11 both", 'animation:flapL .42s ease-in-out .5s 16 both'),
+    expect: ['finishes within the flight rather than outlasting it'],
   },
   {
     /* ⚠️ "LONGER" IS NOT "LESS OFTEN". This stretches the ORIGINAL 13s
        keyframes over 30s: the duration check passes, all three agree, and the
        bat drifts across the screen in slow motion for the whole cycle. Only
        the dead-air check catches it. */
+    /* ⚠️ ANCHOR REPOINTED. There are no percentages left to stretch — the
+       flight is two stops on a path. The same failure now arrives as a longer
+       DURATION: a 30s flight is a bat drifting, not a bat flying. */
     name: 'the bat is slowed to a crawl instead of flying less often',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '18.633%{transform:translate(0%,0%) rotate(0deg) scale(1)}100%{transform:translate(0,0) rotate(0deg) scale(1)}',
-      '43%{transform:translate(0%,0%) rotate(0deg) scale(1)}80%{transform:translate(300%,-18%) rotate(16deg) scale(0.9)}100%{transform:translate(0,0) rotate(0deg) scale(1)}'),
-    expect: ['home well before the cycle ends'],
+    apply: () => patch(HOME, 'animation:fly 5s cubic-bezier(.45,.05,.4,1)', 'animation:fly 30s cubic-bezier(.45,.05,.4,1)'),
+    expect: ['fast enough to read as flying, not drifting'],
   },
   {
     /* The obvious wrong instinct, and it renders as nothing at all. */
@@ -6516,8 +6530,9 @@ const FAULTS = [
   {
     name: 'the bat goes back to looping for ever',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s 1 forwards',
-      'animation:batfly 30s cubic-bezier(.45,.05,.4,1) .5s infinite'),
+    /* ⚠️ ANCHOR REPOINTED to the fly/dive shorthand. */
+    apply: () => patch(HOME, 'animation:fly 5s cubic-bezier(.45,.05,.4,1) .5s 1 forwards',
+      'animation:fly 5s cubic-bezier(.45,.05,.4,1) .5s infinite'),
     expect: ['none of them loops'],
   },
   {
@@ -6525,17 +6540,229 @@ const FAULTS = [
        has landed. */
     name: 'the wing flap keeps looping after the flight has stopped',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, 'animation:batflap 30s ease-in-out .5s 1 forwards',
-      'animation:batflap 30s ease-in-out .5s infinite'),
+    /* ⚠️ ANCHOR REPOINTED to flapL. */
+    apply: () => patch(HOME, 'animation:flapL .42s ease-in-out .5s 11 both',
+      'animation:flapL .42s ease-in-out .5s infinite'),
     expect: ['none of them loops'],
   },
   {
     /* Looks fine today only because 0% and 100% happen to agree. */
     name: 'the bat stops holding its final frame',
     suite: 'test-about-board.js',
-    apply: () => patch(HOME, '.5s 1 forwards;animation-play-state:paused}\n  .crest-anim .cfl',
-      '.5s 1;animation-play-state:paused}\n  .crest-anim .cfl'),
+    /* ⚠️ ANCHOR REPOINTED — the fill mode now sits on the fly/dive shorthand
+       inside .cf, and the wings carry `both` rather than `forwards`. */
+    apply: () => patch(HOME, 'dive 5s ease-in-out .5s 1 forwards;', 'dive 5s ease-in-out .5s 1;'),
     expect: ['holds its final frame'],
+  },
+
+
+  /* ---- the rebuilt bat: wings and offset-path flight (7 Aug 2026) -------
+     Spec: claude/specs/spec-about-bat.md. Every fault below renders a bat
+     that looks finished. That is why they exist: the version this replaced
+     was clipped 31px on the right for two days and no test said a word. */
+
+  {
+    /* ⚠️⚠️ THE BUG THIS REBUILD EXISTS TO FIX, PUT BACK. Shrink the stage to
+       the old calc()-sized box and the flight runs straight through the clip:
+       the bat loses a bite out of its wing at the far end of the path and
+       gains it back on the way home. Nothing errors, the animation is smooth,
+       and every text-matching check ("is there an overflow:hidden") passes.
+       Only sampling the path against the rectangle catches it. */
+    name: 'the flight stage shrinks back to a box the path does not fit inside',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'width:600px;height:583px;overflow:hidden', 'width:420px;height:420px;overflow:hidden'),
+    expect: ['no part of the flight is clipped'],
+  },
+  {
+    /* The mirror: keep the stage, push the path out of it. Same visible
+       result, opposite edit — a check that only ever looked at .cstage would
+       miss this half entirely. */
+    name: 'the flight path is widened past the edge of the stage that clips it',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'C397,104 409,192 349,270', 'C497,104 559,192 449,270'),
+    expect: ['no part of the flight is clipped'],
+  },
+  {
+    /* ⚠️ THE OVERHANG DIRECTION, WHICH IS NOT SYMMETRICAL. .about-media is the
+       RIGHT column: extending the stage right eats the section padding and puts
+       a horizontal scrollbar on the page at some widths. Extending it left is
+       free. This mirrors the stage onto the wrong side — same size, same clip,
+       same everything, and a scrollbar appears. */
+    name: 'the stage is mirrored onto the right, where it scrolls the page sideways',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.cstage{position:absolute;top:-60px;left:-97px;', '.cstage{position:absolute;top:-60px;left:17px;'),
+    expect: ['does not overhang its right or bottom edge'],
+  },
+  {
+    /* ⚠️ THE PAIR THAT MUST MOVE TOGETHER. The stage moved by (-97,-60), so the
+       badge inside it moved by (+97,+60) to stay at (4,4) of the photo box.
+       Edit one alone — which is what anybody nudging the flight would do — and
+       the crest slides off the corner of the photo it is supposed to pin. */
+    name: 'the stage is moved without moving the badge back, so the crest slides',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim{position:absolute;top:64px;left:101px;', '.crest-anim{position:absolute;top:44px;left:81px;'),
+    expect: ['still sits at (4,4)'],
+  },
+  {
+    /* ⚠️ THE TELEPORT. Move the path's first point off the element's own
+       centre and offset-distance 0% is no longer where the bat sits with no
+       animation — so it JUMPS the instant the section scrolls into view, and
+       sits outside the hole in the shield for anyone with reduced motion on.
+       The flight itself is unaffected and looks perfect. */
+    name: 'the path starts somewhere other than the crest centre, so the bat teleports',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'path("M59,59 C143,26', 'path("M20,90 C143,26'),
+    expect: ['does not teleport on launch'],
+  },
+  {
+    /* And the other end: the bat lands somewhere other than the hole it came
+       out of. With `forwards` holding the final frame, it stays there. */
+    name: 'the flight ends away from the hole in the shield',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'C41,264 -10,86 59,59', 'C41,264 -10,86 90,90'),
+    expect: ['lands back in the hole'],
+  },
+  {
+    /* ⚠️⚠️ THE BUG THAT WAS ACTUALLY FOUND, PUT BACK (7 Aug 2026). This is the
+       path exactly as first authored: 51 degrees between its departure heading
+       and its arrival heading. offset-rotate:auto points the bat along the
+       tangent, so it takes off level in the shield's hole and lands nose-up-
+       left — and `forwards` holds it there for good. Nothing errors, the
+       flight is smooth, every duration and clip check passes, and the crest
+       ends up with a crooked bat jammed in it. Found by measuring a real
+       render, not by reading the CSS. */
+    name: 'the flight arrives on a different heading and the bat lands askew',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'C41,264 -10,86 59,59', 'C41,264 37,130 59,59'),
+    expect: ['leaves and arrives on the same heading'],
+  },
+  {
+    /* And the other half: matched headings, but the nose offset no longer
+       cancels them — so the bat rests at a consistent WRONG angle at both ends
+       of the flight, which reads as deliberate and is not. */
+    name: 'the nose offset stops cancelling the departure heading',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'offset-rotate:auto 21.45deg', 'offset-rotate:auto 14deg'),
+    expect: ['nose offset cancels it'],
+  },
+  {
+    /* ⚠️ WITHOUT `auto` THE BAT SLIDES ALONG THE CURVE SIDEWAYS. It still
+       travels the whole path, still flaps, still lands. It is just facing the
+       wrong way for the entire flight, and the CSS is valid. */
+    name: 'the bat stops turning to face its direction of travel',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'offset-rotate:auto 21.45deg', 'offset-rotate:21.45deg'),
+    expect: ['turns to face its direction of travel'],
+  },
+  {
+    /* ⚠️ THE ONE THAT KILLS THE FLIGHT WHILE LOOKING ALIVE. offset-path owns
+       the element's transform matrix. Writing the dive as a transform:scale()
+       overwrites it — the bat scales up and down on the spot, in the crest,
+       for five seconds and never moves an inch. Every duration, iteration and
+       fill-mode check passes. */
+    name: 'the dive is written as a transform, which overwrites the motion path',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes dive{0%{scale:1}22%{scale:.92}55%{scale:.88}80%{scale:.94}100%{scale:1}}',
+      '@keyframes dive{0%{transform:scale(1)}22%{transform:scale(.92)}55%{transform:scale(.88)}80%{transform:scale(.94)}100%{transform:scale(1)}}'),
+    expect: ['standalone scale property, not a transform'],
+  },
+  {
+    /* ⚠️⚠️ THE NOTCH. Give the body band an animation and it rotates with the
+       wings — which means it no longer covers the wedge that opens at the cut
+       line, and the bat flies with a transparent V bitten out of its chest.
+       Reviewing the CSS, an animation on all three layers looks MORE correct
+       than an animation on two. */
+    name: 'the body band is animated along with the wings, reopening the notch',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim .half.b{clip-path:inset(0 38% 0 38%)}',
+      '.crest-anim .half.b{clip-path:inset(0 38% 0 38%);animation:flapL .42s ease-in-out .5s 11 both}'),
+    expect: ['body band carries no animation'],
+  },
+  {
+    /* The band is dropped from the markup entirely — two layers, which is the
+       obvious way to build this and leaves the same notch. */
+    name: 'the body band is dropped, leaving two rotating halves and a gap',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '<span class="half b"></span>', ''),
+    expect: ['in paint order with the band last'],
+  },
+  {
+    /* ⚠️ THE TRANSPARENT STRIPE. Tighten the two wing clips until they meet
+       exactly instead of overlapping and sub-pixel rounding opens a hairline
+       down the middle of the bat at some zoom levels — visible on a phone,
+       invisible on the machine it was built on. */
+    name: 'the wing clips are tightened until they no longer overlap',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim .half.l{clip-path:inset(0 44% 0 0)', '.crest-anim .half.l{clip-path:inset(0 60% 0 0)'),
+    expect: ['overlap rather than leaving a transparent stripe'],
+  },
+  {
+    /* And the band narrowed until it no longer spans the overlap it exists to
+       hide. Still present, still unanimated, still useless. */
+    name: 'the body band is narrowed until it stops covering the join',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim .half.b{clip-path:inset(0 38% 0 38%)}', '.crest-anim .half.b{clip-path:inset(0 48% 0 48%)}'),
+    expect: ['covers the whole overlap'],
+  },
+  {
+    /* ⚠️ THE SHEAR. transform-origin at the centre swings each wing around the
+       middle of the whole bat instead of its own shoulder — the bat reads as
+       shearing sideways rather than flapping. It is one of the two values
+       anybody adjusting the flap would reach for first. */
+    name: 'the wings pivot at the centre of the bat instead of at the shoulder',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'clip-path:inset(0 44% 0 0);transform-origin:45% 38%', 'clip-path:inset(0 44% 0 0);transform-origin:50% 50%'),
+    expect: ['pivots at its own shoulder'],
+  },
+  {
+    /* ⚠️ THE LOPSIDED ONE, AND IT IS SUBTLE. Move one pivot only and the bat
+       flaps out of true — one wing sweeping further than the other every beat.
+       It looks like a deliberate quirk rather than a bug. */
+    name: 'one wing pivot is moved and the bat flaps lopsided',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'clip-path:inset(0 0 0 44%);transform-origin:55% 38%', 'clip-path:inset(0 0 0 44%);transform-origin:62% 44%'),
+    expect: ['mirror each other about the midline'],
+  },
+  {
+    /* Both wings sweeping the same direction: the bat rows rather than flies,
+       and both keyframe sets are present and valid. */
+    name: 'both wings sweep the same way, so the bat rows instead of flapping',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes flapR{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(26deg)}}',
+      '@keyframes flapR{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-26deg)}}'),
+    expect: ['mirror image rather than both sweeping the same way'],
+  },
+  {
+    /* ⚠️ THE DEAD KEYFRAMES CREEPING BACK. A revert that restores batfly
+       without removing `fly` leaves two contradictory sets of timings in the
+       stylesheet, one of them selecting nothing. This repo has been bitten by
+       exactly that shape before — CSS that reads as if something still uses
+       it. Nothing renders differently, which is the whole problem. */
+    name: 'a dead keyframe set is restored alongside the live one',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '@keyframes fly{from{offset-distance:0%}to{offset-distance:100%}}',
+      '@keyframes fly{from{offset-distance:0%}to{offset-distance:100%}}\n  @keyframes batfly{0%{transform:none}100%{transform:none}}'),
+    expect: ['dead @keyframes batfly is gone'],
+  },
+  {
+    /* ⚠️ THE PHOTOGRAPHIC BAT COMES BACK, which is the mistake the tombstone
+       exists to prevent. crest-bat-real.png is shaded for a static wings-out
+       pose; clipped into rotating wings the shading smears. It renders. */
+    name: 'the photographic bat is painted again and smears when the wings rotate',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'background:url(assets/crest-bat.png) center/100% no-repeat',
+      'background:url(assets/crest-bat-real.png) center/100% no-repeat'),
+    expect: ['photographic bat is not painted'],
+  },
+  {
+    /* ⚠️ THE WINGS LEFT RUNNING UNDER REDUCED MOTION. The flight stops, so a
+       check on `.cf` alone passes — and the bat sits parked in the crest
+       flapping its wings at somebody who asked for less motion. */
+    name: 'reduced motion stops the flight but leaves the wings flapping',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, '.crest-anim .cf,.crest-anim .cfl,.crest-anim .half{animation:none}',
+      '.crest-anim .cf,.crest-anim .cfl{animation:none}'),
+    expect: ['wings stop with it'],
   },
 
   {

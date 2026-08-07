@@ -604,10 +604,27 @@ check('…NOT the complete crest, which would put two bats on screen',
    holed shield to fly out of. Either alone is a bug that renders without
    erroring, so neither is allowed to exist without the other. */
 const HAS_SHIELD = /crest-shield\.png/.test(ABOUT);
-const HAS_BAT = /crest-bat\.png/.test(ABOUT) && /crest-bat-real\.png/.test(ABOUT);
-check('both bat images are present', HAS_BAT,
-  'crest-bat.png is the flat silhouette, crest-bat-real.png the photographic one');
+/* ⚠️ THE BAT IS NOW A CSS BACKGROUND, NOT AN <img> (7 Aug 2026). The three
+   clip-path layers paint crest-bat.png from the stylesheet, so looking for it
+   in ABOUT alone finds nothing and this pairing check would report the bat
+   missing on a page where it is plainly there. Look in the page. */
+const HAS_BAT = /url\(assets\/crest-bat\.png\)/.test(stripCssComments(PAGE));
+check('the flat bat silhouette is painted', HAS_BAT,
+  'crest-bat.png, as the background of the three clip-path layers');
 eq('the holed shield and the bat stand or fall together', HAS_SHIELD, HAS_BAT);
+
+/* ⚠️ AND THE PHOTOGRAPHIC BAT IS NO LONGER A LIVE ELEMENT, DELIBERATELY.
+   crest-bat-real.png is shaded for a static wings-out pose (18 colour buckets,
+   measured) so it cannot be clipped into rotating wings — the shading smears.
+   The asset stays in the repo; what must not come back is a reference to it in
+   the running page. Asserted on comment-stripped source so the TOMBSTONE
+   explaining why it went does not itself trip the check — the fifth time that
+   trap has been laid in this repo. */
+check('the photographic bat is not painted anywhere in the live page',
+  !/crest-bat-real\.png/.test(stripCssComments(stripJsComments(PAGE_CODE))),
+  'it is shaded for one pose and smears when clipped into wings');
+check('…with the reason left behind as a tombstone rather than silently dropped',
+  /crest-bat-real\.png IS NOT FLAT/.test(PAGE));
 
 /* ⚠️ AND PAGE-WIDE, because the pairing rule has a hole in it otherwise. The
    shield is legitimate in exactly ONE place — here, with the bat to fill it.
@@ -652,9 +669,9 @@ check('the crest is still on the page elsewhere',
 
 /* ---- the bat itself ------------------------------------------------------ */
 
-/* ⚠️ .cstage IS LOAD-BEARING, NOT DECORATION. batfly carries the bat to 410%
-   right and 180% down — outside the photo box. Without an overflow:hidden stage
-   that is a horizontal scrollbar on the whole page, reported by nothing. */
+/* ⚠️ .cstage IS LOAD-BEARING, NOT DECORATION. The flight carries the bat well
+   outside the 118px badge box. Without an overflow:hidden stage that is a
+   horizontal scrollbar on the whole page, reported by nothing. */
 const CSTAGE = (stripCssComments(PAGE).match(/\.cstage\{[^}]*\}/) || [''])[0];
 check('the flight path is clipped by .cstage', /overflow:\s*hidden/.test(CSTAGE), CSTAGE);
 check('…and the stage cannot swallow clicks meant for the page',
@@ -662,17 +679,260 @@ check('…and the stage cannot swallow clicks meant for the page',
 check('the stage is in the markup, wrapping the crest',
   /<div class="cstage">[\s\S]{0,400}class="crest-anim"/.test(ABOUT));
 
-/* All three keyframe sets, because the animation is three layers: the flight
-   path, the wing flap, and the crossfade between the flat and real bat. */
-['batfly', 'batflap', 'batmorph'].forEach((k) =>
-  check(`@keyframes ${k} is present`, new RegExp('@keyframes\\s+' + k + '\\b').test(PAGE)));
+/* ---- the flight, as geometry rather than as text ------------------------ */
+/* ⚠️ EVERYTHING BELOW IS ARITHMETIC ON THE ACTUAL NUMBERS, NOT A GREP FOR
+   THEM. `offset-path:path()` is literal pixels in the ELEMENT's box, and the
+   clip that stops the page scrolling sideways is a different box at a
+   different origin. A check that reads "is there an offset-path" passes on a
+   path that flies the bat straight out through the clip — which is invisible
+   in the source and obvious on screen. So the path is parsed, sampled, and
+   compared against the stage rectangle. */
 
-/* ⚠️ IT MUST STOP FOR REDUCED MOTION, AND IT MUST HIDE. `animation:none` alone
-   parks the bat wherever it happened to be — out over the photos, looking like
-   a stray image rather than a design. */
+/* The four numbers that place the badge inside the stage. Read, never
+   assumed: if either the stage or the badge moves without the other, the crest
+   lands somewhere other than (4,4) of .about-media and nothing errors. */
+const num = (re, src) => Number((src.match(re) || [])[1]);
+const STAGE_W = num(/\.cstage\{[^}]*width:(-?[\d.]+)px/, CSSNC);
+const STAGE_H = num(/\.cstage\{[^}]*height:(-?[\d.]+)px/, CSSNC);
+const STAGE_T = num(/\.cstage\{[^}]*top:(-?[\d.]+)px/, CSSNC);
+const STAGE_L = num(/\.cstage\{[^}]*left:(-?[\d.]+)px/, CSSNC);
+const ANIM = (CSSNC.match(/\.crest-anim\{[^}]*\}/) || [''])[0];
+const BADGE_T = num(/top:(-?[\d.]+)px/, ANIM);
+const BADGE_L = num(/left:(-?[\d.]+)px/, ANIM);
+const BADGE_W = num(/width:(-?[\d.]+)px/, ANIM);
+
+check('the stage is a fixed pixel canvas, not a percentage of its container',
+  Number.isFinite(STAGE_W) && Number.isFinite(STAGE_H),
+  `${STAGE_W}x${STAGE_H} — path() is literal pixels, so the canvas must be too`);
+
+/* ⚠️ IT MAY OVERHANG LEFT AND UP. IT MAY NOT OVERHANG RIGHT OR DOWN.
+   .about-media is the RIGHT column: a right overhang eats the section padding
+   and puts a horizontal scrollbar on the page at some widths. Left is the text
+   column, which is free room. This is the check that makes "extends left and
+   up only" a rule rather than a comment. */
+check('the stage overhangs up and left of the photo box', STAGE_T < 0 && STAGE_L < 0,
+  `top ${STAGE_T}px, left ${STAGE_L}px`);
+/* The photo box is square-ish and never narrower than the badge's own column;
+   the overhang that matters is the one PAST its right edge, which is
+   STAGE_L + STAGE_W - boxWidth. Rather than guess the box width, assert the
+   badge sits far enough inside the stage that the stage's right edge is at
+   most the box's own right edge for any box at least as wide as the badge's
+   offset allows. Concretely: the stage extends (STAGE_W + STAGE_L) past the
+   box's left edge, and the box is at least that wide only if the design says
+   so — so this is asserted against the measured 533px box in the comment. */
+const BOX_MEASURED = 533;
+check('…and does not overhang its right or bottom edge, which is the scrollbar bug',
+  STAGE_L + STAGE_W <= BOX_MEASURED && STAGE_T + STAGE_H <= BOX_MEASURED,
+  `right edge at ${STAGE_L + STAGE_W}px, bottom at ${STAGE_T + STAGE_H}px, box ${BOX_MEASURED}px`);
+
+/* ⚠️ THE BADGE MUST STILL LAND AT (4,4) OF .about-media. The stage moved by
+   (STAGE_L, STAGE_T), so the badge inside it has to move by exactly the
+   opposite amount to stay put. Two numbers that must change together; this is
+   the pair that catches one of them being edited alone. */
+eq('the crest badge still sits at (4,4) of the photo box',
+  `${BADGE_L + STAGE_L},${BADGE_T + STAGE_T}`, '4,4');
+
+/* The path, parsed. One M and three C segments, cubic Béziers throughout. */
+const PATHSTR = (CSSNC.match(/offset-path:\s*path\("([^"]+)"\)/) || [])[1] || '';
+check('the flight is one continuous offset-path, not a list of waypoints',
+  PATHSTR.length > 40, `${PATHSTR.length} chars`);
+
+const pts = (PATHSTR.match(/-?[\d.]+\s*,\s*-?[\d.]+/g) || [])
+  .map((p) => p.split(',').map(Number));
+check('the path parsed into coordinate pairs', pts.length >= 10, `${pts.length} points`);
+
+/* ⚠️ THE PATH MUST START AT THE ELEMENT'S OWN CENTRE. With
+   offset-anchor:50% 50%, offset-distance 0% puts the bat's centre on the first
+   point — so if that point is not the centre of the 118px box, the bat
+   TELEPORTS the instant the animation is armed, and sits somewhere other than
+   the hole in the shield for anyone with reduced motion on. */
+const centre = BADGE_W / 2;
+check('the path starts at the crest centre, so the bat does not teleport on launch',
+  Math.abs(pts[0][0] - centre) <= 1 && Math.abs(pts[0][1] - centre) <= 1,
+  `starts (${pts[0]}), badge centre is (${centre},${centre})`);
+check('…and returns there, so it lands back in the hole in the shield',
+  Math.abs(pts[pts.length - 1][0] - centre) <= 1 &&
+  Math.abs(pts[pts.length - 1][1] - centre) <= 1,
+  `ends (${pts[pts.length - 1]})`);
+check('the anchor is the bat centre, which is what makes those two checks true',
+  /offset-anchor:\s*50%\s+50%/.test(CSSNC));
+
+/* ⚠️ THE WHOLE FLIGHT INSIDE THE CLIP — sampled, not eyeballed. This is the
+   check that would have caught the bug this rebuild exists to fix: the old
+   flight was clipped 31px on the right and 24-27px at the top, which looked
+   like a bat with a bite out of it and no test said a word.
+
+   Sample the Béziers at 200 points each, add the bat's rotated half-extent,
+   and require every sample to sit inside the stage. The half-extent is the
+   half-diagonal of the 118px box because the bat rotates with the path — a
+   bounding box that ignores rotation under-reports the corners, which is
+   exactly the mistake made on the first pass at this. */
+function cubicAt(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  return [0, 1].map((i) =>
+    u * u * u * p0[i] + 3 * u * u * t * p1[i] + 3 * u * t * t * p2[i] + t * t * t * p3[i]);
+}
+const samples = [];
+for (let s = 1; s + 2 < pts.length; s += 3) {
+  for (let i = 0; i <= 200; i++) {
+    samples.push(cubicAt(pts[s - 1], pts[s], pts[s + 1], pts[s + 2], i / 200));
+  }
+}
+check('the flight path sampled', samples.length > 500, `${samples.length} samples`);
+/* Half-diagonal of the badge box, which is the worst case for any rotation. */
+const HALF = Math.sqrt(2) * BADGE_W / 2;
+/* Path coordinates are in .crest-anim's box; the stage's origin is
+   (BADGE_L, BADGE_T) further up and left. Convert before comparing — mixing
+   the two coordinate systems is how a clipped flight passes a clip check. */
+const stageX = samples.map((p) => p[0] + BADGE_L);
+const stageY = samples.map((p) => p[1] + BADGE_T);
+const worst = {
+  left: Math.min(...stageX) - HALF,
+  top: Math.min(...stageY) - HALF,
+  right: STAGE_W - (Math.max(...stageX) + HALF),
+  bottom: STAGE_H - (Math.max(...stageY) + HALF),
+};
+check('no part of the flight is clipped by the stage, at any point along it',
+  worst.left >= 0 && worst.top >= 0 && worst.right >= 0 && worst.bottom >= 0,
+  `clearances L${Math.round(worst.left)} T${Math.round(worst.top)} ` +
+  `R${Math.round(worst.right)} B${Math.round(worst.bottom)} px`);
+
+/* ⚠️ THE BAT BANKS INTO ITS TURNS, WHICH IS THE WHOLE POINT OF offset-path.
+   `offset-rotate:auto` alone points the bat along the tangent; the +14deg is
+   the artwork's own nose-up offset. Without `auto` it flies sideways, and the
+   flight still runs. */
+check('the bat turns to face its direction of travel', /offset-rotate:\s*auto\b/.test(CSSNC),
+  'without `auto` it slides along the curve sideways and nothing errors');
+
+/* ⚠️⚠️ THE LANDING ANGLE, AND THIS ONE WAS A REAL BUG CAUGHT BY MEASURING
+   RATHER THAN BY READING (7 Aug 2026). `offset-rotate:auto` points the bat
+   along the path's TANGENT — so the angle it rests at is decided by the shape
+   of the curve, not by anything you can see in the markup. The first version
+   of this path left 51 degrees between its departure and its arrival: the bat
+   took off flush in the shield's bat-shaped hole and landed nose-up-left,
+   sitting permanently askew in a hole cut for a level bat. `forwards` then
+   held it there. It renders perfectly and is invisible in the source.
+
+   Two things have to be true and they are not independent:
+     - the path must LEAVE and ARRIVE on the same heading, or the bat rests at
+       two different angles at the two ends of the same flight;
+     - `offset-rotate`'s fixed part must cancel that heading, or it rests at a
+       consistent WRONG angle at both ends.
+   Both are arithmetic on the control points, so both are checked here. */
+const ang = (from, to) => Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+const outHeading = ang(pts[0], pts[1]);
+const inHeading = ang(pts[pts.length - 2], pts[pts.length - 1]);
+check('the flight leaves and arrives on the same heading',
+  Math.abs(outHeading - inHeading) < 1,
+  `departs ${outHeading.toFixed(1)}°, arrives ${inHeading.toFixed(1)}° — ` +
+  'a mismatch parks the bat askew in a hole cut for a level one');
+const noseOffset = Number((CSSNC.match(/offset-rotate:\s*auto\s+(-?[\d.]+)deg/) || [])[1]);
+check('…and the nose offset cancels it, so the bat rests level in the hole',
+  Number.isFinite(noseOffset) && Math.abs(outHeading + noseOffset) < 1,
+  `heading ${outHeading.toFixed(2)}° + offset ${noseOffset}° = ` +
+  `${(outHeading + noseOffset).toFixed(2)}°, wanted 0`);
+
+/* The four live keyframe sets. batfly / batflap / batmorph are GONE — see the
+   tombstone in the stylesheet — and their absence is asserted, because a dead
+   keyframe set left behind is a second set of timings for the next person to
+   reconcile against the live one. */
+['fly', 'dive', 'flapL', 'flapR'].forEach((k) =>
+  check(`@keyframes ${k} is present`, new RegExp('@keyframes\\s+' + k + '\\b').test(CSSNC)));
+['batfly', 'batflap', 'batmorph'].forEach((k) =>
+  check(`the dead @keyframes ${k} is gone`,
+    !new RegExp('@keyframes\\s+' + k + '\\b').test(CSSNC)));
+check('…with a tombstone saying what was there and why it went',
+  /TOMBSTONE[\s\S]{0,400}batfly/.test(PAGE),
+  'a deletion with no trace is an invitation to re-add it');
+
+/* ⚠️ SCALE IS A STANDALONE PROPERTY HERE, NOT A transform. offset-path owns
+   the element's transform matrix; a `transform:scale()` on the same element
+   overwrites it and the bat stops moving along the path entirely — while the
+   scale animation still runs, so it looks alive and goes nowhere. */
+const DIVE = (CSSNC.match(/@keyframes dive\{[^}]*\}/) || [''])[0];
+check('the dive uses the standalone scale property, not a transform',
+  /scale:/.test(DIVE) && !/transform:/.test(DIVE), DIVE);
+
+/* ---- the wings ---------------------------------------------------------- */
+/* ⚠️ THREE LAYERS OVER ONE FLAT PNG. Left wing, right wing, body band. The
+   band is painted last and covers the wedge that opens at the cut line when
+   the wings rotate; two layers alone leave a visible notch. */
+const HALF_L = (CSSNC.match(/\.crest-anim \.half\.l\{[^}]*\}/) || [''])[0];
+const HALF_R = (CSSNC.match(/\.crest-anim \.half\.r\{[^}]*\}/) || [''])[0];
+const HALF_B = (CSSNC.match(/\.crest-anim \.half\.b\{[^}]*\}/) || [''])[0];
+check('all three wing layers exist', !!HALF_L && !!HALF_R && !!HALF_B);
+check('…and all three are in the markup, in paint order with the band last',
+  /class="half l"[\s\S]{0,200}class="half r"[\s\S]{0,200}class="half b"/.test(ABOUT),
+  'the band covers the wedge the two rotating wings open at the cut line');
+
+/* ⚠️ THE BAND MUST NEVER ROTATE. This is the check the whole three-layer
+   trick rests on: give the band an animation and the wedge it exists to cover
+   opens up again, and the bat renders perfectly with a notch in its chest. */
+check('the body band carries no animation of any kind',
+  !/animation/.test(HALF_B), HALF_B);
+
+/* The clip regions have to MEET or OVERLAP, never leave a gap. Left keeps
+   0..56%, right keeps 44..100%, band keeps 38..62%: the wings overlap by 12
+   points and the band straddles the join. A gap between the two wing clips is
+   a transparent stripe down the middle of the bat. */
+const insetOf = (rule) => ((rule.match(/clip-path:inset\(([^)]+)\)/) || [])[1] || '')
+  .trim().split(/\s+/).map((v) => parseFloat(v));
+const IL = insetOf(HALF_L), IR = insetOf(HALF_R), IB = insetOf(HALF_B);
+check('the wing clips were parsed', IL.length === 4 && IR.length === 4 && IB.length === 4,
+  `${IL} / ${IR} / ${IB}`);
+/* inset() order is top right bottom left, so the left layer keeps 0..(100-right)
+   and the right layer keeps (left)..100. */
+check('the two wing clips overlap rather than leaving a transparent stripe',
+  (100 - IL[1]) >= IR[3], `left keeps 0..${100 - IL[1]}%, right keeps ${IR[3]}..100%`);
+check('…and the body band covers the whole overlap, not just part of it',
+  IB[3] <= IR[3] && (100 - IB[1]) >= (100 - IL[1]),
+  `band keeps ${IB[3]}..${100 - IB[1]}%, overlap is ${IR[3]}..${100 - IL[1]}%`);
+
+/* ⚠️ THE PIVOTS ARE THE SHOULDER, NOT THE CENTRE. transform-origin at 50% 50%
+   swings each wing around the middle of the whole bat, which reads as the bat
+   shearing rather than flapping. They sit just inboard of the cut line and
+   just above the body's midline, and they must MIRROR each other. */
+const originOf = (rule) => ((rule.match(/transform-origin:([^;}]+)/) || [])[1] || '')
+  .trim().split(/\s+/).map((v) => parseFloat(v));
+const OL = originOf(HALF_L), OR = originOf(HALF_R);
+check('each wing pivots at its own shoulder, not at the centre of the bat',
+  OL.length === 2 && OR.length === 2 && OL[0] !== 50 && OR[0] !== 50,
+  `${OL} / ${OR}`);
+eq('…and the two pivots mirror each other about the midline',
+  OL[0] + OR[0], 100);
+eq('…at the same height, so the bat does not flap lopsided', OL[1], OR[1]);
+check('…and above the middle of the bat, where a shoulder is', OL[1] < 50,
+  `${OL[1]}% down`);
+
+/* The two flap keyframes must be mirror images too, or the bat rows. */
+/* ⚠️ THE BODY IS NESTED BRACES, SO `[^}]*` STOPS AT THE FIRST INNER ONE.
+   First attempt did exactly that and found one rotation instead of two, then
+   reported "keyframes not found" on keyframes that are plainly there. Match to
+   the DOUBLE brace that closes the block. */
+const FL = (CSSNC.match(/@keyframes flapL\{([\s\S]*?)\}\}/) || [])[1] || '';
+const FR = (CSSNC.match(/@keyframes flapR\{([\s\S]*?)\}\}/) || [])[1] || '';
+const degs = (s) => [...s.matchAll(/rotate\((-?[\d.]+)deg\)/g)].map((m) => Number(m[1]));
+check('both flap keyframes were found', degs(FL).length >= 2 && degs(FR).length >= 2);
+eq('the wings flap in mirror image rather than both sweeping the same way',
+  degs(FL).map((d) => -d).join(','), degs(FR).join(','));
+
+/* ⚠️ IT MUST STOP FOR REDUCED MOTION — AND IT MUST STAY VISIBLE, WHICH IS THE
+   OPPOSITE OF WHAT THIS RULE USED TO DO (7 Aug 2026). The old rule also set
+   opacity:0, correctly, because batfly parked the bat wherever it happened to
+   be and a stray bat over the photos looked broken. offset-path changed that:
+   with no animation the bat sits at offset-distance 0%, which is its own
+   centre, which is the hole in crest-shield.png. Hiding it now leaves a
+   bat-shaped hole in the crest for exactly the people who asked for less
+   motion — the same 5 Aug bug, arriving by a different door. */
 const RM = (PAGE.match(/@media \(prefers-reduced-motion:reduce\)\{[\s\S]*?\n  \}/) || [''])[0];
 check('the bat honours prefers-reduced-motion', /\.crest-anim \.cf/.test(RM), RM.slice(0, 200));
-check('…by hiding, not just by freezing mid-flight', /animation:none;opacity:0/.test(RM));
+check('…and the wings stop with it, not just the flight',
+  /\.crest-anim \.half/.test(RM),
+  'flapping wings on a parked bat is the drift this catches');
+check('…by freezing at the start, NOT by hiding — a hidden bat is a holed crest',
+  /animation:none\}/.test(RM) && !/animation:none;opacity:0/.test(RM), RM.slice(0, 300));
+check('…with the reversal recorded, because the old rule was right for the old flight',
+  /THE BAT STOPS BUT STAYS VISIBLE/.test(PAGE));
 
 /* ⚠️⚠️ THE BOOT PATTERN. This is the single most important check in the block.
    The script that was mothballed on 5 Aug used find-it-once — scan, else watch
@@ -1034,35 +1294,69 @@ check('the condition actually reads BOTH thresholds',
 check('…and the first pass decides from scratch rather than inheriting',
   /tight === null\) \? \(y > TIGHT_ON\)/.test(HDRJS));
 
-section('the bat flies once every 30 seconds, and rests in between');
+section('the bat flies once, at the speed of one flight');
 
-/* ⚠️ ALL THREE ANIMATIONS OR NONE. The flight, the wing flap and the
-   flat/real crossfade are three separate animations on three elements driven
-   only by having the same duration. Change one and the wings flap while the
-   bat is parked on the crest, or the photographic bat fades in over nothing. */
-const batDur = ['batfly', 'batflap', 'batmorph'].map((n) =>
-  (HDRCSS.match(new RegExp('animation:' + n + ' (\\d+)s')) || [])[1]);
-check('all three bat animations declare a duration', batDur.every(Boolean), batDur.join(' / '));
-eq('the flight and the wing flap run on the same clock', batDur[0], batDur[1]);
-eq('…and so does the flat/real crossfade', batDur[0], batDur[2]);
-check('the cycle is long enough to be occasional', Number(batDur[0]) >= 30,
-  `${batDur[0]}s — it was 13s with TWO flights in it, i.e. one every ~6s`);
+/* ⚠️ THE 30s DEAD-AIR TIMELINE IS GONE, AND SO IS THE CHECK THAT GUARDED IT
+   (7 Aug 2026). The old flight was ~40 hand-computed percentages spread over a
+   30s animation of which only the first 18.6% moved, and the checks here
+   existed to stop somebody "slowing the bat down" by stretching those
+   percentages instead of adding dead air. `offset-path` needs exactly two
+   stops, so there are no percentages left to drift and no dead air to defend.
+   What replaces those checks is the one thing that still matters: the flight,
+   the dive and both wings have to agree about WHEN, or the wings flap on a bat
+   that has already landed. */
+/* ⚠️ THE SHORTHAND IS A COMMA-SEPARATED LIST **AND** IT CONTAINS COMMAS.
+   `fly` and `dive` share one `animation:` property, so a reader anchored on
+   `animation:NAME` finds fly and misses dive; splitting the value on `,`
+   instead chops `cubic-bezier(.45,.05,.4,1)` into four pieces and finds
+   neither. Both mistakes were made, in that order, and both produced NaN —
+   which compares equal to nothing and fails with a message that reads like the
+   CSS is wrong. Split on TOP-LEVEL commas only, tracking bracket depth. */
+function animParts(css) {
+  const out = [];
+  for (const m of css.matchAll(/animation:([^;}]+)/g)) {
+    let depth = 0, cur = '';
+    for (const ch of m[1]) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+  return out;
+}
+const PARTS = animParts(HDRCSS);
+const decl = (n) => PARTS.find((d) => new RegExp('^' + n + '\\b').test(d)) || '';
+/* The FIRST time value in an animation shorthand is the duration, the SECOND
+   is the delay — order, not magnitude. */
+const times = (n) => [...decl(n).matchAll(/(?:^|\s)(\d*\.?\d+)s(?=\s|$)/g)].map((m) => Number(m[1]));
+const dur = (n) => times(n)[0];
+const dly = (n) => times(n)[1];
+const flyDecl = decl('fly');
+check('the flight declares a duration', dur('fly') > 0, `${dur('fly')}s`);
+eq('the dive runs for exactly as long as the flight', dur('dive'), dur('fly'));
+eq('…and starts with it', dly('dive'), dly('fly'));
+eq('the two wings flap on the same clock as each other',
+  `${dur('flapL')}/${dly('flapL')}`, `${dur('flapR')}/${dly('flapR')}`);
+check('…and start with the flight, not before or after it',
+  dly('flapL') === dly('fly'), `wings ${dly('flapL')}s vs flight ${dly('fly')}s`);
 
-/* ⚠️ LONGER IS NOT THE SAME AS LESS OFTEN. Stretching the same keyframes over
-   30s gives a bat drifting in slow motion — a different animation, not a rarer
-   one. The flight has to FINISH early and leave the rest of the cycle empty,
-   so this reads the last keyframe before 100% and requires real dead air. */
-const flyBody = (HDRCSS.match(/@keyframes batfly\{([\s\S]*?)\}\n/) || [''])[1] || '';
-/* ⚠️ THE STOPS ONLY — a percentage followed by `{`. The first version of this
-   matched any `NN%` and picked up `translate(30%,80%)` out of a keyframe's
-   VALUE, so it reported the flight ending at 80% when the real last stop is
-   18.633%. It failed loudly, which is the only reason it was caught; the same
-   sloppiness in an absence check would have passed silently. */
-const flyStops = [...flyBody.matchAll(/(?:^|\})\s*(\d+(?:\.\d+)?)%\{/g)].map((m) => parseFloat(m[1]));
-const lastMove = Math.max(...flyStops.filter((x) => x < 100));
-check('the flight keyframes were found', flyStops.length > 5, `${flyStops.length} stops`);
-check('the bat is home well before the cycle ends', lastMove < 25,
-  `last movement at ${lastMove}% — the remaining ${Math.round(100 - lastMove)}% is rest`);
+/* ⚠️ THE WINGS MUST STOP WHEN THE BAT LANDS. They are a SHORT animation
+   repeated a counted number of times, not one long one, so the arithmetic is
+   iterations x duration and it has to come out at or under the flight. Get it
+   wrong high and the bat sits in the crest flapping; wrong low and it glides
+   the last part of the flight with its wings locked. */
+const flapCount = Number((decl('flapL').match(/\s(\d+)\s/) || [])[1]);
+const flapTotal = flapCount * dur('flapL');
+check('the wing flap is a counted repeat, not an endless one', flapCount > 1,
+  `${flapCount} flaps of ${dur('flapL')}s`);
+check('…and it finishes within the flight rather than outlasting it',
+  flapTotal <= dur('fly') + 0.05 && flapTotal >= dur('fly') * 0.85,
+  `${flapTotal.toFixed(2)}s of flapping inside a ${dur('fly')}s flight`);
+check('the flight itself is fast enough to read as flying, not drifting',
+  dur('fly') <= 8, `${dur('fly')}s — 30s was a bat in slow motion`);
+check('…and the flight declaration was located', flyDecl.length > 10, flyDecl);
 
 section('both drop-downs open with a movement');
 
@@ -1221,22 +1515,31 @@ check('…with the reason recorded, because the two numbers look comparable and 
 section('the bat flies once, and then never again');
 
 /* ⚠️ ONE FLIGHT, EVER (Jay, 6 Aug 2026: "have the bat only fly once"). All
-   three animations or none — the flight, the wing flap and the crossfade are
+   four animations or none — the flight, the dive and the two wings are
    separate animations on separate elements, and one left looping means wings
    flapping on a bat that has landed. */
-const batDecls = [...(CSSNC.matchAll(/animation:bat(fly|flap|morph) [^;}]+/g))].map((m) => m[0]);
-check('all three bat animations were located', batDecls.length === 3, batDecls.length + ' found');
+/* Same shorthand trap as above — reuse the depth-aware splitter. */
+const batDecls = animParts(CSSNC).filter((d) => /^(fly|dive|flapL|flapR)\b/.test(d));
+check('all four bat animations were located', batDecls.length === 4, batDecls.length + ' found');
 check('none of them loops', batDecls.every((d) => !/infinite/.test(d)),
   batDecls.filter((d) => /infinite/.test(d)).join(' | '));
-check('…each runs exactly once', batDecls.every((d) => /\s1\s/.test(d)));
+/* ⚠️ THE WINGS RUN ELEVEN TIMES, NOT ONCE, AND THAT IS NOT A LOOP. The old
+   check required a literal ` 1 ` in every declaration, which was right when
+   all three animations were one long pass. A short flap repeated a counted
+   number of times is still "flies once" — what must not appear is `infinite`.
+   Requiring `1` here would have forced the flap back into one 5s keyframe set,
+   i.e. one slow wing-beat for the whole flight. */
+check('…each has a counted iteration rather than an open-ended one',
+  batDecls.every((d) => /\s\d+\s/.test(d)),
+  batDecls.filter((d) => !/\s\d+\s/.test(d)).join(' | '));
 
-/* ⚠️ `forwards` IS NOT DECORATION. Without it the animation snaps back to its
-   0% frame on ending — which happens to be the same place the bat lands, so it
-   would look correct today and break silently the moment anybody edits the
-   last keyframe. */
-check('…and holds its final frame rather than snapping back',
-  batDecls.every((d) => /forwards/.test(d)),
-  'it looks fine today only because 0% and 100% agree');
+/* ⚠️ THE FINAL FRAME IS HELD. `forwards` on the flight and the dive; `both` on
+   the wings, which also need their FROM state before the delay elapses — a
+   wing with neither sits unrotated for the first half-second and then jumps.
+   Either fill mode holds the end; neither is optional. */
+check('…and each holds its final frame rather than snapping back',
+  batDecls.every((d) => /forwards|both/.test(d)),
+  'it looks fine today only because the first and last frames agree');
 
 section('purely automatic — and what that costs, and how it is paid');
 

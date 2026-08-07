@@ -550,7 +550,7 @@
           </sc-if>
 
           <div style="display:flex;flex-direction:column;gap:8px">
-            <sc-for value="{{ docRows }}" alias="row">
+            <sc-for list="{{ docRows }}" as="row" hint-placeholder-count="2">
               <div style="padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
                 <div style="min-width:0">
                   <div style="font-weight:700;font-size:14px">{{ row.title }}</div>

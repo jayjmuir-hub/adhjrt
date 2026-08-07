@@ -314,7 +314,7 @@
 
             <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-              <sc-for value="{{ docTagChips }}" alias="chip">
+              <sc-for list="{{ docTagChips }}" as="chip" hint-placeholder-count="4">
                 <button onClick="{{ chip.toggle }}" style="{{ chip.style }}">{{ chip.name }}</button>
               </sc-for>
             </div>
@@ -345,7 +345,7 @@
           </sc-if>
 
           <div style="display:flex;flex-direction:column;gap:8px">
-            <sc-for value="{{ docRows }}" alias="row">
+            <sc-for list="{{ docRows }}" as="row" hint-placeholder-count="2">
               <div style="{{ row.rowStyle }}">
                 <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
                   <div style="min-width:0">

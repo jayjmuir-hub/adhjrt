@@ -296,6 +296,86 @@ section('⚠️ Documents are never public, and never in the repo');
   check('…and never writes a path', !/writeFileSync|createWriteStream/.test(fn));
 }
 
+section('⚠️ Every loop uses the attributes the ENGINE understands');
+{
+  /* ⚠️ THIS SECTION EXISTS BECAUSE THE DOCUMENTS TAB SHIPPED TO PRODUCTION
+     RENDERING NOTHING, AND EVERY ONE OF THE 121 CHECKS IN THIS FILE PASSED.
+     Jay found it in about a minute; the suite could not have found it ever.
+
+     The markup was written as:
+
+         <sc-for value="{{ docRows }}" alias="row">
+
+     `value` and `alias` are INVENTED. Every working loop in this repo uses
+     `list` and `as`. The engine binds nothing, renders nothing, and reports
+     NO ERROR ANYWHERE — so the tab drew its heading, its upload form and a
+     tab badge reading "Documents (2)", proving the upload and the list both
+     worked perfectly, above a completely empty list. The count comes from
+     state; the rows come from the loop.
+
+     Why nothing caught it: every check on the panel read the SOURCE for a
+     handler name or a sentence, and all of those were present. Source
+     presence is not rendering. This is the same family as the `{{ X }}`
+     binding trap and the dead `api.X` calls — a mistake that is not a build
+     error, not a runtime crash, and not visible in review.
+
+     So the check is REPO-WIDE and mechanical, not scoped to documents: the
+     next person to invent an attribute gets caught on any page. */
+  const PAGES = ['Organizer.dc.html', 'Manager.dc.html', 'Quins JRT.dc.html',
+                 'Scores & Standings.dc.html', 'Signin.dc.html', 'Club.dc.html'];
+
+  let loops = 0, ifs = 0;
+  PAGES.forEach((f) => {
+    /* ⚠️ SCRIPT BLOCKS AND COMMENTS ARE BOTH STRIPPED, AND BOTH ARE NEEDED.
+       The first version stripped HTML comments only and immediately reported a
+       bare `<sc-if>` on the homepage — which is a sentence inside a /* *​/ JS
+       comment explaining why the menu panel is inside one. A check that
+       matches prose about the code is not a check on the code. That is the
+       THIRD time this trap has fired in a single day's work on this repo, so:
+       `sc-for` and `sc-if` only ever exist in MARKUP, so everything between
+       <script> tags goes before anything is counted. */
+    const src = readRepo(f)
+      .replace(/<script[\s\S]*?<\/script>/g, '')
+      .replace(/<style[\s\S]*?<\/style>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+
+    (src.match(/<sc-for\b[^>]*>/g) || []).forEach((tag) => {
+      loops++;
+      check(`${f}: a loop binds its list with list= — ${tag.slice(0, 52)}`,
+        /\blist="\{\{/.test(tag), tag);
+      check(`${f}: …and names its item with as= — ${tag.slice(0, 52)}`,
+        /\bas="/.test(tag), tag);
+      /* Positive AND negative: the invented pair by name, so a future
+         `value=`/`alias=` fails loudly rather than silently drawing nothing. */
+      check(`${f}: …and uses neither value= nor alias= — ${tag.slice(0, 52)}`,
+        !/\bvalue="/.test(tag) && !/\balias="/.test(tag), tag);
+    });
+
+    (src.match(/<sc-if\b[^>]*>/g) || []).forEach((tag) => {
+      ifs++;
+      /* sc-if genuinely IS value= — the two tags do not agree with each
+         other, which is precisely why the wrong one is so easy to reach for.
+         Asserted so nobody "makes them consistent" and breaks every
+         conditional on the site. */
+      check(`${f}: a conditional binds with value= — ${tag.slice(0, 52)}`,
+        /\bvalue="\{\{/.test(tag), tag);
+    });
+  });
+
+  /* A sweep over nothing passes for ever. */
+  check('the loop sweep actually found loops', loops > 30, String(loops));
+  check('the conditional sweep actually found conditionals', ifs > 30, String(ifs));
+
+  /* And the documents loops specifically, by name, so a regression reads
+     unmistakably instead of as one of a hundred. */
+  const org = readRepo('Organizer.dc.html');
+  check('the tag chips loop is bound', /<sc-for list="\{\{ docTagChips \}\}" as="chip"/.test(org));
+  check('the organiser document rows loop is bound', /<sc-for list="\{\{ docRows \}\}" as="row"/.test(org));
+  check('the manager document rows loop is bound',
+    /<sc-for list="\{\{ docRows \}\}" as="row"/.test(readRepo('Manager.dc.html')));
+}
+
 section('The manager page lists documents and cannot change them');
 {
   const mgr = readRepo('Manager.dc.html');

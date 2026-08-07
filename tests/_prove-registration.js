@@ -399,6 +399,50 @@ const FAULTS = [
   },
   /* ---- the venue schematic ---- */
   {
+    /* ⚠️ THE ONE THAT ACTUALLY SHIPPED BROKEN, 7 Aug 2026. The Documents tab
+       went to production rendering an empty list, and all 121 checks in
+       test-documents.js passed, because they read the SOURCE for handler
+       names and sentences — all of which were present. `value`/`alias` are
+       invented; the engine binds nothing, renders nothing and reports no
+       error, so the tab drew a badge saying "Documents (2)" above an empty
+       list. Jay found it in a minute. This fault is the guard. */
+    name: 'a document loop reverts to the invented value=/alias= attributes',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ docRows }}" as="row" hint-placeholder-count="2">',
+      '<sc-for value="{{ docRows }}" alias="row">'),
+    expect: ['uses neither value= nor alias='],
+  },
+  {
+    name: 'the tag-chips loop loses its list binding',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ docTagChips }}" as="chip"',
+      '<sc-for value="{{ docTagChips }}" as="chip"'),
+    expect: ['a loop binds its list with list='],
+  },
+  {
+    /* The manager side is a separate page and fails independently. */
+    name: 'the manager document loop loses its item name',
+    suite: 'test-documents.js',
+    apply: () => patch('Manager.dc.html',
+      '<sc-for list="{{ docRows }}" as="row"',
+      '<sc-for list="{{ docRows }}" alias="row"'),
+    expect: ['names its item with as='],
+  },
+  {
+    /* ⚠️ sc-if genuinely IS value=, and sc-for is list=/as=. The two tags do
+       not agree, which is exactly why the wrong one is easy to reach for.
+       This fault is the "make them consistent" tidy-up, which would break
+       every conditional on the page it touched. */
+    name: 'a conditional is "made consistent" with the loop syntax',
+    suite: 'test-documents.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-if value="{{ isDocuments }}"',
+      '<sc-if list="{{ isDocuments }}"'),
+    expect: ['a conditional binds with value='],
+  },
+  {
     /* DOCUMENTS (7 Aug 2026) -- spec claude/specs/spec-documents.md.
        ⚠️ THE ONE THAT MATTERS MOST. Every manager seeing every group's
        documents is not a crash and not an error: it is a longer list. The

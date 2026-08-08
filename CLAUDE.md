@@ -288,6 +288,13 @@ check that was right"* is already on the list in `claude/lessons.md`.
 403, *"not in this session's authorized repository set."* Every push happens on
 a PC.
 
+⚠️ **NAME THE SANDBOX BRANCH AFTER THE REMOTE BRANCH IT WILL LAND ON.** Work on
+`dev`, never `devwork`/`mobfix`/`t2`. The stop hook resolves an upstream as
+`origin/<branch>` and falls back to `origin/main` when that ref does not exist,
+so a scratch name makes it report work as unpushed that is already on
+`origin/dev`. Five false alarms in one session came from nothing else. See
+`claude/lessons.md`.
+
 **Routes that do NOT work — do not retry them:**
 
 | Route | Why not |

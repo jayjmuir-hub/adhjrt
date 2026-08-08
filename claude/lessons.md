@@ -14,6 +14,32 @@ changelog entry, not a lesson.
 
 ---
 
+**⚠️ THE STOP HOOK'S "UNPUSHED COMMITS" ALARM IS CAUSED BY OUR OWN BRANCH
+NAMING, NOT BY THE HOOK.** It fired five times in one session and was a false
+alarm every time. The cause is worth understanding rather than muting.
+
+The hook resolves an upstream as `origin/<current-branch>` **if that ref
+exists**, and falls back to `origin/HEAD` if it does not. So a sandbox scratch
+branch — `devwork`, `mobfix`, `t2` — has no `origin/` twin, gets compared
+against `origin/main`, and reports commits that are in fact already safely on
+`origin/dev`. The warning is literally true and completely misleading.
+
+**The fix is ours, and it is free: name the sandbox branch after the remote
+branch it will land on.** Work on `dev` in the sandbox, not `dev-something`.
+Then the hook compares against `origin/dev`, and after the bundle lands on the
+PC and you `git fetch`, it goes quiet — correctly, because there is genuinely
+nothing unpushed.
+
+⚠️ **Do not "fix" this by editing the hook.** `~/.claude/stop-hook-git-check.sh`
+is root-owned in the EPHEMERAL cloud container and is re-provisioned at the
+start of every session — an edit buys one session and teaches the next one
+nothing. That was tried on 6 Aug; this container's copy still has the two
+working-tree gates that edit removed, which is the proof it does not persist.
+
+**And never push to silence it.** The sandbox cannot push at all (403), so the
+hook is asking for something only the PC can do. Fetch, compare against
+`origin/`, and say plainly that it was a false alarm.
+
 **⚠️ WRITING *ABOUT* THE SKIP-CI MARKER IN A COMMIT MESSAGE TRIGGERS IT.**
 Netlify scans the **whole commit message**, not just the subject line. A commit
 whose subject was clean but whose body discussed `[skip ci]` twice — because the

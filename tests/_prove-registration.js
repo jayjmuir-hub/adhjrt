@@ -4220,7 +4220,7 @@ const FAULTS = [
     name: 'the sponsors-section placement loses its logo',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">', ''),
-    expect: ['four HSBC images on the page'],
+    expect: ['five HSBC images on the page'],
   },
   {
     name: 'the header mark is unwrapped, so space-between spreads it into the bar',
@@ -4305,7 +4305,7 @@ const FAULTS = [
     name: 'the hero lockup is dropped',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, HERO_IMG, ''),
-    expect: ['four HSBC images on the page'],
+    expect: ['five HSBC images on the page'],
   },
   {
     /* The obvious "tidy-up": the two Register buttons appear twice on this
@@ -4409,6 +4409,75 @@ const FAULTS = [
     apply: () => patch(HOME, 'style="height:128px;width:auto;max-width:100%;display:block"',
       'style="height:128px;width:auto;display:block"'),
     expect: ['bounded on a narrow screen'],
+  },
+
+  /* ---- the persistent partner strip, added 8 Aug 2026 (test-sponsors.js) ---
+     Jay: "we need a way to keep the HSBC on the screen when scrolling."
+     It is a FIXED bar, which means every one of its failure modes is invisible
+     to anyone reviewing on a desktop — the strip does not exist above 900px.
+     That is why it gets six faults and not one. */
+  {
+    /* The whole point of the strip, silently removed. */
+    name: 'the persistent strip loses its HSBC mark',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '    <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" class="partner-strip-mark">\n', ''),
+    expect: ['five HSBC images on the page'],
+  },
+  {
+    /* ⚠️ THE ONE-SIDED BREAKPOINT EDIT. Somebody decides tablets have room for
+       the header lockup after all and moves ONE of the two 900s. Between 880
+       and 900 the page then shows the header mark AND the strip, or neither —
+       and a count of five passes either way, because both marks are still in
+       the markup. This is the fault the paired assertion exists for. */
+    name: 'the strip breakpoint is moved without moving the header one',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '  @media(max-width:900px){\n    .partner-strip{', '  @media(max-width:880px){\n    .partner-strip{'),
+    expect: ['SAME breakpoint'],
+  },
+  {
+    /* ⚠️ The quiet one. Everything still looks right; the bottom 38px of the
+       footer just sits under the strip forever, on phones only. */
+    name: 'the page stops reserving room for the fixed strip',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '    body{padding-bottom:38px}\n', ''),
+    expect: ['reserves room for it'],
+  },
+  {
+    name: 'the strip loses its stated height, so the reserved room means nothing',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'height:34px;padding:0 16px;', 'padding:0 16px;'),
+    expect: ['stated height'],
+  },
+  {
+    /* The "improvement" that will be suggested: the mark is right there, why
+       not let people tap it. Because it is FIXED — it follows a parent into the
+       registration form and out of the site from any scroll position. Same
+       reasoning as the header mark, which has its own fault above. */
+    name: 'the strip mark is made a link off the site',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" class="partner-strip-mark">',
+      '<a href="https://www.hsbc.ae"><img src="assets/sponsor-hsbc-white.webp" alt="HSBC" class="partner-strip-mark"></a>'),
+    expect: ['NOT a link'],
+  },
+  {
+    name: 'the strip eyebrow is reworded away from the partner language',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<span class="partner-strip-label">In partnership with</span>',
+      '<span class="partner-strip-label">Our sponsors</span>'),
+    expect: ['In partnership with'],
+  },
+
+  /* ---- the phone CTA row, 8 Aug 2026 (test-sponsors.js) ------------------ */
+  {
+    /* ⚠️ The class is not decoration. The two Register buttons are sized by
+       phone rules that address the row through it; the inline style cannot be
+       reached from a stylesheet without it, and losing it silently returns the
+       buttons to stacking, which is the fault Jay reported in the first place. */
+    name: 'the hero CTA row loses the class the phone rules address it by',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '<div class="hero-cta" style="display:flex;gap:16px;margin-top:38px',
+      '<div style="display:flex;gap:16px;margin-top:38px'),
+    expect: ['addressable by class'],
   },
   {
     name: 'the "coming soon" badge is put back above a confirmed partner',

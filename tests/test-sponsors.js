@@ -189,8 +189,43 @@ const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
 /* ⚠️ FOUR since 8 Aug 2026, not three. The fourth is the MOBILE-ONLY hero
    lockup that sits above the date pill; the in-row one is hidden at the same
    breakpoint, so a visitor never sees the mark twice. That pairing is asserted
-   below — the count alone would pass on a page showing both at once. */
-eq('four HSBC images on the page', imgTags.length, 4);
+   below — the count alone would pass on a page showing both at once.
+   ⚠️ FIVE since later the same day. The fifth is the PERSISTENT PARTNER STRIP
+   fixed to the bottom of the screen (Jay: "we need a way to keep the HSBC on
+   the screen when scrolling"). It is paired with the sticky-header lockup the
+   same way the two hero lockups are paired with each other — header above
+   900px, strip at 900 and below — and that pairing is asserted immediately
+   below, because a raw count of five passes just as happily on a page showing
+   both at once, which is the bug the pairing exists to prevent. */
+eq('five HSBC images on the page', imgTags.length, 5);
+
+/* ⚠️ THE STRIP AND THE HEADER MARK ARE MUTUALLY EXCLUSIVE, ON THE SAME NUMBER.
+   Both rules are `max-width:900px`: one hides `.hdr-partner`, the other shows
+   `.partner-strip`. If somebody moves one breakpoint and not the other there is
+   a band of widths with two HSBC marks on screen, or none — and neither shows
+   up in a count. Asserting the NUMBER in both rules is what makes a one-sided
+   edit fail here rather than on a tablet. */
+const hdrHide = (PAGE.match(/@media\(max-width:(\d+)px\)\{ \.hdr-partner\{display:none!important\} \}/) || [])[1];
+const stripShow = (PAGE.match(/@media\(max-width:(\d+)px\)\{\s*\.partner-strip\{\s*\n?\s*display:flex/) || [])[1];
+check('the header lockup is hidden at a stated breakpoint', hdrHide === '900', hdrHide);
+check('the bottom strip is shown at the SAME breakpoint', stripShow === '900', stripShow);
+check('…so exactly one of the two is on screen at any width', hdrHide === stripShow, `${hdrHide} vs ${stripShow}`);
+
+/* ⚠️ THE STRIP IS FIXED, SO IT COVERS WHATEVER IS UNDER IT. The page pays for
+   the 34px it occupies with a matching body padding-bottom inside the same
+   media query. Without it the last band of the footer sits permanently behind
+   the strip — invisible above 900px, where the strip does not exist at all, so
+   nobody reviewing on a desktop would ever see it. */
+check('the strip has a stated height', /\.partner-strip\{[\s\S]{0,400}?height:34px/.test(PAGE));
+check('…and the page reserves room for it', /body\{padding-bottom:38px\}/.test(PAGE));
+
+/* Same rule as the sticky header mark, and for the same reason: a FIXED element
+   follows a visitor down the whole page, so a tap target on it can take a
+   parent out of the registration form from anywhere. The one clickable HSBC
+   mark is the big one in #sponsors, which is not sticky. */
+const stripBlock = (PAGE.match(/<div class="partner-strip"[\s\S]*?<\/div>/) || [''])[0];
+check('the strip contains an HSBC mark', /alt="HSBC"/.test(stripBlock));
+check('…and it is NOT a link', !/<a[\s>]/.test(stripBlock));
 imgTags.forEach((tag, i) => {
   check(`HSBC image ${i + 1} uses the white lockup, not the black one`, tag.includes(WHITE));
   /* Every one of these sits on #0C0C0E. If a light-background placement is
@@ -290,9 +325,18 @@ check('the mobile-only lockup is shown at that same breakpoint',
   /* ⚠️ The row it joined had only two children and no wrap rule. A third item
      overflows a phone without one, and an overflowing hero is the first thing
      anybody sees. */
-  const rowStart = PAGE.indexOf('<div style="display:flex;gap:16px;margin-top:38px');
+  /* ⚠️ ANCHOR REPOINTED 8 Aug 2026, NOT DELETED. It read
+     `<div style="display:flex;gap:16px;margin-top:38px` and stopped matching
+     the moment the row gained `class="hero-cta"` — the class the phone rules
+     need to address it at all. An anchor that no longer matches makes this
+     check pass vacuously on `rowStart >= 0 && ...` being short-circuited to
+     false... which is to say it FAILS, loudly, which is why it was caught. The
+     fix is to repoint it at the same element, not to loosen it to a substring
+     that would survive the row being replaced wholesale. */
+  const rowStart = PAGE.indexOf('<div class="hero-cta" style="display:flex;gap:16px;margin-top:38px');
+  check('the hero button row is addressable by class, not just inline style', rowStart >= 0);
   check('the hero button row wraps, now that a third item shares it',
-    rowStart >= 0 && PAGE.slice(rowStart, rowStart + 260).includes('flex-wrap:wrap'));
+    rowStart >= 0 && PAGE.slice(rowStart, rowStart + 280).includes('flex-wrap:wrap'));
 
   /* ⚠️ THE DIVIDER ONLY MAKES SENSE ON ONE LINE. Rendered at 390px the row
      wraps and the lockup lands on its own line, where a 1px vertical bar has
@@ -453,8 +497,15 @@ check('no 54px lockup survives anywhere on the page', !/sponsor-hsbc-white\.webp
    one for phones, never both visible. It is NOT back to the old band-plus-hero
    pair the original check was written against: the band is still gone, and
    that is asserted separately. */
-check('"In partnership with" appears exactly twice — the two hero lockups',
-  (NO_COMMENTS.match(/In partnership with/g) || []).length === 2,
+/* ⚠️ THREE since later on 8 Aug 2026. The third is the persistent bottom strip's
+   eyebrow. Still NOT the old band-plus-hero pair — the band is gone and that is
+   asserted separately above. The three are: the wide-screen hero lockup, the
+   phone hero lockup, and the strip. The first two are mutually exclusive with
+   each other and the strip is mutually exclusive with the HEADER mark, which
+   has no eyebrow, so the most a visitor ever reads at once is two — one in the
+   hero and one in the strip, a screen apart. */
+check('"In partnership with" appears exactly three times — two hero lockups and the strip',
+  (NO_COMMENTS.match(/In partnership with/g) || []).length === 3,
   (NO_COMMENTS.match(/In partnership with/g) || []).length);
 /* The tombstone is not decoration: it carries why the band existed, so the
    next person meets the reasoning before re-adding it. */

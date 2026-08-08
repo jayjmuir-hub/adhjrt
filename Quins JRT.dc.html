@@ -783,6 +783,48 @@
      ordinary rule would silently lose. */
   @media(max-width:900px){ .hdr-partner{display:none!important} }
 
+  /* ============ PERSISTENT PARTNER STRIP ============
+     The markup and the argument for it are at the bottom of the <body>, just
+     after </footer>. Only the geometry is here.
+
+     ⚠️ THE 900px BREAKPOINT IS NOT A COINCIDENCE AND IS NOT FREE TO MOVE. It is
+     the same number as the `.hdr-partner` hide directly above, so the mark is on
+     the page exactly once at every width: header above 900, strip at 900 and
+     below. Change one of these two lines and you must change the other, or you
+     get two HSBC marks on a tablet, or none.
+     ⚠️ DEFAULT IS `display:none`, not "shown then hidden". A strip that has to
+     be switched off for desktop is one missed media query away from covering
+     the footer on a 1400px screen. */
+  .partner-strip{display:none}
+  @media(max-width:900px){
+    .partner-strip{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      position:fixed;left:0;right:0;bottom:0;z-index:40;
+      height:34px;padding:0 16px;
+      background:rgba(12,12,14,0.96);backdrop-filter:blur(10px);
+      border-top:1px solid rgba(255,255,255,0.1)}
+    /* The signature line, 2px not 4px: the header's is the page's masthead and
+       this is a footer strip - the same rule at the same weight in both places
+       reads as two headers. */
+    .partner-strip-line{position:absolute;top:0;left:0;right:0;height:2px;
+      background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)}
+    .partner-strip-label{font-size:9px;letter-spacing:1.6px;color:#3bd070;
+      font-weight:800;text-transform:uppercase;white-space:nowrap}
+    /* 18px tall on a 3.7:1 lockup is ~67px wide. Below about 15px the wordmark
+       stops being readable and the hexagon carries it alone, which is not the
+       lockup HSBC supplied. */
+    .partner-strip-mark{height:18px;width:auto;display:block}
+    /* ⚠️ THE STRIP'S HEIGHT, PAID FOR. 34px of bar plus 4px of air. If the
+       height above changes, this changes with it - there is no calc() tying
+       them together and nothing that fails loudly if they drift. */
+    body{padding-bottom:38px}
+  }
+  /* At 380px and under the eyebrow and the mark together want more than the bar
+     has; the eyebrow is the part that can go, because the mark is the point. */
+  @media(max-width:380px){
+    .partner-strip-label{display:none}
+  }
+
   /* The hero lockup keeps its divider only while it SHARES a line with the two
      Register buttons. Once the row wraps (measured: it drops to its own line at
      phone widths) the divider is a vertical bar with nothing on the other side
@@ -814,6 +856,39 @@
     .hero-partner{display:none!important}
     .hero-partner-m{display:flex!important}
 
+    /* ⚠️ THE TWO REGISTER BUTTONS SHARE ONE ROW ON A PHONE (Jay, 8 Aug 2026:
+       "the register team and player buttons should be beside each other not
+       vertically stacked"). They were never stacked ON PURPOSE - the row is
+       `flex-wrap:wrap` and they simply did not fit: measured at 221px + 224px
+       + a 16px gap = 461px against 296px of row at 360px, so the second wrapped
+       at EVERY phone width, 430px included.
+
+       Three things have to change together or they still will not fit:
+         (a) `flex:1 1 0` + `min-width:0` on the wrappers, which are inline-block
+             in the markup and so sized by their content until told otherwise;
+         (b) `width:100%` on the button, which is what actually consumes the
+             width the wrapper just won;
+         (c) the font and padding down - 18px type in 34px of side padding needs
+             221px on its own, and the wrapper only has 143px at 360px.
+       Doing (a) alone leaves two 143px boxes with a 221px button hanging out of
+       each; doing (c) alone just makes two narrow buttons that still stack.
+
+       ⚠️ `.hero-cta > div` ALSO MATCHES `.hero-partner`, the third child. That
+       is safe only because it is `display:none` from 800px down and a
+       display:none child is not a flex item at all. If that hide is ever
+       narrowed, this rule starts giving the HSBC lockup a third of the row. */
+    .hero-cta{gap:10px!important}
+    .hero-cta > div{flex:1 1 0!important;min-width:0!important}
+    .hero-cta .reg-btn{width:100%!important;font-size:14px!important;padding:16px 4px!important}
+    /* ⚠️ THE "COMING SOON" BADGE HAS TO COME DOWN WITH THE BUTTON. It is two
+       absolutely-positioned spans: a 122px plate that punches a hole in the
+       button's top edge, and the pill that sits in the hole. On a 143px button
+       a 122px plate is 85% of the width and reads as a second bar rather than a
+       notch. Both are styled inline, hence !important on every line. */
+    .hero-cta > div > span:nth-of-type(1){width:94px!important;right:8px!important}
+    .hero-cta > div > span:nth-of-type(2){right:12px!important;font-size:9px!important;
+                                          padding:4px 9px!important;letter-spacing:.6px!important}
+
     /* The countdown was FIVE flex items at min-width:82px in a 348px space, so
        it wrapped into THREE rows 170px tall — measured, not guessed. The label
        takes its own line and the four boxes share what is left. */
@@ -822,14 +897,35 @@
     .cd-row > div{min-width:0!important;flex:1 1 0!important;padding:12px 4px!important}
   }
 
-  /* ⚠️ The supporters tiles are capped at 260px so a short LAST ROW does not
-     stretch into three enormous boxes. On a phone there is only ever one tile
-     per row, so that cap would leave a narrow card floating in the middle of a
-     390px screen - lift it and let the tile use the width it has.
-     !important for the same reason as the rules above: the tile is styled
-     inline and an ordinary rule silently loses. */
-  @media(max-width:640px){
-    .spon-tile{max-width:none!important}
+  /* ⚠️ TOMBSTONE (8 Aug 2026). A `@media(max-width:640px){.spon-tile{max-width:
+     none!important}}` lived here on its own. Its comment said "on a phone there
+     is only ever one tile per row, so lift the 260px cap and let the tile use
+     the width it has" - which was TRUE and was the bug. Lifting the cap made
+     each of the 18 supporter tiles a full-width 296px card, so the block was 18
+     rows tall and every mark was rendered LARGER on a phone than on a desktop.
+     Jay, 8 Aug 2026: "i don't like the way the sponsors don't scale smaller and
+     all stack vertically". The cap is still lifted - it is the flex-basis, not
+     the cap, that decides how many fit - but the basis now comes down with the
+     screen instead of staying at 190px. See below.
+
+     ⚠️ THE INLINE `flex:1 1 190px` IS WHAT PUT ONE TILE PER ROW, NOT THE CAP.
+     At 360px the row has 296px; two tiles at a 190px basis want 394px, so the
+     second wrapped. Overriding max-width alone could never have fixed that, and
+     that is why the old rule read as if it had. */
+  @media(max-width:760px){
+    /* THREE across from 400px up, TWO below it (Jay's call, 8 Aug 2026).
+       Measured at 430px: a third of (430 - 32 section padding - 20 gap) is
+       126px per tile. At 360px the same sum gives 91px, which is under the
+       width of the wider wordmarks once tile padding is off - hence the second
+       breakpoint rather than three across everywhere.
+       ⚠️ The 33.333% basis needs the gap subtracted or three tiles want 100%
+       PLUS two gaps and the third wraps - the exact fault this rule fixes. */
+    #sponsors{padding-left:16px!important;padding-right:16px!important}
+    .spon-tile{flex:1 1 calc(33.333% - 10px)!important;max-width:none!important;
+               min-height:74px!important;padding:10px!important}
+  }
+  @media(max-width:399px){
+    .spon-tile{flex:1 1 calc(50% - 7px)!important}
   }
 
   @media(max-width:760px){
@@ -870,15 +966,42 @@
     /* The two Register buttons sit inside the nav; let them fill the panel. */
     .hdr-row[data-nav-open="true"] .hdr-nav > div{width:100%!important;margin-top:6px!important}
     .hdr-row[data-nav-open="true"] .hdr-nav > div a{text-align:center!important}
-    /* Multi-column sections collapse to one. m-stack-2 keeps two abreast so the
-       four headline stats still read as a set rather than a long list. */
+    /* Multi-column sections collapse to one. */
     .m-stack{grid-template-columns:1fr!important;gap:34px!important;padding-left:20px!important;padding-right:20px!important}
-    .m-stack-2{grid-template-columns:1fr 1fr!important;padding-left:20px!important;padding-right:20px!important}
-    /* In the 2x2 stack the desktop dividers go wrong: the row-end cell kept a
-       stray outer border and the two rows had no divider. Interior lines only. */
-    .m-stack-2>div{border-right:none!important}
-    .m-stack-2>div:nth-child(odd){border-right:1px solid rgba(255,255,255,0.25)!important}
-    .m-stack-2>div:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,0.25)!important}
+
+    /* ⚠️ THE STATS BAR STAYS ONE ROW OF FOUR ON A PHONE (Jay, 8 Aug 2026:
+       "the counting stats bar should remain one horizontal bar not stack
+       vertically"). It was 2x2 here from the first mobile pass.
+
+       ⚠️ TOMBSTONE FOR THE 2x2. What was here:
+         .m-stack-2{grid-template-columns:1fr 1fr!important;padding:0 20px}
+         .m-stack-2>div{border-right:none}
+         .m-stack-2>div:nth-child(odd){border-right:1px solid ...}
+         .m-stack-2>div:nth-child(-n+2){border-bottom:1px solid ...}
+       and its comment said two abreast kept the four "reading as a set rather
+       than a long list". The argument was sound and the class name still says
+       `-2`; the name is now wrong and is kept because `.m-stack-2` is written
+       into the markup and renaming it is a bigger diff than this change earns.
+       The nth-child border rules go WITH the 2x2 - in one row of four, `odd`
+       would leave the divider off cells 2 and 4, and `-n+2` would draw a
+       horizontal line under the first two cells of a bar that has no second
+       row. Both were correct only for the grid they were written for.
+
+       ⚠️ THE PADDING AND THE TYPE COME DOWN TOGETHER, and neither is optional.
+       At 360px: 360 - 20 (section padding) = 340, / 4 = 85px per cell, less
+       6px of cell padding = 79px of content. "3000+" in Anton at the desktop
+       floor of 30px measures ~78px and "AGE GROUPS" at 13px with 1px of
+       letter-spacing measures ~90px, so the label alone would have wrapped or
+       spilled. 7.2vw is 25.9px at 360 and 31px at 430; 10px with the
+       letter-spacing cut to 0.3px puts the longest label at ~66px.
+       ⚠️ If a stat's VALUE ever gets longer than five characters - a five digit
+       player count, or "1000s" - re-measure. Nothing here asserts it fits. */
+    .m-stack-2{grid-template-columns:repeat(4,1fr)!important;padding-left:10px!important;padding-right:10px!important}
+    .m-stack-2>div{padding:22px 3px!important;border-bottom:none!important;
+                   border-right:1px solid rgba(255,255,255,0.25)!important}
+    .m-stack-2>div:last-child{border-right:none!important}
+    .m-stack-2>div>div:first-child{font-size:clamp(22px,7.2vw,34px)!important}
+    .m-stack-2>div>div:last-child{font-size:10px!important;letter-spacing:.3px!important}
     /* A 520px floor cannot fit a 390px screen - it alone would keep the page
        scrolling sideways after the wrapper was fixed. */
     .m-nofloor{min-width:0!important}
@@ -1768,7 +1891,7 @@
       <!-- ⚠️ flex-wrap added with the partner lockup (Aug 2026). The row was two
            buttons and never needed it; a third item makes it overflow a phone
            without it, and an overflowing hero is the first thing anybody sees. -->
-      <div style="display:flex;gap:16px;margin-top:38px;align-items:center;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
+      <div class="hero-cta" style="display:flex;gap:16px;margin-top:38px;align-items:center;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .24s both">
         <div style="position:relative;display:inline-block">
           <button onClick="{{ onClickRegisterTeam }}" class="reg-btn" style="--glow:#E11B22"><span class="reg-btn-bar"></span><span class="holo"></span><span class="reg-btn-label">Register a team</span></button>
           <sc-if value="{{ registrationClosed }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:-4px;right:14px;width:122px;height:21px;background:#0C0C0E;border-radius:100px;z-index:2"></span><span style="position:absolute;top:-11px;right:19px;z-index:3;background:linear-gradient(95deg,#17A34A,#0e7d37 50%,#8f1319);color:#fff;font-family:'Barlow';font-weight:800;font-size:10px;letter-spacing:1px;padding:5px 13px;border-radius:100px;text-transform:uppercase;box-shadow:0 5px 14px rgba(0,0,0,.4);white-space:nowrap">Coming Soon</span></sc-if>
@@ -2633,6 +2756,45 @@
       </div>
     </div>
   </footer>
+
+  <!-- ============ PERSISTENT PARTNER STRIP (phones/tablets only) ============
+       Jay, 8 Aug 2026: "we need a way to keep the HSBC on the screen when
+       scrolling, it should always be visible somehow."
+
+       ⚠️ WHY A BOTTOM STRIP AND NOT THE STICKY HEADER, which is where the mark
+       already lives on a desktop. Measured at 360px: the crest and wordmark
+       block is 249px, the hamburger is 46px, and the row's own padding takes
+       32px - leaving about 17px. The header lockup is hidden below 900px for
+       exactly that reason (`.hdr-partner{display:none}`), and it was hidden
+       BECAUSE it did not fit, not because nobody wanted it. Putting HSBC back
+       up there means shrinking the wordmark, the strap and the crest to buy
+       ~50px and then rendering a principal partner's mark at 14px. Jay chose
+       the strip, 8 Aug 2026, over that squeeze and over a floating corner pill.
+
+       ⚠️ NOT A LINK, for the same reason the header mark is not one: this is
+       fixed, so it follows a visitor down every page, including a parent part
+       way through the registration form. The one clickable HSBC mark on this
+       page is the big one in #sponsors, which is not sticky. Do not "improve"
+       this by wrapping it in an <a>.
+
+       ⚠️ z-index 40, BELOW the header's 50 and far below the modals' 200. A
+       modal covers this strip completely, which is correct - it is furniture,
+       not a control, and it must not sit on top of a form.
+
+       ⚠️ IT COSTS SCREEN, AND THE PAGE HAS TO PAY FOR IT. `body` gets a
+       padding-bottom of the strip's height in the same media query. Without it
+       the last 38px of the footer sits permanently underneath the strip - which
+       is the failure mode nobody notices on a desktop, because the strip is not
+       there at all above 900px.
+
+       The reverse (white wordmark) asset, like the header and hero: this bar is
+       #0C0C0E. assets/sponsor-hsbc.webp has a black wordmark and would need a
+       white plate behind it. -->
+  <div class="partner-strip" aria-hidden="false">
+    <span class="partner-strip-line"></span>
+    <span class="partner-strip-label">In partnership with</span>
+    <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" class="partner-strip-mark">
+  </div>
 
   <!-- ============ REGISTER A TEAM MODAL ============ -->
   <sc-if value="{{ teamModalOpen }}" hint-placeholder-val="{{ false }}">

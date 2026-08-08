@@ -14,6 +14,36 @@ changelog entry, not a lesson.
 
 ---
 
+**⚠️ "NOTHING HAPPENED" IS NOT EVIDENCE OF A BROKEN MECHANISM WHEN YOU HAVE
+ALSO SUPPRESSED THAT MECHANISM.** Six pushes produced zero Netlify deploys and
+that was read as "the GitHub webhook is dead" — stated confidently, with the
+config inspected and a GitHub App check to back it up. Five of the six carried
+`[skip ci]` and were *correctly* not built; the sixth targeted a branch that had
+been deleted. Branch deploys were working the whole time. **Before blaming the
+mechanism, check whether you turned it off yourself.**
+
+**⚠️ A 404 PROVES NOTHING ON ITS OWN — YOU NEED AN UNRULED SIBLING.** Verifying
+a `force = true` redirect by fetching the blocked path is ambiguous with "the
+file is not in that snapshot", and a nonexistent path 404s identically. Two
+attempts were wasted on it. **The measurement is a file of the same type, in
+the same deploy, with no rule on it, returning 200 at the same moment.**
+
+**⚠️ A BRANCH DEPLOY IS FREE, SO PROVE REDIRECTS THERE, NOT ON PRODUCTION.**
+Both `netlify.toml` rules were proven on `compare--` for 0 credits, against
+production as the live baseline. **Take the baseline BEFORE the change** — the
+whole test rests on production still answering 200 while the branch answers 404.
+
+**⚠️ ANYTHING THAT EXISTS ONLY IN THE CLOUD SANDBOX IS ONE SESSION FROM GONE.**
+When `dev` and `Compare` were deleted from `origin` and from the PC in one go, a
+commit survived only in an ephemeral container that is reclaimed at session end.
+**Bundle it to a real disk before doing anything else** — before diagnosing,
+before asking, before tidying.
+
+**⚠️ A TOMBSTONE FILED SOMEWHERE ELSE IS A DEAD POINTER WEARING A HAT.** A doc
+was deleted and its tombstone written to `claude/archive/` under a new name.
+Eleven documents still pointed at the original path, so all eleven broke.
+**Put the tombstone where the thing was.**
+
 
 **⚠️ CHECK THE CODE BEFORE RECOMMENDING THE WORK, NOT AFTER.** On 6 Aug I
 recommended sweeping five pages for the stuck-hover bug as the best use of a

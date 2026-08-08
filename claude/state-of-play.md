@@ -25,7 +25,11 @@ the Claude project, so a bare clone got one file and fourteen dead pointers.
 this page, then `CLAUDE.md`.** Before this there was no tie-breaker and a
 session arbitrated by whichever file it happened to read last.
 
-⚠️ **THE `/claude/*` 404 RULE IN `netlify.toml` IS UNVERIFIED.** It points at
+✅ **THE `/claude/*` 404 RULE IS VERIFIED (8 Aug 2026)** — see the section
+below. The paragraph that follows is kept because its *reasoning* about why a
+bare 404 proves nothing is still right.
+
+⚠️ **[SUPERSEDED] THE `/claude/*` 404 RULE IN `netlify.toml` IS UNVERIFIED.** It points at
 `/404.html` (not at itself — the mistake that left the `tests/` rule broken for
 months), but **reading the toml proves nothing.** No deploy has run since the
 commit, so the docs are not in the deployed snapshot and a 404 on
@@ -117,6 +121,53 @@ own head forbids dates.
 **Suite after all of it: 38 files green, 719/719 faults, 33 suites clean —
 baseline UNCHANGED, which is the proof files were reorganised rather than
 added.**
+
+## ✅ BOTH REDIRECT RULES VERIFIED, AND `dev`/`Compare` WERE DELETED AND RESTORED (8 Aug)
+
+**The rules are proven, by a measurement that discriminates.** A branch deploy
+is FREE, and that is how it was done without spending 15 credits.
+
+| | `compare--` (carries the rules) | production (does not) |
+|---|---|---|
+| `/CLAUDE.md` | **404** ×3 | **200** |
+| `/RESTORE.md` | **404** | **200** |
+| `/claude/state-of-play.md` | 404 | 404 |
+| `/` · `/robots.txt` · `/no-such-xyz` | 200 · 200 · 404 | — |
+
+⚠️ **THE 404s ON THEIR OWN PROVE NOTHING** — a file that is simply absent 404s
+identically, and that ambiguity wasted two earlier attempts. **The 200 on an
+unruled sibling in the same snapshot is what makes it a measurement.**
+
+⚠️ **`adhjrt.com/CLAUDE.md` AND `/RESTORE.md` ARE STILL SERVED ON PRODUCTION.**
+The fix is on `dev` and `Compare`; `main` does not have it yet. Merging costs
+one 15-credit deploy.
+
+## ⚠️ `dev` AND `Compare` WERE DELETED FROM GITHUB AND FROM jay-pc (8 Aug) — restored
+
+Jay deleted them by accident. **Both were gone from `origin` AND from jay-pc's
+clone**, leaving `main` only. One commit — the `netlify.toml` root-doc fix —
+existed **nowhere but an ephemeral cloud sandbox**. It was bundled to disk
+first, then restored; `dev` and `Compare` are both back at that commit and
+`Compare` is 0 behind `main`.
+
+⚠️ **A BRANCH THAT EXISTS ONLY IN THE SANDBOX IS ONE SESSION FROM GONE.** The
+container is reclaimed when the session ends. **Anything not on a PC or on
+`origin` is not saved.**
+
+## ⚠️ I DIAGNOSED A BROKEN WEBHOOK. IT WAS NOT BROKEN. (8 Aug)
+
+Six pushes produced zero deploys, so I concluded Netlify had stopped receiving
+events from GitHub, and said so confidently. **Wrong.** Five of the six carried
+`[skip ci]` and were *correctly* not built. The sixth went to `dev` — which by
+then had been deleted, so Netlify reported
+`git ref refs/heads/dev does not exist`. Branch deploys work fine: `Compare`
+built in 37s the moment the branch existed again.
+
+⚠️ **"NOTHING HAPPENED" IS NOT EVIDENCE OF A BROKEN MECHANISM WHEN YOU HAVE
+ALSO SUPPRESSED THAT MECHANISM.** Every commit that day was `[skip ci]`.
+A silent system that you have told to be silent proves nothing — and I built a
+confident diagnosis on it. **Check the thing you disabled before blaming the
+thing you did not.**
 
 ## ⚠️ The suite was RUN, not quoted — 719/719, 33 clean, 38 files (7 Aug)
 

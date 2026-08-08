@@ -134,10 +134,13 @@
 # unnoticed on the tests/ rule for months while the comment above it claimed
 # otherwise. See the tests/ block above.
 #
-# ⚠️ THIS RULE IS UNVERIFIED UNTIL SOMEBODY FETCHES THE URL ON A DEPLOY.
-# Reading this file proves nothing; that is exactly how tests/ went wrong.
-# After the next production deploy, fetch adhjrt.com/claude/state-of-play.md
-# and confirm 404.
+# ✅ VERIFIED 8 Aug 2026, and verified in the way that DISCRIMINATES.
+# On a deploy carrying this rule, /claude/state-of-play.md, /claude/lessons.md
+# and /claude/archive/pr11-status.md all returned 404 WHILE /CLAUDE.md — the
+# same file type, in the same snapshot, with no rule at the time — returned
+# 200. A 404 on its own proves nothing here, because a file that is simply
+# absent 404s identically; the 200 on an unruled sibling is what makes it a
+# real measurement. Controls: / and /robots.txt 200, /no-such-xyz 404.
 #
 # ⚠️ AND IT DOES NOT MAKE THESE DOCS PRIVATE. This repo is PUBLIC: every file
 # here is readable on github.com regardless of what Netlify serves. This rule
@@ -159,12 +162,15 @@
 # github.com regardless. This is about not serving internal documentation as
 # part of the website.
 #
-# ⚠️ THIS RULE IS THE ONE THING ON THIS SITE THAT CAN BE VERIFIED BY A REAL
-# BEFORE/AFTER. The baseline was taken BEFORE the change — production serves
-# /CLAUDE.md at 200 today — so a deploy carrying this rule must flip that same
-# path to 404. Same file, same name, only the rule differs. Every other 404
-# check here is ambiguous with "the file is not in the snapshot"; this one is
-# not.
+# ✅ VERIFIED 8 Aug 2026 BY A REAL BEFORE/AFTER, which is why this rule was
+# written this way. Baseline taken BEFORE: production served /CLAUDE.md at 200.
+# The Compare branch deploy, carrying this rule, returned 404 x3 for /CLAUDE.md
+# and 404 for /RESTORE.md AT THE SAME MOMENT production still returned 200 for
+# both. Same file, same name, same commit content — only the rule differs.
+# Controls on that deploy: / 200, /robots.txt 200, /no-such-xyz 404.
+#
+# ⚠️ A branch deploy is FREE. That is how this was proven without spending 15
+# credits on production. Use the same trick next time a redirect needs proving.
 [[redirects]]
   from = "/CLAUDE.md"
   to = "/404.html"

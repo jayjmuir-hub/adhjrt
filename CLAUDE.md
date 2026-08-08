@@ -260,8 +260,9 @@ git bundle list-heads x.bundle          # ⚠️ check the ref NAME before writi
 # ship it: SendUserFile -> device_commit_files into the scratch folder
 
 # on the PC
-git bundle verify <path>\x.bundle
-git fetch <path>\x.bundle main:main
+git bundle verify <path>\x.bundle       # prints the ref the bundle carries
+git fetch <path>\x.bundle main          # SOURCE ref only, no destination
+git merge --ff-only FETCH_HEAD
 git rev-parse 'main^{tree}'             # must equal the sandbox's
 ```
 
@@ -273,9 +274,24 @@ both.**
 
 ⚠️ **A bundle made with `origin/main..HEAD` names its ref `HEAD`, not the
 branch.** Run `git bundle list-heads` first.
-⚠️ **`git fetch <bundle> dev:dev` is REFUSED while `dev` is checked out** —
-*fatal: refusing to fetch into branch 'refs/heads/dev'*. Fetch without a
-destination refspec and `git merge --ff-only FETCH_HEAD` instead.
+
+⚠️ **THE FETCH TAKES THE SOURCE REF AND NO DESTINATION — `git fetch <bundle>
+dev`.** There are two ways to get this wrong and they fail differently, which
+is why both are written out:
+
+| What you type | What happens |
+|---|---|
+| `git fetch <bundle> dev:dev` | *fatal: refusing to fetch into branch 'refs/heads/dev'* — while `dev` is the checked-out branch |
+| `git fetch <bundle>` | *fatal: couldn't find remote ref HEAD* — a bare fetch asks for `HEAD`, and a bundle built from `origin/dev..dev` carries `refs/heads/dev` |
+| `git fetch <bundle> dev` | ✅ lands on `FETCH_HEAD`, then `git merge --ff-only FETCH_HEAD` |
+
+⚠️ **CORRECTED 8 Aug 2026, having been wrong here since 2 Aug.** This paragraph
+said "fetch without a destination refspec", which is only half right: it drops
+the destination, and it also drops the SOURCE, and without a source git asks
+for `HEAD`. It failed on the first real use after the rule was written down.
+The line directly above says to run `list-heads` and check the ref NAME — and
+then the command underneath ignored the name it just told you to look up. **If
+a rule tells you to look something up, the next line has to use it.**
 ⚠️ **Put the scratch folder OUTSIDE the repo** — a SIBLING of the clone, never
 a child, because the repo root is the served site. `C:\Users\jayjm\GitHub\_scratch`
 is the one used; it needs a folder grant on `C:\Users\jayjm\GitHub`, not on the

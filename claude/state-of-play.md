@@ -206,6 +206,72 @@ sentence, including this one.**
 > `CLUB_FORM_KEY` is its gate. The team and player forms are still gated and
 > must stay that way.
 
+## ⚠️ FIVE PRODUCTION DEPLOYS ON 8 AUG, ALL PHONE WORK — AND FOUR CHECKS THAT LIED (8 Aug)
+
+**Live at `79d57fd`.** Started from *"one of the club committee members already
+[looked at it on a phone]"*.
+
+⚠️ **THE FIRST DIAGNOSIS WAS WRONG AND IT WAS THE OBVIOUS ONE.** Measured before
+touching anything: `scrollWidth` equalled the viewport at 360/390/430 and no box
+crossed the right edge. **The homepage did not overflow.** Every complaint was a
+layout decision that reads badly on a phone, not a bug. Chasing "the page
+overflows" would have gone nowhere.
+
+| Shipped | What it was |
+|---|---|
+| Hero CTAs side by side | Never stacked *on purpose* — 221+224+16 = **461px against 296px** of row, so they wrapped at every phone width, 430 included |
+| Stats bar one row of four | Was a deliberate 2×2; padding and type had to come down with it |
+| Sponsors 2/3 across | 18 tiles were **full-width rows** because the flex-basis stayed 190px — **not** the 260px cap the old comment blamed. Page **1,545px shorter** at 360 |
+| Fixed HSBC strip, homepage + `/app` | Header has ~17px spare at 360px, which is *why* the header lockup was hidden below 900 |
+| Registration modals | Email input crushed to a **~40px square** — the `+971` block is `flex:none` and cannot shrink, so its grid track starved the email track |
+| `/rules` bracket claim | See below |
+| `/manager` first phone layout | **106px of sideways scroll**, measured in a real signed-in session |
+
+⚠️ **FOUR TIMES A CHECK REPORTED SUCCESS WHILE MEASURING THE WRONG THING.** This
+is the same thread as the four traps in the 8 Aug morning handoff, walked into
+four more times in one afternoon:
+
+1. **A harness that had not booted.** The homepage loads React from unpkg; the
+   sandbox could not reach it, so "no overflow, sections empty" was measuring an
+   unrendered document. Then the fonts silently failed and the headline rendered
+   in a serif — `document.fonts` said `error`, the screenshot just looked
+   slightly off. **Trust `document.fonts.ready`, not the picture.**
+2. **`overflow-x:hidden` "fixed" the `/manager` overflow.** It hid it. Two nav
+   links were clipped off the screen where they could not be scrolled to, and
+   the audit reported `sidewaysPx: 0`. Caught only by counting
+   *overflowing-and-unreachable* separately.
+3. **A CSS rule that matched nothing.** The source spells inline styles
+   `display:flex`; the renderer emits `display: flex`. Verified live:
+   `.matches('[style*="display:flex"]')` → `false`. **The source is not what
+   ships.**
+4. **A test that passed against its own bug.** The check for the rendered
+   spelling matched a different rule further down, so deleting the spelling it
+   guarded passed. The fault run caught it.
+
+⚠️ **And one decoy I created myself:** a tombstone comment quoting the old
+`@media(max-width:640px){.spon-tile{...}}` rule verbatim was matched by a test's
+regex instead of the live rule, reporting a whole fix as missing. **A tombstone
+that quotes code becomes a decoy for the next search — anchor on something only
+the live rule has.**
+
+⚠️ **THE REGISTRATION MODALS HAD NEVER BEEN SEEN ON A PHONE, AND THE REASON IS
+STRUCTURAL:** they only render while the window is OPEN, and it had been shut
+every previous time the page was checked at phone width. **A screen that only
+renders in one state is not tested by looking at the page.**
+
+⚠️ **`/rules` said something false, not merely vague.** *"Everyone plays through
+… a Cup, Bowl, Plate and Shield bracket."* `scores-data.js` contradicts it five
+ways, and the one that matters is a comment: *"A 5th-place team (odd pool sizes)
+sits out of the knockouts entirely."* **That makes the heading wrong, not just
+the bracket names.** Replaced with the only guaranteed part — the pool stage —
+and the tests now assert that claim **against the homepage too**, because the
+same promise on two surfaces is the hundreds-vs-thousands mistake again.
+
+**Bundle route note:** `CLAUDE.md` § 1b said to fetch a bundle *"without a
+destination refspec"*. That drops the source as well, and a bare fetch asks for
+`HEAD`, which a `origin/dev..dev` bundle does not carry. Corrected to
+`git fetch <bundle> dev` with all three forms tabulated.
+
 ## Where things stand
 
 | | |
@@ -216,7 +282,7 @@ sentence, including this one.**
 | Branch deploys | allow-list is **`dev, Compare`**. ⚠️ **Free — 0 credits.** ⚠️ A branch deploy outlives its branch and reads production's env vars and stores. **Whether they are password-gated: read the Netlify MCP, not this page.** |
 | Teams / Players sheets | **CLEAN** (0 / 0), cleared by Jay 2 Aug |
 | Rehearsal data | **CLEARED**, verified 2 Aug |
-| Registration window | force OPEN. **Jay decides on his own — do not raise this.** |
+| Registration window | ⚠️ **NOT RECORDED HERE ANY MORE — the same treatment as the site-password row above, and for the same reason.** It was force **OPEN** and then force **CLOSED** inside two hours on 8 Aug 2026, so any value written here is wrong by the time it is read. **Read it live: `GET https://adhjrt.com/.netlify/functions/registration-window`** — `state.open` and `state.forced`, and the `warnings` array says in plain English which way a force is pointing. **Jay decides on his own — do not raise this.** ⚠️ **The registration MODALS only exist while it is open**, so a phone or layout check made while it is shut has not seen them (this is exactly how they shipped unusable — see 8 Aug below). |
 | `ORGANIZER_INVITE_CODE` | **DELETED.** Organiser self-signup closed. |
 | `MANAGER_INVITE_CODES` | stays — 15 age groups. **Checked in Netlify 6 Aug: no `"admin"` key exists, so nothing is silently broken.** ⚠️ A master key must still be named `"*"`, a literal asterisk — never `"admin"` (see Jobs 5, kept as a tombstone). |
 | Google sign-in | LIVE, confirmed working |
@@ -227,10 +293,11 @@ sentence, including this one.**
 | **The header nav** | **LIVE (`24fb84c`)** — holo pill + underline on hover, current section underlined, bar condenses past 90px of scroll. ⚠️ `data-sec` and `.hdr-tight` live on `<html>`; never move them onto the header. ⚠️ The nav's width is now load-bearing — pill padding and gap are pinned by tests because widening them overflows the sticky bar. |
 | **`/rules`** | **LIVE (`24fb84c`), button themed and centred (`f24ae0d`)** — placeholder page. ⚠️ **Jay owes the actual rules;** the block to replace is marked in `rules.html` and nothing else on that page needs touching. ⚠️ The button's `width:fit-content` wrapper is load-bearing — see `f24ae0d` above. |
 | **The About section** | **LIVE, 6 Aug.** A **coverflow carousel** — six cards recycling eleven photos, auto-advancing every 6s, no drag and no keys. ⚠️ **The box bleeds past its grid column to the right edge of the page**, which is what buys the width without shrinking the 66px heading; `100vw` counts the scrollbar and the centred section does not, so it subtracts `--sbw`. ⚠️ **The crest and flying bat are back** — badge is the HOLED `crest-shield.png` and it stands or falls with the bat. ⚠️ **Hidden below 760px and the photos are not fetched there.** ⚠️ `prefers-reduced-motion` does NOT stop the timer — with no controls there is nothing to press. Phone walkthrough still **pending**. |
-| HSBC | three placements — 19 / 128 / 96px. Walkthrough **pending**. |
+| HSBC | ⚠️ **FIVE placements on the homepage since 8 Aug, not three** — 19 / 128 / auto / 96 / **18px (new fixed bottom strip)** — plus **three** in `/app`. Never more than two visible at once; the pairings share breakpoint numbers (800 and 900 on the homepage, 359 in the app) and both are asserted. Full table in `RESTORE.md` § HSBC. Phone walkthrough **still pending**. |
+| **Phone layout** | **Homepage, registration modals, `/rules` and `/app` are done and LIVE (8 Aug).** ⚠️ **`Organizer.dc.html` still has ZERO media queries** — as do `Signin.dc.html` (2/2 inputs under 16px, so iOS zooms on focus) and `Scores & Standings.dc.html` (deliberate — Jay's call 8 Aug: `/app` is the match-day phone answer). Counts and the three traps are in `RESTORE.md` § Phone layout. |
 | The real draw | **still placeholder clubs** in all 15 groups. Pitches and kick-off times are real; the pools wait on real registrations. Everything else waits on this. |
 | Results nav link | still an in-page `#results` jump — change to `/scores` only once the draw is real |
-| Tests | **38 files green; 719/719 faults caught; 33 suites clean undamaged** — MEASURED on jay-pc 7 Aug 2026 at `5bb5f1e`, `runall.ps1` reported `All green.` with zero FAILED lines and 39 `--- ` headers (38 files + the prover). ⚠️ This row previously said 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31 — **three files, three different numbers, none correct.** `test-about-board.js` 238 checks; `test-design-polish.js` 70; `test-manager-dc-draw.js` 275; `test-age-group-picker.js` 84. ⚠️ **The baseline went 31 → 32 because a FILE was added** — it must move up for a new file and stay put for an extended one. ⚠️ **The baseline number going UP is the only proof a new suite ran undamaged — and it staying PUT is the proof an existing one was extended.** |
+| Tests | **38 files green; 759/759 faults caught; 33 suites clean undamaged** — MEASURED on jay-pc 8 Aug 2026 at `79d57fd`, `runall.ps1` reported `All green.` with 39 `--- ` headers (38 files + the prover). ⚠️ The fault count went 719 → 724 → 731 → 738 → 747 → 751 → 759 across 8 Aug as each change added its own; **the number in prose is worth nothing — trust `runall.ps1`'s own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` (33) going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** No new FILE was added on 8 Aug, so 33 is correct and must not move. |
 
 ## ⚠️ JOBS FOR JAY
 
@@ -321,6 +388,18 @@ Jay clicks the green button.
    `/manager` and `/signin` have **never been looked at on a real touch
    viewport**. A source check says their hover rules cannot stick in the way
    that mattered; it cannot say the pages feel right in a hand.
+   ⚠️ **PARTLY ANSWERED 8 Aug, and only partly.** `/manager` HAS now been
+   measured on a real touch viewport — in Jay's signed-in Chrome under DevTools
+   device emulation at 430px, before and after. `/organizer` was measured too
+   (3/3 controls under 16px; wide tables scroll in their own box, no page-level
+   overflow). `/scores` and `/signin` still have not been. ⚠️ **And "measured"
+   is still not "used": nothing in this project has been checked on a REAL
+   handset.** Everything is headless Chromium or DevTools emulation. The two
+   things neither can see are **iOS Safari's dynamic toolbar** under the new
+   fixed HSBC strips, and **whether the 16px rule actually stops zoom-on-focus**
+   — which is real-iOS-only behaviour and does not reproduce in an emulator at
+   any width. Both are one-line fixes if wrong. **This is the single largest
+   unverified claim in the 8 Aug work.**
 1b. **`/app`'s bottom tab bar is width-gated only** —
    `@media(min-width:820px)` hides it. A phone whose browser is in desktop mode
    reports 980px and loses the primary navigation entirely (see the `/app`
@@ -337,6 +416,20 @@ Jay clicks the green button.
    until it is answered, dismissing it leaves the draft intact, a clean draft
    switches silently, and re-picking the current group is a no-op.
 4. **Splitting oversized `Organizer.dc.html`** — not started.
+4b. ⚠️ **`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL** — zero media queries,
+   62 flex rows, 274 inline font-sizes under 16px, 5 tables. Jay asked for it on
+   8 Aug and it was **deliberately not started**: `Manager.dc.html` was done
+   first and shipped so there was something working before touching the file
+   that carries the draw editor and score entry. **Two questions were put to Jay
+   and are unanswered:** (a) is "make it work" enough, as `/manager` got, or
+   does he want a real phone redesign — cards instead of table rows, a
+   collapsing toolbar; (b) keep the `.bo` attribute-selector approach, which
+   works but depends on how the renderer spells inline styles, or spend a much
+   bigger diff on real classes that cannot break that way. ⚠️ **Its wide tables
+   already scroll inside their own boxes and are NOT broken** — measured, no
+   page-level sideways scroll at 430px. Its 3/3 form controls under 16px are.
+4c. **`Signin.dc.html` has 2/2 inputs under 16px**, so iOS zooms on focus on the
+   page every account holder uses. One rule fixes it; not done.
 5. **The team-code race** — in progress.
 6. **The adhjrt-sim suite on jay-pc is stale** and no longer coverage you are
    missing. Worth pruning that folder; the repo says so now.

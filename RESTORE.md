@@ -395,11 +395,42 @@ only confirmed sponsor** — eighteen supporters shipped in the grid on
 5 Aug 2026 (this sentence said otherwise until 7 Aug, contradicting the
 supporters-grid section below it in this same file). HSBC stays ABOVE and
 SEPARATE from that grid; do not demote them into a row of equals.
-The mark appears in **three** places on the homepage, all on `#0C0C0E`:
+⚠️ **FIVE PLACES ON THE HOMEPAGE SINCE 8 AUG 2026, NOT THREE.** This sentence
+said three until then, and it was already wrong when the mobile hero lockup
+shipped. **Never any more than two are visible at once**, and the pairings are
+what makes that true — each pair is mutually exclusive on the *same* breakpoint
+number, so moving one number without the other gives a band of widths with two
+marks on screen, or none. Both pairings are asserted in `test-sponsors.js`.
+
+| Pair | Above the breakpoint | At/below it |
+|---|---|---|
+| **800px** | hero in-row lockup, 128px | mobile hero lockup above the date pill, `height:auto` |
+| **900px** | sticky-header mark, 19px | **fixed bottom partner strip**, 18px |
+
+The strip is new on 8 Aug 2026 (Jay: *"we need a way to keep the HSBC on the
+screen when scrolling, it should always be visible somehow"*). It is
+`position:fixed; bottom:0; z-index:40`, 34px tall, and **`body` pays for it with
+a matching `padding-bottom:38px` in the same media query** — without that the
+last band of the footer sits behind it permanently, which is invisible above
+900px where the strip does not exist at all. ⚠️ **Not a link**, same reason as
+the header mark: a fixed element follows a visitor down the whole page. Below
+380px the eyebrow drops and the mark stands alone.
+
+⚠️ **`/app` carries THREE marks of its own**, and its persistence works the
+opposite way round: the app's header is already `position:sticky`, so the mark
+is on screen at every scroll position from 360px up **without any strip**. The
+strip there exists only at **≤359px**, where the header mark is hidden so the
+bar does not wrap to two lines — same number, same pairing rule. The app's
+strip sits on the bottom edge and **lifts `.tabbar` to `bottom:26px`** rather
+than covering it, and the safe-area inset moves from the tab bar to the strip
+because the strip is the bottom-most thing now (`/app` is `viewport-fit=cover`,
+so that inset is real space over the home indicator).
+
+The three original homepage placements, all on `#0C0C0E`:
 
 | Where | Size | Notes |
 |---|---|---|
-| sticky header, beside the crest | 19px | not a link; hidden below 900px |
+| sticky header, beside the crest | 19px | not a link; hidden below 900px — the bottom strip takes over there |
 | hero, centred in the space after the Register buttons | **128px** | added 3 Aug 2026; `margin-left:auto` AND `margin-right:auto` — auto on BOTH sides is what makes it halfway rather than hard right, which Jay rejected. `max-width:100%` because at 128px it is ~510px wide, wider than a phone. "In partnership with" above it, divider to its left |
 | `<section id="sponsors">` | **96px** | "Principal partner", plus a paragraph. Raised from 64px on 5 Aug at Jay's request. ⚠️ **All three sizes are asserted now** — a placement quietly SHRINKING is the same class of failure as one quietly vanishing: the mark is still there, so nothing looks broken, and the only confirmed partner is smaller than the day before with nobody the wiser. |
 
@@ -672,6 +703,59 @@ check on the identifier alone would pass the moment somebody re-added the same
 list under a different one.
 
 ---
+
+## Phone layout — which pages have one, and which never did (8 Aug 2026)
+
+⚠️ **Counted, because "responsive" was assumed of pages that had never had a
+single media query.**
+
+| File | `@media` rules | State |
+|---|---|---|
+| `Quins JRT.dc.html` | 23 | laid out for a phone |
+| `app.html` | 11 | laid out for a phone |
+| `rules.html` / `legal.html` | 1 each | simple pages, fine |
+| **`Manager.dc.html`** | **0 → 1 block (8 Aug)** | first phone pass — makes it *work*, not a redesign |
+| **`Organizer.dc.html`** | **0** | ⚠️ **still none.** 62 flex rows, 274 inline font-sizes under 16px, 5 tables |
+| **`Scores & Standings.dc.html`** | **0** | deliberate — `/app` is the match-day phone answer (Jay, 8 Aug) |
+| **`Signin.dc.html`** | **0** | ⚠️ 2/2 inputs under 16px, so iOS zooms on focus |
+| **`Club.dc.html`** | **0** | uses `auto-fit minmax()`, so it collapses anyway |
+
+**The back-office block (`Manager.dc.html`) is five blanket rules scoped to a
+`.bo` class**, not fifty bespoke ones — the file has 44 flex rows and 176 inline
+font-size declarations under 16px, and naming each would be a larger, riskier
+diff that rots the moment a row is added. It wraps every flex row, gives every
+flex child `min-width:0`, forces controls to 16px, floors tap targets at 44px,
+and trims the shell padding.
+
+⚠️ **THREE TRAPS, ALL OF WHICH READ AS CORRECT CSS.**
+
+1. **The renderer re-emits every inline style WITH SPACES.** The source writes
+   `display:flex`; the live DOM says `display: flex`. An attribute selector
+   written against the source spelling **matches nothing in a browser** —
+   verified live, `el.matches('[style*="display:flex"]')` returned `false` and
+   the spaced form returned `true`. **Any rule selecting on an inline style must
+   carry both spellings, and must be checked in a rendered page.** The source is
+   not what ships.
+2. ⚠️ **NEVER `overflow-x:hidden` TO FIX AN OVERFLOW.** The first version had it.
+   It did not fix the 106px overflow — it hid it, clipping "View organizer area"
+   and "← Main site" off the side of the screen where they could not even be
+   scrolled to, while the audit reported `sidewaysPx: 0`. Three elements
+   overflowing, three unreachable, headline number saying success. **A page that
+   scrolls sideways is the honest symptom.** A negative check now guards it.
+3. **An audit run inside a driven browser must exclude the driver.** Two of the
+   first "overflowing elements" on `/manager` were the Claude-in-Chrome
+   extension's own overlay — `z-index:2147483646`, orange drop-shadow.
+
+⚠️ **iOS Safari zooms the page when a focused control's own computed font-size
+is under 16px, and does not zoom back out.** This is why the 16px rules exist on
+the registration modals and the back office. It has to be on the **control**,
+not a wrapper — Safari reads the focused element. **It does not reproduce in a
+desktop emulator at any width.**
+
+⚠️ **The registration modals only render while the window is OPEN**, which is
+why they went unlooked-at through every earlier mobile pass — the window was
+shut, so opening the home page on a phone showed no modal at all. **A screen
+that only renders in one state is not tested by looking at the page.**
 
 ## Gotchas found the hard way
 

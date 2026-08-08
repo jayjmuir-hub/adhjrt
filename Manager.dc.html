@@ -41,6 +41,84 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
   tbody tr:hover td{background:rgba(0,0,0,0.025)}
+
+  /* ============ PHONE LAYOUT (added 8 Aug 2026) ============
+     ⚠️ THIS FILE HAD NO @media RULE OF ANY KIND BEFORE THIS BLOCK. Neither did
+     Organizer.dc.html, Scores & Standings.dc.html, Signin.dc.html or
+     Club.dc.html — the home page has 23 and /app has 11, and the back office
+     had none at all. It was never given a phone layout, which is not the same
+     as having one that broke.
+
+     ⚠️ MEASURED IN A REAL SIGNED-IN SESSION at 430px (Jay's Chrome, DevTools
+     device emulation), because these screens cannot be reached without a
+     session and render nothing useful without one:
+       • the page scrolled SIDEWAYS by 106px — document.scrollWidth 536 vs a
+         430px viewport;
+       • every form control was under 16px;
+       • nine tap targets were under 44px.
+     ⚠️ Two "offenders" in that first measurement were the Claude-in-Chrome
+     extension's own overlay (z-index 2147483646, orange drop-shadow), not this
+     page. An audit run inside a driven browser has to exclude the driver.
+
+     WHY BLANKET RULES AND NOT FIFTY BESPOKE ONES. This file has 44 flex rows,
+     27 of them with no flex-wrap, and 176 font-size declarations under 16px,
+     all inline. Naming each one would be a larger and far riskier diff than the
+     three rules below, and it would rot the moment a row is added. The rules
+     are scoped to `.bo` so nothing outside the dashboard shell is touched.
+
+     ⚠️ THIS PASS MAKES THE PAGE WORK, NOT LOOK DESIGNED. Stated plainly because
+     the difference matters and the next person will judge it: no sideways
+     scroll, no zoom-on-focus, thumb-sized targets, toolbars that wrap and wide
+     tables that scroll inside their own box. Laying the dashboard out AS a
+     phone screen — cards instead of table rows, a collapsing toolbar — is a
+     separate job and is not what this is. */
+  @media(max-width:760px){
+    /* 1. THE PAGE-LEVEL SIDEWAYS SCROLL. The dashboard header row is a flex
+          row of four — crest+title, the age-group switcher, "View organizer
+          area", "← Main site" — with no wrap. Its PARENT wraps; it does not,
+          which is why the fault survived a glance at the markup.
+          ⚠️ `min-width:0` is the other half. Without it a flex item refuses to
+          shrink below its content's min-content width, so wrapping alone still
+          leaves the row wider than the screen. */
+    /* ⚠️ BOTH SPELLINGS, AND THIS IS NOT BELT-AND-BRACES. The source writes
+       `display:flex`; the DC renderer RE-EMITS every inline style with spaces,
+       so the live DOM says `display: flex`. An attribute selector written
+       against the source spelling matches NOTHING in the browser. The first
+       version of this block had only the no-space form, and
+       `el.matches('[style*="display:flex"]')` returned false on the live page
+       while `[style*="display: flex"]` returned true.
+       ⚠️ If a rule here ever has to select on an inline style again, write both
+       forms, and CHECK IT IN A RENDERED PAGE — the source is not what ships. */
+    .bo [style*="display:flex"],.bo [style*="display: flex"]{flex-wrap:wrap}
+    .bo [style*="display:flex"] > *,.bo [style*="display: flex"] > *{min-width:0}
+
+    /* 2. ⚠️ iOS SAFARI ZOOMS THE PAGE when a focused control's own computed
+          font-size is under 16px, and does not zoom back out. Every control on
+          this page was 13-15px. Has to be on the control itself — Safari reads
+          the focused element, not an inherited value. */
+    .bo input,.bo select,.bo textarea{font-size:16px!important}
+
+    /* 3. Thumb-sized targets. 44px is the floor, and `auto` height keeps a
+          button that already exceeds it from being squashed to exactly 44. */
+    .bo button,.bo a[style*="padding"],.bo select{min-height:44px}
+
+    /* 4. The shell's own padding: 24px each side of a 390px screen is 12% of it. */
+    .bo{padding-left:14px!important;padding-right:14px!important}
+
+    /* ⚠️ THERE IS DELIBERATELY NO `overflow-x:hidden` HERE, AND IT MUST NOT BE
+       ADDED. The first version of this block had it, and it did not fix the
+       overflow — it HID it. The header row was still 537px wide in a 430px
+       viewport; `overflow-x:hidden` clipped "View organizer area" and "← Main
+       site" off the side of the screen where they could not even be scrolled
+       to, and the audit then reported `sidewaysPx: 0` and called it fixed.
+       Measured: 3 elements overflowing, 3 of them unreachable, while the
+       headline number said success.
+       The fixtures table has `min-width:460px` and sits in its own
+       `overflow-x:auto` box — it is SUPPOSED to scroll there, and it does. If
+       anything else ever overflows, the page scrolling sideways is the honest
+       symptom and the thing to fix. Hiding it makes content disappear silently
+       on the one device nobody reviews on. */
+  }
 </style>
 </helmet>
 
@@ -63,7 +141,9 @@
 
   <!-- ===================== DASHBOARD ===================== -->
   <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
-    <div style="max-width:1300px;margin:0 auto;padding:28px 24px 80px">
+    <!-- `bo` = back office. Every phone rule in the <style> block is scoped to
+         this class, so nothing outside the signed-in dashboard is affected. -->
+    <div class="bo" style="max-width:1300px;margin:0 auto;padding:28px 24px 80px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:20px">
         <div style="display:flex;align-items:center;gap:14px">
           <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#1A1C1F">

@@ -12,7 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { readRepo, repoRoot, section, check, summary } = require('./_lib');
+const { readRepo, repoRoot, section, check, eq, summary } = require('./_lib');
 
 const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '');
@@ -328,6 +328,72 @@ section('Nothing that moves on hover can stick on a touch screen — on ANY page
       `${spans.length} pointer-gated block(s) found in app.html`);
   }
 }
+
+/* =========================================================================
+   The back office on a phone (8 Aug 2026)
+   =========================================================================
+   ⚠️ BEFORE THIS, Manager.dc.html CONTAINED NO @media RULE OF ANY KIND — and
+   neither did Organizer, Scores & Standings, Signin or Club. The home page has
+   23 and app.html has 11. The back office was never given a phone layout,
+   which is not the same as having one that broke.
+
+   ⚠️ EVERY NUMBER BELOW WAS MEASURED IN A REAL SIGNED-IN SESSION at 430px,
+   because /manager renders nothing useful without one. Before: the page
+   scrolled sideways 106px, 1/1 controls under 16px, 9/11 tap targets under
+   44px. After: 0, 0/1, 0/11, and zero elements overflowing. */
+section('The back office has a phone layout at all');
+
+const MGR = readRepo('Manager.dc.html').replace(/\r\n/g, '\n');
+
+check('Manager has a phone media query', /@media\(max-width:760px\)\{/.test(MGR));
+check('…scoped to the dashboard shell, not the whole document', /class="bo"/.test(MGR));
+
+/* ⚠️ THE ONE THAT ALREADY FAILED ONCE, SILENTLY. The source writes
+   `display:flex`; the DC renderer re-emits every inline style WITH SPACES, so
+   the live DOM says `display: flex`. A selector written against the source
+   spelling matches nothing in the browser — verified on the live page, where
+   `el.matches('[style*="display:flex"]')` was false and the spaced form was
+   true. The rule looked correct in the diff and did nothing at all.
+   Both spellings are required. Asserting the SPACED one specifically, because
+   that is the one that actually matches what ships. */
+/* ⚠️ EACH RULE IS MATCHED WHOLE, not by looking for the spelling anywhere in
+   the file. The first version of these checks searched for
+   `.bo [style*="display: flex"]` on its own — which still matched the
+   min-width:0 rule further down, so deleting the spaced spelling from the
+   flex-wrap rule passed. The fault run caught it. That is the "a fixture must
+   DISCRIMINATE" rule in CLAUDE.md, and it caught a check that would have
+   passed against the exact bug it was written for. */
+check('the flex-wrap rule carries BOTH spellings — the source one and the rendered one',
+  /\.bo \[style\*="display:flex"\],\.bo \[style\*="display: flex"\]\{flex-wrap:wrap\}/.test(MGR));
+check('the min-width:0 rule carries both too, or wrapping alone will not shrink a row',
+  /\.bo \[style\*="display:flex"\] > \*,\.bo \[style\*="display: flex"\] > \*\{min-width:0\}/.test(MGR));
+
+/* iOS Safari zooms on focus below 16px and does not zoom back out. On the
+   control itself — Safari reads the focused element, not an inherited value. */
+const mgrZoom = MGR.match(/\.bo input,\.bo select,\.bo textarea\{font-size:(\d+)px!important\}/);
+check('back-office controls carry their own font-size rule', !!mgrZoom);
+eq('…and it is 16px, the iOS no-zoom threshold', mgrZoom && mgrZoom[1], '16');
+
+check('tap targets have a 44px floor', /\.bo button,\.bo a\[style\*="padding"\],\.bo select\{min-height:44px\}/.test(MGR));
+
+/* ⚠️ THE MOST IMPORTANT CHECK IN THIS SECTION, and it is a NEGATIVE one.
+   The first version of this block carried `overflow-x:hidden` on `.bo`. It did
+   not fix the 106px overflow — it HID it. The header row was still 537px wide
+   in a 430px viewport, and the clip put "View organizer area" and "← Main site"
+   off the side of the screen where they could not even be scrolled to. The
+   audit then reported sidewaysPx:0 and called it fixed. Measured at the time:
+   3 elements overflowing, 3 of them unreachable, headline number saying success.
+   A page that scrolls sideways is an honest symptom. Hiding it makes content
+   disappear silently on the one device nobody reviews on. */
+check('the shell does NOT hide horizontal overflow', !/\.bo\{[^}]*overflow-x:hidden/.test(MGR));
+/* Paired with a control, because an empty match proves nothing on its own:
+   the rule this is scanning for is definitely present in some form. */
+check('…control: the .bo shell block is present to have been scanned', /\.bo\{padding-left:14px!important/.test(MGR));
+
+/* The fixtures table has min-width:460px and is SUPPOSED to scroll inside its
+   own box — that is correct behaviour and must not be "fixed" by removing the
+   floor, which would squash a five-column table into 390px. */
+check('the wide table still has its own horizontal scroller', /<div style="overflow-x:auto">/.test(MGR));
 
 summary('test-design-polish.js');
 }

@@ -4479,6 +4479,68 @@ const FAULTS = [
       '<div style="display:flex;gap:16px;margin-top:38px'),
     expect: ['addressable by class'],
   },
+  /* ---- the back office on a phone, 8 Aug 2026 (test-design-polish.js) ----
+     Manager.dc.html had no @media rule of any kind before this. Every fault
+     here is invisible unless you are looking at a SIGNED-IN session at phone
+     width, which is a state almost nobody reviews in. */
+  {
+    name: 'the phone block is dropped from the back office entirely',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '  @media(max-width:760px){', '  @media(max-width:99999px) and (min-width:99998px){'),
+    expect: ['Manager has a phone media query'],
+  },
+  {
+    /* ⚠️ THE ONE THAT ALREADY HAPPENED. The source spells it `display:flex`;
+       the renderer emits `display: flex`. Keeping only the source spelling is
+       a rule that reads correctly in the diff and matches nothing in a
+       browser — verified live, the header row stayed 537px wide. */
+    name: 'the rendered (spaced) spelling is dropped, so the rule matches nothing in a browser',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', ',.bo [style*="display: flex"]{flex-wrap:wrap}', '{flex-wrap:wrap}'),
+    expect: ['BOTH spellings'],
+  },
+  {
+    name: 'the min-width:0 half is dropped, so wrapping alone cannot shrink a row',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '.bo [style*="display:flex"] > *,.bo [style*="display: flex"] > *{min-width:0}\n', ''),
+    expect: ['min-width:0 rule carries both'],
+  },
+  {
+    name: 'the back-office control font-size drifts back under the iOS threshold',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '.bo input,.bo select,.bo textarea{font-size:16px!important}',
+      '.bo input,.bo select,.bo textarea{font-size:15px!important}'),
+    expect: ['iOS no-zoom threshold'],
+  },
+  {
+    name: 'the 44px tap-target floor is removed',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '    .bo button,.bo a[style*="padding"],.bo select{min-height:44px}\n', ''),
+    expect: ['44px floor'],
+  },
+  {
+    /* ⚠️ THE WORST ONE, because it makes the audit report success. Hiding the
+       overflow clipped two nav links off the side of the screen where they
+       could not be scrolled to, and sidewaysPx read 0. */
+    name: 'overflow-x:hidden is put back on the shell, hiding the fault instead of fixing it',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '.bo{padding-left:14px!important;padding-right:14px!important}',
+      '.bo{overflow-x:hidden;padding-left:14px!important;padding-right:14px!important}'),
+    expect: ['does NOT hide horizontal overflow'],
+  },
+  {
+    name: 'the wide fixtures table loses its own scroller, so it drags the page instead',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '<div style="overflow-x:auto">', '<div>'),
+    expect: ['own horizontal scroller'],
+  },
+  {
+    name: 'the shell loses the class every phone rule is scoped to',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Manager.dc.html', '<div class="bo" style="max-width:1300px', '<div style="max-width:1300px'),
+    expect: ['scoped to the dashboard shell'],
+  },
+
   /* ---- the settled-rules claim, 8 Aug 2026 (test-about-board.js) ---------
      This list is what a club reads while deciding whether to enter. A false
      item on it is worse than a missing one. */

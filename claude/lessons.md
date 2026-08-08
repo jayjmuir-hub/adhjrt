@@ -14,6 +14,25 @@ changelog entry, not a lesson.
 
 ---
 
+**⚠️ WRITING *ABOUT* THE SKIP-CI MARKER IN A COMMIT MESSAGE TRIGGERS IT.**
+Netlify scans the **whole commit message**, not just the subject line. A commit
+whose subject was clean but whose body discussed `[skip ci]` twice — because the
+commit was about that very trap — was silently not built. No deploy entry, no
+"Skipped" row, nothing: identical to a push that never arrived. It cost a wrong
+diagnosis ("the webhook is dead") and a merge to `main` that appeared to do
+nothing.
+
+⚠️ **Two things made it invisible.** This site logs no "Skipped" entry, so the
+absence is total. And a **newly created branch builds anyway** — `dev` and
+`Compare` were recreated at a commit whose body also carried the marker and both
+built fine, which looked like proof that pushes were working. **Creating a ref
+and updating a ref are different events, and only one of them honours the
+marker.**
+
+**The rule: never write the literal marker into a message unless you mean it.**
+Say "the skip-ci marker" in prose. And when a push produces no deploy at all,
+`git log -1 --format=%B | grep -c 'skip ci'` before blaming anything else.
+
 **⚠️ "NOTHING HAPPENED" IS NOT EVIDENCE OF A BROKEN MECHANISM WHEN YOU HAVE
 ALSO SUPPRESSED THAT MECHANISM.** Six pushes produced zero Netlify deploys and
 that was read as "the GitHub webhook is dead" — stated confidently, with the

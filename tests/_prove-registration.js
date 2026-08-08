@@ -2129,6 +2129,52 @@ const FAULTS = [
     /* ⚠️ The sponsors-section lockup quietly shrunk back. The mark is still
        there, so nothing looks broken — and the tournament's only confirmed
        partner is smaller than it was with nobody the wiser. */
+    /* ⚠️ THE RATIO BUG ITSELF, INJECTED. Measured on a Samsung S20 Ultra:
+       without this rule the hero mark rendered 348x128 — 26.7% narrower than
+       its 3.707 ratio. A squashed partner logo throws no error and looks
+       almost right, which is exactly why it survived on the live site. */
+    name: 'the hero HSBC lockup loses its ratio guard and squashes on a phone',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '.hero-partner img{height:auto!important;max-height:128px!important}',
+      '.hero-partner img{max-height:128px!important}'),
+    expect: ['hero lockup keeps its ratio'],
+  },
+  {
+    /* The same bug on the other placement. Two copies of one fix, so both are
+       injected — a rule that guards only one of them is half a fix. */
+    name: 'the sponsors HSBC lockup loses its ratio guard',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'a[href*="hsbc.ae"] img{height:auto!important;max-height:96px!important}',
+      'a[href*="hsbc.ae"] img{max-height:96px!important}'),
+    expect: ['sponsors lockup keeps its ratio'],
+  },
+  {
+    /* ⚠️ BOTH HERO LOCKUPS VISIBLE AT ONCE. Deleting the hide rule leaves the
+       mark on screen twice on a phone, which is worse than the bug it fixed —
+       and a plain count of the images passes happily. */
+    name: 'the in-row hero lockup stops hiding, so HSBC shows twice on a phone',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '    .hero-partner{display:none!important}\n', ''),
+    expect: ['in-row hero lockup is hidden'],
+  },
+  {
+    /* The inverse: the mobile lockup never appears, so the mark is invisible
+       on arrival again — the original complaint. */
+    name: 'the mobile-only lockup never displays, so HSBC is below the fold again',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '    .hero-partner-m{display:flex!important}\n', ''),
+    expect: ['mobile-only lockup is shown'],
+  },
+  {
+    /* ⚠️ THE ORIGINAL BUG, RE-INTRODUCED ON THE NEW MARK. A pinned height beside
+       max-width is precisely what bent the other two. */
+    name: 'the mobile lockup regains a pinned pixel height',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'alt="HSBC" style="height:auto;width:auto;max-width:200px',
+      'alt="HSBC" style="height:128px;width:auto;max-width:200px'),
+    expect: ['mobile hero lockup has no pinned pixel height'],
+  },
+  {
     name: 'the sponsors-section HSBC lockup shrinks back to 64px',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, 'alt="HSBC" style="height:96px', 'alt="HSBC" style="height:64px'),
@@ -4174,7 +4220,7 @@ const FAULTS = [
     name: 'the sponsors-section placement loses its logo',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, '<img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:96px;width:auto;max-width:100%;display:block;margin:0 auto">', ''),
-    expect: ['three HSBC images on the page'],
+    expect: ['four HSBC images on the page'],
   },
   {
     name: 'the header mark is unwrapped, so space-between spreads it into the bar',
@@ -4259,7 +4305,7 @@ const FAULTS = [
     name: 'the hero lockup is dropped',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, HERO_IMG, ''),
-    expect: ['three HSBC images on the page'],
+    expect: ['four HSBC images on the page'],
   },
   {
     /* The obvious "tidy-up": the two Register buttons appear twice on this

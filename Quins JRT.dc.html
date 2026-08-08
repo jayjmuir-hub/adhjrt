@@ -789,8 +789,37 @@
      of it, and the indent leaves the mark out of line with the buttons above.
      !important for the same reason as the rule above - the block is styled
      inline and an ordinary rule silently loses. */
+  /* ⚠️ THE HSBC MARK MUST NEVER BE SQUASHED — and it was, on both placements.
+     MEASURED on a Samsung S20 Ultra (412px viewport, DPR 3.5, real touch UA):
+     the hero lockup rendered 348x128, which is 26.7% narrower than its true
+     3.707 ratio, and the sponsors lockup rendered 266x96, 25.2% out.
+     CAUSE: the height is pinned in px while max-width:100% clamps the width.
+     Any container narrower than the intrinsic width (474px at 128px tall)
+     squashes the mark, and a distorted partner logo is the one thing on this
+     page that is never acceptable.
+     ⚠️ FIXED IN CSS, DELIBERATELY NOT IN THE TAGS. _prove-registration.js pins
+     the hero img verbatim (HERO_IMG) and the sponsors fault patches the literal
+     'alt="HSBC" style="height:96px'. Editing either tag orphans a fault
+     SILENTLY — a fault that cannot be injected is a failed run, not a pass.
+     height:auto + max-height reproduces the old size wherever there is room and
+     scales proportionally where there is not. */
+  .hero-partner img{height:auto!important;max-height:128px!important}
+  a[href*="hsbc.ae"] img{height:auto!important;max-height:96px!important}
+
   @media(max-width:800px){
     .hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}
+    /* ⚠️ THE TWO HERO LOCKUPS ARE MUTUALLY EXCLUSIVE. The in-row one goes and
+       the top one arrives at the same breakpoint, so the mark is never on the
+       page twice. Change one of these lines and you must change the other. */
+    .hero-partner{display:none!important}
+    .hero-partner-m{display:flex!important}
+
+    /* The countdown was FIVE flex items at min-width:82px in a 348px space, so
+       it wrapped into THREE rows 170px tall — measured, not guessed. The label
+       takes its own line and the four boxes share what is left. */
+    .cd-row{gap:8px!important}
+    .cd-row > span{flex-basis:100%!important;margin-right:0!important}
+    .cd-row > div{min-width:0!important;flex:1 1 0!important;padding:12px 4px!important}
   }
 
   /* ⚠️ The supporters tiles are capped at 260px so a short LAST ROW does not
@@ -1711,6 +1740,21 @@
           <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#3bd070;text-transform:uppercase;margin-top:2px">Creative Lead</div>
         </div>
       </div>
+      <!-- ⚠️ MOBILE-ONLY HSBC LOCKUP (Jay, 8 Aug 2026 — "on mobile the HSBC
+           should be above the green sat 7 and sunday 8 box").
+           WHY A SECOND COPY instead of moving the one in the button row: that
+           mark lives INSIDE the button flex row, the date pill has a different
+           parent, and CSS `order` cannot move a child across containers.
+           WHY IT MATTERS: measured on a 412px phone, the in-row mark sits 711px
+           down the page — below the fold — while the header mark is hidden
+           below 900px. The principal partner was invisible on arrival.
+           ⚠️ Only ONE of the two ever shows; see the paired display rules in
+           the stylesheet. ⚠️ NO FIXED HEIGHT here on purpose — a pinned height
+           with max-width is exactly what squashed the other two. -->
+      <div class="hero-partner-m" style="display:none;flex-direction:column;gap:8px;margin-bottom:22px">
+        <span style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase">In partnership with</span>
+        <img src="assets/sponsor-hsbc-white.webp" alt="HSBC" style="height:auto;width:auto;max-width:200px;display:block">
+      </div>
       <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(23,163,74,0.14);border:1px solid rgba(23,163,74,0.4);padding:8px 16px;border-radius:100px;margin-bottom:28px;animation:fadeUp .6s cubic-bezier(.2,.7,.2,1) both">
         <span style="width:8px;height:8px;border-radius:50%;background:#3bd070;box-shadow:0 0 10px #3bd070"></span>
         <span style="font-weight:700;font-size:13px;letter-spacing:1.5px;color:#3bd070">SAT 7 &amp; SUN 8 NOVEMBER 2026 · ZAYED SPORTS CITY, ABU DHABI</span>
@@ -1718,7 +1762,7 @@
       <h1 style="font-family:'Anton';font-size:clamp(54px,10.5vw,146px);line-height:0.92;letter-spacing:.01em;text-transform:uppercase;max-width:14ch;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .08s both">
         Two big days of<br><span style="color:#E11B22">junior rugby</span>
       </h1>
-      <p style="font-size:21px;max-width:600px;margin-top:26px;color:#C9CDD6;font-weight:500;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .16s both">
+      <p style="font-size:clamp(17px,4.6vw,21px);max-width:600px;margin-top:26px;color:#C9CDD6;font-weight:500;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .16s both">
         The UAE's friendliest festival of junior rugby. Clubs from across the Gulf, thousands of young players, two unforgettable days of sport, sun and team spirit at Zayed Sports City.
       </p>
       <!-- ⚠️ flex-wrap added with the partner lockup (Aug 2026). The row was two
@@ -1762,7 +1806,7 @@
 
       <!-- countdown -->
       <sc-if value="{{ showCountdown }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:56px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .32s both">
+        <div class="cd-row" style="margin-top:56px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) .32s both">
           <span style="font-size:12px;letter-spacing:2px;color:#3bd070;font-weight:700;text-transform:uppercase;margin-right:6px">Kick-off in</span>
           <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1">{{ days }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">DAYS</div></div>
           <div style="background:rgba(12,12,14,.5);border:1px solid rgba(255,255,255,.12);border-top:3px solid #E11B22;border-radius:10px;padding:12px 20px;text-align:center;min-width:82px;backdrop-filter:blur(4px)"><div style="font-family:'Anton';font-size:clamp(30px,4.4vw,52px);line-height:1">{{ hours }}</div><div style="font-size:10.5px;letter-spacing:1.5px;color:#8b93a3;font-weight:700;margin-top:5px">HRS</div></div>

@@ -186,7 +186,11 @@ section('Every placement uses the white lockup');
    sticky header (19px), the hero lockup (128px) and the sponsors section
    (96px, raised from 64 on 5 Aug at Jay's request). */
 const imgTags = PAGE.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
-eq('three HSBC images on the page', imgTags.length, 3);
+/* ⚠️ FOUR since 8 Aug 2026, not three. The fourth is the MOBILE-ONLY hero
+   lockup that sits above the date pill; the in-row one is hidden at the same
+   breakpoint, so a visitor never sees the mark twice. That pairing is asserted
+   below — the count alone would pass on a page showing both at once. */
+eq('four HSBC images on the page', imgTags.length, 4);
 imgTags.forEach((tag, i) => {
   check(`HSBC image ${i + 1} uses the white lockup, not the black one`, tag.includes(WHITE));
   /* Every one of these sits on #0C0C0E. If a light-background placement is
@@ -201,9 +205,42 @@ imgTags.forEach((tag, i) => {
    is smaller than the day before with nobody the wiser. Written out, so moving
    one is a deliberate edit here in the same commit. The sponsors-section
    lockup went 64 -> 96 on 5 Aug at Jay's request. */
-const hsbcHeights = imgTags.map((t) => Number((t.match(/height:(\d+)px/) || [])[1]));
+/* ⚠️ .filter() IS LOAD-BEARING, NOT TIDYING. The mobile lockup deliberately
+   carries NO pixel height — a pinned height beside max-width is exactly what
+   squashed the other two by 25-27% on a real phone. It contributes no number
+   here, and the three FIXED placements must still read 19 / 128 / 96. */
+const hsbcHeights = imgTags
+  .map((t) => (t.match(/height:(\d+)px/) || [])[1])
+  .filter(Boolean)
+  .map(Number);
 check('the HSBC placements are 19px, 128px and 96px',
   JSON.stringify(hsbcHeights) === JSON.stringify([19, 128, 96]), hsbcHeights.join(', '));
+
+/* ⚠️ AND THE MOBILE ONE MUST STAY PROPORTIONAL. This is the check that would
+   have caught the original bug: a mark with a pinned height AND max-width
+   cannot keep its ratio in a container narrower than its intrinsic width. */
+const mobileTag = imgTags.find((t) => /height:auto/.test(t));
+check('the mobile hero lockup has no pinned pixel height', !!mobileTag, mobileTag || 'none');
+check('the mobile hero lockup is capped by width, not height',
+  !!mobileTag && /max-width:\d+px/.test(mobileTag));
+
+/* ⚠️ THE RATIO FIX ITSELF, ASSERTED. This is the rule that stops a pinned
+   height fighting max-width. Without it the marks squash by 25-27% on a phone
+   and nothing errors — the logo is simply wrong, which for a partner mark is
+   the whole problem. Asserted for BOTH placements, because both were bent. */
+const FLAT = PAGE.replace(/\s+/g, '');
+check('the hero lockup keeps its ratio (height:auto + max-height cap)',
+  /\.hero-partnerimg\{height:auto!important;max-height:128px!important\}/.test(FLAT));
+check('the sponsors lockup keeps its ratio (height:auto + max-height cap)',
+  /a\[href\*="hsbc\.ae"\]img\{height:auto!important;max-height:96px!important\}/.test(FLAT));
+
+/* ⚠️ THE TWO HERO LOCKUPS MUST BE MUTUALLY EXCLUSIVE. Showing both would put
+   the partner mark on screen twice, which is worse than the bug this fixed. */
+check('the in-row hero lockup is hidden at the mobile breakpoint',
+  /\.hero-partner\{display:none!important\}/.test(PAGE.replace(/\s+/g, '')) ||
+  /\.hero-partner\s*\{\s*display:\s*none\s*!important\s*\}/.test(PAGE));
+check('the mobile-only lockup is shown at that same breakpoint',
+  /\.hero-partner-m\{display:flex!important\}/.test(PAGE.replace(/\s+/g, '')));
 
 /* ⚠️ THE HERO PLACEMENT, AND THE REASON IT IS ALLOWED TO BE THERE.
    The hero sits on #0C0C0E, and the reverse lockup's hexagon is HSBC red. The
@@ -412,8 +449,13 @@ check('the stat strip is still there', statsAt >= 0);
 check('no 54px lockup survives anywhere on the page', !/sponsor-hsbc-white\.webp[^>]*height:54px/.test(NO_COMMENTS));
 /* One "In partnership with" on the page now, not two. The band had the other,
    and two of them a few hundred pixels apart is what Jay objected to. */
-check('"In partnership with" appears exactly once',
-  (NO_COMMENTS.match(/In partnership with/g) || []).length === 1);
+/* ⚠️ TWICE since 8 Aug 2026, and both are hero lockups — one for wide screens,
+   one for phones, never both visible. It is NOT back to the old band-plus-hero
+   pair the original check was written against: the band is still gone, and
+   that is asserted separately. */
+check('"In partnership with" appears exactly twice — the two hero lockups',
+  (NO_COMMENTS.match(/In partnership with/g) || []).length === 2,
+  (NO_COMMENTS.match(/In partnership with/g) || []).length);
 /* The tombstone is not decoration: it carries why the band existed, so the
    next person meets the reasoning before re-adding it. */
 check('the removal left a tombstone explaining what was there and why it went',

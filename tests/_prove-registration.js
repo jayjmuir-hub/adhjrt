@@ -4479,6 +4479,61 @@ const FAULTS = [
       '<div style="display:flex;gap:16px;margin-top:38px'),
     expect: ['addressable by class'],
   },
+  /* ---- the app's narrow-width partner strip, 8 Aug 2026 -------------------
+     Every failure mode here is invisible unless you are looking at a viewport
+     359px or narrower, which nobody reviewing on a desktop ever is. */
+  {
+    name: 'the app strip loses its HSBC mark',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '    <img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">\n  </div>\n</div>', '  </div>\n</div>'),
+    expect: ['three HSBC images in the app'],
+  },
+  {
+    /* ⚠️ The one that puts TWO HSBC marks on a 360px screen. The count still
+       reads three, because both are still in the markup. */
+    name: 'the app strip breakpoint drifts off the header hide',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '@media(max-width:359px){\n  .app-partner-strip{display:flex', '@media(max-width:400px){\n  .app-partner-strip{display:flex'),
+    expect: ['SAME one that hides the header mark'],
+  },
+  {
+    /* The "tidy-up" that drops the default and relies on the media query alone
+       — which leaves the strip on at every width above 820px too, over the
+       desktop nav, where .tabbar is hidden and nothing is lifted for it. */
+    name: 'the app strip stops being off by default',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '.app-partner-strip{display:none}\n', ''),
+    expect: ['off by default'],
+  },
+  {
+    name: 'the tab bar is not lifted, so the strip covers the tabs',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '  .tabbar{bottom:26px;padding-bottom:6px}\n', ''),
+    expect: ['tab bar is lifted'],
+  },
+  {
+    name: 'the app stops reserving room, so the last card sits behind the strip',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '  .app{padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}\n', ''),
+    expect: ['reserves the extra room'],
+  },
+  {
+    /* ⚠️ The safe-area one. On an iPhone the mark ends up under the home
+       indicator; in every desktop browser the inset is 0 and nothing looks
+       wrong at all. */
+    name: 'the strip drops the safe-area inset the tab bar gave up',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', 'padding:0 12px env(safe-area-inset-bottom);', 'padding:0 12px;'),
+    expect: ['carries the safe-area inset'],
+  },
+  {
+    name: 'the app strip mark is made a link off the app',
+    suite: 'test-sponsors.js',
+    apply: () => patch('app.html', '<img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">\n  </div>',
+      '<a href="https://www.hsbc.ae"><img src="/assets/sponsor-hsbc-white.webp" alt="HSBC"></a>\n  </div>'),
+    expect: ['strip mark is not a link'],
+  },
+
   {
     name: 'the "coming soon" badge is put back above a confirmed partner',
     suite: 'test-sponsors.js',

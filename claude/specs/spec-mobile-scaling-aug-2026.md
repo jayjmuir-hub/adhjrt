@@ -224,6 +224,64 @@ was rendering their mark at 14px in a crowded header.
 
 ---
 
+---
+
+## 5. The match-day app — added 8 Aug 2026, after the above
+
+**Jay asked for "the same sort of sticky bottom HSBC in the app too". The
+premise was wrong and the fix is much smaller than that.**
+
+⚠️ **`/app` already keeps HSBC on screen at all times from 360px up.**
+`header.top` is `position:sticky; top:0` and carries the mark at 15px, so it is
+there on every tab at every scroll position. Measured at 390px scrolled to
+y=90: header at `top:0`, mark visible, 56×15. Nothing needed building for the
+widths almost everyone uses.
+
+⚠️ **And this page's bottom edge was already taken.** `.tabbar` is
+`position:fixed; bottom:0`, five tabs, 63px. A website-style strip laid over it
+would have covered the primary navigation of the app people use for two days at
+the side of a pitch.
+
+**The one real gap: ≤359px.** The header mark is hidden there by a measured,
+documented decision — the bar holds one line down to ~342px with the mark, and
+below that it wraps, on the phones with the least screen. Confirmed at 320px:
+`display:none`, zero box. So a 320px handset had no persistent HSBC.
+
+**What was built.** `.app-partner-strip` — shown **only** at `max-width:359px`,
+the same number as the header hide, so exactly one placement is on screen at
+any width. 26px tall, `--ink` background with the reverse lockup, sitting on
+the bottom edge; **`.tabbar` moves up to `bottom:26px`** rather than being
+covered, and `.app`'s padding-bottom goes 84 → 110px to reserve the room.
+
+⚠️ **The safe-area inset moves with the bottom edge.** This page is
+`viewport-fit=cover`, so `env(safe-area-inset-bottom)` is real space over the
+home indicator. It belonged to `.tabbar`; it now belongs to the strip, and the
+tab bar's padding drops to a plain 6px. On both, the tabs float. On neither,
+the HSBC mark sits under the home indicator. **Neither is visible in a desktop
+browser** — which is why it is asserted rather than eyeballed.
+
+**Verified at 320 / 359 / 360 / 390 / 430:** exactly one HSBC placement visible
+at each — strip at 320 and 359 (flush to the bottom, tabs lifted to 755,
+padding 110px), header at 360 and up (strip `display:none`, tabs back at
+bottom:0, padding 84px).
+
+⚠️ **Two mistakes on the way in, both of which looked correct.**
+
+1. **The block was first written next to the `.hdr-partner` hide it pairs with
+   — which is ABOVE `.tabbar` in the file.** It overrides `.tabbar{bottom:0}`
+   at the same specificity, so source order decided it and the tab bar simply
+   did not move. The CSS read as if it had been applied. Caught by measuring
+   `.tabbar`'s box, not by reading the rule. It now lives below `.tabbar`, with
+   a comment saying why moving it back breaks it silently.
+2. **Moving it broke the comment**, closing it early so half the block was
+   parsed as CSS. The stylesheet was corrupt from that point down and
+   `display:none` never applied — the strip rendered at 360px+ as a 281px
+   block. Also caught only by measurement.
+
+**Both are the same failure as the four in the 8 Aug handoff: a change that
+reported success while the thing it claimed to do had not happened.** Reading
+the diff would have passed both.
+
 ## What this change does NOT do
 
 - **Nothing outside `Quins JRT.dc.html`.** `/rules`, `/legal`, `/signin` and the

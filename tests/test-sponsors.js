@@ -831,7 +831,13 @@ section('The match-day app carries the partner too');
 const APP = readRepo('app.html').replace(/\r\n/g, '\n');
 
 const appImgs = APP.match(/<img[^>]*sponsor-hsbc[^>]*>/g) || [];
-eq('two HSBC images in the app — header and More tab', appImgs.length, 2);
+/* ⚠️ THREE since 8 Aug 2026, not two. The third is the persistent partner strip
+   above the tab bar, and it exists for ONE width band: at and below 359px the
+   header mark is hidden, so without it a narrow handset has no HSBC on screen
+   while scrolling. From 360px up the sticky header already does that job and
+   the strip is off — which is the pairing asserted just below, and the reason a
+   raw count of three is not enough on its own. */
+eq('three HSBC images in the app — header, More tab and the narrow-width strip', appImgs.length, 3);
 appImgs.forEach((tag, i) => {
   check(`app HSBC image ${i + 1} uses the white lockup`, tag.includes('/' + WHITE), tag);
   check(`app HSBC image ${i + 1} has an alt attribute`, /alt="HSBC"/.test(tag));
@@ -855,6 +861,39 @@ const appHide = APP.match(/@media\(max-width:(\d+)px\)\{\s*\.hdr-partner\{([^}]*
 check('the app mark has its own hide rule', !!appHide);
 eq('it hides below 360px', appHide && appHide[1], '359');
 check('the rule hides it', !!appHide && /display:\s*none/.test(appHide[2]));
+
+/* ⚠️ THE STRIP AND THE HEADER HIDE ARE THE SAME NUMBER, AND THAT IS THE WHOLE
+   DESIGN. One number too high and a 360px phone renders the mark in the header
+   AND in the strip — two HSBC marks on one screen, which nothing else in this
+   project does. One too low and there is a band of widths with neither. The
+   image count above passes in both cases; only this catches it. */
+const appStripShow = (APP.match(/@media\(max-width:(\d+)px\)\{\s*\n\s*\.app-partner-strip\{display:flex/) || [])[1];
+check('the app strip is shown at a stated breakpoint', appStripShow === '359', appStripShow);
+check('…the SAME one that hides the header mark', !!appHide && appStripShow === appHide[1],
+  `${appStripShow} vs ${appHide && appHide[1]}`);
+check('the strip is off by default, not switched off for desktop',
+  /\.app-partner-strip\{display:none\}/.test(APP));
+
+/* ⚠️ THE BOTTOM OF THIS PAGE WAS ALREADY OCCUPIED. `.tabbar` is fixed at
+   bottom:0. The strip does not stack on top of it — the tab bar moves up by the
+   strip's height instead, and `.app` reserves the extra room. Three values with
+   no calc() binding them; if any one is missed the tabs are covered, or float,
+   or the last card sits behind the strip. */
+check('the tab bar is lifted by the strip height', /\.tabbar\{bottom:26px/.test(APP));
+check('…and the app reserves the extra room', /\.app\{padding-bottom:calc\(env\(safe-area-inset-bottom\) \+ 110px\)\}/.test(APP));
+
+/* ⚠️ viewport-fit=cover, so env(safe-area-inset-bottom) is REAL space over the
+   home indicator. It belonged to .tabbar while the tab bar was the bottom-most
+   element; it belongs to the strip now. On both, the tabs float; on neither,
+   the HSBC mark sits under the home indicator. Invisible in a desktop browser
+   either way. */
+check('the strip carries the safe-area inset', /\.app-partner-strip\{[\s\S]{0,400}?padding:0 12px env\(safe-area-inset-bottom\)/.test(APP));
+check('…and the tab bar has given it up', /\.tabbar\{bottom:26px;padding-bottom:6px\}/.test(APP));
+
+const appStripStart = APP.indexOf('<div class="app-partner-strip">');
+const appStrip = appStripStart >= 0 ? APP.slice(appStripStart, APP.indexOf('</div>', appStripStart)) : '';
+check('the strip carries an HSBC mark', /alt="HSBC"/.test(appStrip));
+check('the strip mark is not a link', appStripStart >= 0 && !/<a[\s>]/.test(appStrip));
 
 /* ⚠️ ASSERTED AS A BLOCK, NOT AS A STRING, and that is not fussiness — the
    first version of this check just looked for the words "Principal partner"

@@ -111,6 +111,70 @@ main{padding:16px}
 .tabbar button svg{width:21px;height:21px}
 .tabbar button.on{color:var(--red)}
 
+/* ---------- persistent partner strip, NARROW HANDSETS ONLY ----------
+   Jay, 8 Aug 2026: "we need hsbc on the screen somehow all the time."
+
+   ⚠️ THIS BLOCK LIVES BELOW `.tabbar` ON PURPOSE, not up beside the
+   `.hdr-partner` hide it is paired with. It overrides `.tabbar{bottom:0}` and
+   `.app{padding-bottom:…}` at the SAME specificity, so source order is the only
+   thing deciding the winner. Written next to the header hide first, and the tab
+   bar simply did not move — measured at 320px, tabbar still at bottom:0, and it
+   looked exactly like a rule that had been applied. Move this block back up and
+   it silently stops working.
+
+   ⚠️ READ THE RULE ABOVE BEFORE TOUCHING THIS. On this page HSBC is ALREADY on
+   screen all the time from 360px up — `header.top` is `position:sticky;top:0`
+   and carries the mark, so it is there on every tab at every scroll position.
+   Measured at 390px scrolled to y=90: header at top:0, mark visible. This strip
+   exists ONLY to cover the one width band where that is not true: at and below
+   359px the header mark is hidden, because with it the bar wraps to two lines
+   on the devices with the least screen to spare.
+
+   ⚠️ THEREFORE `max-width:359px`, THE SAME NUMBER AS THE HIDE ABOVE, and the
+   two must move together. One number too high and a 360px phone shows the mark
+   in the header AND in the strip — two HSBC marks on one screen, which nothing
+   else in this project does. One too low and there is a band with neither.
+
+   ⚠️ THIS PAGE'S BOTTOM WAS ALREADY OCCUPIED. `.tabbar` is fixed at bottom:0.
+   The strip does not stack on top of it — the tab bar moves UP by the strip's
+   height and the strip takes the bottom edge, so the tabs keep their full
+   target size and nothing overlaps. Three values move together and there is no
+   calc() tying them: the strip height, the tabbar offset, and `.app`'s
+   padding-bottom, which is 84px + the strip.
+
+   ⚠️ THE SAFE-AREA INSET MOVES WITH THE BOTTOM EDGE. This page is
+   `viewport-fit=cover`, so on a notched phone `env(safe-area-inset-bottom)` is
+   real space over the home indicator. It belonged to `.tabbar` while the tab
+   bar was the bottom-most thing; now it belongs to the strip, and the tab bar's
+   padding drops to a plain 6px. Leaving the inset on BOTH double-counts it and
+   floats the tabs; leaving it on NEITHER puts the HSBC mark under the home
+   indicator on an iPhone. Neither is visible in a desktop browser.
+
+   ⚠️ DARK BAR, WHITE LOCKUP. The tab bar above it is near-white, so this strip
+   is `--ink` like the header — the reverse lockup sits straight on it. Do NOT
+   "simplify" by matching the tab bar's background and swapping in
+   assets/sponsor-hsbc.webp: a black wordmark on a translucent white bar over
+   scrolling content is unreadable half the time.
+
+   ⚠️ NOT A LINK, same as the header mark directly above and for the same
+   reason — it is fixed, on screen all weekend, a thumb's width from the tabs. */
+.app-partner-strip{display:none}
+@media(max-width:359px){
+  .app-partner-strip{display:flex;align-items:center;justify-content:center;gap:8px;
+    position:fixed;bottom:0;left:0;right:0;z-index:45;
+    height:calc(env(safe-area-inset-bottom) + 26px);
+    padding:0 12px env(safe-area-inset-bottom);
+    background:var(--ink);border-top:1px solid rgba(255,255,255,.12);
+    max-width:900px;margin:0 auto}
+  .app-partner-strip span{font-size:8px;letter-spacing:1.2px;color:#3bd070;
+    font-weight:800;text-transform:uppercase;white-space:nowrap}
+  .app-partner-strip img{height:12px;width:auto;display:block}
+  .tabbar{bottom:26px;padding-bottom:6px}
+  .app{padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}
+}
+/* The desktop rule already hides .tabbar above 820px; the strip is off from
+   360px up, so it can never be on the same screen as the desktop nav. */
+
 /* ---------- building blocks ---------- */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);
       border:1px solid var(--line);overflow:hidden}
@@ -436,6 +500,16 @@ tr.me td{background:#fffdf4;font-weight:800}
   <main id="main"><div class="spin">Loading…</div></main>
 
   <nav class="tabbar" id="tabbar"></nav>
+
+  <!-- Persistent partner strip. Shown ONLY at and below 359px, where the header
+       mark is hidden — above that the sticky header already keeps HSBC on
+       screen and this would be a second copy of it. The whole argument, and the
+       three values that have to move together, are on .app-partner-strip in the
+       stylesheet. Deliberately NOT a link, like the header mark. -->
+  <div class="app-partner-strip">
+    <span>In partnership with</span>
+    <img src="/assets/sponsor-hsbc-white.webp" alt="HSBC">
+  </div>
 </div>
 
 <div class="sheet-scrim" id="scrim"></div>

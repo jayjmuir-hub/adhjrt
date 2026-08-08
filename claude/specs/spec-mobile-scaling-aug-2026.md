@@ -282,6 +282,65 @@ bottom:0, padding 84px).
 reported success while the thing it claimed to do had not happened.** Reading
 the diff would have passed both.
 
+---
+
+## 6. The registration modals — added 8 Aug 2026, after the deploy
+
+⚠️ **These screens had never been looked at on a phone, and there is a reason
+worth writing down: they only exist while the registration window is OPEN.** It
+had been shut every previous time the page was checked at phone width, so
+opening the home page on a phone showed no modal at all. Jay forced the window
+open to check them and found them unusable. **A screen that only renders in one
+state does not get tested by looking at the page.**
+
+**Measured before the change**, Register-a-team modal:
+
+| Width | Panel | Content inside it | Phone row |
+|---|---|---|---|
+| 360 | 312 | **224px** | 299px wide, **spills 89px** |
+| 390 | 342 | 254px | spills 59px |
+| 412 | 364 | 276px | spills 37px |
+
+**136px of a 360px screen was gone before a single field** — 48px of scrim
+padding plus 88px of panel padding — and what was left was then split into two
+columns.
+
+**Four separate faults. Fixing any one alone leaves the form broken.**
+
+1. **The two-column rows never collapse.** `grid-template-columns:1fr 1fr` at
+   every width. ⚠️ In the EMAIL + MOBILE rows the mobile cell holds a `+971`
+   block that is `flex:none` — it cannot shrink — so that track refuses to go
+   below its content and **the email input is crushed to roughly a 40px square
+   with its label wrapped over three lines**. Widening the panel does not fix
+   it; only going to one column does.
+2. **Desktop padding.** 40px/44px inside the panel, 24px of scrim outside. Down
+   to 26px/18px and 10px, which hands ~50px back at 360px.
+3. ⚠️ **Every control was under 16px, so iOS Safari zooms the page on focus and
+   does not zoom back out.** Twelve of fifteen controls at 15px. A parent
+   pinches out again after every field. **This does not reproduce in a desktop
+   emulator at any width** — it is real-iOS-only behaviour, and the rule has to
+   be on the control itself, because Safari reads the computed font-size of the
+   focused element.
+4. **The player roster row was six columns** — first / last / day / month /
+   year / remove — in 224px, about 30px each. Re-laid as two full-width names,
+   then the **same `1fr 1.7fr 1.1fr` ratio the parent form's own date row
+   already uses** (September has to fit), then remove on its own line.
+
+**After:** content width **224 → 304px** at 360, **zero** horizontal spill,
+**0 of 15** controls under 16px.
+
+**Breakpoint 640px, not 760.** The panel is `max-width:600px`, so above ~648px
+it is no longer width-constrained and the desktop layout is correct.
+
+⚠️ **One more regex-matched-a-comment.** The test's first attempt to grab the
+new phone block used `@media\(max-width:640px\)\{` — which matched the
+**tombstone comment** written earlier in this same change, since that comment
+quotes the old `@media(max-width:640px){.spon-tile{…}}` rule verbatim. Every
+assertion then reported the fix as missing. It is now anchored on `.reg-scrim`,
+which only the live rule has. Same family as the lesson already in
+`claude/lessons.md`; **writing a tombstone that quotes code creates a new decoy
+for the next search.**
+
 ## What this change does NOT do
 
 - **Nothing outside `Quins JRT.dc.html`.** `/rules`, `/legal`, `/signin` and the

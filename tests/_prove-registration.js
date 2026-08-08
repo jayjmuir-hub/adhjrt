@@ -4479,6 +4479,73 @@ const FAULTS = [
       '<div style="display:flex;gap:16px;margin-top:38px'),
     expect: ['addressable by class'],
   },
+  /* ---- the registration modals on a phone, 8 Aug 2026 ---------------------
+     These screens only render while the registration window is OPEN, so none of
+     this is visible on the page in its normal state. Every fault here is one
+     somebody could introduce while "tidying the CSS" and never see. */
+  {
+    name: 'the two-column rows stop collapsing, crushing the email field again',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '    .reg-2col{grid-template-columns:1fr!important}\n', ''),
+    expect: ['collapse to one column'],
+  },
+  {
+    /* ⚠️ The subtle one. 15px still matches any check that only asks whether a
+       font-size rule exists — and 15px is the exact value that caused the bug. */
+    name: 'the control font-size drifts to 15px, so iOS zooms on focus again',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '.reg-modal input,.reg-modal select,.reg-modal textarea{font-size:16px!important}',
+      '.reg-modal input,.reg-modal select,.reg-modal textarea{font-size:15px!important}'),
+    expect: ['iOS no-zoom threshold'],
+  },
+  {
+    /* Moving it to the panel looks equivalent and is not: iOS reads the
+       computed font-size of the focused element itself. */
+    name: 'the no-zoom rule is moved onto the panel instead of the controls',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '.reg-modal input,.reg-modal select,.reg-modal textarea{font-size:16px!important}',
+      '.reg-modal{font-size:16px!important}'),
+    expect: ['carry their own font-size rule'],
+  },
+  {
+    name: 'the panel keeps its desktop padding on a phone',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '.reg-modal{padding:26px 18px!important', '.reg-modal{padding:40px 44px!important'),
+    expect: ['panel padding comes down'],
+  },
+  {
+    name: 'the scrim keeps its desktop padding on a phone',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '.reg-scrim{padding:10px!important}', '.reg-scrim{padding:24px!important}'),
+    expect: ['scrim padding comes down'],
+  },
+  {
+    name: 'a two-column row loses the class the phone rule addresses it by',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '<div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px',
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px'),
+    expect: ['seven two-column rows are addressable'],
+  },
+  {
+    name: 'the player roster row goes back to six columns on a phone',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '.reg-playerrow{grid-template-columns:1fr 1.7fr 1.1fr!important}',
+      '.reg-playerrow{grid-template-columns:1fr 1fr 0.7fr 1.15fr 0.85fr 32px!important}'),
+    expect: ['roster row is re-laid'],
+  },
+  {
+    name: 'the roster remove button is left sharing a line with the date',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '    .reg-playerrow > *:nth-child(6){grid-column:1/4!important;justify-self:end}\n', ''),
+    expect: ['remove button on its own line'],
+  },
+  {
+    name: 'a modal panel loses the class every phone rule hangs off',
+    suite: 'test-registration-panel.js',
+    apply: () => patch(HOME, '<div class="reg-modal" style="background:#111113;', '<div style="background:#111113;'),
+    expect: ['both modals have an addressable panel'],
+  },
+
   /* ---- the app's narrow-width partner strip, 8 Aug 2026 -------------------
      Every failure mode here is invisible unless you are looking at a viewport
      359px or narrower, which nobody reviewing on a desktop ever is. */

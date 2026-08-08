@@ -928,6 +928,71 @@
     .spon-tile{flex:1 1 calc(50% - 7px)!important}
   }
 
+  /* ============ THE REGISTRATION MODALS ON A PHONE ============
+     Jay turned registration on, opened the forms on a phone and found them
+     unusable, 8 Aug 2026. They had never been looked at at this width: the
+     modals only appear while the registration window is OPEN, and it had been
+     shut every previous time the page was checked on a phone. **A screen that
+     only exists in one state does not get tested by looking at the page.**
+
+     ⚠️ MEASURED BEFORE ANY CHANGE, Register-a-team modal, iPhone widths:
+       360px  panel 312 wide, 224px of CONTENT      phone row 299 wide, spills 89px
+       390px  panel 342 wide, 254px of content      spills 59px
+       412px  panel 364 wide, 276px of content      spills 37px
+     136px of a 360px screen was gone before a single field: 48px of scrim
+     padding plus 88px of panel padding. What was left was then split into two
+     columns, so an email input got ~105px minus its own 28px of padding.
+
+     FOUR SEPARATE FAULTS, and fixing any one alone leaves the form broken.
+
+     1. THE TWO-COLUMN ROWS DO NOT COLLAPSE. `grid-template-columns:1fr 1fr` at
+        every width. In the EMAIL + MOBILE rows the mobile cell holds a `+971`
+        block that is `flex:none` — it cannot shrink — so that track refuses to
+        go below its content and the email track is squeezed to a ~40px square
+        with its label wrapped over three lines. Collapsing to one column is
+        what actually fixes it; widening the panel alone does not.
+
+     2. THE PANEL AND SCRIM PADDING ARE DESKTOP NUMBERS. 40px/44px inside plus
+        24px of scrim outside. Down to 26px/18px and 10px, which hands ~50px
+        back to the fields on a 360px screen.
+
+     3. ⚠️ EVERY CONTROL IS UNDER 16px, SO iOS SAFARI ZOOMS THE PAGE ON FOCUS
+        AND DOES NOT ZOOM BACK OUT. Twelve of the fifteen controls were 15px.
+        This is not a taste question and it does not reproduce in a desktop
+        emulator at any width — the rule is font-size >= 16px on the control
+        itself. A parent tapping the first field gets a magnified page they then
+        have to pinch out of, for every field.
+
+     4. THE PLAYER ROWS WERE SIX COLUMNS. first / last / day / month / year /
+        remove, in 224px — about 30px each. Re-laid as name, name, then the
+        SAME 1fr 1.7fr 1.1fr date ratio the parent form already uses (month has
+        to fit "September"), with remove on its own line.
+
+     640px, not 760: the panel is `max-width:600px`, so above ~648px it is no
+     longer width-constrained and the desktop layout is the right one. */
+  @media(max-width:640px){
+    .reg-scrim{padding:10px!important}
+    /* 94vh not 88vh: the taller panel is what keeps the submit button reachable
+       without a long scroll once the rows have stacked and the form is taller. */
+    .reg-modal{padding:26px 18px!important;max-height:94vh!important;border-radius:16px!important}
+    .reg-2col{grid-template-columns:1fr!important}
+    /* ⚠️ ON THE CONTROL, NOT ON A WRAPPER. iOS reads the computed font-size of
+       the focused element itself; inheriting 16px from a parent does not stop
+       the zoom. Every one of these is styled inline, so !important is required
+       or the rule loses silently. */
+    .reg-modal input,.reg-modal select,.reg-modal textarea{font-size:16px!important}
+    /* The player sub-form: two full-width names, then the date ratio that is
+       already proven in the parent's own date-of-birth row directly below,
+       then the remove button on its own line pushed right. */
+    .reg-playerrow{grid-template-columns:1fr 1.7fr 1.1fr!important}
+    .reg-playerrow > *:nth-child(1),
+    .reg-playerrow > *:nth-child(2){grid-column:1/4!important}
+    .reg-playerrow > *:nth-child(3){grid-column:1/2!important}
+    .reg-playerrow > *:nth-child(4){grid-column:2/3!important}
+    .reg-playerrow > *:nth-child(5){grid-column:3/4!important}
+    .reg-playerrow > *:nth-child(6){grid-column:1/4!important;justify-self:end}
+  }
+
   @media(max-width:760px){
     /* Header stays ONE line. Wrapping the links made everything reachable but
        took three lines, and the header is sticky - so a quarter of the screen
@@ -2798,8 +2863,8 @@
 
   <!-- ============ REGISTER A TEAM MODAL ============ -->
   <sc-if value="{{ teamModalOpen }}" hint-placeholder-val="{{ false }}">
-    <div role="dialog" aria-modal="true" aria-label="Register a team" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropTeam }}">
-      <div style="background:#111113;border:1px solid rgba(255,255,255,0.09);border-radius:20px;max-width:600px;width:100%;max-height:88vh;overflow-y:auto;padding:40px 44px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5);color:#fff" onClick="{{ stopProp }}">
+    <div class="reg-scrim" role="dialog" aria-modal="true" aria-label="Register a team" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropTeam }}">
+      <div class="reg-modal" style="background:#111113;border:1px solid rgba(255,255,255,0.09);border-radius:20px;max-width:600px;width:100%;max-height:88vh;overflow-y:auto;padding:40px 44px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5);color:#fff" onClick="{{ stopProp }}">
         <button onClick="{{ closeTeamModal }}" aria-label="Close" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#fff;font-size:18px;cursor:pointer">&times;</button>
 
         <sc-if value="{{ teamSubmitted }}" hint-placeholder-val="{{ false }}">
@@ -2831,7 +2896,7 @@
             <p style="color:#aeb4bf;margin-top:10px;font-size:15px">Fill in your club's details below to secure your spot. {{ regFormNote }}</p>
 
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
                   <select value="{{ teamForm.club }}" onChange="{{ onTeamClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -2862,7 +2927,7 @@
                 </div>
               </div>
 
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PREFERRED POOL</label>
                   <select value="{{ teamForm.preferredPool }}" onChange="{{ onPreferredPool }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -2887,7 +2952,7 @@
                 <input value="{{ teamForm.headCoachName }}" onInput="{{ onHeadCoachName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
               </div>
 
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH EMAIL</label>
                   <input type="email" value="{{ teamForm.headCoachEmail }}" onInput="{{ onHeadCoachEmail }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -2909,7 +2974,7 @@
                 <input value="{{ teamForm.managerName }}" onInput="{{ onManagerName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
               </div>
 
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER EMAIL</label>
                   <input type="email" value="{{ teamForm.managerEmail }}" onInput="{{ onManagerEmail }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -2944,7 +3009,7 @@
                        "Date of birth is stored as yyyy-mm-dd". -->
                   <sc-for list="{{ teamPlayerRows }}" as="p" hint-placeholder-count="0">
                     <div style="display:flex;flex-direction:column;gap:4px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)">
-                      <div style="display:grid;grid-template-columns:1fr 1fr 0.7fr 1.15fr 0.85fr 32px;gap:8px;align-items:center">
+                      <div class="reg-playerrow" style="display:grid;grid-template-columns:1fr 1fr 0.7fr 1.15fr 0.85fr 32px;gap:8px;align-items:center">
                         <input value="{{ p.firstName }}" onInput="{{ p.onFirstName }}" placeholder="First name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
                         <input value="{{ p.lastName }}" onInput="{{ p.onLastName }}" placeholder="Last name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
                         <select value="{{ p.dobDay }}" onChange="{{ p.onDobDay }}" aria-label="Player day of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 6px;color:#fff;font-size:13px">
@@ -2992,8 +3057,8 @@
 
   <!-- ============ REGISTER A PLAYER MODAL ============ -->
   <sc-if value="{{ playerModalOpen }}" hint-placeholder-val="{{ false }}">
-    <div role="dialog" aria-modal="true" aria-label="Register a player" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropPlayer }}">
-      <div style="background:#111113;border:1px solid rgba(255,255,255,0.09);border-radius:20px;max-width:600px;width:100%;max-height:88vh;overflow-y:auto;padding:40px 44px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5);color:#fff" onClick="{{ stopProp }}">
+    <div class="reg-scrim" role="dialog" aria-modal="true" aria-label="Register a player" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{ onBackdropPlayer }}">
+      <div class="reg-modal" style="background:#111113;border:1px solid rgba(255,255,255,0.09);border-radius:20px;max-width:600px;width:100%;max-height:88vh;overflow-y:auto;padding:40px 44px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5);color:#fff" onClick="{{ stopProp }}">
         <button onClick="{{ closePlayerModal }}" aria-label="Close" style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#fff;font-size:18px;cursor:pointer">&times;</button>
 
         <sc-if value="{{ playerSubmitted }}" hint-placeholder-val="{{ false }}">
@@ -3013,7 +3078,7 @@
             <p style="color:#aeb4bf;margin-top:10px;font-size:15px">Joining without a team already? Register here and we'll help place your player. {{ regFormNote }}</p>
 
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYER FIRST NAME</label>
                   <input value="{{ playerForm.playerFirstName }}" onInput="{{ onPlayerFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -3093,7 +3158,7 @@
                 </sc-if>
               </div>
 
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT / GUARDIAN FIRST NAME</label>
                   <input value="{{ playerForm.parentFirstName }}" onInput="{{ onPlayerParentFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
@@ -3128,7 +3193,7 @@
                     Same as parent/guardian above
                   </label>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
+                <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
                   <input value="{{ playerForm.emergencyFirstName }}" onInput="{{ onEmergencyFirstName }}" disabled="{{ playerForm.emergencySame }}" placeholder="First name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
                   <input value="{{ playerForm.emergencyLastName }}" onInput="{{ onEmergencyLastName }}" disabled="{{ playerForm.emergencySame }}" placeholder="Last name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
                 </div>

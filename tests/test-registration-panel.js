@@ -973,4 +973,74 @@ const rosterDobAtCutoffAge = (age) => `${2026 - age}-01-01`;
    which covers both destinations, both names, the fact that there is exactly
    one of each, and that nothing above the footer links to either. */
 
+/* =========================================================================
+   The registration modals on a phone (8 Aug 2026)
+   =========================================================================
+   ⚠️ THESE SCREENS ONLY EXIST WHILE THE REGISTRATION WINDOW IS OPEN, which is
+   why they went unlooked-at through every previous mobile pass — the window was
+   shut, so opening the page on a phone showed no modal at all. Jay forced the
+   window open on 8 Aug specifically to check them and found them unusable.
+   Measured before the fix, Register-a-team at 360px: 224px of content inside
+   the panel, the phone row 299px wide spilling 89px past it, the email input
+   collapsed to roughly a 40px square, and twelve of fifteen controls under 16px.
+
+   All four assertions below are about the PHONE rules. None of them can be
+   checked by looking at the page on a desktop, and three of the four are
+   invisible even in a desktop emulator at phone width — the iOS zoom one only
+   shows up on real iOS. That is exactly why they are pinned here. */
+section('The registration modals are usable on a phone');
+
+const REGHOME = readRepo(HOME).replace(/\r\n/g, '\n');
+
+/* Addressable at all. Every one of these elements is styled INLINE, so without
+   a class there is nothing for a stylesheet to select and no phone rule can
+   exist. Counted, not `>= 1`, so a row losing its class shows up here rather
+   than as a squashed field somebody notices in November. */
+eq('both modals have an addressable scrim', (REGHOME.match(/class="reg-scrim"/g) || []).length, 2);
+eq('both modals have an addressable panel', (REGHOME.match(/class="reg-modal"/g) || []).length, 2);
+eq('all seven two-column rows are addressable', (REGHOME.match(/class="reg-2col"/g) || []).length, 7);
+eq('the player roster row is addressable', (REGHOME.match(/class="reg-playerrow"/g) || []).length, 1);
+
+/* ⚠️ ANCHORED ON `.reg-scrim`, NOT ON THE MEDIA QUERY ALONE. A plain
+   `@media\(max-width:640px\)\{` matches the TOMBSTONE COMMENT a few hundred
+   lines above, which quotes the old `@media(max-width:640px){.spon-tile{...}}`
+   rule verbatim — so the first version of this line captured a comment and
+   every assertion below reported the fix as missing. Caught first run. Same
+   family as the lesson already in claude/lessons.md about a regex matching a
+   comment instead of the code, and the fix is the same: anchor on something
+   only the live rule has. */
+const phoneBlock = (REGHOME.match(/@media\(max-width:640px\)\{\s*\n\s*\.reg-scrim[\s\S]*?\n  \}/) || [''])[0];
+check('there is a phone block for the modals', /\.reg-modal/.test(phoneBlock));
+
+/* 1. ⚠️ THE COLLAPSE IS THE FIX. In the EMAIL + MOBILE rows the mobile cell
+      holds a `+971` block that is `flex:none` and so cannot shrink; that track
+      refuses to go below its content and the email track is crushed. Widening
+      the panel does not help — only going to one column does. */
+check('the two-column rows collapse to one column', /\.reg-2col\{grid-template-columns:1fr!important\}/.test(phoneBlock));
+
+/* 2. The desktop padding gave away 136px of a 360px screen before any field —
+      48px of scrim plus 88px of panel. */
+check('the scrim padding comes down', /\.reg-scrim\{padding:10px!important\}/.test(phoneBlock));
+check('the panel padding comes down', /\.reg-modal\{padding:26px 18px!important/.test(phoneBlock));
+
+/* 3. ⚠️ THE ONE THAT ONLY BITES ON REAL iOS. Safari zooms the page when a
+      focused control's own computed font-size is under 16px, and it does not
+      zoom back out — so a parent pinches out again after every field. Twelve of
+      fifteen controls were 15px.
+      Asserted as EXACTLY 16px and ON THE CONTROLS: 15px would reintroduce the
+      bug and still match a looser "has a font-size" check, and a rule on a
+      wrapper does not work because iOS reads the focused element itself. */
+const zoomRule = (phoneBlock.match(/\.reg-modal input,\.reg-modal select,\.reg-modal textarea\{font-size:(\d+)px!important\}/) || []);
+check('the controls carry their own font-size rule', zoomRule.length > 0);
+eq('…and it is 16px, the iOS no-zoom threshold', zoomRule[1], '16');
+
+/* 4. The roster row was six columns — first / last / day / month / year /
+      remove — in 224px, about 30px each. The date ratio it now uses is the same
+      1fr 1.7fr 1.1fr as the parent form's own date row, because "September" has
+      to fit. */
+check('the roster row is re-laid for a phone', /\.reg-playerrow\{grid-template-columns:1fr 1\.7fr 1\.1fr!important\}/.test(phoneBlock));
+check('…with the two names on full-width lines',
+  /\.reg-playerrow > \*:nth-child\(1\),\s*\n\s*\.reg-playerrow > \*:nth-child\(2\)\{grid-column:1\/4!important\}/.test(phoneBlock));
+check('…and the remove button on its own line', /nth-child\(6\)\{grid-column:1\/4!important;justify-self:end\}/.test(phoneBlock));
+
 main().then(() => summary('test-registration-panel.js'));

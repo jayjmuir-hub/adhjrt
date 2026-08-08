@@ -162,7 +162,42 @@
       <ul>
         <li><b>Age-grade format under UAERF rules.</b> Mini, midi and youth, from U6 through to U18.</li>
         <li><b>Two days.</b> Saturday 7 and Sunday 8 November 2026, at Zayed Sports City, Abu Dhabi.</li>
-        <li><b>Everyone plays through.</b> A pool stage followed by a Cup, Bowl, Plate and Shield bracket, so every team that turns up plays a full day of rugby rather than going home after one loss.</li>
+        <!-- ⚠️ REWRITTEN 8 Aug 2026. It said: "Everyone plays through. A pool
+             stage followed by a Cup, Bowl, Plate and Shield bracket, so every
+             team that turns up plays a full day of rugby rather than going home
+             after one loss."
+
+             Jay, 8 Aug 2026: "we don't know for sure that every age group will
+             have cup, bowl, plate and shield brackets" and "there is no
+             guarantee that every team will play through to a knockout stage."
+             Both are right, and scores-data.js is more definite than either:
+
+               • buildBracket SKIPS a tier outright when the pool is too small —
+                 `// tier doesn't exist at all (pool too small)`. A pool of three
+                 has no rank-4 team, so that age group has no Shield.
+               • u16b and u16g are in SPECIAL_BRACKET_AGE_IDS and use a
+                 different bracket entirely, with semi-finals.
+               • u6 and u7 are in FESTIVAL_AGE_IDS and do not play a full round
+                 robin at all.
+               • ⚠️ `// A 5th-place team (odd pool sizes) sits out of the
+                 knockouts entirely.` So "everyone plays through" was not a
+                 hedge that needed softening — it was false, and it was the
+                 HEADING.
+               • And a saved organiser override replaces the knockout completely,
+                 so any structure at all is possible.
+
+             ⚠️ WHAT SURVIVES IS THE ONLY PART THAT IS ACTUALLY GUARANTEED: the
+             POOL stage. Every team plays every other team in its pool, which is
+             what makes one defeat not the end of a club's day. That claim is
+             already made on the home page (#schedule, "Every team plays every
+             team in its pool") and the two must keep agreeing — same-claim-two-
+             places is the "hundreds vs thousands" mistake this project has
+             already made once.
+
+             ⚠️ DO NOT PUT THE FOUR BRACKET NAMES BACK until the draw is done
+             and the pool sizes are known. This is a promise made to clubs
+             deciding whether to enter. -->
+        <li><b>A pool stage, so one defeat is not the end of your day.</b> Every team plays every other team in its pool. Finals are played on top of the pool stage; which sides reach them, and how the brackets are named, depends on the age group and on how many teams enter &mdash; that is confirmed once entries close.</li>
         <li><b>Spirit of Rugby.</b> Sides nominate an opposition player in the older age groups; it is judged on the day.</li>
       </ul>
       <div class="note">

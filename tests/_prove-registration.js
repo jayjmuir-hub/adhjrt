@@ -4479,6 +4479,38 @@ const FAULTS = [
       '<div style="display:flex;gap:16px;margin-top:38px'),
     expect: ['addressable by class'],
   },
+  /* ---- the settled-rules claim, 8 Aug 2026 (test-about-board.js) ---------
+     This list is what a club reads while deciding whether to enter. A false
+     item on it is worse than a missing one. */
+  {
+    name: 'the four bracket names are restated as settled',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', 'Finals are played on top of the pool stage;',
+      'A Cup, Bowl, Plate and Shield bracket follows;'),
+    expect: ['named four-tier bracket'],
+  },
+  {
+    name: 'the "everyone plays through" promise creeps back',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', '<b>A pool stage, so one defeat is not the end of your day.</b>',
+      '<b>Everyone plays through.</b>'),
+    expect: ['every team reaches a knockout'],
+  },
+  {
+    name: 'the pool promise is dropped, leaving the item saying nothing',
+    suite: 'test-about-board.js',
+    apply: () => patch('rules.html', 'Every team plays every other team in its pool. ', ''),
+    expect: ['pool promise'],
+  },
+  {
+    /* The two surfaces drifting apart — the home page quietly stops saying it
+       while the rules page still does. */
+    name: 'the home page stops making the same pool claim',
+    suite: 'test-about-board.js',
+    apply: () => patch(HOME, 'Every team plays every team in its pool.', 'Fixtures are drawn by the organisers.'),
+    expect: ['same claim the home page makes'],
+  },
+
   /* ---- the registration modals on a phone, 8 Aug 2026 ---------------------
      These screens only render while the registration window is OPEN, so none of
      this is visible on the page in its normal state. Every fault here is one

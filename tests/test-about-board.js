@@ -1641,6 +1641,36 @@ check('the photos cannot be dragged as images',
 section('the tournament rules page');
 
 const RULES = readRepo('rules.html').replace(/\r\n/g, '\n');
+
+/* ⚠️ THE "WHAT IS ALREADY SETTLED" LIST IS A PROMISE TO CLUBS DECIDING WHETHER
+   TO ENTER, so anything on it has to be true of EVERY age group, not the
+   typical one. One item was not, and it was corrected on 8 Aug 2026.
+
+   It claimed "Everyone plays through … a Cup, Bowl, Plate and Shield bracket".
+   scores-data.js contradicts that four ways: buildBracket skips a tier when the
+   pool is too small (a pool of three has no Shield), u16b/u16g use a different
+   bracket with semi-finals, u6/u7 do not play a full round robin, and — the one
+   that made the HEADING false — "a 5th-place team (odd pool sizes) sits out of
+   the knockouts entirely".
+
+   These checks are deliberately about the CLAIM, not the wording. The bracket
+   names may come back once the draw exists and pool sizes are known; what must
+   not come back is stating them as settled while they are not. */
+const RULES_NOCOMMENT = RULES.replace(/<!--[\s\S]*?-->/g, '');
+check('the settled list does not promise a named four-tier bracket',
+  !/Cup, Bowl, Plate and Shield/i.test(RULES_NOCOMMENT));
+check('…nor promises that every team reaches a knockout',
+  !/Everyone plays through/i.test(RULES_NOCOMMENT));
+/* The POOL claim is the part that is actually guaranteed, and it is what
+   replaced the false one — so its absence means the correction was reverted
+   rather than reworded. */
+check('…and it still makes the pool promise, which IS guaranteed',
+  /plays every other team in its pool/i.test(RULES_NOCOMMENT));
+/* ⚠️ SAME CLAIM, TWO SURFACES. The home page says it too, and the two drifting
+   apart is the "hundreds vs thousands" mistake this project has already made
+   once. Asserted against the home page rather than against a literal here. */
+check('…the same claim the home page makes',
+  /plays every team in its pool/i.test(readRepo('Quins JRT.dc.html')));
 const TOML_R = TOML;
 
 check('rules.html exists and is a full page', RULES.includes('<!DOCTYPE html>') && RULES.length > 3000);

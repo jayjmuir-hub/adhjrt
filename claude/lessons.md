@@ -24,11 +24,22 @@ branch — `devwork`, `mobfix`, `t2` — has no `origin/` twin, gets compared
 against `origin/main`, and reports commits that are in fact already safely on
 `origin/dev`. The warning is literally true and completely misleading.
 
-**The fix is ours, and it is free: name the sandbox branch after the remote
-branch it will land on.** Work on `dev` in the sandbox, not `dev-something`.
-Then the hook compares against `origin/dev`, and after the bundle lands on the
-PC and you `git fetch`, it goes quiet — correctly, because there is genuinely
-nothing unpushed.
+**The fix has TWO halves and the first one alone is not enough.** That was
+written here as a one-part rule and the hook disproved it within the hour.
+
+1. **Name the sandbox branch after the remote branch it will land on.** Work on
+   `dev`, not `devwork`/`mobfix`/`t2`. That fixes the wrong-ref comparison.
+2. ⚠️ **`git fetch origin` in the sandbox immediately after the PC pushes.**
+   This is the half that was missing. The push happens on jay-pc, so the
+   sandbox's `origin/dev` still points at the previous commit and the hook
+   compares against a ref that is one behind. **Measured:** local `dev`
+   `f679619`, sandbox `origin/dev` `8796c90`, "1 unpushed"; after a fetch,
+   `0` — with `git ls-remote` confirming the remote had it the whole time.
+
+**Both causes produce the identical message**, which is why fixing one and
+declaring victory was wrong. The write path is: build in the sandbox → bundle
+→ push from the PC → **fetch back in the sandbox**. Skip that last step and the
+alarm fires every time, correctly describing a ref that is simply out of date.
 
 ⚠️ **Do not "fix" this by editing the hook.** `~/.claude/stop-hook-git-check.sh`
 is root-owned in the EPHEMERAL cloud container and is re-provisioned at the

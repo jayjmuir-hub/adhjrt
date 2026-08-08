@@ -263,6 +263,15 @@ main{padding:16px}
          font-weight:800;font-size:11px;letter-spacing:1px;padding:6px 15px;border-radius:100px;
          text-transform:uppercase;margin-bottom:14px}
 
+/* The unpublished marker — see viewNote(). Amber left edge AND a sentence: the
+   colour cannot say "these team names are invented", which is what the SAMPLE
+   case has to get across. Not gated on width; it matters most on a phone. */
+.vnote{background:#FFF8E6;border:1px solid #E8C46A;border-left:4px solid #C98A05;
+       border-radius:12px;padding:12px 15px;margin:0 0 12px}
+.vnote b{display:block;font-family:'Anton';font-size:14px;letter-spacing:.4px;
+         text-transform:uppercase;color:#7A5300;margin-bottom:4px}
+.vnote div{font-size:12.5px;line-height:1.55;color:#5A4A22}
+
 /* tables */
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
@@ -733,7 +742,15 @@ async function load(agId){
      rejected and the tab saying "Loading…" forever — the retry card below is
      what a manager actually needs at pitch-side. */
   try {
-    const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
+    /* ⚠️ S.session IS PASSED ON PURPOSE AND MUST STAY. Without it these two
+       fetches ask as the public, so an unpublished age group came back
+       awaitingPublication and Fixtures, Results and Tables all showed
+       comingSoon() — to a signed-in manager standing at the pitch. The server
+       decides what a session is allowed (get-schedule-override.js checks
+       hasAgeGroupAccess), so a manager browsing somebody else's group still
+       gets the public answer. A signed-OUT reader passes null and nothing
+       changes for them. See claude/specs/spec-draft-visibility-aug-2026.md. */
+    const [fx, st] = await Promise.all([api.getFixtures(agId, S.session), api.getStandings(agId, S.session)]);
     if (S.browseId !== agId) return;          // a newer pill won the race
     S.fixtures = fx; S.standings = st;
     if (agId === S.ageId) S.followFx = fx;    // one fetch serves both tabs
@@ -749,7 +766,7 @@ async function loadFollowData(){
   const id = S.ageId;
   if (!id) { S.followFx = null; return; }
   try {
-    const fx = await api.getFixtures(id);
+    const fx = await api.getFixtures(id, S.session); // session: see load()
     if (S.ageId !== id) return;
     S.followFx = fx;
   } catch (e) { /* Today simply keeps what it had; the next poll retries. */ }
@@ -761,12 +778,15 @@ async function loadFollowData(){
 async function refresh(){
   const bid = S.browseId, aid = S.ageId;
   const jobs = [];
-  if (bid) jobs.push(Promise.all([api.getFixtures(bid), api.getStandings(bid)]).then(([fx, st]) => {
+  /* session on all three: see load(). A background poll that dropped it would
+     quietly replace a draft view with "coming soon" thirty seconds after the
+     tab opened, which is a worse failure than never showing it. */
+  if (bid) jobs.push(Promise.all([api.getFixtures(bid, S.session), api.getStandings(bid, S.session)]).then(([fx, st]) => {
     if (S.browseId !== bid) return;
     S.fixtures = fx; S.standings = st;
     if (bid === S.ageId) S.followFx = fx;
   }));
-  if (aid && aid !== bid) jobs.push(api.getFixtures(aid).then((fx) => {
+  if (aid && aid !== bid) jobs.push(api.getFixtures(aid, S.session).then((fx) => {
     if (S.ageId === aid) S.followFx = fx;
   }));
   /* A failed background poll keeps whatever is on screen — never an error,
@@ -866,6 +886,26 @@ function comingSoon(what, agId){
     <b>${what} not published yet</b>
     <div>The draw for ${esc(ageName(agId))} hasn’t been released. It will appear here as soon as the organisers publish it.</div>
   </div></div>`;
+}
+
+/* THE UNPUBLISHED MARKER — the counterpart of comingSoon(). getFixtures() and
+   getStandings() are now called WITH the session (see load()), so a signed-in
+   manager or organiser gets an unpublished draw instead of the card above.
+   This says which kind they are looking at.
+
+   ⚠️ 'sample' is the auto-generated draw and its team names are INVENTED.
+   Until the real draw exists that is what most age groups return, so the
+   wording has to say so — an amber edge cannot. Both titles are pinned by
+   tests; grep tests/ before rewording either.
+   ⚠️ Returns '' for 'published' AND for 'none', so a public reader can never
+   see a marker — 'none' is handled by comingSoon() before this is reached. */
+function viewNote(view){
+  if (view !== 'draft' && view !== 'sample') return '';
+  const t = view === 'draft' ? 'Draft — not published' : 'Sample draw — not real fixtures';
+  const b = view === 'draft'
+    ? 'You can see this because you are signed in. The public still sees “coming soon” for this age group until it is published.'
+    : 'No draw has been saved for this age group yet, so these pools are auto-generated placeholders and the team names are invented. Nothing here is visible to the public.';
+  return `<div class="vnote"><b>${esc(t)}</b><div>${esc(b)}</div></div>`;
 }
 /* Every row, table and bracket now shows the code (ADH1) rather than the full
    club name — a phone screen has room for one or the other, and codes are
@@ -1036,10 +1076,22 @@ function viewToday(){
   const upcoming = mineList.filter(m => !m.result).slice(0, 4);
   const recent = mineList.filter(m => m.result).slice(-3).reverse();
 
-  const more = (upcoming.length ? `<div class="sec-t">${S.team ? 'Your fixtures' : 'Next up'}</div><div class="card">${upcoming.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '')
-             + (recent.length ? `<div class="sec-t">Recent results</div><div class="card">${recent.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '');
+  /* Today gets the marker too, and it goes FIRST — this tab is the one a
+     manager opens by reflex, so it is where an invented team name would
+     otherwise be believed. Empty string when the draw is published or when
+     there is nothing to show. */
+  const note = live.length ? viewNote(fx && fx.view) : '';
+  /* ⚠️ `lists`, NOT `more`, DECIDES WHETHER THE PRACTICAL CARD SHOWS. The
+     marker is prepended after that decision is made — folding it into the value
+     the `!more` test reads would have suppressed the pre-tournament "getting
+     here / what to bring" card for every signed-in manager, because the marker
+     is a non-empty string. A cosmetic addition silently removing a card is
+     exactly the kind of change nothing would have failed on. */
+  const lists = (upcoming.length ? `<div class="sec-t">${S.team ? 'Your fixtures' : 'Next up'}</div><div class="card">${upcoming.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '')
+              + (recent.length ? `<div class="sec-t">Recent results</div><div class="card">${recent.map(m=>matchRow(m,S.ageId)).join('')}</div>` : '');
+  const more = note + lists;
 
-  return hero + followCard() + (p === 'before' && !more ? practical : more + (p==='before' ? practical : ''));
+  return hero + followCard() + (p === 'before' && !lists ? practical : more + (p==='before' ? practical : ''));
 }
 
 /* ---------------- Fixtures & Results ---------------- */
@@ -1073,7 +1125,7 @@ function viewResults(){
   if (!fx) return head + (S.loadError ? loadFail() : `<div class="card"><div class="spin">Loading…</div></div>`);
   if (fx.awaitingPublication) return head + comingSoon('Results', S.browseId);
   const { showFilter, seg } = teamSeg();
-  return head + seg + resultsList(fx, showFilter);
+  return head + viewNote(fx.view) + seg + resultsList(fx, showFilter);
 }
 
 function viewFixtures(){
@@ -1095,7 +1147,7 @@ function viewFixtures(){
     `<div class="pool-h">${esc(k)}</div>${byPool[k].map(m=>matchRow(m,S.browseId,true)).join('')}`).join('');
 
   const ko = (fx.knockout || []).filter(k => k.home || k.away);
-  return head + seg
+  return head + viewNote(fx.view) + seg
     + `<div class="card">${groups || '<div class="empty"><b>No matches</b><div>Nothing scheduled here yet.</div></div>'}</div>`
     + (ko.length && !(showFilter && S.onlyMine) ? `<div class="sec-t">Knockout</div><div class="card">${ko.map(m=>matchRow(m,S.browseId,true)).join('')}</div>` : '');
 }
@@ -1115,7 +1167,7 @@ function viewTables(){
     `<div class="card"><div class="empty"><b>No pools yet</b><div>Nothing to show for this age group.</div></div></div>`;
 
   const adv = st._advance || 0;
-  return head + pools.map(p => {
+  return head + viewNote(st.view) + pools.map(p => {
     const rows = st.tables[p.id] || [];
     return `<div class="sec-t">${esc(p.name)}</div><div class="card"><div class="tscroll"><table>
       <thead><tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>+/−</th><th>Pts</th></tr></thead>

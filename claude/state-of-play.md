@@ -138,9 +138,16 @@ is FREE, and that is how it was done without spending 15 credits.
 identically, and that ambiguity wasted two earlier attempts. **The 200 on an
 unruled sibling in the same snapshot is what makes it a measurement.**
 
-⚠️ **`adhjrt.com/CLAUDE.md` AND `/RESTORE.md` ARE STILL SERVED ON PRODUCTION.**
-The fix is on `dev` and `Compare`; `main` does not have it yet. Merging costs
-one 15-credit deploy.
+✅ **AND IT IS CLOSED ON PRODUCTION TOO (measured 8 Aug 2026).** This block used
+to end *"`adhjrt.com/CLAUDE.md` and `/RESTORE.md` ARE STILL SERVED ON
+PRODUCTION"*. They are not — the sixth deploy of 8 Aug carried the rule.
+Measured live with controls in the same snapshot: `/CLAUDE.md` **404**,
+`/RESTORE.md` **404**, `/claude/handoff-2026-08-08b.md` **404**,
+`/claude/no-such-file-xyz.md` **404**, while `/`, `/rules`, `/app` and
+`/manager` all answer **200**. ⚠️ **The stale sentence survived in this file for
+the length of a day and was the first thing a fresh session read about the
+subject** — which is the whole argument for this page having a size budget and
+for checking a live fact live.
 
 ## ⚠️ `dev` AND `Compare` WERE DELETED FROM GITHUB AND FROM jay-pc (8 Aug) — restored
 
@@ -272,6 +279,56 @@ destination refspec"*. That drops the source as well, and a bare fetch asks for
 `HEAD`, which a `origin/dev..dev` bundle does not carry. Corrected to
 `git fetch <bundle> dev` with all three forms tabulated.
 
+## ⚠️ MANAGERS AND ORGANISERS COULD NOT SEE AN UNPUBLISHED DRAW (8 Aug, on `dev`)
+
+Jay: *"the managers and organizers should be able to see fixtures, tables, and
+standings in their sections even if they aren't published, because they have to
+be able to make fixture changes when not published, the way it is now they are
+blind"*. Right, and wider than described. Full reasoning, including the argument
+AGAINST each choice, in `claude/specs/spec-draft-visibility-aug-2026.md` — **do
+not re-derive it.**
+
+**The cause was one word in three signatures.** `getDraw(agId, session)` served
+the draft, so the editor always worked; `getFixtures(agId)`,
+`getStandings(agId)` and `getSpiritAward(agId)` took no session at all, so every
+other view of the same draw asked as the public and got "not released yet".
+⚠️ **`get-schedule-override.js` already served the draft correctly — no backend
+change was made, and none was needed.** The hole was the client not passing the
+session it was already holding.
+
+⚠️ **THE PART NOBODY ASKED ABOUT IS THE MATCH-DAY ONE.** `/manager`'s score
+sheet builds its match list from the same fetch, so **no score could be entered
+for an unpublished age group.** Managers can publish on tournament days only, so
+with nothing published before the weekend, scoring sat behind a manager
+publishing it themselves first.
+
+| Shipped | What it was |
+|---|---|
+| `viewModeOf()` in `scores-data.js` | one derivation, four modes — `published` / `draft` / `sample` / `none`. ⚠️ Discriminated on the SERVER's `isDraft`, not on `!!session` — see RESTORE.md § Which reader sees which draw |
+| `/manager` | Fixtures, Results and Tables tabs, the score sheet and the Spirit award all read the draft |
+| `/app` | six fetch calls across three functions, none of which passed the session it was holding |
+| **`/organizer`** | **a new read-only "Fixtures & tables" tab — it had no view of a draw at all.** Ninth tab; two pinned counts went red and both were moved |
+| The marker | worded, not coloured, in three files, because `sample` renders INVENTED team names |
+
+**Jay's two calls:** show the sample draw rather than hiding it, and give
+`/organizer` its own panel rather than leaning on the `/manager` switcher.
+
+⚠️ **THE FAULT PROVER CAUGHT THREE FAULTS IN THE NEW TESTS THEMSELVES**, all the
+same shape — the stub answered identically whether or not the session was
+passed, so the likeliest regression of all was invisible; and a source check
+anchored on a string that appears in two methods of the same file passed while
+the method it named was broken. Detail in the spec. **This is the fourth
+consecutive piece of work where the instrument agreed with the intention.**
+
+⚠️ **THE SUITE RUNS IN THE CLOUD SANDBOX AND NOTHING SAID SO.** `CLAUDE.md` §5
+describes `powershell tests/runall.ps1` on jay-pc, ~7 minutes, polled through a
+log because an MCP call caps at 60s. The files are plain Node with no
+dependencies and each finds the clone itself:
+`for f in tests/test-*.js; do node "$f"; done` plus
+`node tests/_prove-registration.js` reproduces the entire run with no PowerShell
+and no bridge. **Iteration is free.** `runall.ps1` is still the authority for
+the header count on jay-pc.
+
 ## Where things stand
 
 | | |
@@ -297,7 +354,7 @@ destination refspec"*. That drops the source as well, and a bare fetch asks for
 | **Phone layout** | **Homepage, registration modals, `/rules` and `/app` are done and LIVE (8 Aug).** ⚠️ **`Organizer.dc.html` still has ZERO media queries** — as do `Signin.dc.html` (2/2 inputs under 16px, so iOS zooms on focus) and `Scores & Standings.dc.html` (deliberate — Jay's call 8 Aug: `/app` is the match-day phone answer). Counts and the three traps are in `RESTORE.md` § Phone layout. |
 | The real draw | **still placeholder clubs** in all 15 groups. Pitches and kick-off times are real; the pools wait on real registrations. Everything else waits on this. |
 | Results nav link | still an in-page `#results` jump — change to `/scores` only once the draw is real |
-| Tests | **38 files green; 759/759 faults caught; 33 suites clean undamaged** — MEASURED on jay-pc 8 Aug 2026 at `79d57fd`, `runall.ps1` reported `All green.` with 39 `--- ` headers (38 files + the prover). ⚠️ The fault count went 719 → 724 → 731 → 738 → 747 → 751 → 759 across 8 Aug as each change added its own; **the number in prose is worth nothing — trust `runall.ps1`'s own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` (33) going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** No new FILE was added on 8 Aug, so 33 is correct and must not move. |
+| Tests | **39 files green; 773/773 faults caught; 34 suites clean undamaged** — MEASURED **in the cloud sandbox on plain Node**, 8 Aug 2026, on `dev` with the draft-visibility work. ⚠️ **NOT yet run through `runall.ps1` on jay-pc at this commit** — that is the authority for the header count and it should print **40** (39 files + the prover). ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
 
 ## ⚠️ JOBS FOR JAY
 
@@ -415,7 +472,8 @@ Jay clicks the green button.
    **DONE 6 Aug (`3bfd9b7`)** — the gate is now driven: it fires, nothing moves
    until it is answered, dismissing it leaves the draft intact, a clean draft
    switches silently, and re-picking the current group is a no-op.
-4. **Splitting oversized `Organizer.dc.html`** — not started.
+4. **Splitting oversized `Organizer.dc.html`** — not started, and it grew by a
+   tab on 8 Aug (the read-only Fixtures & tables panel).
 4b. ⚠️ **`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL** — zero media queries,
    62 flex rows, 274 inline font-sizes under 16px, 5 tables. Jay asked for it on
    8 Aug and it was **deliberately not started**: `Manager.dc.html` was done

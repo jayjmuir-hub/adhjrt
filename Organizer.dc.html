@@ -154,6 +154,7 @@
           <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Tournament configuration</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
+            <button onClick="{{ showFixturesView }}" style="{{ tabFixturesStyle }}">Fixtures &amp; tables</button>
             <button onClick="{{ showVenue }}" style="{{ tabVenueStyle }}">Venue &amp; days</button>
             <button onClick="{{ showRegistration }}" style="{{ tabRegistrationStyle }}">Registration</button>
             <button onClick="{{ showDocuments }}" style="{{ tabDocumentsStyle }}">Documents<sc-if value="{{ hasDocs }}" hint-placeholder-val="{{ false }}"> ({{ docCount }})</sc-if></button>
@@ -575,6 +576,133 @@
             </sc-for>
           </select>
           <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
+        </div>
+      </sc-if>
+
+      <!-- Fixtures & tables tab — READ-ONLY (Aug 2026).
+           Nothing here writes. Editing a draw and entering a score stay on
+           /manager, which an organiser reaches through the switcher only they
+           get. See openFixturesView() and the spec it names. -->
+      <sc-if value="{{ isFixturesView }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:24px">
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+              <div style="flex:1;min-width:260px">
+                <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:6px">Fixtures &amp; tables</div>
+                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">A read-only look at any age group's draw, results and standings — <b style="color:#454D58">including before it is published</b>. To change a draw or enter a score, use <b style="color:#454D58">/manager</b> and its age-group switcher.</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <label style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC">Age group</label>
+                <select value="{{ fxvAgeId }}" onChange="{{ onFxvAge }}" style="font-size:16px;padding:10px 12px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;background:#FFFFFF;color:#1A1C1F;min-height:44px">
+                  <sc-for list="{{ fxvAgeOptions }}" as="g" hint-placeholder-count="4">
+                    <option value="{{ g.id }}">{{ g.name }}</option>
+                  </sc-for>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <sc-if value="{{ fxvLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#5A626E;font-size:14px">Loading…</div>
+          </sc-if>
+          <!-- "could not load" is NOT the same as "nothing drawn yet" — see the
+               fxvUnavailable comment in state. -->
+          <sc-if value="{{ fxvUnavailable }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Could not load</div>
+              <div style="color:#5A626E;font-size:14px">The draw for {{ fxvAgeName }} could not be fetched. Pick the age group again to retry.</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fxvNoteShow }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFF8E6;border:1px solid #E8C46A;border-left:4px solid #C98A05;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px;color:#7A5300;margin-bottom:5px">{{ fxvNoteTitle }}</div>
+              <div style="color:#5A4A22;font-size:13px;line-height:1.6">{{ fxvNoteBody }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fxvAwaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Nothing drawn yet</div>
+              <div style="color:#5A626E;font-size:14px">There is no saved draw for {{ fxvAgeName }} and nothing published.</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fxvEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+              <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No matches</div>
+              <div style="color:#5A626E;font-size:14px">Nothing is scheduled for {{ fxvAgeName }} yet.</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ fxvPoolGroups }}" as="g" hint-placeholder-count="2">
+            <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 9px">{{ g.name }}</div>
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid rgba(0,0,0,0.08)">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div style="font-weight:600;font-size:14px;line-height:1.4">{{ r.teams }}</div>
+                  <div style="font-family:'Anton';font-size:18px;white-space:nowrap">{{ r.score }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ fxvHasKnockout }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:20px 0 9px">Knockout</div>
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+              <sc-for list="{{ fxvKnockoutRows }}" as="r" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid rgba(0,0,0,0.08)">
+                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div style="font-weight:600;font-size:14px;line-height:1.4"><span style="display:block;font-size:11px;color:#5A626E;margin-bottom:2px">{{ r.meta }}</span>{{ r.teams }}</div>
+                  <div style="font-family:'Anton';font-size:18px;white-space:nowrap">{{ r.score }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ fxvFestival }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:24px 22px;text-align:center;margin-top:20px">
+              <div style="font-family:'Anton';font-size:20px;text-transform:uppercase;margin-bottom:8px">Festival age group</div>
+              <div style="color:#5A626E;font-size:14px">{{ fxvFestivalBlurb }}</div>
+            </div>
+          </sc-if>
+
+          <sc-for list="{{ fxvTableCards }}" as="tc" hint-placeholder-count="2">
+            <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:20px 0 9px">{{ tc.name }} — table</div>
+            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+              <div style="overflow-x:auto">
+                <table style="width:100%;font-size:13px;min-width:460px">
+                  <thead><tr>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">#</th>
+                    <th style="text-align:left;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 8px;background:#FAF9F7">Team</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">P</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">W</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">D</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">L</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">PF</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">PA</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">+/&minus;</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">Pts</th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ tc.rows }}" as="t" hint-placeholder-count="4">
+                      <tr style="{{ t.rowStyle }}">
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07);color:#5A626E">{{ t.pos }}</td>
+                        <td style="text-align:left;padding:9px 8px;border-top:1px solid rgba(0,0,0,0.07);font-weight:700">{{ t.team }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.P }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.W }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.D }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.L }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.PF }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.PA }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.diff }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07);font-family:'Anton';font-size:15px">{{ t.pts }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="font-size:11.5px;color:#5A626E;padding:11px 16px;border-top:1px solid rgba(0,0,0,0.07);line-height:1.6">Green edge = qualifies for the knockout stage.</div>
+            </div>
+          </sc-for>
         </div>
       </sc-if>
 
@@ -1658,6 +1786,21 @@ class Component extends DCLogic {
        /signin when there is none. */
     api: null, session: null,
     tab: 'teams', search: '', clubFilter: '', ageFilter: '', expandedTeam: '',
+    /* The Fixtures & tables tab (Aug 2026) — spec
+       claude/specs/spec-draft-visibility-aug-2026.md.
+
+       ⚠️ READ-ONLY ON PURPOSE, AND THAT IS THE WHOLE DESIGN. Every draw edit
+       and every score stays in /manager, where an organiser already reaches any
+       age group through the switcher only they get. A second write path against
+       the same draft blob would be a second thing to keep in step, and Blobs
+       has no compare-and-set — see RESTORE.md § Results storage for what that
+       cost the first time it happened.
+
+       fxvUnavailable is SEPARATE from an empty draw, the same distinction the
+       docs and clubs tabs both needed: "nothing drawn yet" and "the fetch
+       failed" are different facts and have to read differently. */
+    fxvAgeId: '', fxvFixtures: null, fxvStandings: null,
+    fxvLoading: false, fxvUnavailable: false,
     /* Documents (Aug 2026) -- spec claude/specs/spec-documents.md.
        docsUnavailable is SEPARATE from an empty list on purpose: "none yet"
        and "could not load" are different facts and must read differently.
@@ -3012,6 +3155,133 @@ class Component extends DCLogic {
     if (api && api.loadVenue) { api.loadVenue().catch(() => {}); }
   }
 
+  /* ---------------- Fixtures & tables tab (READ-ONLY) ----------------
+     Why this tab exists: /organizer had no view of a draw at all. Fixtures,
+     results and standings were readable on /manager, on /app and on the public
+     /scores — and every one of those three asked as the PUBLIC, so an
+     unpublished age group came back "not released yet" to the very people whose
+     job is to check it before it goes out. Threading the session fixed the
+     other two surfaces; this tab is the one that was missing entirely.
+     Spec: claude/specs/spec-draft-visibility-aug-2026.md. */
+  openFixturesView() {
+    this.setState({ tab: 'fixtures' });
+    /* First open picks a group so the tab is never a blank frame with a
+       dropdown. Any later open keeps whatever was being looked at. */
+    const agId = this.state.fxvAgeId || (MANAGER_AGE_GROUPS[0] || {}).id || '';
+    if (agId) this.loadFixturesView(agId);
+  }
+
+  async loadFixturesView(agId) {
+    const { api, session } = this.state;
+    if (!api || !agId) return;
+    /* ⚠️ THE AGE ID IS SET BEFORE THE AWAIT AND RE-CHECKED AFTER IT. Same
+       shape as loadDraw() on /manager (RESTORE.md § Publishing fixtures): the
+       selector stays live while this is in flight, so a response for the group
+       the organiser has just left must not paint over the one they moved to. */
+    this.setState({ fxvAgeId: agId, fxvFixtures: null, fxvStandings: null, fxvLoading: true, fxvUnavailable: false });
+    try {
+      /* ⚠️ `session` IS WHAT MAKES THIS TAB WORTH HAVING. Drop it and every
+         unpublished group reads "not published yet" — which is the exact fault
+         this tab was built to answer. An organiser's session carries
+         ageGroupId '*', so the server allows the draft for any group. */
+      const [fx, st] = await Promise.all([
+        api.getFixtures(agId, session),
+        api.getStandings(agId, session),
+      ]);
+      if (this.state.fxvAgeId !== agId) return; // a newer pick won the race
+      this.setState({ fxvFixtures: fx, fxvStandings: st, fxvLoading: false });
+    } catch (e) {
+      if (this.state.fxvAgeId !== agId) return;
+      /* Told apart from an empty draw on purpose — see the state comment. */
+      this.setState({ fxvLoading: false, fxvUnavailable: true });
+    }
+  }
+
+  /* The render values for the tab, kept out of vals() because that method is
+     already long enough to hide a mistake in. */
+  fxvVals(s) {
+    const fx = s.fxvFixtures, st = s.fxvStandings;
+    const view = (fx && fx.view) || (st && st.view) || '';
+    const shortName = (t) => (s.api && s.api.teamShort ? s.api.teamShort(t) : t);
+
+    /* The marker. Same four modes and the same wording as /manager and /app —
+       ⚠️ if you reword one, reword all three: tests/test-organizer-fixtures.js
+       asserts the titles match Manager.dc.html's exactly, because three copies
+       of a sentence drift and this repo has the scars. */
+    const note = view === 'draft'
+      ? { show: true, title: 'Draft — not published',
+          body: 'You can see this because you are signed in. The public still sees "coming soon" for this age group until it is published on /manager.' }
+      : view === 'sample'
+        ? { show: true, title: 'Sample draw — not real fixtures',
+            body: 'No draw has been saved for this age group yet, so these pools are auto-generated placeholders and the team names are invented. Nothing here is visible to the public.' }
+        : { show: false, title: '', body: '' };
+
+    const awaiting = !!(fx && fx.awaitingPublication);
+    const ready = !!fx && !awaiting;
+
+    /* Pool games grouped by pool, in first-appearance order — the same
+       ordering /manager uses, for the same reason: a flat list of twenty rows
+       is unreadable and the pool is how people think about a draw. */
+    const byPool = {};
+    if (ready) (fx.pool || []).forEach((m) => {
+      const k = m.poolName || 'Matches';
+      (byPool[k] = byPool[k] || []).push(m);
+    });
+    const row = (m) => ({
+      time: m.time || '', pitch: m.pitch || 'TBD',
+      teams: `${shortName(m.home)} v ${shortName(m.away)}`,
+      meta: m.round || m.poolName || '',
+      score: (m.result && m.result.homeScore != null)
+        ? `${m.result.homeScore}–${m.result.awayScore}` : '',
+      played: !!(m.result && m.result.homeScore != null),
+    });
+    const poolGroups = Object.keys(byPool).map((k) => ({ name: k, rows: byPool[k].map(row) }));
+    /* A knockout slot with neither side decided is not a fixture anybody can
+       play, so it is excluded here exactly as it is on /manager and /app. */
+    const knockoutRows = ready ? (fx.knockout || []).filter((k) => k.home || k.away).map(row) : [];
+
+    const stAge = (st && st.ageGroup) || null;
+    const stReady = !!st && !st.awaitingPublication;
+    const advance = (st && st._advance) || 0;
+    const tableCards = (stReady && stAge && stAge.hasStandings)
+      ? (st.pools || []).map((p) => ({
+          name: p.name,
+          rows: ((st.tables || {})[p.id] || []).map((t, i) => ({
+            pos: i + 1, team: shortName(t.team),
+            P: t.P, W: t.W, D: t.D, L: t.L, PF: t.PF, PA: t.PA,
+            diff: `${t.PF - t.PA > 0 ? '+' : ''}${t.PF - t.PA}`,
+            pts: t.pts,
+            /* Green edge on the qualifying places only — the top `advance`
+               rows, not every row and not none. */
+            rowStyle: i < advance ? 'box-shadow:inset 3px 0 0 #17A34A' : '',
+          })),
+        }))
+      : [];
+
+    return {
+      isFixturesView: s.tab === 'fixtures',
+      fxvAgeId: s.fxvAgeId,
+      fxvAgeOptions: MANAGER_AGE_GROUPS,
+      fxvAgeName: (MANAGER_AGE_GROUPS.find((g) => g.id === s.fxvAgeId) || {}).name || s.fxvAgeId,
+      onFxvAge: (e) => this.loadFixturesView(e.target.value),
+      fxvLoading: s.fxvLoading,
+      fxvUnavailable: s.fxvUnavailable,
+      fxvNoteShow: note.show, fxvNoteTitle: note.title, fxvNoteBody: note.body,
+      /* Only ever true for a group nothing is published for AND no draft
+         exists for — i.e. view 'none'. An organiser should almost never see
+         this, and if they do it means the draft blob is genuinely empty. */
+      fxvAwaiting: awaiting && !s.fxvLoading && !s.fxvUnavailable,
+      fxvEmpty: ready && poolGroups.length === 0 && knockoutRows.length === 0,
+      fxvPoolGroups: poolGroups,
+      fxvHasKnockout: knockoutRows.length > 0,
+      fxvKnockoutRows: knockoutRows,
+      fxvFestival: !!(stReady && stAge && !stAge.hasStandings),
+      fxvFestivalBlurb: stAge ? `${stAge.name} is non-competitive — no standings are kept.` : '',
+      fxvTableCards: tableCards,
+      fxvHasTables: tableCards.length > 0,
+    };
+  }
+
   /* Is today one of the tournament days? Read off the venue layout rather
      than hardcoded, and compared in local terms because that is how a person
      standing at Zayed Sports City experiences the date. A UI guard on the
@@ -4116,6 +4386,7 @@ class Component extends DCLogic {
       isDocuments: s.tab === 'documents',
       ...this.docVals(s),
       isTournament: s.tab === 'tournament',
+      ...this.fxvVals(s),
       bulkBusy: s.bulkBusy, bulkMsg: s.bulkMsg,
       onPublishAll: () => this.onPublishAll(),
       onUnpublishAll: () => this.onUnpublishAll(),
@@ -4151,6 +4422,7 @@ class Component extends DCLogic {
       showClubs: () => this.setState({ tab: 'clubs' }),
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       showTournament: () => this.openTournament(),
+      showFixturesView: () => this.openFixturesView(),
       showDocuments: () => { this.setState({ tab: 'documents' }); this.loadDocuments(); },
       tabTeamsStyle: s.tab === 'teams' ? tabOn : tabOff,
       tabPlayersStyle: s.tab === 'players' ? tabOn : tabOff,
@@ -4159,6 +4431,7 @@ class Component extends DCLogic {
       tabClubsStyle: s.tab === 'clubs' ? tabOn : tabOff,
       tabRegistrationStyle: s.tab === 'registration' ? tabOn : tabOff,
       tabTournamentStyle: s.tab === 'tournament' ? tabOn : tabOff,
+      tabFixturesStyle: s.tab === 'fixtures' ? tabOn : tabOff,
       tabDocumentsStyle: s.tab === 'documents' ? tabOn : tabOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,

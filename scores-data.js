@@ -875,6 +875,42 @@ async function fetchOverrideState(agId, session) {
   };
 }
 
+/* ---------------- WHICH DRAW IS THIS READER ALLOWED TO SEE ----------------
+   One derivation, four answers, called by getFixtures() and getStandings() so
+   the two cannot drift apart. getDraw() does NOT use it — the editor always
+   wants the draft and reports the publish state separately, in `_publish`.
+   Added Aug 2026: the editor could always read an
+   unpublished draw and every OTHER view of the same data was blind, so a
+   manager who had just built a draw could not read it back as a fixture list,
+   could not see a table, and — because the score sheet's match list is built
+   from the same fetch — could not enter a score at all.
+
+     'published' the published copy. What the public gets, unchanged.
+     'draft'     an unpublished draft this reader is allowed to see.
+     'sample'    no draft exists, so resolveDraw() will fall back to the
+                 deterministic auto-generated draw. PLACEHOLDER CLUBS.
+     'none'      nothing published and no right to a draft. "Coming soon".
+
+   ⚠️ THE DISCRIMINATOR IS THE SERVER'S `isDraft`, NOT `!!session`, AND THE
+   DIFFERENCE IS AUTHORISATION. get-schedule-override.js sets isDraft only when
+   it verified the token AND hasAgeGroupAccess() passed; anything short of that
+   falls through to the published answer with isDraft false. Deriving the mode
+   here from `isDraft` therefore inherits the server's decision for free — a
+   manager asking for somebody else's age group is refused the draft and lands
+   on 'published'/'none' with no client-side check needed.
+
+   Deriving it from `!!session` instead would put every manager into a draft
+   view for all fifteen groups, with `schedule` empty because the server
+   withheld it — i.e. a SAMPLE badge over placeholder clubs, presented as that
+   group's own work. ⚠️ It would also pass a hand-check by an organiser, who has
+   access to everything and would never see the broken case. */
+function viewModeOf(state) {
+  if (state && state.isDraft) return state.schedule ? 'draft' : 'sample';
+  if (!state || state.awaitingPublication) return 'none';
+  return 'published';
+}
+export { viewModeOf };
+
 const delay = (ms) => new Promise((r) => setTimeout(r, ms)); // small UI-friendly pause
 
 function findAg(id) { return AGE_GROUPS.find((a) => a.id === id); }
@@ -1512,14 +1548,20 @@ export async function getSchedule(agId) {
   return { ageGroup: { id: ag.id, name: ag.name }, pools, knockout };
 }
 
-export async function getStandings(agId) {
+/* `session` is optional and is what lets a manager or organiser see an
+   unpublished draw — see viewModeOf(). A public caller passes nothing and gets
+   exactly what it always got. ⚠️ Scores & Standings.dc.html (/scores) must keep
+   passing nothing: it is a purely public page and a parent must never see a
+   draft. Asserted in tests/test-scores-public.js. */
+export async function getStandings(agId, session) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return null;
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId)]);
-  if (state.awaitingPublication) {
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const view = viewModeOf(state);
+  if (view === 'none') {
     return {
       ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings },
-      awaitingPublication: true,
+      awaitingPublication: true, view,
       _advance: ag.advance, pools: [], tables: {}, bracket: [], doubleBracket: null,
     };
   }
@@ -1529,7 +1571,7 @@ export async function getStandings(agId) {
   const isSpecial = SPECIAL_BRACKET_AGE_IDS.includes(ag.id);
   const bracket = ag.hasStandings && !isSpecial ? buildBracket(ag, draw, tables, store) : [];
   const doubleBracket = ag.hasStandings && isSpecial ? buildU16BBracket(ag, draw, tables, store) : null;
-  return { ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings }, _advance: ag.advance, pools: draw.pools || [], tables, bracket, doubleBracket };
+  return { ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings }, view, _advance: ag.advance, pools: draw.pools || [], tables, bracket, doubleBracket };
 }
 
 export function supportsSpiritAward(agId) {
@@ -1542,9 +1584,12 @@ export function supportsSpiritAward(agId) {
 // real match for the age group has a result, `complete` is true and
 // `winners` lists the player(s) with the most nominations (a tie produces
 // more than one winner).
-export async function getSpiritAward(agId) {
+export async function getSpiritAward(agId, session) {
   if (!SPIRIT_AWARD_AGE_IDS.includes(agId)) return { supported: false };
-  const fixtures = await getFixtures(agId);
+  /* Session threaded through for the same reason as its caller — the tally is
+     derived from getFixtures(), so without it the award card stayed empty for
+     an unpublished group even to the manager who owns it. */
+  const fixtures = await getFixtures(agId, session);
   const all = [...fixtures.pool, ...fixtures.knockout];
   const real = all.filter((fx) => fx.home && fx.away);
   const totalMatches = real.length;
@@ -1575,11 +1620,15 @@ export async function getSpiritAward(agId) {
   return { supported: true, totalMatches, playedMatches, complete, tally, winners };
 }
 
-export async function getFixtures(agId) {
+/* `session` is optional — see the note on getStandings() and viewModeOf().
+   ⚠️ This is also what the score sheet's match list is built from, so passing
+   the session is what lets a score be entered before the draw is published. */
+export async function getFixtures(agId, session) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return [];
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId)]);
-  if (state.awaitingPublication) return { awaitingPublication: true, pool: [], knockout: [] };
+  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const view = viewModeOf(state);
+  if (view === 'none') return { awaitingPublication: true, view, pool: [], knockout: [] };
   const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const pool = draw.slots.map((fx) => ({
@@ -1602,7 +1651,7 @@ export async function getFixtures(agId) {
     pitch: s.pitch || 'TBD',
     result: store[s.id] || null,
   }));
-  return { pool, knockout };
+  return { pool, knockout, view };
 }
 
 /* THE team display-name rule, as a plain function (added Aug 2026 for the

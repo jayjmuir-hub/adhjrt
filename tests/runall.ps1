@@ -58,6 +58,10 @@ $tests = @(
   'test-manager-dc.js',
   'test-manager-dc-score-sheet.js',
   'test-manager-dc-draw.js',
+  # Managers and organisers can see an unpublished draw (8 Aug 2026) - spec
+  # claude/specs/spec-draft-visibility-aug-2026.md. A NEW TEST FILE DOES NOT
+  # JOIN THE SUITE BY ITSELF; this line is the whole registration.
+  'test-draft-visibility.js',
   'test-knockout-brackets.js',
   'test-simulate-spirit-award.js',
   'test-scores-public.js',

@@ -7134,6 +7134,162 @@ const FAULTS = [
       'Preview a branch at https://<branch>--serene-gingersnap-1d0eb6.netlify.app\n\n### 5. The tests'),
     expect: ['every mention of the dead host is flagged as dead'],
   },
+
+  /* ---- managers and organisers can see an unpublished draw (8 Aug 2026) ----
+     Spec: claude/specs/spec-draft-visibility-aug-2026.md. The suite is
+     test-draft-visibility.js, and it is the first file in this repo to DRIVE
+     getFixtures()/getStandings() against a stubbed backend rather than read
+     their source — which is why most of the faults below are behavioural. A
+     source-only suite would have caught barely a third of them. */
+  {
+    /* ⚠️ THE ONE THAT MATTERS. Swaps the discriminator from the server's
+       `isDraft` — set only once hasAgeGroupAccess() has passed — to "we got a
+       state at all". Every manager then lands in a draft/sample view for all
+       fifteen age groups, and a public reader gets a SAMPLE badge over
+       placeholder clubs. ⚠️ An organiser hand-checking this would see nothing
+       wrong, because they have access to every group. */
+    name: 'viewModeOf stops asking whether the server allowed the draft',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(SD, "  if (state && state.isDraft) return state.schedule ? 'draft' : 'sample';",
+      "  if (state) return state.schedule ? 'draft' : 'sample';"),
+    expect: ['REFUSED the draft to', 'public + unpublished → view none'],
+  },
+  {
+    /* The classic: the session is accepted, threaded, and then not passed on.
+       Every source check that greps for `getFixtures(agId, session)` passes
+       against this. Only the content assertion on the draft's own pitch name
+       fails — claude/lessons.md, "calling the right function is not the same as
+       using its answer". */
+    name: 'getFixtures takes the session and asks as the public anyway',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(SD,
+      '  const ag = findAg(agId); if (!ag) return [];\n  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);',
+      '  const ag = findAg(agId); if (!ag) return [];\n  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId)]);'),
+    expect: ['session + draft → view draft', 'own pitch reached the output'],
+  },
+  {
+    /* Reverts the gate to the pre-fix condition. `view` is still computed and
+       still returned, so anything asserting the field EXISTS passes. */
+    name: 'getFixtures gates on awaitingPublication again instead of the view',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(SD,
+      "  if (view === 'none') return { awaitingPublication: true, view, pool: [], knockout: [] };",
+      '  if (state.awaitingPublication) return { awaitingPublication: true, view, pool: [], knockout: [] };'),
+    expect: ['session + draft → view draft', 'pool matches are returned'],
+  },
+  {
+    name: 'getStandings drops `view` from its answer',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(SD,
+      '  return { ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings }, view, _advance:',
+      '  return { ageGroup: { id: ag.id, name: ag.name, hasStandings: ag.hasStandings }, _advance:'),
+    expect: ['getStandings serves the draft to a session and nothing to the public / session + draft → view draft'],
+  },
+  {
+    /* The award is DERIVED from getFixtures, so it is a second reader needing
+       the same thread — and it was missed on the first pass of this very
+       change. `totalMatches` is the discriminating value: 0 on the public path,
+       non-zero on the draft one. */
+    name: 'getSpiritAward stops passing the session to getFixtures',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(SD, '  const fixtures = await getFixtures(agId, session);',
+      '  const fixtures = await getFixtures(agId);'),
+    expect: ['matches are counted'],
+  },
+  {
+    /* ⚠️ THE SILENT ONE. All three api calls in load() still read
+       `(agId, session)` and every source check on them passes — but `session`
+       is now undefined in that scope, so all three ask as the public. No error,
+       no console line, and the tabs quietly go back to "not released yet".
+       This is why the destructure is asserted on its own. */
+    name: 'Manager load() stops destructuring session out of state',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('Manager.dc.html',
+      '    const { api, session } = this.state;\n    const keepDraw = this.state.drawDirty;',
+      '    const { api } = this.state;\n    const keepDraw = this.state.drawDirty;'),
+    expect: ['destructures session out of state'],
+  },
+  {
+    name: 'the /manager standings fetch loses its session',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('Manager.dc.html', 'api.getStandings(agId, session)', 'api.getStandings(agId)'),
+    expect: ['/manager getStandings passes the session'],
+  },
+  {
+    /* The background poll, not the initial load. Dropping it here replaces a
+       working draft view with "coming soon" thirty seconds after the tab opens
+       — worse than never showing it, and invisible to a check that only looks
+       at the first fetch. Caught by the COUNT, which is why the count is
+       written into the check rather than one call being spot-checked. */
+    name: 'the /app background poll drops the session',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html', 'api.getFixtures(bid, S.session)', 'api.getFixtures(bid)'),
+    expect: ['all six of its fetch calls', 'no getFixtures call left without a session'],
+  },
+  {
+    /* ⚠️ THE LEAK, IN THE OTHER DIRECTION. /scores is purely public. A session
+       passed here shows a parent an unpublished draw — the one thing the
+       publish step exists to prevent. */
+    name: 'the public /scores page starts passing a session',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('Scores & Standings.dc.html', 'api.getStandings(selectedAgeId)',
+      'api.getStandings(selectedAgeId, session)'),
+    expect: ['/scores passes no session to getStandings'],
+  },
+  {
+    /* viewNote() is the only one of the three markers that runs on a page the
+       public can reach. Without the early return, every parent on /app is told
+       that real published fixtures are a draft. */
+    name: 'app.html viewNote loses its early return, so the marker shows on published fixtures',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html', "  if (view !== 'draft' && view !== 'sample') return '';",
+      "  if (view === 'never') return '';"),
+    expect: ['returns nothing for any mode but draft/sample'],
+  },
+  {
+    /* The sample view renders placeholder clubs. Drop the sentence and all that
+       is left is an amber border, which cannot say "these team names are
+       invented". Patched in ONE of the three files on purpose — the check reads
+       all three separately, so a per-file loss has to be caught. */
+    name: 'the /organizer sample marker stops saying the team names are invented',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(ORG, 'auto-generated placeholders and the team names are invented.',
+      'auto-generated placeholders.'),
+    expect: ['Organizer.dc.html says the sample team names are invented'],
+  },
+  {
+    /* The tab is read-only by design — editing and scoring stay on /manager so
+       there is no second write path against the draft blob. This smuggles a
+       write name into the panel. */
+    name: 'a write creeps into the read-only /organizer fixtures panel',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(ORG, 'onChange="{{ onFxvAge }}"', 'onChange="{{ onFxvAge }}" data-act="saveDraw"'),
+    expect: ['the panel does not call saveDraw'],
+  },
+  {
+    /* Same shape as the loadDraw() guard on /manager (RESTORE.md § Publishing
+       fixtures). The age selector stays live while the fetch is in flight, so
+       without this a response for the group the organiser has just left paints
+       over the one they moved to. */
+    name: 'loadFixturesView loses the guard against a stale response',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(ORG,
+      '      if (this.state.fxvAgeId !== agId) return; // a newer pick won the race',
+      '      if (false) return; // a newer pick won the race'),
+    expect: ['re-checks the age id after the await'],
+  },
+  {
+    /* /organizer reads through organizer-data.js, not scores-data.js. The
+       re-export is what makes the tab work at all, and forgetting it is how
+       this change first went red — test-accounts.js's api.* sweep caught it
+       independently, which is the coverage working twice over. */
+    name: 'organizer-data.js stops re-exporting the fixtures readers',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('organizer-data.js',
+      "export { getFixtures, getStandings, teamShort } from './scores-data.js';",
+      "export { teamShort } from './scores-data.js';"),
+    expect: ['re-exports getFixtures, getStandings and teamShort'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

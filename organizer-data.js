@@ -346,6 +346,20 @@ export {
   venue, loadVenue, teamNamesFromRegs,
 } from './scores-data.js';
 
+/* The READ-ONLY Fixtures & tables tab (Aug 2026) — spec
+   claude/specs/spec-draft-visibility-aug-2026.md. Re-exported for the same
+   reason as everything above it: this tab must read a draw through the
+   identical function /manager, /app and the public /scores read it through, or
+   "the fixtures" quietly comes to mean two different things.
+
+   ⚠️ BOTH TAKE AN OPTIONAL SESSION AS THEIR SECOND ARGUMENT, and passing it is
+   the entire point — it is what lets an organiser see an unpublished draft, or
+   the sample draw, instead of "not published yet". See viewModeOf() in
+   scores-data.js. ⚠️ teamShort is here because the tab shows codes rather than
+   full club names: a table cell has no room for "Abu Dhabi Harlequins 1".
+   Nothing in this group writes. */
+export { getFixtures, getStandings, teamShort } from './scores-data.js';
+
 export async function getRegistrationWindow() {
   const r = await tryFetchJson('/.netlify/functions/registration-window');
   if (r.real && r.json && r.json.ok) return r.json;

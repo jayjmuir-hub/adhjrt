@@ -228,6 +228,14 @@
               <div style="color:#5A626E;font-size:14px">{{ comingSoonBlurb }}</div>
             </div>
           </sc-if>
+          <!-- The unpublished marker. Amber left edge AND a sentence — the
+               colour alone cannot say "these team names are invented". -->
+          <sc-if value="{{ fxNoteShow }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFF8E6;border:1px solid #E8C46A;border-left:4px solid #C98A05;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px;color:#7A5300;margin-bottom:5px">{{ fxNoteTitle }}</div>
+              <div style="color:#5A4A22;font-size:13px;line-height:1.6">{{ fxNoteBody }}</div>
+            </div>
+          </sc-if>
           <sc-if value="{{ fixturesEmpty }}" hint-placeholder-val="{{ false }}">
             <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No matches</div>
@@ -279,6 +287,12 @@
               <div style="color:#5A626E;font-size:14px">{{ comingSoonBlurb }}</div>
             </div>
           </sc-if>
+          <sc-if value="{{ fxNoteShow }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFF8E6;border:1px solid #E8C46A;border-left:4px solid #C98A05;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px;color:#7A5300;margin-bottom:5px">{{ fxNoteTitle }}</div>
+              <div style="color:#5A4A22;font-size:13px;line-height:1.6">{{ fxNoteBody }}</div>
+            </div>
+          </sc-if>
           <sc-if value="{{ resultsEmpty }}" hint-placeholder-val="{{ false }}">
             <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No results yet</div>
@@ -308,6 +322,12 @@
             <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Standings not published yet</div>
               <div style="color:#5A626E;font-size:14px">{{ comingSoonBlurb }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ stNoteShow }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFF8E6;border:1px solid #E8C46A;border-left:4px solid #C98A05;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px;color:#7A5300;margin-bottom:5px">{{ stNoteTitle }}</div>
+              <div style="color:#5A4A22;font-size:13px;line-height:1.6">{{ stNoteBody }}</div>
             </div>
           </sc-if>
           <sc-if value="{{ tablesFestival }}" hint-placeholder-val="{{ false }}">
@@ -1238,7 +1258,14 @@ class Component extends DCLogic {
   }
 
   async load(agId) {
-    const { api } = this.state;
+    /* ⚠️ `session` IS LOAD-BEARING IN THIS DESTRUCTURE, NOT TIDINESS. Without
+       it the three fetches below ask as the PUBLIC, so an unpublished age group
+       came back awaitingPublication and the Fixtures, Results and Tables tabs
+       all rendered "hasn't been released yet" — to the manager who had just
+       built the draw. The score sheet's match list is built from the same
+       fetch, so no score could be entered either. See
+       claude/specs/spec-draft-visibility-aug-2026.md. */
+    const { api, session } = this.state;
     const keepDraw = this.state.drawDirty;
     /* load() runs after every score save and clear, and also after
        switchAge() (see above) once any dirty draft has been confirmed away.
@@ -1252,7 +1279,7 @@ class Component extends DCLogic {
       drawLoadedFor: keepDraw ? s.drawLoadedFor : null,
     }));
     this.clearDrawTransientState();
-    const [fx, st] = await Promise.all([api.getFixtures(agId), api.getStandings(agId)]);
+    const [fx, st] = await Promise.all([api.getFixtures(agId, session), api.getStandings(agId, session)]);
     if (this.state.ageId !== agId) return; // a stale response for a group we left
     this.setState({ fixtures: fx, standings: st });
     if (this.state.tab === 'draw' && !this.state.drawDirty) await this.loadDraw(agId);
@@ -1260,7 +1287,7 @@ class Component extends DCLogic {
     /* Only fetched where the award actually runs — an unconditional fetch
        would put a request (and an empty card) on every other age group. */
     if (api.supportsSpiritAward(agId)) {
-      const award = await api.getSpiritAward(agId);
+      const award = await api.getSpiritAward(agId, session);
       if (this.state.ageId === agId) this.setState({ spiritAward: award });
     }
   }
@@ -2214,6 +2241,37 @@ class Component extends DCLogic {
     const sheetR = sheetMatch && sheetMatch.result;
     const fx = s.fixtures;
     const fxReady = !!fx && !fx.awaitingPublication;
+    /* ---- THE UNPUBLISHED MARKER ----
+       api.getFixtures/getStandings now return a `view` of 'published' |
+       'draft' | 'sample' | 'none' (see viewModeOf() in scores-data.js). Only
+       the first two mean "these are real fixtures".
+
+       ⚠️ THE MARKER IS WORDED, NOT COLOURED, AND THAT IS THE POINT. 'sample'
+       renders the deterministic auto-generated draw, which is PLACEHOLDER
+       CLUBS — and while the real draw is still outstanding that is what most
+       age groups will show. A tinted border would not tell anybody that the
+       team names are invented, so the body text says so in a sentence. Both
+       titles are pinned by tests; if you reword one, grep tests/ first. */
+    const viewNote = (v) => {
+      if (v === 'draft') return {
+        show: true,
+        title: 'Draft — not published',
+        body: 'You can see this because you are signed in. The public still sees "coming soon" for this age group until it is published on the Draw tab.',
+      };
+      if (v === 'sample') return {
+        show: true,
+        title: 'Sample draw — not real fixtures',
+        body: 'No draw has been saved for this age group yet, so these pools are auto-generated placeholders and the team names are invented. Nothing here is visible to the public.',
+      };
+      return { show: false, title: '', body: '' };
+    };
+    /* Two derivations rather than one shared value on purpose: the fixtures and
+       results tabs read `fx`, the tables tab reads `st`, and they are separate
+       fetches. They should always agree — if they ever do not, the honest thing
+       is for each tab to describe its own data. `s.standings` is read directly
+       rather than through the `st` alias below, which is declared later. */
+    const fxNote = viewNote(fx && fx.view);
+    const stNote = viewNote(s.standings && s.standings.view);
     /* A knockout slot with neither side decided is not a fixture anyone can
        play, so it is excluded everywhere a match list is built. */
     const playable = fxReady ? (fx.pool || []).concat((fx.knockout || []).filter((k) => k.home || k.away)) : [];
@@ -2382,6 +2440,16 @@ class Component extends DCLogic {
       onCloseDocView: () => this.closeDocView(),
 
       comingSoonBlurb: `The draw for ${this.ageName(s.ageId)} hasn't been released yet.`,
+
+      /* The unpublished marker. One derivation per fetch — see viewNote()
+         above. `fxNote` covers the Fixtures and Results tabs, `stNote` the
+         Tables tab. */
+      fxNoteShow: fxNote.show,
+      fxNoteTitle: fxNote.title,
+      fxNoteBody: fxNote.body,
+      stNoteShow: stNote.show,
+      stNoteTitle: stNote.title,
+      stNoteBody: stNote.body,
 
       fixturesLoading: !fx,
       fixturesAwaiting: !!(fx && fx.awaitingPublication),

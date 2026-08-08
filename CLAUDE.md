@@ -493,6 +493,21 @@ transient connection failure reads exactly like "the site is gone".
 build step. `powershell tests/runall.ps1`, or `node tests/<file>` for one. Each
 file finds the clone itself, so any checkout on any machine can run them.
 
+⚠️ **AND THE WHOLE SUITE RUNS IN A CLOUD SANDBOX, WITH NO POWERSHELL AND NO
+BRIDGE — measured 8 Aug 2026.** The paragraphs below describe polling a log on
+jay-pc because an MCP `start_process` call caps at 60s, and that is still true
+*there*; it is not the only option. In a sandbox:
+
+```
+for f in tests/test-*.js; do node "$f" || echo "FAILED $f"; done
+node tests/_prove-registration.js
+```
+
+reproduces the entire run, prover included, in a few minutes. **That makes
+iteration free** — build and prove in the sandbox, then run `runall.ps1` on
+jay-pc once before the merge, because it is still the authority for the
+`--- <file>` header count and for the CRLF checkout.
+
 It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section

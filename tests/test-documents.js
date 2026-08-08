@@ -702,21 +702,26 @@ section('The tab bar keeps Jay’s order with Documents in it');
   /* The regroup shipped on 7 Aug with an order assertion in
      test-organizer-clubs.js pinning SEVEN tabs. Documents is the eighth and
      joins the list deliberately — that check exists so an eighth tab cannot
-     slip in unnoticed, and this is the moment it is meant to fire. */
+     slip in unnoticed, and this is the moment it is meant to fire.
+
+     ⚠️ AND IT FIRED AGAIN ON 8 AUG, correctly, when the read-only "Fixtures &
+     tables" tab became the ninth. ⚠️ THE SAME COUNT IS PINNED IN
+     test-organizer-clubs.js FROM THE SAME SLICE — two copies, on purpose, and
+     both went red. Move one and you move the other in the same commit. */
   const src = readRepo('Organizer.dc.html');
   const a = src.indexOf('<!-- tabs');
   const b = src.indexOf('<!-- 30 Jul:', a);
   const bar = src.slice(a, b).replace(/<!--[\s\S]*?-->/g, '');
 
   const ORDER = ['showClubs', 'showTeams', 'showPlayers',
-                 'showTournament', 'showVenue', 'showRegistration', 'showDocuments',
-                 'showAccounts'];
+                 'showTournament', 'showFixturesView', 'showVenue', 'showRegistration',
+                 'showDocuments', 'showAccounts'];
   const at = (h) => bar.indexOf('onClick="{{ ' + h + ' }}"');
   let ordered = true;
   for (let i = 1; i < ORDER.length; i++) if (at(ORDER[i]) < at(ORDER[i - 1])) ordered = false;
-  check('all eight tabs are present', ORDER.every((h) => at(h) > -1));
+  check('all nine tabs are present', ORDER.every((h) => at(h) > -1));
   check('…in Jay’s order, Documents inside Tournament configuration', ordered);
-  eq('there are exactly eight tabs', (bar.match(/onClick="\{\{ show/g) || []).length, 8);
+  eq('there are exactly nine tabs', (bar.match(/onClick="\{\{ show/g) || []).length, 9);
 
   /* ⚠️ Jay placed Documents under Tournament configuration. A reasonable
      person would call this distribution rather than configuration — it is

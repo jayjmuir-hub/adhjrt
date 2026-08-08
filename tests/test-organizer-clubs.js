@@ -366,8 +366,8 @@ section('The tab bar is grouped, in Jay’s order');
   const bar = src.slice(barStart, barEnd).replace(/<!--[\s\S]*?-->/g, '');
 
   const ORDER = ['showClubs', 'showTeams', 'showPlayers',
-                 'showTournament', 'showVenue', 'showRegistration', 'showDocuments',
-                 'showAccounts'];
+                 'showTournament', 'showFixturesView', 'showVenue', 'showRegistration',
+                 'showDocuments', 'showAccounts'];
 
   const at = (h) => bar.indexOf('onClick="{{ ' + h + ' }}"');
   ORDER.forEach((h) => check('the bar carries ' + h, at(h) > -1));
@@ -377,7 +377,7 @@ section('The tab bar is grouped, in Jay’s order');
      "Clubs is first and Accounts is last" perfectly. */
   let ordered = true;
   for (let i = 1; i < ORDER.length; i++) if (at(ORDER[i]) < at(ORDER[i - 1])) ordered = false;
-  check('the seven tabs are in Jay’s order, left to right', ordered,
+  check('the tabs are in Jay’s order, left to right', ordered,
     ORDER.map((h) => h + '@' + at(h)).join(' '));
 
   /* ⚠️ THE COUNT IS ASSERTED TOO. A ninth tab added without a decision about
@@ -386,15 +386,20 @@ section('The tab bar is grouped, in Jay’s order');
      age-group picker: when a rule is "everywhere X appears", write the COUNT
      into the check.
 
-     ⚠️ IT WENT 7 -> 8 ON 7 AUG 2026 WHEN DOCUMENTS LANDED, AND THAT IS THE
-     CHECK WORKING RATHER THAN AN OBSTACLE. The number moved in the same
-     commit as the tab, with the new handler added to ORDER above. If you are
-     reading this because the check just failed: only change the number if
-     you have ALSO added the handler to ORDER. Changing it on its own deletes
-     the only thing guarding tab order and leaves a check that still looks
-     like coverage. */
+     ⚠️ IT WENT 7 -> 8 ON 7 AUG 2026 WHEN DOCUMENTS LANDED, AND 8 -> 9 ON
+     8 AUG WHEN THE READ-ONLY "Fixtures & tables" TAB LANDED. Both times this
+     check failed first and that is the check WORKING rather than an obstacle.
+     The number moves in the same commit as the tab, with the new handler added
+     to ORDER above. If you are reading this because the check just failed: only
+     change the number if you have ALSO added the handler to ORDER. Changing it
+     on its own deletes the only thing guarding tab order and leaves a check
+     that still looks like coverage.
+
+     ⚠️ THE COUNT IS PINNED IN TWO FILES — here and in tests/test-documents.js,
+     which asserts the same number from the same slice. Both went red on the
+     ninth tab. If you move one, move the other in the same commit. */
   const buttons = (bar.match(/onClick="\{\{ show/g) || []).length;
-  eq('there are exactly eight tabs', buttons, 8);
+  eq('there are exactly nine tabs', buttons, 9);
 
   /* The three group labels, each read as its own claim. "A label exists"
      would pass on a bar that had lost two of them. */

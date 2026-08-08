@@ -1343,6 +1343,80 @@ selection and the picker starts lying about where you are.
   fault that brings the duplicate back, and one that empties the block heading
   so "it is gone" cannot be satisfied by the day vanishing altogether.
 
+## Which reader sees which draw — `viewModeOf()`
+
+**There is one derivation and it lives in `scores-data.js`.** `getFixtures()` and
+`getStandings()` both call `viewModeOf(state)`, which returns one of four:
+
+| Mode | When | What is served |
+|---|---|---|
+| `published` | a published copy exists | the published draw |
+| `draft` | the caller is allowed the draft AND a draft exists | the draft, behind a worded marker |
+| `sample` | the caller is allowed the draft and NO draft exists | the auto-generated draw — **placeholder clubs** — behind a worded marker |
+| `none` | nobody is allowed the draft and nothing is published | nothing; the reader shows "coming soon" |
+
+⚠️ **THE DISCRIMINATOR IS THE SERVER'S `isDraft`, NOT "A SESSION EXISTS", AND
+THAT IS AN AUTHORISATION DECISION.** `get-schedule-override.js` sets `isDraft`
+only after it has verified the token *and* `hasAgeGroupAccess()` has passed;
+anything short of that falls through to the published answer with `isDraft`
+false. Deriving the mode from it therefore inherits the server's decision for
+free — a manager asking for somebody else's age group is refused the draft and
+lands on `published`/`none` with no client-side check written anywhere.
+
+Deriving it from `!!session` instead would put **every manager into a draft view
+for all fifteen groups**, with the schedule empty because the server withheld it
+— a SAMPLE badge over placeholder clubs, presented as that group's own work.
+⚠️ **And it would pass a hand-check by an organiser**, who has access to
+everything and would never see the broken case.
+
+**Who passes a session, and who must not:**
+
+| Caller | Session? |
+|---|---|
+| `/manager` `load()` — Fixtures, Results, Tables, the score sheet, the Spirit award | ✅ |
+| `/app` — `load()`, `loadFollowData()`, and both fetches in `refresh()` | ✅ |
+| `/organizer` — `loadFixturesView()` | ✅ |
+| **`/scores`** (`Scores & Standings.dc.html`) | ❌ **never** — purely public |
+| **The homepage** (`getSchedule()`) | ❌ **never** — takes no session parameter |
+
+⚠️ **THE SCORE SHEET IS BUILT FROM THE SAME FETCH.** `/manager`'s `playable`
+list comes from `getFixtures()`, so before this existed **no score could be
+entered for an unpublished age group at all** — and `_publish.js` lets a manager
+publish on tournament days only. If no organiser had published before the
+weekend, match-day scoring sat behind a manager publishing it themselves first.
+
+⚠️ **THE MARKER IS WORDED, NOT COLOURED, AND THE WORDING IS ASSERTED.** The
+`sample` view renders invented team names; an amber edge cannot say so. The two
+titles — *"Draft — not published"* and *"Sample draw — not real fixtures"* — are
+carried in **three** files (`Manager.dc.html`, `app.html`, `Organizer.dc.html`)
+and `tests/test-draft-visibility.js` reads all three separately, so a per-file
+loss is caught. Reword one, reword all three.
+
+⚠️ **`app.html`'s `viewNote()` returns `''` for `published` AND for `none`.** It
+is the only one of the three markers that runs on a page the public can reach —
+without that early return every parent on `/app` is told real fixtures are a
+draft.
+
+**The `/organizer` "Fixtures & tables" tab is READ-ONLY on purpose.** Editing a
+draw and entering a score stay on `/manager`, which an organiser reaches through
+the age-group switcher only they get. A second write path against the same draft
+blob would be a second thing to keep in step, and Blobs has no compare-and-set
+— see § Results storage for what that cost the first time. A test asserts the
+panel's markup names no write function.
+
+⚠️ **`regeneratePoolSlots()` MINTS MATCH IDS FROM `Date.now()`**, so a
+regenerated draft carries brand-new ids and results stored against the old ones
+do not appear in draft standings. Harmless while no results exist; on match day,
+editing pools makes draft tables read empty. **Pre-existing behaviour — draft
+standings expose it, they do not cause it.**
+
+⚠️ **`/organizer` READS THROUGH `organizer-data.js`, NOT `scores-data.js`.**
+`getFixtures`, `getStandings` and `teamShort` are re-exported there. Forgetting
+that is how this change first went red, caught by `test-accounts.js`'s sweep
+asserting every `api.*` the page calls actually exists.
+
+---
+
 ## Publishing fixtures
 
 ⚠️ **`loadDraw(agId)` ON `/manager` OPENS WITH AN ENTRY GUARD, AND IT IS

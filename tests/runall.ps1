@@ -53,6 +53,7 @@ $tests = @(
   'test-documents.js',
   'test-email.js',
   'test-google-auth.js',
+  'test-google-auth-behaviour.js',
   'test-fixtures-results-sync.js',
   'test-simulate-tournament.js',
   'test-team-logos.js',
@@ -77,6 +78,7 @@ $tests = @(
   'test-accessibility.js',
   'test-validate-not-coerce.js',
   'test-scoring-model.js',
+  'test-homepage-dates.js',
   'test-about-board.js',
   'test-doc-claims.js',
   'test-age-group-picker.js'

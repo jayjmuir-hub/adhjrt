@@ -3636,9 +3636,23 @@ class Component extends DCLogic {
        valid, which would erase a network error on the first keystroke - a
        parent would see "we could not send this" flash and vanish. */
     playerSendFailed: false,
+
+    /* Which day each age group is really on, from the venue layout, keyed by
+       the card's `age`. NULL until loadFixtureData() gets the layout, and null
+       for ever if that fetch fails — dayOfCard() falls back to the day written
+       into AGE_GROUP_CARDS in both cases. */
+    liveDayOf: null,
   };
 
   componentDidMount() {
+    /* ⚠️ A STARTING VALUE, NOT THE ANSWER. The real target comes from the venue
+       layout in loadFixtureData() below, which an organiser can change. This
+       line only exists so the countdown shows something on the first frame
+       rather than flashing zeros while /venue-layout is fetched — and so it
+       still shows the right thing if that fetch never lands.
+
+       It must stay in step with DEFAULT_VENUE.day1.date in _venue.js;
+       test-homepage-dates.js asserts it does. 04:00Z is 08:00 in Abu Dhabi. */
     this.target = new Date('2026-11-07T04:00:00Z').getTime();
     this.tick();
     this.timer = setInterval(() => this.tick(), 1000);
@@ -3711,9 +3725,50 @@ class Component extends DCLogic {
       const venue = api.loadVenue ? await api.loadVenue() : null;
       const n = venue && venue.day1 && (venue.day1.pitches || []).length;
       if (typeof n === 'number') this.setState({ pitchCount: n });
+
+      /* ⚠️ AND THE DATES, WHICH ARE NOT DECORATIVE. The countdown target and
+         each age group's day were written out by hand on this page while
+         /app, /scores and the back office all read them from the layout an
+         organiser can edit. So moving a group between days updated everywhere
+         EXCEPT the homepage, silently — the one page a parent lands on first.
+
+         The layout was already being fetched here for the pitch count; only
+         the two lines below are new. No extra request.
+
+         ⚠️ EVERYTHING FALLS BACK TO THE WRITTEN-DOWN TABLE. loadVenue() itself
+         falls back to DEFAULT_VENUE when the endpoint is unreachable, and if
+         anything here is missing or malformed the hardcoded day and target
+         stand — the page must never end up with no date at all because a
+         fetch failed. */
+      if (venue && venue.day1 && typeof venue.day1.date === 'string') {
+        const t = Date.parse(`${venue.day1.date}T04:00:00Z`);   // 08:00 in Abu Dhabi
+        if (Number.isFinite(t)) this.target = t;
+      }
+      /* isDayOne() reads the same layout and is the function /app and /scores
+         already use, so all three agree by construction rather than by
+         somebody remembering to edit three places. */
+      if (api.isDayOne) {
+        const dayOf = {};
+        AGE_GROUP_CARDS.forEach((g) => {
+          try { dayOf[g.age] = api.isDayOne(g.age.toLowerCase()) ? 'day1' : 'day2'; }
+          catch (e) { /* leave it out; the card keeps its written-down day */ }
+        });
+        this.setState({ liveDayOf: dayOf });
+      }
     } catch (e) {
-      console.warn('could not read the venue layout for the pitch count:', e && e.message);
+      console.warn('could not read the venue layout for the pitch count or dates:', e && e.message);
     }
+  }
+
+  /* Which day a card belongs to: the live layout if we have it, otherwise the
+     day written into AGE_GROUP_CARDS. Returns 'day1' | 'day2' so both callers
+     compare against the same thing the venue layout uses, rather than against
+     the strings 'Saturday'/'Sunday' — which are labels, and would break the
+     moment somebody renamed a day. */
+  dayOfCard(g) {
+    const live = this.state.liveDayOf && this.state.liveDayOf[g.age];
+    if (live) return live;
+    return g.day === 'Sunday' ? 'day2' : 'day1';
   }
 
   jumpToFixture(ageId) {
@@ -4582,8 +4637,15 @@ class Component extends DCLogic {
       })(),
       submitPlayer: () => this.submitPlayer(),
 
-      groupsSaturday: AGE_GROUP_CARDS.filter((g) => g.day === 'Saturday').map((g) => ({ ...g, onJump: () => this.jumpToFixture(g.age.toLowerCase()) })),
-      groupsSunday: AGE_GROUP_CARDS.filter((g) => g.day === 'Sunday').map((g) => ({ ...g, onJump: () => this.jumpToFixture(g.age.toLowerCase()) })),
+      /* ⚠️ THE LIVE LAYOUT WINS, THE WRITTEN-DOWN DAY IS THE FALLBACK. Until
+         Aug 2026 this filtered on the hardcoded `g.day` alone, so an organiser
+         moving a group between days in the venue panel updated /app, /scores
+         and the back office and left this page saying the opposite. liveDayOf
+         is populated from isDayOne() in loadFixtureData(); it is null until the
+         layout lands and stays null if the fetch fails, and in both cases the
+         table below decides — which is the behaviour this page has always had. */
+      groupsSaturday: AGE_GROUP_CARDS.filter((g) => this.dayOfCard(g) === 'day1').map((g) => ({ ...g, onJump: () => this.jumpToFixture(g.age.toLowerCase()) })),
+      groupsSunday: AGE_GROUP_CARDS.filter((g) => this.dayOfCard(g) === 'day2').map((g) => ({ ...g, onJump: () => this.jumpToFixture(g.age.toLowerCase()) })),
       showCountdown: this.props.showCountdown ?? true,
       registrationOpen: open,
       registrationClosed: !open,

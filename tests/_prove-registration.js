@@ -270,6 +270,9 @@ const RESULTS_F = path.join('netlify', 'functions', '_results.js');
 /* Login rate limiting — see the eight faults after THOSE. */
 const LOGIN_F = path.join('netlify', 'functions', 'login.js');
 const RATELIMIT_F = path.join('netlify', 'functions', '_ratelimit.js');
+/* Validate-not-coerce - see the eight faults at the end. */
+const SCORING_F = path.join('netlify', 'functions', 'scoring-rules.js');
+const VENUE_F = path.join('netlify', 'functions', '_venue.js');
 const SD = 'scores-data.js';
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
@@ -2590,12 +2593,27 @@ const FAULTS = [
     expect: ['the mailer is told the team code'],
   },
   {
-    name: 'a failed numbering read costs the whole registration',
+    /* ⚠️ REPOINTED, NOT DELETED — and its PREMISE was INVERTED in Aug 2026.
+       This fault used to make a failed numbering read throw, aimed at the check
+       'a failed numbering read does not cost the registration'. Both encoded a
+       trade that was the wrong way round: numbering from an empty list mints a
+       code that ALREADY EXISTS, and per _teams.js a duplicate code silently
+       puts one team in two pools with a full set of fixtures in each. Refusing
+       is now the correct behaviour, so the old fault could no longer be
+       injected and the check it named no longer exists.
+
+       The inverted case — numbering from scratch again — has its own fault at
+       the end of this file. What is kept HERE is the half that still matters
+       and was never separately guarded: the refusal must be a clean 503 with
+       the NOT_SAVED message, never an exception escaping handleSubmission,
+       because a submission that throws is parked by nothing and told to
+       nobody. */
+    name: 'a failed numbering read throws out of handleSubmission instead of refusing cleanly',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
-      '    } catch (err) {\n      log(`could not read the teams sheet for numbering - ${err && err.message}`);\n    }',
-      '    } catch (err) {\n      throw err;\n    }'),
-    expect: ['a failed numbering read does not cost the registration'],
+      '      log(`could not read the teams sheet for numbering - ${err && err.message}`);',
+      '      throw err;'),
+    expect: ['a failed numbering read does not throw out of handleSubmission'],
   },
   {
     name: 'a dropped field stops being logged, so nothing is ever noticed',
@@ -8017,6 +8035,68 @@ const FAULTS = [
     suite: 'test-login-ratelimit.js',
     apply: () => patch('Signin.dc.html', ' aria-describedby="username-hint"', ''),
     expect: ['tied to the input with aria-describedby'],
+  },
+
+  /* ==================================================================== */
+  /* VALIDATE, DO NOT COERCE (Aug 2026) - four bugs of one shape.
+
+     Something the code could not make sense of was quietly turned into
+     something it could, and the caller was told it had worked. Coercion is
+     RIGHT on a read (a blob nobody can parse must not take the tournament
+     down) and WRONG on a write, where somebody is telling you what the truth
+     IS. Three of the four were a read-shaped rule applied at a write. */
+  {
+    name: 'scoring-rules takes a string where a list belongs, and stores tries-only',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!Array.isArray(rules[ag])) {', '        if (false) {'),
+    expect: ['a string instead of a list is REFUSED'],
+  },
+  {
+    name: 'scoring-rules accepts a wrong-cased age group, writing a key nothing reads',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!groups.includes(ag)) {', '        if (false) {'),
+    expect: ['an unknown age-group key is refused'],
+  },
+  {
+    name: 'scoring-rules accepts a scoring component that does not exist',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (unknown.length) {', '        if (false) {'),
+    expect: ['an unknown component is refused'],
+  },
+  {
+    name: 'scoring-rules lets an empty list through to become tries-only',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!rules[ag].length) {', '        if (false) {'),
+    expect: ['an empty list is refused rather than becoming tries-only'],
+  },
+  {
+    name: 'mergeVenue goes back to the || fallback that empty splits defeat',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(VENUE_F, '    const splits = resolveSplits(src);',
+      '    const splits = normaliseSplits(src.splits) || splitsFromPitches(src.pitches);'),
+    expect: ['an all-unrecognised splits object does not empty the day'],
+  },
+  {
+    name: 'resolveSplits stops telling EMPTY apart from ABSENT',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(VENUE_F, '  if (norm && Object.keys(norm).length) return norm;', '  if (norm) return norm;'),
+    expect: ['an all-unrecognised splits object does not empty the day'],
+  },
+  {
+    name: 'a single player registration loses its server-side age check',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(INTAKE_F, '  if (!roster && d.dob) {', '  if (false) {'),
+    expect: ['a wildly out-of-age child is refused'],
+  },
+  {
+    name: 'a failed teams-sheet read numbers from scratch again, minting a duplicate code',
+    suite: 'test-intake.js',
+    /* Single-line anchor on purpose: patch() replaces the FIRST occurrence and
+       the catch block is the first of the two 503 returns. */
+    apply: () => patch(INTAKE_F,
+      '      return { status: 503, body: { ok: false, error: NOT_SAVED } };',
+      '      existing = [];'),
+    expect: ['a failed numbering read REFUSES rather than minting a duplicate code'],
   },
 ];
 

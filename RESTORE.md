@@ -984,6 +984,60 @@ appending at the end of the tag would have cost nothing and broken nothing.
 
 ---
 
+## Validate on a write; coerce only on a read
+
+**Four bugs of one shape**, all fixed Aug 2026. Something the code could not
+make sense of was quietly turned into something it could, and the caller was
+told it had worked.
+
+**⚠️ The rule that came out of it: coercion is RIGHT on a read and WRONG on a
+write.** A blob nobody can parse must not take the tournament down, so a reader
+falls back. A writer is being *told what the truth is* — the only safe answer to
+input it cannot understand is to refuse and say why. Three of the four were a
+read-shaped rule applied at a write.
+
+- **Team codes: a failed teams-sheet read now REFUSES the registration.** It
+  used to number from an empty list, so it minted `ADH1` when `ADH1` already
+  existed. The old comment said this "costs the tidy number, not the
+  registration" — wrong about what it costs. Per `_teams.js` the code is the
+  team's identity in the draw, the standings, the knockout and every match id,
+  so a duplicate **silently puts one team in two pools with a full set of
+  fixtures in each**. A parked submission an organiser re-enters costs five
+  minutes; a duplicate code is found on a tournament morning by a coach who
+  cannot find their pool. A non-array from the sheet refuses for the same
+  reason — an unrecognised shape is not evidence the sheet is empty.
+- **Single player registrations are age-checked server-side.** The check
+  existed but sat inside `if (roster)`, and `roster` is only populated for
+  team-registration — so a coach entering a bulk squad was checked and **a
+  parent entering one child was not**. That is the asymmetry the wrong way
+  round: the player form is the primary path and the only one that collects
+  play-up consent. A dob of 2000-01-01 against U8 Tag was accepted, written to
+  the sheet and confirmed by email.
+- **`scoring-rules.js` validates instead of coercing.** `cleanRules()` turns
+  anything unrecognised into `['tries']`, which is right on a read and wrong
+  here. A string instead of a list answered `200 ok` and silently switched an
+  age group to tries-only — conversions, penalties and drop goals scoring zero,
+  with the stored figures echoed back so it looked deliberate. Wrong-cased keys
+  wrote a key nothing reads. Unknown components, empty lists and unknown groups
+  are now named in a 400.
+- **`mergeVenue` can no longer build a day with no pitches.** `normaliseSplits()`
+  returns `{}` — **truthy** — when every key is unrecognised, so
+  `normaliseSplits(...) || splitsFromPitches(...)` never fired, `derivePitches({})`
+  gave `[]`, and the day loaded with no playing surfaces while `groups` still
+  listed age groups on them. **⚠️ Empty is not absent, and `||` cannot tell them
+  apart.** `validateVenue` (the write path) always had the right guard; the
+  reader had its own broken copy. Both now call one `resolveSplits()`.
+
+⚠️ **One prover fault had its premise INVERTED rather than repointed.** Fault
+260 used to assert "a failed numbering read does not cost the registration" —
+the trade that turned out to be backwards. It is kept, aimed at the half that
+still matters (the refusal must be a clean 503, never an exception escaping
+`handleSubmission`), with the inversion recorded in place. **Repoint, never
+delete — but say so when the thing being repointed was wrong, not merely
+moved.**
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

@@ -75,6 +75,7 @@ $tests = @(
   'test-head-metadata.js',
   'test-image-weight.js',
   'test-accessibility.js',
+  'test-validate-not-coerce.js',
   'test-about-board.js',
   'test-doc-claims.js',
   'test-age-group-picker.js'

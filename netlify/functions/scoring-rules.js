@@ -16,7 +16,7 @@
 // group totals.
 
 const { resolveSession, blobStore } = require('./_auth');
-const { loadRules, cleanRules, BY_AGE, POINTS } = require('./_scoring');
+const { loadRules, cleanRules, BY_AGE, POINTS, VALID } = require('./_scoring');
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -42,6 +42,41 @@ exports.handler = async (event) => {
       const { rules } = JSON.parse(event.body || '{}');
       if (!rules || typeof rules !== 'object') {
         return json(400, { ok: false, error: 'Missing rules.' });
+      }
+
+      /* ⚠️ VALIDATE, DO NOT COERCE. cleanRules() turns anything it does not
+         recognise into ['tries'] — which is right for a blob READ, where the
+         alternative is a broken tournament, and wrong here, where somebody is
+         telling us what the rules ARE.
+
+         Before this check: POST {"rules":{"u16b":"tries,conversions"}} — a
+         string rather than an array, an ordinary client bug — answered
+         200 {ok:true} and stored u16b:['tries']. From that moment every U16B
+         result totalled tries only; conversions, penalties and drop goals
+         scored zero. The manager saw the stored figures echoed back, so it
+         looked deliberate, and nothing anywhere distinguished it from a real
+         rule change.
+
+         Wrong-cased or unknown keys were worse: {"u16B":[...]} wrote a key
+         nothing ever reads and left U16B on the defaults, also with 200 ok. */
+      const groups = Object.keys(BY_AGE);
+      for (const ag of Object.keys(rules)) {
+        if (!groups.includes(ag)) {
+          return json(400, { ok: false, error: `Unknown age group: ${ag}` });
+        }
+        if (!Array.isArray(rules[ag])) {
+          return json(400, { ok: false, error: `Scoring for ${ag} must be a list, not ${typeof rules[ag]}.` });
+        }
+        const unknown = rules[ag].filter((k) => !VALID.includes(k));
+        if (unknown.length) {
+          return json(400, { ok: false, error: `Unknown scoring component(s) for ${ag}: ${unknown.join(', ')}` });
+        }
+        /* An empty list is a real choice nobody can mean: cleanRules would turn
+           it into ['tries'] and report success, so the organiser would believe
+           they had switched scoring OFF for that group. */
+        if (!rules[ag].length) {
+          return json(400, { ok: false, error: `${ag} must score at least one thing.` });
+        }
       }
 
       const store = blobStore('config');

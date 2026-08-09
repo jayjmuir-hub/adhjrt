@@ -630,20 +630,14 @@ month. Both now prove the positions exist before comparing them.
 `aria-label` in the MIDDLE of existing tags rather than appending. Appending
 would have broken nothing. All five reported COULD NOT INJECT.
 
-⚠️ **Still open from the same review**, worst first:
-duplicate team codes on a failed sheet read; no server-side age check on a
-single player registration; `scoring-rules.js` silently rewrites a group to
-tries-only on a malformed value and answers 200; `mergeVenue` can produce a day
-with zero pitches; the homepage hardcodes tournament dates the back office can
-change; there is no lockfile; 184 KB of dead JS is served; and `_scoring.js` and
-`scores-data.js` hold duplicate points tables with nothing asserting they match.
-
-**The counts that used to be duplicated in `CLAUDE.md` and `tests/README.md`
-have been DELETED rather than re-synced a fifth time.** They disagreed with
-each other and with this file on four separate occasions. This file is the one
-place a count belongs, because rotting is its job.
-
-## 9 Aug 2026 — the branch was MEASURED on a deploy preview (PR #16)
+⚠️ **THE REVIEW IS NOW FULLY ADDRESSED.** What remains is housekeeping, none of
+it user-facing: no `package-lock.json` (Netlify re-resolves dependency ranges on
+every deploy); `bcryptjs` 2.x from 2017, where 3.x adds a guard for bcrypt's
+silent 72-byte password truncation and there is no length ceiling anywhere;
+184 KB of dead JS (`deck-stage.js`, `image-slot.js`, `doc-page.js`) served with
+zero references; `sw.js` caches unboundedly and `CACHE = 'adhjrt-v1'` has never
+been bumped; and `_scoring.js` and `scores-data.js` hold duplicate points tables
+with nothing asserting they match.
 
 `fix/review-aug-2026` pushed; PR #16 opened purely to get a free Deploy Preview.
 **Production is untouched.** Branch deploys are set to "all branches" but no
@@ -730,6 +724,40 @@ preview.** `Error 400: origin_mismatch` — the preview host is not in the OAuth
 client's authorised JavaScript origins, and should not be added permanently
 because every PR gets a different host. Test Google on production only. Nothing
 in this branch touches that path.
+
+## 9 Aug 2026 — validate-not-coerce: the last four review findings (same branch)
+
+Four bugs of one shape, all fixed. Durable detail in `RESTORE.md` →
+"Validate on a write; coerce only on a read".
+
+1. **A failed teams-sheet read minted a DUPLICATE team code** — two squads, one
+   identity, in the draw and the standings and every match id. Now refuses.
+2. **A single player registration had no server-side age check at all** — only
+   the coach's bulk roster was checked. The parent path, which is the primary
+   one, was unguarded.
+3. **`scoring-rules.js` coerced malformed input into tries-only and answered
+   200 ok**, silently zeroing conversions, penalties and drop goals for an age
+   group while echoing the stored figures back as if intended.
+4. **`mergeVenue` could produce a tournament day with no pitches**, because
+   `normaliseSplits()` returns `{}` — truthy — and `||` cannot tell empty from
+   absent. The write path had the right guard all along; the reader had its own
+   broken copy. One shared `resolveSplits()` now.
+
+**Suite: 850/850 faults, 41 clean, 46 files.** Eight new faults.
+
+⚠️ **A PROVER FAULT HAD ITS PREMISE INVERTED, not merely moved.** Fault 260
+asserted "a failed numbering read does not cost the registration" — the trade
+that turned out to be backwards. Repointed at the half that still holds (the
+refusal must be a clean 503, never an exception escaping `handleSubmission`)
+with the inversion written down in place. Repoint never delete — **and say so
+when the thing repointed was wrong rather than relocated.**
+
+⚠️ **My own age-check test passed for the wrong reason first.** It used invented
+field names, so the submission was refused at the required-field step and never
+reached the age rule — it would have passed identically with no age check in the
+code. Rewritten with the real field names from the spec, and with the in-age
+CONTROL asserted *before* the refusal so a check that rejected everything cannot
+look like a working gate.
 
 ## Where things stand
 

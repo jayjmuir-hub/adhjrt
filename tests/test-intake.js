@@ -1570,8 +1570,34 @@ const H = (body, over) => {
   const { r, threw } = await H({ form: 'team-registration', data: goodTeam() },
     { readTeamsSheet: async () => { throw new Error('sheet read failed'); } });
   check('a failed numbering read does not throw out of handleSubmission', !threw, r.body.error);
-  eq('a failed numbering read does not cost the registration', r.status, 200);
-  check('…and a code is still issued', typeof r.body.teamCode === 'string' && r.body.teamCode.length > 0);
+
+  /* ⚠️ THIS TRADE WAS DELIBERATELY REVERSED IN AUG 2026, AND THESE TWO CHECKS
+     USED TO ASSERT THE OPPOSITE. They read:
+
+         eq('a failed numbering read does not cost the registration', r.status, 200);
+         check('…and a code is still issued', …teamCode.length > 0);
+
+     The reasoning was "a failed read costs the tidy number, not the entry".
+     That was wrong about what it costs. On a failed read `existing` stayed [],
+     nextTeamCode saw no prior codes and returned ADH1 — so if that club already
+     had an ADH1 in that age group, TWO SQUADS ended up sharing one code. Per
+     _teams.js the code is the team's identity in the draw, the standings, the
+     knockout and every match id, so a duplicate silently puts one team in two
+     pools with a full set of fixtures in each.
+
+     A parked submission an organiser re-enters by hand costs five minutes. A
+     duplicate code is found on a tournament morning by a coach who cannot find
+     their pool. Refuse, and say so. */
+  eq('⚠️ a failed numbering read REFUSES rather than minting a duplicate code', r.status, 503);
+  check('…and says nothing was saved, with a way to fix it',
+    /nothing has been registered/i.test(r.body.error) && /admin@adhjrt\.com/.test(r.body.error), r.body.error);
+  check('…and issues no code at all', !r.body.teamCode);
+}
+{
+  /* A shape we do not recognise is not evidence that the sheet is empty. */
+  const { r } = await H({ form: 'team-registration', data: goodTeam() },
+    { readTeamsSheet: async () => ({ not: 'an array' }) });
+  eq('a non-array from the teams sheet refuses too', r.status, 503);
 }
 /* Nothing a dependency can do may turn into a rejection. */
 {

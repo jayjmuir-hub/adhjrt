@@ -7414,6 +7414,73 @@ const FAULTS = [
       '<span data-was-an-input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"'),
     expect: ['the page still has six inputs'],
   },
+
+  /* ---- the two defects found by reviewing the above (8 Aug 2026) ----
+     Both were introduced BY the draft-visibility change and neither was caught
+     by any of its thirteen faults, which is the argument for the review. */
+  {
+    /* ⚠️ THE ONE THAT MATTERS. Reverts signout to what it was — clear the
+       session, re-render, refetch nothing — which was a harmless no-op until
+       these caches could hold a DRAFT. The draft then stayed on screen wearing
+       "you can see this because you are signed in" for whoever held the phone
+       next. Nothing new leaves the server, which is exactly why no server-side
+       check would ever have caught it. */
+    name: 'signing out of /app stops clearing the fetched fixtures, leaving a draft on screen',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html',
+      '    S.fixtures = null; S.standings = null; S.followFx = null;\n    render();',
+      '    render();'),
+    expect: ['signout clears the fixtures cache', 'clears the standings cache'],
+  },
+  {
+    /* Today reads a SEPARATE cache from the other tabs — that is what lets it
+       survive browsing another age group — so dropping only this one leaves the
+       draft on Today while every other tab is clean. The most plausible partial
+       fix, and the reason followFx is asserted by name. */
+    name: 'signout clears the fixtures caches but forgets the separate Today one',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html', 'S.fixtures = null; S.standings = null; S.followFx = null;',
+      'S.fixtures = null; S.standings = null;'),
+    expect: ['clears the followFx cache too'],
+  },
+  {
+    /* Clearing AFTER the render paints the draft for a frame. Both orderings
+       contain both strings, so only a positional check catches it. */
+    name: 'the signout caches are cleared after the render instead of before it',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html',
+      '    S.fixtures = null; S.standings = null; S.followFx = null;\n    render();',
+      '    render();\n    S.fixtures = null; S.standings = null; S.followFx = null;'),
+    expect: ['cleared BEFORE the render'],
+  },
+  {
+    /* Clearing without refetching leaves the app on a spinner rather than on the
+       public view — the caches are honest but the page never recovers. */
+    name: 'signout clears the caches but never refetches as the public',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html', '    load(S.browseId || S.ageId);\n', ''),
+    expect: ['signout refetches as the public'],
+  },
+  {
+    /* ⚠️ THE DEFECT REINSTATED: MANAGER_AGE_GROUPS[0] is u6, hasStandings:false,
+       so the first open of the tab reads "Festival age group — no standings are
+       kept" and looks broken. */
+    name: 'the /organizer fixtures tab goes back to opening on index 0 (u6, no table)',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(ORG, '      const hit = (ags || []).find((a) => a.hasStandings);',
+      '      const hit = (ags || [])[0];'),
+    expect: ['picks a group with a table rather than index 0'],
+  },
+  {
+    /* Hardcoding the festival ids here would be a THIRD copy of knowledge that
+       lives in scores-data.js and _scoring.js — how the pitch model and the
+       registration rules each went wrong once already. */
+    name: 'the festival ids are copied into openFixturesView instead of asked for',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch(ORG, "      const hit = (ags || []).find((a) => a.hasStandings);",
+      "      const hit = (ags || []).find((a) => a.id !== 'u6' && a.id !== 'u7');"),
+    expect: ['festival ids are NOT hardcoded'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

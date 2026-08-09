@@ -392,6 +392,82 @@ const draftSchedule = () => ({
       org.includes('fxvUnavailable') && org.includes('Could not load'));
   }
 
+  /* =======================================================================
+     8. Signing out of /app must drop the DATA, not just the session.
+     ======================================================================= */
+  section('signing out of /app cannot leave a draft on screen');
+  {
+    const app = readRepo('app.html');
+
+    /* ⚠️ SLICED TO THE SIGNOUT BRANCH. Every string below exists elsewhere in
+       this file — `S.fixtures = null` is in load(), `load(` is everywhere — so
+       searching the whole file would pass against a signout branch that does
+       none of it. Anchored between its own guard and the next branch. */
+    const a = app.indexOf("if (a === 'signout')");
+    const b = app.indexOf("if (a === 'tools')", a);
+    check('the signout branch was found', a > -1 && b > a);
+    const branch = app.slice(a, b);
+    check('CONTROL: the branch really is the signout one', branch.includes('api.logout()'));
+
+    /* The defect this guards: before the draft-visibility change these caches
+       could only hold PUBLISHED fixtures, so clearing the session and
+       re-rendering was enough. Now they may hold a draft, and a re-render with
+       no refetch left it on screen wearing "you can see this because you are
+       signed in" for whoever held the phone next. */
+    check('signout clears the fixtures cache', /S\.fixtures\s*=\s*null/.test(branch));
+    check('signout clears the standings cache', /S\.standings\s*=\s*null/.test(branch));
+    /* followFx is a SEPARATE cache — that is what lets Today survive browsing
+       another age group — so it has to be cleared by name or the Today tab keeps
+       the draft after the other tabs have dropped it. */
+    check('signout clears the followFx cache too', /S\.followFx\s*=\s*null/.test(branch));
+    check('signout refetches as the public', /\bload\(/.test(branch));
+    check('…and reloads the followed group when it is not the one on screen',
+      /loadFollowData\(\)/.test(branch));
+
+    /* ⚠️ ORDER IS PART OF THE FIX. Clearing after the render shows the draft for
+       a frame. Asserted by position, not by presence — both orderings contain
+       both strings. */
+    check('the caches are cleared BEFORE the render, not after',
+      branch.indexOf('S.fixtures = null') < branch.indexOf('render()'),
+      'clear@' + branch.indexOf('S.fixtures = null') + ' render@' + branch.indexOf('render()'));
+    check('the session is dropped before the refetch, so the refetch is public',
+      branch.indexOf('S.session = null') < branch.indexOf('load('),
+      'session@' + branch.indexOf('S.session = null') + ' load@' + branch.indexOf('load('));
+  }
+
+  /* =======================================================================
+     9. The /organizer tab must not open on a group that keeps no table.
+     ======================================================================= */
+  section('the /organizer fixtures tab opens on a group that has a table');
+  {
+    const org = readRepo('Organizer.dc.html');
+    const a = org.indexOf('openFixturesView() {');
+    const b = org.indexOf('async loadFixturesView(', a);
+    check('openFixturesView was found', a > -1 && b > a);
+    const fn = org.slice(a, b);
+
+    /* ⚠️ THE DEFECT: MANAGER_AGE_GROUPS[0] is u6, a festival group with
+       hasStandings:false, so the first open rendered "Festival age group — no
+       standings are kept" and read like a broken tab. */
+    check('the first open picks a group with a table rather than index 0',
+      /\.find\(\(a\) => a\.hasStandings\)/.test(fn));
+    check('CONTROL: the function really does still reference the age-group list',
+      fn.includes('MANAGER_AGE_GROUPS'));
+    /* MANAGER_AGE_GROUPS is kept only as the FLOOR, so a failed fetch still
+       opens the tab on something. If it became the primary pick again this
+       passes while the bug is back — hence the positive check above. */
+    check('MANAGER_AGE_GROUPS[0] survives as the fallback',
+      /MANAGER_AGE_GROUPS\[0\]/.test(fn));
+    /* ⚠️ AND THE FESTIVAL IDS MUST NOT BE COPIED HERE. They live in
+       scores-data.js / _scoring.js; a third copy is how the pitch model and the
+       registration rules each went wrong once. Paired with a control, because an
+       absence check on its own proves nothing. */
+    check('the festival ids are NOT hardcoded into this function',
+      !/'u6'|"u6"|'u7'|"u7"/.test(fn));
+    check('CONTROL: this file does mention u6 elsewhere, so the search works',
+      /'u6'/.test(org));
+  }
+
 })().then(() => summary('test-draft-visibility.js')).catch((e) => {
   console.error(e);
   process.exitCode = 1;

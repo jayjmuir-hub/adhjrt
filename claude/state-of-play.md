@@ -362,6 +362,55 @@ dependencies and each finds the clone itself:
 and no bridge. **Iteration is free.** `runall.ps1` is still the authority for
 the header count on jay-pc.
 
+## ⚠️ A REVIEW OF THE DAY'S WORK FOUND TWO DEFECTS ITS OWN 13 FAULTS DID NOT (8 Aug, on `dev`)
+
+Jay asked for a code review of what had just shipped. **Two real defects, both
+introduced by the draft-visibility change, neither caught by any of its faults —
+which is the argument for reviewing rather than only testing.**
+
+⚠️ **1. Signing out of `/app` left an unpublished draft on screen.** `act()`'s
+signout branch cleared the session and re-rendered but refetched nothing. That
+was a **harmless no-op until this change**, because `S.fixtures` /
+`S.standings` / `S.followFx` could only ever hold PUBLISHED fixtures. Once they
+could hold a draft, signing out left it on screen still wearing the marker that
+reads *"You can see this because you are signed in"* — for whoever was handed the
+phone next. Tab switches do not refetch; only an age-pill change or the
+60-second match-day poll would have cleared it. **Nothing new leaked from the
+server, which is exactly why no server-side check could have caught it.**
+⚠️ **This is `claude/lessons.md`'s "deleting a config value can promote an
+ordinary check into a load-bearing one" running in reverse:** a change elsewhere
+made an existing line load-bearing, and nothing pointed at the line.
+Fixed by clearing all three caches **before** the render and refetching as the
+public. ⚠️ `followFx` is a separate cache from `fixtures` — that is what lets
+Today survive browsing another age group — so it is cleared and reloaded **by
+name**, and a fault exists for the partial fix that forgets it.
+
+⚠️ **2. The new `/organizer` tab opened on U6, which keeps no table.**
+`MANAGER_AGE_GROUPS[0]` is `u6` (`hasStandings:false`), so the first thing an
+organiser ever saw was *"Festival age group — no standings are kept"*, reading
+like a broken tab. ⚠️ **`MANAGER_AGE_GROUPS` cannot answer this** — its entries
+are `{id,name}` with no `hasStandings`, and the festival ids live in
+`scores-data.js` / `_scoring.js`. Hardcoding `'u6'`/`'u7'` here would have been a
+THIRD copy of that knowledge, which is how the pitch model and the registration
+rules each went wrong once; a fault now catches exactly that shortcut. Fixed by
+asking the data layer, reusing the list the Tournament tab already fetches, with
+`MANAGER_AGE_GROUPS[0]` kept as the floor so a failed fetch still opens on
+something. **Verified in a rendered page: it now opens on U8 Tag and the
+festival message is gone.**
+
+⚠️ **AND THE REVIEW'S THIRD FINDING WAS ABOUT THE VERIFICATION ITSELF.** The
+render audit that closed gap 4b measured the **default tab only** — 13 flex rows
+on a file with 72, eight of nine tabs never rendered — and was reported as
+"measured in a rendered page". All nine have now been walked at 390px: **0
+controls under 16px, 0 buttons under 44px, 0 sideways scroll, 0 clipped, every
+flex row wrapping, on every tab.** The conclusion held, but it held by luck
+rather than by the check. ⚠️ **Still unmeasured:** the venue schematic's
+absolutely-positioned drag markers never render without a backend, and one of
+them contains a flex row the blanket rule matches.
+
+**Suite: 792/792 faults, 34 clean, 39 files.** Six new faults, all six on the
+review's findings.
+
 ## Where things stand
 
 | | |
@@ -387,7 +436,7 @@ the header count on jay-pc.
 | **Phone layout** | **ALL of it is LIVE (8 Aug): homepage, registration modals, `/rules`, `/app`, `/manager`, `/organizer` and `/signin`.** Only `Scores & Standings.dc.html` still has zero media queries, deliberately — Jay's call 8 Aug: `/app` is the match-day phone answer. ⚠️ `/signin` was recorded here and in `RESTORE.md` as "2/2 inputs under 16px"; **measured, it is SIX, all at 15px.** One rule covers them and a test now pins the count. ✅ All three back-office blocks are **measured in a RENDERED page** by `tools/render-audit.js`, with a desktop width as the control — table in `RESTORE.md` § Phone layout, along with the counts and the three traps. |
 | The real draw | **still placeholder clubs** in all 15 groups. Pitches and kick-off times are real; the pools wait on real registrations. Everything else waits on this. |
 | Results nav link | still an in-page `#results` jump — change to `/scores` only once the draw is real |
-| Tests | **39 files green; 786/786 faults caught; 34 suites clean undamaged; 40 `--- ` headers** — the fault count moved 773 → 786 with the `/organizer` and `/signin` phone work, and the clean baseline **stayed at 34, which is the proof those checks EXTENDED `test-design-polish.js` rather than arriving in a new file.** The 773/34/40 figures were measured twice at `7c78a16`, in the cloud sandbox on plain Node **and** by `powershell tests/runall.ps1` on jay-pc, which agreed exactly. ⚠️ The header count was first read as **0** by a poll using `Select-String -SimpleMatch '^--- '`, which treats the regex literally — the trap already in `claude/lessons.md`, hit again. Re-read without it: 40, with a deliberately-unmatchable control returning 0. ⚠️ 12 stderr lines in that run are the prover's own injected faults (`verify is not defined` and friends), read rather than counted. ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
+| Tests | **39 files green; 792/792 faults caught; 34 suites clean undamaged; 40 `--- ` headers** — the fault count moved 773 → 786 with the `/organizer` and `/signin` phone work and → 792 with the two defects the code review found, and the clean baseline **stayed at 34, which is the proof those checks EXTENDED `test-design-polish.js` rather than arriving in a new file.** The 773/34/40 figures were measured twice at `7c78a16`, in the cloud sandbox on plain Node **and** by `powershell tests/runall.ps1` on jay-pc, which agreed exactly. ⚠️ The header count was first read as **0** by a poll using `Select-String -SimpleMatch '^--- '`, which treats the regex literally — the trap already in `claude/lessons.md`, hit again. Re-read without it: 40, with a deliberately-unmatchable control returning 0. ⚠️ 12 stderr lines in that run are the prover's own injected faults (`verify is not defined` and friends), read rather than counted. ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
 
 ## ⚠️ JOBS FOR JAY
 

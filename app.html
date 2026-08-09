@@ -1242,7 +1242,38 @@ function wire(){
 function act(a){
   if (a === 'follow')  return openFollow();
   if (a === 'signin')  return signIn();
-  if (a === 'signout') { api.logout(); try{orgApi.logout();}catch(e){} S.session=null; render(); toast('Signed out'); return; }
+  /* ⚠️ SIGNING OUT MUST DROP THE FETCHED DATA, NOT JUST THE SESSION, AND THIS
+     LINE WAS A HARMLESS NO-OP UNTIL THE DRAFT-VISIBILITY CHANGE MADE IT
+     LOAD-BEARING. Before that, S.fixtures/S.standings/S.followFx could only ever
+     hold PUBLISHED fixtures, so clearing the session and re-rendering was
+     enough. Now they may hold an unpublished DRAFT — and a re-render with no
+     refetch left that draft on screen, still wearing the marker that reads "You
+     can see this because you are signed in", to whoever was handed the phone
+     next. Tab switches do not refetch; only an age-pill change or the 60-second
+     match-day poll would have cleared it.
+
+     Nothing new leaks from the server — the data was legitimately fetched — but
+     showing unpublished fixtures to whoever holds the device is the one thing
+     the publish step exists to prevent.
+
+     ⚠️ Clear FIRST, then render, then refetch as the public. Clearing before
+     the render means not even one frame shows the draft. load() is async and
+     deliberately not awaited, exactly like the age-pill handler above it; it
+     re-fetches with S.session now null, so it gets the public answer, and if the
+     network is down S.loadError shows the retry card rather than the stale
+     draft. ⚠️ followFx is a SEPARATE cache from fixtures (that is why Today
+     survives browsing another age group) so it has to be cleared by name — and
+     reloaded by name too, when the followed group is not the one on screen. */
+  if (a === 'signout') {
+    api.logout(); try{orgApi.logout();}catch(e){}
+    S.session = null;
+    S.fixtures = null; S.standings = null; S.followFx = null;
+    render();
+    toast('Signed out');
+    load(S.browseId || S.ageId);
+    if (S.ageId && S.ageId !== S.browseId) loadFollowData();
+    return;
+  }
   if (a === 'tools')   { location.href = '/manager'; return; }
   if (a === 'venuemap') return openSheet('Venue map',
     `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">

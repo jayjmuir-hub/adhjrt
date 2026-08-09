@@ -3269,8 +3269,44 @@ class Component extends DCLogic {
     this.setState({ tab: 'fixtures' });
     /* First open picks a group so the tab is never a blank frame with a
        dropdown. Any later open keeps whatever was being looked at. */
-    const agId = this.state.fxvAgeId || (MANAGER_AGE_GROUPS[0] || {}).id || '';
-    if (agId) this.loadFixturesView(agId);
+    if (this.state.fxvAgeId) { this.loadFixturesView(this.state.fxvAgeId); return; }
+
+    /* ⚠️ THE FIRST OPEN MUST NOT LAND ON U6, AND IT DID. `MANAGER_AGE_GROUPS[0]`
+       is `u6`, a FESTIVAL group with hasStandings:false — so the very first
+       thing an organiser ever saw on this tab was "Festival age group — no
+       standings are kept", which reads like the tab is broken rather than like
+       the tab working correctly on the one group that keeps no table.
+
+       ⚠️ `MANAGER_AGE_GROUPS` CANNOT ANSWER THIS: its entries are {id,name} and
+       carry no hasStandings. The flag lives on the data layer's own list, and
+       the festival ids live in scores-data.js / _scoring.js — so picking the
+       first non-festival group by hardcoding 'u8' here would put a THIRD copy of
+       that knowledge in the repo, which is how the pitch model and the
+       registration rules each went wrong once already. Ask the data layer.
+
+       `tournAgeGroups` is that list, already fetched for the Tournament tab, so
+       it is reused when present rather than re-fetched. Every branch falls back
+       to MANAGER_AGE_GROUPS[0] so a failed fetch opens the tab on SOMETHING
+       rather than on a blank frame — the old behaviour, kept as the floor. */
+    const firstWithTable = (ags) => {
+      const hit = (ags || []).find((a) => a.hasStandings);
+      return (hit || (ags || [])[0] || MANAGER_AGE_GROUPS[0] || {}).id || '';
+    };
+    const known = this.state.tournAgeGroups;
+    if (known && known.length) { this.loadFixturesView(firstWithTable(known)); return; }
+
+    const api = this.state.api;
+    const fallback = (MANAGER_AGE_GROUPS[0] || {}).id || '';
+    if (api && api.getAgeGroups) {
+      api.getAgeGroups()
+        .then((ags) => {
+          this.setState({ tournAgeGroups: ags || [] });
+          this.loadFixturesView(firstWithTable(ags));
+        })
+        .catch(() => { if (fallback) this.loadFixturesView(fallback); });
+      return;
+    }
+    if (fallback) this.loadFixturesView(fallback);
   }
 
   async loadFixturesView(agId) {

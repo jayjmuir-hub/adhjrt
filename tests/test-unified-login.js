@@ -135,15 +135,29 @@ section('The refusals: wrong password, unknown name, Google-only, pending');
 {
   const r = parse(await post({ username: 'orga', password: 'pw-wrong' }));
   eq('a wrong password is a clean 401', r.status, 401);
-  eq('…with one non-enumerating message', r.error, 'Incorrect username or password.');
+
+  /* ⚠️ THE PROPERTY IS "ONE MESSAGE FOR EVERY REFUSAL", NOT A PARTICULAR
+     SENTENCE. This was pinned to the literal 'Incorrect username or password.'
+     and broke the moment the copy gained a line telling people to use their
+     username rather than their email — a change that improved the message
+     without weakening the property. The refusal text is read from the code
+     ONCE here and every case below is compared against THAT, so the wording can
+     be improved freely and the day two refusals stop matching, these fail. */
+  const REFUSAL = r.error;
+  check('the refusal message was captured', typeof REFUSAL === 'string' && REFUSAL.length > 10, String(REFUSAL));
+  check('…and still does not say which half was wrong',
+    !/no such|not found|unknown user|incorrect password\.$/i.test(REFUSAL), REFUSAL);
+  /* The one wording rule kept deliberately: it must name the trap that stopped
+     the person who built this site. See netlify/functions/login.js. */
+  check('…and names the username/email trap', /not your email/i.test(REFUSAL), REFUSAL);
 
   const r2 = parse(await post({ username: 'nobody', password: 'pw-x' }));
   eq('an unknown username gets the SAME answer — no way to probe who exists',
-    [r2.status, r2.error], [401, 'Incorrect username or password.']);
+    [r2.status, r2.error], [401, REFUSAL]);
 
   const r3 = parse(await post({ username: 'goog', password: 'anything' }));
   eq('a Google-only account trying the password form gets the same clean 401, never a 500',
-    [r3.status, r3.error], [401, 'Incorrect username or password.']);
+    [r3.status, r3.error], [401, REFUSAL]);
 
   const r4 = parse(await post({ username: 'pend', password: 'pw-pend' }));
   eq('a pending account is told so', r4.status, 403);
@@ -179,6 +193,16 @@ section('Rate limiting: same budget, same shared bucket as the old endpoints');
     uniSrc.includes('`${clientIp(event)}:login`'));
   check('…with the 10-per-15-minutes budget',
     uniSrc.includes('{ max: 10, windowMs: 15 * 60 * 1000 }'));
+  /* ⚠️ AND A SECOND, PER-ACCOUNT BUCKET, ONLY FAILURES COUNTING (Aug 2026).
+     The single connection-wide bucket above was incremented before the password
+     was checked, so ten CORRECT sign-ins used up the whole venue's budget — and
+     every manager at Zayed Sports City shares one connection address. The
+     :login bucket is kept as the sweep backstop with a much higher ceiling.
+     Behaviour is proven in test-login-ratelimit.js; these two hold the shape. */
+  check('…plus a per-account bucket, so one person cannot lock out the venue',
+    uniSrc.includes('`${clientIp(event)}:${uname}:login`'));
+  check('…and the counter is only touched on a FAILED attempt',
+    /await recordFailure\(/.test(uniSrc) && !/await checkRate\(/.test(uniSrc));
 }
 
 /* ====================================================================== */

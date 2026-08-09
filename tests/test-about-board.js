@@ -375,7 +375,16 @@ check('…and the cell actually carries that class in the markup',
   /class="about-media"/.test(PAGE),
   'a rule with nothing to select is not a hide');
 
-const PIC = (PAGE.match(/<picture>[\s\S]*?<\/picture>/) || [''])[0];
+/* ⚠️ THE BOARD'S picture, NOT THE FIRST ONE IN THE FILE. This used to be
+   PAGE.match(/<picture>...<\/picture>/) — the first match anywhere — which was
+   the board's only because the board was the only <picture> on the page. The
+   moment the hero photo became one (Aug 2026, when a 1.8 MB PNG was replaced by
+   avif/webp sources), that grabbed the hero instead and three checks below
+   started measuring the wrong element. They failed loudly, which is the system
+   working; a positional match that had silently kept passing on the wrong
+   element would have been worse. Selected by CONTENT now, so a fourth
+   <picture> appearing somewhere cannot repeat it. */
+const PIC = (PAGE.match(/<picture>(?:(?!<\/picture>)[\s\S])*board-01[\s\S]*?<\/picture>/) || [''])[0];
 check('the fail-safe picture was located', PIC.includes('board-01'));
 check('2. phones match a source that costs no request',
   /<source media="\(max-width:760px\)" srcset="data:image\/gif;base64,/.test(PIC),

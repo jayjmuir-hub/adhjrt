@@ -57,7 +57,7 @@ async function saveAccounts(list) {
 /* The password-length rule lives in _password.js — policy, not cryptography,
    and dependency-free so a test can require it without bcrypt. Re-exported
    below so every existing `require('./_auth')` keeps working. */
-const { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem } = require('./_password');
+const { MIN_PASSWORD_LENGTH, MAX_PASSWORD_BYTES, PASSWORD_TOO_SHORT, PASSWORD_TOO_LONG, passwordProblem } = require('./_password');
 
 function hashPassword(password) {
   return bcrypt.hash(password, 10);
@@ -111,6 +111,89 @@ function getBearerToken(event) {
   return m ? m[1] : null;
 }
 
+/* ⚠️ verify() ALONE IS NOT A DOOR. It proves the token was signed by us and is
+   under six months old — nothing more. It cannot know that the account was
+   revoked, rejected, demoted, or had its password reset ten minutes ago,
+   because a token is a signed snapshot of what was true when it was minted and
+   this system keeps no session table.
+
+   Until Aug 2026 every guarded endpoint called verify() and stopped there. So
+   an organiser pressing Revoke changed the accounts blob and changed NOTHING
+   ELSE: the revoked person's phone kept working for up to 182 days — still
+   posting scores, still publishing fixtures, still reading their age group's
+   children's dates of birth and medical notes. `reject`, which deletes the
+   account outright, was equally cosmetic. And a revoked ORGANISER's token still
+   passed requireOrganizer, so they could re-approve themselves and mint a fresh
+   organiser account — revocation was not merely delayed, it was reversible by
+   the person being revoked. The only real remedy was rotating SESSION_SECRET,
+   which signs the whole committee out at once.
+
+   resolveSession() is that missing half. It costs one small blob read per
+   authenticated request, which is the price of Revoke meaning anything.
+
+   ⚠️ ROLE AND AGE GROUP ARE RE-DERIVED FROM THE ACCOUNT, NOT READ OFF THE
+   TOKEN. That is what makes a DEMOTION take effect too — moving a manager from
+   u16b to u12, or an organiser down to manager, used to leave the old powers
+   signed into the old token until it aged out.
+
+   ⚠️ IT FAILS CLOSED, AND DISTINGUISHES THE TWO REASONS. A blob read that
+   ERRORS gives 503 "try again", never 401 — a 401 would sign a manager out
+   mid-tournament over a transient blip and send them hunting for a password
+   they have not typed since August. A token that is genuinely revoked gives
+   401/403 and says so. The one thing it must never do is fall through to
+   "allowed" on an error; see _ratelimit.js for what fail-open costs. */
+async function resolveSession(event) {
+  const payload = verify(getBearerToken(event));
+  if (!payload) return { ok: false, status: 401, error: 'Not signed in.' };
+
+  let accounts;
+  try {
+    accounts = await loadAccounts();
+  } catch (err) {
+    console.error('auth: could not read accounts to check the session —', err && err.message);
+    return { ok: false, status: 503, error: 'Could not check your sign-in just now. Please try again.' };
+  }
+
+  const account = accounts.find((a) => a.username === payload.username);
+  if (!account) return { ok: false, status: 401, error: 'This login no longer exists. Ask a tournament organizer.' };
+  if (!account.approved) return { ok: false, status: 403, error: 'This login has been revoked. Ask a tournament organizer.' };
+
+  /* Stamped by accounts-admin.js when an account is revoked or has its password
+     reset. Absent on every account created before Aug 2026, so a missing stamp
+     MUST read as "no stamp" or the whole committee is signed out on deploy.
+     ⚠️ The `|| 0` is not what carries that, and I checked rather than assumed:
+     Number(undefined) is NaN, and `anything < NaN` is already false, so an
+     absent stamp is permissive by JavaScript's own rules with or without it.
+     It is here to make the intent explicit and to stop the next person
+     "tidying" it into something with a live default — `|| Date.now()` would
+     sign everyone out on every request, and reads almost identically. */
+  const validFrom = Number(account.sessionsValidFrom) || 0;
+  if (payload.iat < validFrom) {
+    return { ok: false, status: 401, error: 'You have been signed out. Please sign in again.' };
+  }
+
+  return {
+    ok: true,
+    session: {
+      ...payload,
+      username: account.username,
+      role: account.role,
+      ageGroupId: account.role === 'manager' ? (account.ageGroupId || '') : '',
+    },
+  };
+}
+
+/* The same check for the endpoints that treat a session as OPTIONAL — the
+   public gets an answer either way, a signed-in person gets more. Returns the
+   session or null, never an error, because there is nothing to report: a bad,
+   revoked or unverifiable token simply means "answer as the public".
+   ⚠️ Note the deliberate asymmetry with resolveSession's 503: here a blob blip
+   downgrades to the PUBLIC answer, which is safe, rather than erroring. */
+async function optionalSession(event) {
+  const r = await resolveSession(event);
+  return r.ok ? r.session : null;
+}
+
 // True if a decoded session token may edit/submit for the given age group.
 // Organizers (full access to everything) and the special "admin" manager
 // invite code (ageGroupId === '*') can act on any age group; an ordinary
@@ -139,4 +222,5 @@ function signInMethodOf(account) {
 }
 
 module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore,
-  MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT, passwordProblem, signInMethodOf };
+  resolveSession, optionalSession,
+  MIN_PASSWORD_LENGTH, MAX_PASSWORD_BYTES, PASSWORD_TOO_SHORT, PASSWORD_TOO_LONG, passwordProblem, signInMethodOf };

@@ -37,7 +37,7 @@
 // data-layer function in the same commit; test-accounts.js now checks every
 // api.* the page calls actually exists.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, passwordProblem, signInMethodOf } = require('./_auth');
 const { readSignIns } = require('./_signins');
 
 // Age-group ids a created manager may be bound to. Mirrors AGE_GROUPS in
@@ -47,14 +47,23 @@ const VALID_AGE_GROUP_IDS = new Set([
   'u14b', 'u14g', 'u16b', 'u16g', 'u18b', 'u18g', '*',
 ]);
 
-function requireOrganizer(event) {
-  const session = verify(getBearerToken(event));
-  return session && session.role === 'organizer' ? session : null;
+/* ⚠️ resolveSession, NOT verify. This door in particular has to re-read the
+   account: a revoked organiser holding a still-signed token used to pass here
+   and could then re-approve themselves and create a fresh organiser account,
+   which made revocation reversible by the person being revoked. See _auth.js. */
+async function requireOrganizer(event) {
+  const r = await resolveSession(event);
+  if (!r.ok) return r;
+  if (r.session.role !== 'organizer') {
+    return { ok: false, status: 403, error: 'Only tournament organisers can manage accounts.' };
+  }
+  return r;
 }
 
 exports.handler = async (event) => {
-  const session = requireOrganizer(event);
-  if (!session) return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+  const auth = await requireOrganizer(event);
+  if (!auth.ok) return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+  const session = auth.session;
 
   try {
     if (event.httpMethod === 'GET') {
@@ -159,6 +168,12 @@ exports.handler = async (event) => {
         accounts[idx].passwordHash = await hashPassword(payload.password);
         accounts[idx].passwordChangedAt = new Date().toISOString();
         accounts[idx].passwordChangedBy = session.username;
+        /* ⚠️ A RESET MUST END THE OLD SESSIONS, or it is not a recovery — it is
+           just a second way in. The reason to reset someone's password is
+           usually that it, or their phone, is in the wrong hands; leaving the
+           tokens minted from the old one alive for six months hands that person
+           exactly what the reset was meant to take away. */
+        accounts[idx].sessionsValidFrom = Date.now();
         await saveAccounts(accounts);
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
@@ -166,9 +181,15 @@ exports.handler = async (event) => {
       if (action === 'approve') {
         accounts[idx].approved = true;
       } else if (action === 'reject') {
+        /* Deleting the record is enough on its own now: resolveSession 401s a
+           token whose account it cannot find. It did NOT used to be. */
         accounts.splice(idx, 1);
       } else if (action === 'revoke') {
         accounts[idx].approved = false;
+        /* Belt and braces. `approved: false` is what resolveSession checks, but
+           stamping the clock too means a later re-approval does not silently
+           resurrect the tokens this revocation was meant to kill. */
+        accounts[idx].sessionsValidFrom = Date.now();
       } else {
         return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown action.' }) };
       }

@@ -53,13 +53,21 @@ function keyFor(address) {
    A windowStart in the FUTURE is treated as stale too. A clock skew between
    instances, or a stored value from a machine running fast, must not be able to
    lock somebody out for longer than the window. */
-function readWindow(value, now) {
+/* ⚠️ windowMs IS A PARAMETER, AND USED TO BE THE MODULE CONSTANT. Every caller
+   that passes its own `opts.windowMs` — login (15 min) and signup (15 min) —
+   had its expiry measured against the registration gateway's ONE HOUR instead,
+   because this line read `>= WINDOW_MS`. checkRate's retryAfterSecs was
+   computed from the caller's window, so a locked-out person was told to try
+   again in 15 minutes and was then refused for 45 more. Found in Aug 2026 by a
+   test that filled a max-3 bucket, advanced the clock past its OWN window, and
+   expected it clear. Nothing had ever advanced a clock here before. */
+function readWindow(value, now, windowMs) {
   if (!value || typeof value !== 'object') return null;
   const count = Number(value.count);
   const windowStart = Number(value.windowStart);
   if (!Number.isFinite(count) || !Number.isFinite(windowStart)) return null;
   if (windowStart > now) return null;
-  if (now - windowStart >= WINDOW_MS) return null;
+  if (now - windowStart >= (windowMs || WINDOW_MS)) return null;
   return { count, windowStart };
 }
 
@@ -75,7 +83,7 @@ async function checkRate(store, address, now, opts) {
   let current;
   try {
     if (!store || typeof store.get !== 'function') throw new Error('no store');
-    current = readWindow(await store.get(key, { type: 'json' }), now);
+    current = readWindow(await store.get(key, { type: 'json' }), now, windowMs);
   } catch (err) {
     /* FAIL OPEN. Logged by message only — nothing about the submission itself
        goes anywhere near a log. */
@@ -137,6 +145,78 @@ function checkSignupRate(store, event, now) {
   return checkRate(store, signupBucket(event), now, SIGNUP_RATE_OPTS);
 }
 
+/* ---------------------------------------------------------------------- *
+   PEEK / RECORD — for counting FAILURES rather than attempts (Aug 2026).
+
+   checkRate() reads and increments in one call, which is right for the
+   registration gateway: there, every submission is a submission and counting
+   it is the point.
+
+   ⚠️ IT IS WRONG FOR A PASSWORD FORM, and login.js used it anyway. Two
+   consequences, both found by a code review:
+
+   1. SUCCESSFUL LOGINS ATE THE BUDGET. The counter went up before the password
+      was ever checked, so ten correct sign-ins exhausted it exactly as fast as
+      ten wrong ones.
+   2. THE BUCKET WAS THE WHOLE VENUE. It was keyed on the connection address
+      alone, and every manager at Zayed Sports City shares one
+      x-nf-client-connection-ip. Fifteen managers, ten sign-ins: managers 11-15
+      could not get in on the morning of 7 November, and any mistyped password
+      brought that forward.
+
+   Splitting read from write fixes both: peek before checking the password,
+   record only when it was wrong. A person who signs in correctly never touches
+   the counter at all.
+
+   forget() is what makes a correct password FORGIVING — it clears the
+   per-account counter, so four fumbles then a success leaves a clean slate
+   rather than a manager one mistake away from a lockout they did not earn. */
+
+/* Read a bucket WITHOUT counting against it.
+   Fails open like everything else here: an unreadable counter allows. */
+async function peekRate(store, address, now, opts) {
+  const max = (opts && opts.max) || MAX_PER_WINDOW;
+  const windowMs = (opts && opts.windowMs) || WINDOW_MS;
+  try {
+    if (!store || typeof store.get !== 'function') throw new Error('no store');
+    const win = readWindow(await store.get(keyFor(address), { type: 'json' }), now, windowMs);
+    if (!win || win.count < max) return { ok: true };
+    const left = win.windowStart + windowMs - now;
+    return { ok: false, retryAfterSecs: Math.max(1, Math.ceil(left / 1000)) };
+  } catch (err) {
+    console.warn('rate limit: could not read the counter, allowing -', err && err.message);
+    return { ok: true, degraded: true };
+  }
+}
+
+/* Count one failure against a bucket. Never refuses anything itself — the
+   refusal is peekRate's job on the NEXT attempt — so its only failure mode is
+   not counting, which is the fail-open direction. */
+async function recordFailure(store, address, now, opts) {
+  try {
+    if (!store || typeof store.get !== 'function') throw new Error('no store');
+    const key = keyFor(address);
+    /* ⚠️ THE SAME windowMs THE PEEK USED. Reading with a different window to the
+       one that will refuse means the count can be revived from a bucket the peek
+       already considers expired, or reset while the peek still counts it. */
+    const windowMs = (opts && opts.windowMs) || WINDOW_MS;
+    const win = readWindow(await store.get(key, { type: 'json' }), now, windowMs) || { count: 0, windowStart: now };
+    await store.setJSON(key, { count: win.count + 1, windowStart: win.windowStart });
+  } catch (err) {
+    console.warn('rate limit: could not record the failure -', err && err.message);
+  }
+}
+
+/* Wipe a bucket — a correct password forgives the fumbles that came before it. */
+async function forget(store, address) {
+  try {
+    if (!store || typeof store.delete !== 'function') return;
+    await store.delete(keyFor(address));
+  } catch (err) {
+    console.warn('rate limit: could not clear the counter -', err && err.message);
+  }
+}
+
 /* One copy of the sentence. It was written out in login.js and would have been
    written out three more times here; two copies of one rule drift, and the
    drift is invisible until somebody reads both. */
@@ -150,4 +230,5 @@ function tooManyResponse(rate) {
 module.exports = {
   checkRate, keyFor, MAX_PER_WINDOW, WINDOW_MS,
   checkSignupRate, signupBucket, tooManyResponse, SIGNUP_RATE_OPTS,
+  peekRate, recordFailure, forget,
 };

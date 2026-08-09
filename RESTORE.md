@@ -220,7 +220,7 @@ good reason.
 | `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`. Dependency-free on purpose — see Accounts below |
 | `get-results.js` | public read of all match results (merges every age group's blob) |
 | `submit-result.js` | write one result; re-verifies role + age group from the token; write-and-verify retry |
-| `_results.js` | results storage layout — one blob per age group, legacy merge (see Results storage below) |
+| `_results.js` | results storage layout — one blob per MATCH, two older layouts read as fallbacks (see Results storage below) |
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
@@ -248,7 +248,7 @@ good reason.
 It is named below in the historical account of that removal; it does not
 exist. This table listed it as live until 7 Aug 2026.
 
-Storage: **Netlify Blobs** (`results` — one blob per age group, see **Results
+Storage: **Netlify Blobs** (`results` — one blob per match, see **Results
 storage** below; `accounts`; schedule overrides) plus two **Google Sheets** for
 registrations.
 
@@ -821,6 +821,284 @@ why they went unlooked-at through every earlier mobile pass — the window was
 shut, so opening the home page on a phone showed no modal at all. **A screen
 that only renders in one state is not tested by looking at the page.**
 
+## Page metadata lives in the real `<head>`, never in `<helmet>`
+
+The `.dc.html` pages have a nearly empty literal `<head>` — charset, viewport,
+one script — because `support.js` compiles `<helmet>` out of the `<body>` into
+`document.head` after boot. Until Aug 2026 **every** head tag lived there.
+
+**⚠️ That puts every head tag BELOW `</head>`, and the first version of this
+section said something stronger and wrong.** MEASURED on a deploy preview
+against production: production serves `<title>` at line 14 and `og:title` at
+line 182 with `</head>` at line 7 — so the tags are in the served HTML, in the
+**body**. Not absent, as I first wrote here, but in a place where head-only
+metadata is out of spec and unreliably honoured: most scrapers stop looking at
+`</head>`, and Open Graph and `robots` are specified as head-only.
+
+So the move is right and the severity was overstated. **I described a control
+that was WEAK as one that was ABSENT, from reading the code rather than
+fetching the page** — while writing a note criticising this very file for
+asserting an unverified property. Both halves of that are the lesson.
+
+The same applies to the club form's `noindex`: present on production at line 19
+(body), now at line 34 (head).
+
+**The rule now:**
+
+| Goes in the literal `<head>` | Stays in `<helmet>` |
+|---|---|
+| `<title>`, description, canonical | font preconnects and stylesheets |
+| all `og:` / `twitter:` tags | icons, manifest, theme-color |
+| `robots` (noindex) | every script |
+| JSON-LD | anything the engine templates |
+
+The split is simply *does a non-rendering crawler need it*. Everything in the
+left column is a constant — none of it ever needed the engine.
+
+- **⚠️ MOVE, never copy.** The helmet is appended to `document.head`, so a tag
+  left in both places becomes two `<title>` tags on the live page.
+  `test-head-metadata.js` checks each tag is present in `<head>` **and absent
+  from `<helmet>`** — the negative half is the load-bearing one.
+- **⚠️ Match tags line-anchored when writing checks over these files.** Three
+  separate things broke on this in one sitting: my own `<head>` comment
+  contained the word `<helmet>` and a verification script sliced from the
+  comment instead of the tag; the same comment contained a literal script tag,
+  which `test-about-board.js`'s scanner read as opening a script region and made
+  it report the rest of the file as script body; and a comment naming the club
+  form's path failed `test-intake.js`, which proves the path's absence with a
+  plain substring search. **Real tags start a line; prose never does. And a
+  comment warning about a string is indistinguishable from the string.**
+- `/app` gained a canonical and share tags. The repo root is the deployed site
+  and `/app` is a 200 rewrite, so `/app.html` stays reachable alongside it —
+  two indexable URLs for identical content with nothing joining them.
+- `/legal` was added to `sitemap.xml`; it is `robots: all` with its own
+  canonical and had simply never been listed.
+
+**Also served but not part of the site, now 404'd:** `/netlify/*` (the functions
+source — the one directory whose source *is* security logic), `/netlify.toml`
+and `/package.json`. Same reasoning as `tests/`, `tools/` and `claude/` before
+them; Netlify's own docs say to keep the functions directory outside the publish
+directory, and there is no publish directory here. ⚠️ **Not yet verified on a
+deploy** — prove it on a free branch deploy with an unruled sibling returning
+200 as the control, per this repo's standard.
+
+---
+
+## Image weight — what the pages actually serve
+
+Every photo the markup names is `.avif` + `.webp`, at two widths, in a
+`<picture>`. **No page names a `.png` or `.jpg` original.** The masters stay in
+the repo to re-encode from; they are simply never served.
+
+| | was | now |
+|---|---|---|
+| `action-run` (hero, the LCP) | 1.8 MB PNG | 30 KB avif / 66 KB webp, 13/26 KB at 700px |
+| `venue-map` | 527 KB PNG | 16 KB avif / 39 KB webp |
+| `format-action` | 227 KB JPG | 114 KB avif / 147 KB webp, 33/42 KB at 700px |
+| `sponsors-logos.png` | 371 KB, **zero references anywhere** | deleted |
+
+**⚠️ The hero was the whole point.** It is the Largest Contentful Paint, it sat
+behind the hero at 62% opacity, and at 1.8 MB it was bigger than the rest of the
+homepage put together — pulled in full by every parent on venue mobile data
+before the page could finish painting. The About-section board photos three
+screens further down had had the full treatment *and* a generator script since
+July; the one image that actually gated first paint had never been through it.
+
+- **`fetchpriority="high"` on the hero, and never `loading="lazy"`.** It is
+  above the fold and it IS the LCP — lazy there delays the exact thing being
+  optimised. The two decorative copies further down are the opposite: `lazy`
+  and `fetchpriority="low"`.
+- **`width`/`height` on every one**, so the box is reserved before decode.
+- **The `<img>` fallback is the WebP, never the original.** A browser that fails
+  the whole source list is the one least able to afford 1.8 MB.
+- **⚠️ Both `<source>` elements need the phone variant**, not just one.
+  `test-image-weight.js` originally looked for `action-run-sm` anywhere inside
+  the `<picture>` — so dropping it from the AVIF srcset alone stayed green while
+  every AVIF-capable phone (most of them) pulled the full-width file.
+- Encoded with `ffmpeg` (`libaom-av1`, `libwebp`), quality chosen by measuring:
+  hero SSIM 0.958 at CRF 24, venue map 0.967 at CRF 26. The venue map's PNG was
+  RGBA but **fully opaque everywhere** (measured with `alphaextract`), so
+  dropping the alpha channel costs nothing.
+- **⚠️ The venue map's drag markers are positioned as percentages of the image
+  box.** `<picture>` is a plain wrapper with no box of its own and the `img`
+  keeps `inset:0` against the same positioned ancestor, so the geometry is
+  unchanged — but that is what to re-check if that markup is edited.
+
+**⚠️ `test-image-weight.js` runs in two modes and says which.** The on-disk size
+checks need real bytes; `_prove-registration.js` seeds its temp copy with
+`readFileSync(…,'utf8')`, which mangles binaries, so `assets/` is not seeded
+there. In that copy the **markup** checks still run and are what every fault
+aims at; the weight checks are skipped and the mode is printed. Skipped and
+passed must never look the same.
+
+---
+
+## Accessibility — naming, and the one dialog
+
+**Every form control has an accessible name.** Until Aug 2026 not one did. The
+labels existed and were styled — `<label class="lbl">Club name</label>` with a
+sibling `<input>` — but nothing associated them: no `for`, no `id`, no
+`aria-label`, no wrapping. A screen reader announced *"edit text, blank"* for
+club name, contact name, contact email, phone, every age-group count box, and
+username and password. Those are the forms parents and coaches must complete to
+enter the tournament.
+
+- **`for`/`id` where a visible label sits beside the control** (60 pairs). The
+  id is derived from the control's `name` where it has one.
+- **`aria-label` where there is no visible label** — filters, search boxes, the
+  pitch and time selects in the draw editor, `/app`'s sign-in and walkover.
+- **⚠️ The honeypot must stay unnamed.** It is `aria-hidden="true"` and
+  `tabIndex="-1"` on purpose: naming it would invite the one person who cannot
+  see it to fill it in, which is exactly what it exists to detect.
+- **⚠️ A `<label>` heading a GROUP takes no `for`.** "PLAYERS" and "DATE OF
+  BIRTH" head a list and three selects respectively; the selects carry their own
+  `aria-label`s (Day/Month/Year of birth). Pointing a group heading at one
+  member of the group names the wrong thing.
+
+**The `/app` bottom sheet now behaves like the dialog it declares itself to be.**
+It said `role="dialog" aria-modal="true"` and did none of it: no Escape handler,
+focus never moved in, focus never came back, and Tab walked straight into the
+page behind. It is the **only** interaction surface in `/app` — sign-in, score
+entry and follow-a-team all happen inside it. Every other page in the repo
+already handled Escape and removed its listener on unmount; this file was the
+outlier, so the fix is deliberately their pattern.
+
+- Escape closes; focus moves to the first control on open (deferred one frame,
+  because the sheet animates in); focus returns to whatever opened it; Tab wraps
+  inside. **⚠️ The keydown listener is removed on close** — the sheet opens
+  dozens of times on a match day and an accumulating handler gets slower each
+  time somebody checks a score.
+
+**Submit buttons cannot be double-tapped.** They changed *label* to "Saving…"
+and stayed live, so a double-tap pitch-side — on a phone, in the sun, on a slow
+connection, which is when people tap twice — sent two `submitResult` or two
+`login` POSTs. `busy(id, label)` sets the label **and** `disabled`, and returns
+a restore function, so a failure branch cannot put one back and forget the
+other.
+
+**⚠️ Do not insert an attribute in the MIDDLE of an existing tag.** Adding
+`aria-label` between `value=` and `onChange=` broke four unrelated fault anchors
+in `_prove-registration.js` that quoted those opening tags. They reported
+COULD NOT INJECT rather than passing silently, so nothing was lost — but
+appending at the end of the tag would have cost nothing and broken nothing.
+
+---
+
+## Validate on a write; coerce only on a read
+
+**Four bugs of one shape**, all fixed Aug 2026. Something the code could not
+make sense of was quietly turned into something it could, and the caller was
+told it had worked.
+
+**⚠️ The rule that came out of it: coercion is RIGHT on a read and WRONG on a
+write.** A blob nobody can parse must not take the tournament down, so a reader
+falls back. A writer is being *told what the truth is* — the only safe answer to
+input it cannot understand is to refuse and say why. Three of the four were a
+read-shaped rule applied at a write.
+
+- **Team codes: a failed teams-sheet read now REFUSES the registration.** It
+  used to number from an empty list, so it minted `ADH1` when `ADH1` already
+  existed. The old comment said this "costs the tidy number, not the
+  registration" — wrong about what it costs. Per `_teams.js` the code is the
+  team's identity in the draw, the standings, the knockout and every match id,
+  so a duplicate **silently puts one team in two pools with a full set of
+  fixtures in each**. A parked submission an organiser re-enters costs five
+  minutes; a duplicate code is found on a tournament morning by a coach who
+  cannot find their pool. A non-array from the sheet refuses for the same
+  reason — an unrecognised shape is not evidence the sheet is empty.
+- **Single player registrations are age-checked server-side.** The check
+  existed but sat inside `if (roster)`, and `roster` is only populated for
+  team-registration — so a coach entering a bulk squad was checked and **a
+  parent entering one child was not**. That is the asymmetry the wrong way
+  round: the player form is the primary path and the only one that collects
+  play-up consent. A dob of 2000-01-01 against U8 Tag was accepted, written to
+  the sheet and confirmed by email.
+- **`scoring-rules.js` validates instead of coercing.** `cleanRules()` turns
+  anything unrecognised into `['tries']`, which is right on a read and wrong
+  here. A string instead of a list answered `200 ok` and silently switched an
+  age group to tries-only — conversions, penalties and drop goals scoring zero,
+  with the stored figures echoed back so it looked deliberate. Wrong-cased keys
+  wrote a key nothing reads. Unknown components, empty lists and unknown groups
+  are now named in a 400.
+- **`mergeVenue` can no longer build a day with no pitches.** `normaliseSplits()`
+  returns `{}` — **truthy** — when every key is unrecognised, so
+  `normaliseSplits(...) || splitsFromPitches(...)` never fired, `derivePitches({})`
+  gave `[]`, and the day loaded with no playing surfaces while `groups` still
+  listed age groups on them. **⚠️ Empty is not absent, and `||` cannot tell them
+  apart.** `validateVenue` (the write path) always had the right guard; the
+  reader had its own broken copy. Both now call one `resolveSplits()`.
+
+⚠️ **One prover fault had its premise INVERTED rather than repointed.** Fault
+260 used to assert "a failed numbering read does not cost the registration" —
+the trade that turned out to be backwards. It is kept, aimed at the half that
+still matters (the refusal must be a clean 503, never an exception escaping
+`handleSubmission`), with the inversion recorded in place. **Repoint, never
+delete — but say so when the thing being repointed was wrong, not merely
+moved.**
+
+---
+
+## Dependencies, the password ceiling, and the scoring model
+
+**`package-lock.json` is committed.** Without it Netlify ran `npm install` and
+re-resolved four caret ranges on **every deploy**, so two deploys of the same
+commit could ship different dependency trees, and a compromised patch release of
+any transitive package installed itself. 49 packages are now pinned.
+⚠️ It is 404'd in `netlify.toml` in the same commit that created it — the root
+IS the site, so a new root file is a new public URL by default, and a lockfile
+naming 49 exact versions is a better fingerprinting target than `package.json`.
+
+**`bcryptjs` 2.4.3 → 3.x.** 2.4.3 was the last 2.x, from 2017. Verified against
+the real package before committing, not from the changelog: `require()` still
+works (the UMD fallback covers the ESM-first move), new hashes are `$2b$`, and
+**existing `$2a$` hashes still verify** — no committee member is locked out.
+
+**⚠️ A PASSWORD CEILING, BECAUSE BCRYPT SILENTLY TRUNCATES AT 72 BYTES.**
+Everything past the 72nd byte is discarded before hashing — no error, no
+warning. **Measured:** `compare('a'.repeat(72), hash('a'.repeat(80)))` is
+`true`. So a 100-character passphrase and its first 72 characters were the same
+password, and the person who chose the long one believed otherwise.
+
+- **72 BYTES, NOT CHARACTERS.** The limit is on the UTF-8 encoding. One emoji is
+  four bytes; Arabic and accented characters are two or three. A 60-character
+  password can exceed 72 bytes — and on a UAE tournament site, the people most
+  likely to hit that are exactly the ones a character count would fail.
+- **Refused, never trimmed.** Cutting to 72 silently would store a password the
+  person cannot reproduce by typing what they chose.
+- **Still a set-time rule only**, like the floor. An existing longer password
+  was already truncated by bcrypt, so it keeps working at login.
+
+**⚠️ THE SCORING MODEL IS CARRIED TWICE AND NOW HAS A TEST SAYING SO.**
+`_scoring.js` (`POINTS`, `BY_AGE`, `FESTIVAL_AGE_IDS`) totals a submitted
+result; `scores-data.js` (`SCORE_POINTS`, `SCORE_BY_AGE`, `hasStandings`) builds
+the entry form and the running total. They agreed — nothing made them.
+
+This duplication has already gone wrong **twice** here: the pitch model and the
+registration rules each drifted and each got a `patchShared()`-style helper
+afterwards. The scoring model never did, and it is the one that decides what a
+match was won by. Drift would look like: the form shows 24, the standings show
+something else, and the first person to notice is a coach who thinks the table
+is wrong. `test-scoring-model.js` compares both tables key by key, checks
+`FESTIVAL_AGE_IDS` against `hasStandings:false`, and totals a worked example
+through both paths.
+
+**Service worker.** Was caching **every** successful same-origin GET with no cap
+and no eviction — one homepage visit wrote the hero plus 44 board-image variants
+into Cache Storage permanently. Network-first meant that was never a staleness
+bug; it was a storage bug, and on a nearly-full phone the browser evicts the
+**whole origin's** storage rather than the oldest entry, taking the offline
+fallback with it. Now: navigations and shell assets only, capped at 60 entries,
+oldest-first. ⚠️ `CACHE` is dated rather than numbered and **had never once been
+bumped**, so the documented escape hatch for a poisoned entry had never been
+exercised.
+
+**184 KB of dead JavaScript deleted** — `deck-stage.js`, `image-slot.js`,
+`doc-page.js`. Verified before deleting: no `<script src>`, no `require`, no
+`import`, no custom-element tag anywhere, and no test reads them. The only
+mentions were in each other's comments.
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`
@@ -1093,6 +1371,66 @@ Accounts → Create a login → Organiser. `test-signin-page.js` asserts the
 closure on the page source rather than on state — a check that drives a state
 the UI cannot reach proves nothing about what anyone can actually do.
 
+### Revoke actually ends a session — `resolveSession()`
+
+**A signed token is not a door on its own, and treating it as one made Revoke
+cosmetic.** `verify()` in `_auth.js` proves only that we signed the token and
+that it is under six months old. It cannot know the account behind it was
+revoked, rejected, demoted or had its password reset, because a token is a
+signed snapshot and this system keeps no session table.
+
+Every guarded endpoint used to call `verify()` and stop there. The consequence:
+an organiser pressing **Revoke** changed the accounts blob and changed nothing
+else. The revoked person's phone kept working — posting scores, publishing
+fixtures, reading their age group's children's dates of birth and medical notes
+— until the token aged out. `reject`, which deletes the account outright, was
+equally cosmetic. A revoked **organiser** was worse still: their token still
+passed the organiser check, so they could re-approve themselves and mint a
+fresh organiser account. Revocation was not merely delayed, it was **reversible
+by the person being revoked**. The only real remedy was rotating
+`SESSION_SECRET`, which signs the whole committee out at once.
+
+**`resolveSession(event)` is the door now.** It verifies the token, then loads
+the account and refuses if it is missing, unapproved, or if the token was minted
+before the account's `sessionsValidFrom` stamp. It costs one small blob read per
+authenticated request; that is the price of Revoke meaning anything.
+
+Three properties that are load-bearing and easy to undo by accident:
+
+- **Role and age group are re-derived from the ACCOUNT, never read off the
+  token.** This is what makes a *demotion* take effect — moving a manager from
+  u16b to u12, or an organiser down to manager, used to leave the old powers
+  live in the old token until it expired.
+- **A failed accounts read answers 503, never 401.** Fail closed, but say "try
+  again". A 401 would sign a manager out mid-tournament over a transient blob
+  blip and send them hunting for a password they have not typed since August.
+  `optionalSession()` — for endpoints where the public gets an answer too —
+  deliberately does the opposite and downgrades to the public view instead.
+- **A missing `sessionsValidFrom` must read as "no stamp".** It is absent on
+  every account created before Aug 2026. ⚠️ The `|| 0` is *not* what carries
+  that: `Number(undefined)` is `NaN` and `x < NaN` is already `false`. It is
+  there to stop the tidy-up that turns it into a live default — `|| Date.now()`
+  reads almost identically and refuses every request ever made. This was
+  measured by injecting the removal, not assumed; the first version of the
+  comment claimed the opposite and was wrong.
+
+`accounts-admin.js` stamps `sessionsValidFrom` on **revoke** and on an
+organiser's **password reset**. `reject` needs no stamp — the account is gone,
+and a token whose account cannot be found is refused on that alone.
+
+⚠️ **A self-service password change (`my-account.js`) does NOT yet stamp it**,
+so changing your own password does not sign your other devices out. That is a
+deliberate gap, not an oversight: stamping it would sign the person out of the
+device they were standing at. Closing it properly means minting a replacement
+token in the response and having the page store it.
+
+Proven by `tests/test-session-revocation.js`, which drives the real function
+with a stubbed accounts store so the list can change between calls — the only
+way to assert "the token stayed the same and the answer changed". Nine faults in
+`_prove-registration.js`. ⚠️ Two of those nine exist because the first version
+of the check passed against the bug: see the `|| 0` note above, and the throw
+that killed the file instead of failing the check that was watching it.
+
 ### My account
 
 Design: `claude/specs/spec-my-account.md`. **One card, two modes**, rendered on
@@ -1174,7 +1512,8 @@ on tournament morning, while an organiser approves somebody, means one write
 silently discards the other and the approval just quietly did not happen.
 
 That is not hypothetical. It is exactly the bug that lost match results in July
-2026 and forced the results store to be split one blob per age group — see
+2026 and forced the results store to be split, first one blob per age group and
+then (Aug 2026, after that was not enough) one blob per match — see
 **Results storage** above. One key per person means two people signing in at
 the same moment touch two different keys and cannot collide at all, and no
 sign-in can ever damage an account record. `test-my-account.js` **proves** it
@@ -1264,31 +1603,79 @@ parent contact details.
 
 ---
 
-## Results storage (the old layout is gone)
+## Results storage — one blob per MATCH
 
-Match results live in the `results` Blobs store, **one JSON object per age
-group**, key `ag:<ageGroupId>`, results keyed by match id inside it. All of it
-goes through `_results.js` — `readGroup` / `writeGroup` / `readAll`. Nothing
-else should touch the store directly.
+Match results live in the `results` Blobs store, **one JSON object per match**,
+key `m:<matchId>`. All of it goes through `_results.js` — `readMatch` /
+`writeMatch` / `clearMatch` / `readGroup` / `readAll`. Nothing else should touch
+the store directly.
 
-- **Why it was split.** Everything used to sit in one object under the key
-  `all`. Blobs has no compare-and-set, so a write is a whole-object overwrite:
-  two managers in two different age groups saving in the same second both read
-  `all`, both wrote it back, and the second one — which had never seen the
-  first's score — silently deleted it. With 15 groups scoring at once on a
-  tournament day that was the single biggest match-day risk.
-- **The legacy `all` key is read-only.** `readGroup` falls back to the matching
-  slice of `all` when a group blob doesn't exist yet, and `readAll` layers the
-  per-group blobs over it. Nothing writes or deletes `all` — it is the pre-split
-  history and stays as a safety net. Don't "tidy" it away.
-- **Same-group collisions are handled by write-and-verify.** `submit-result.js`
-  writes, reads the group back, and looks for its own `submittedAt`. If it
-  isn't there, someone overwrote it — re-read, merge, write again, three
-  attempts, then return **409 and an error the manager can see**. Never return
-  `ok:true` without that read-back: a score reported as saved but missing isn't
-  noticed until the standings are wrong. The reply carries `stored:{homeScore,
+**Three layouts have existed, and all three are still READ.** In increasing
+order of authority: `all` (everything in one object), `ag:<ageGroupId>` (one per
+age group), `m:<matchId>` (one per match, current). A per-match blob wins
+whenever it exists.
+
+- **Why it changed the first time.** Blobs has no compare-and-set, so a write is
+  a whole-object overwrite. On layout 1, two managers in two different age
+  groups saving in the same second both read `all`, both wrote it back, and the
+  second — which had never seen the first's score — silently deleted it.
+- **Why it changed again (Aug 2026).** Splitting per age group removed the
+  cross-group collision but kept the read-modify-write, and a code review found
+  that carried two defects the write-and-verify could not see:
+  - **A failed read destroyed the group.** `readGroup` swallowed the error and
+    returned the empty legacy slice; the caller wrote that back as the WHOLE
+    group. Fourteen U16B results stored, one blob timeout while saving the
+    fifteenth, and the blob became `{match15}`. The verifier checked only its
+    own entry, so it passed and the manager saw a green tick.
+  - **Two writers both got a green tick.** A reads, B reads, A writes, A
+    verifies OK, B writes, B verifies OK — A's score is gone and both people
+    were told it saved. A manager plus an organiser scoring the same group is
+    the anticipated case, not an edge one.
+- **One blob per match removes the cause rather than narrowing the window.** A
+  save writes exactly one key: its own. There is no read-modify-write on the
+  write path, so there is nothing another save can be lost inside. Two people
+  saving the SAME match is still last-write-wins, which is correct — one match
+  has one score, and the second person is correcting the first.
+- **⚠️ There is no migration and there must never be one.** Nothing is copied or
+  deleted on deploy. Old results keep being served from wherever they already
+  live until someone edits that match, at which point its own blob appears and
+  takes over for that match alone. No window where a result is in neither place;
+  rolling the change back loses only what was saved while it was live.
+- **⚠️ Clearing writes a TOMBSTONE (`{cleared:true}`), never a delete.** Deleting
+  `m:<matchId>` would let the next read fall through to the older layouts and
+  resurrect the very result just cleared. Tombstones are small and permanent;
+  that is the price of not needing a migration.
+- **⚠️ The trailing colon in the list prefix is load-bearing.** Match ids start
+  with the age-group id, so `m:u12` would also list every `m:u12g:…` blob and
+  hand U12G's scores to U12. `matchPrefix()` includes the colon.
+- **⚠️ The write path and the read path have OPPOSITE failure rules, on
+  purpose.** `readMatch` and the per-match list THROW on a read failure, because
+  treating "I could not ask" as "there is nothing there" is precisely how the
+  first defect happened. `readAll` — the public Standings reader — degrades to
+  whatever could be read instead, because serving a stale score is recoverable
+  and a blank table on a tournament afternoon is not.
+- **⚠️ `readGroup` and `readAll` must agree about which layout wins.** A group
+  blob REPLACES the legacy slice for its group; it does not merge over it. My
+  first rewrite merged in `readGroup` while `readAll` replaced, so a result
+  cleared under layout 2 stayed gone in the public view and came back from the
+  dead on the manager's own dashboard. Nothing had ever asserted the two readers
+  agree; a fault now holds it.
+- **The write-and-verify is KEPT but no longer load-bearing for concurrency.**
+  `submit-result.js` writes, reads the match back, and looks for its own
+  `submittedAt`; three attempts, then **409 and an error the manager can see**.
+  Its job now is turning a silent storage failure into something actionable.
+  Never return `ok:true` without it. The reply carries `stored:{homeScore,
   awayScore,walkover}` and both score screens display those figures rather than
   echoing the form.
+- **Card counts are sanitised like every other figure.** They were the one
+  exception until Aug 2026 and took the client's value raw, so `-3` stored as
+  `-3` and `"abc"` became `NaN`, which `JSON.stringify` writes as `null`. Both
+  were confirmed with a 200 and served to the public Standings page. Now
+  `Math.min(15, Math.max(0, Math.floor(...)))` like the rest.
+- Proven by `tests/test-results-storage.js`, which drives the real layer against
+  a fake store with dials for read and list failure — both defects are about
+  what happens BETWEEN a read and a write, so neither is reachable without one.
+  Eight faults in `_prove-registration.js`.
 - **U6 and U7 refuse scores at the API**, not just in the UI (`FESTIVAL_AGE_IDS`
   in `_scoring.js`). Clearing stays allowed so results stored before that check
   existed can still be removed.
@@ -1947,6 +2334,54 @@ and far short of anything useful to an abuser.
   in a store that also holds the venue layout and the registration window.
 - A window stamped in the **future** is treated as stale. Clock skew between
   instances must not lock somebody out for longer than the window.
+
+### Signing in is rate limited per ACCOUNT, and only failures count
+
+`ACCOUNT_RATE_OPTS` / `CONNECTION_RATE_OPTS` in `login.js`, on top of
+`peekRate()` / `recordFailure()` / `forget()` in `_ratelimit.js`.
+
+**Two buckets, and a correct password costs nothing against either.**
+
+| Bucket | Budget | Job |
+|---|---|---|
+| `${ip}:${username}:login` | 10 / 15 min | stands between a script and ONE manager's password |
+| `${ip}:login` | 50 / 15 min | backstop against a sweep through a LIST of usernames |
+
+**⚠️ What was wrong, because it would have shown up on the day.** There was one
+bucket, keyed on the connection address alone, and `checkRate()` incremented it
+**before the password was ever looked at**. Every manager at Zayed Sports City
+shares one `x-nf-client-connection-ip`. So ten *correct* sign-ins exhausted the
+whole venue's budget exactly as fast as ten wrong ones, and the eleventh manager
+to arrive on the morning of 7 November would have been refused — right password,
+first attempt — for fifteen minutes.
+
+- **Peek, then record.** Reading a counter has no side effect, so an attempt
+  that turns out to be correct spends nothing. Only the failure branch calls
+  `recordFailure`.
+- **A correct password CLEARS the per-account bucket** (`forget`). Four fumbles
+  then a success must leave a clean slate, or a manager walks around all morning
+  one mistake from a lockout they already recovered from.
+- **⚠️ It must NOT clear the connection bucket.** That one is watching for a
+  username sweep; if knowing one correct password reset it, a sweep could be
+  laundered by signing in every 49 guesses. There is a fault for exactly that.
+- **⚠️ `bcrypt` runs even when the username does not exist**, against
+  `DUMMY_HASH`. The old `!account || !passwordHash || await verifyPassword(...)`
+  chain short-circuited, so a real username answered in tens of milliseconds and
+  an unknown one instantly — enough to sort a wordlist into real accounts and
+  everything else before spending a single guess. Measured at 63 ms vs 64 ms
+  against a real cost-10 hash.
+- Proven by `tests/test-login-ratelimit.js`, which drives the real handler
+  through the fifteen-manager scenario against a SHARED store. Eight faults.
+  ⚠️ Note the header comment there: "all fifteen get in" guards the
+  *failures-only* half, not the *per-account* half — that one is held by "mgr2
+  on the same wifi is unaffected". Found by injecting the per-account half and
+  watching the fifteen-manager check pass anyway.
+
+**⚠️ `readWindow()` takes the caller's `windowMs`, and used to use the module's
+one-hour constant.** Every 15-minute limit — login *and* signup — really lasted
+an hour, while `retryAfterSecs` was computed from the caller's window and told
+the person to try again in fifteen minutes. Found in Aug 2026 by the first test
+that ever advanced a clock past a bucket's *own* window.
 
 ### Signup attempts are rate limited too
 

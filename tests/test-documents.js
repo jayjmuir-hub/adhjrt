@@ -230,7 +230,15 @@ section('documents.js — the door, and the split');
   check('it requires the verifier', /require\('\.\/_auth'\)/.test(fn));
   check('it requires the rules', /require\('\.\/_documents'\)/.test(fn));
   check('it requires the age-group list', /require\('\.\/_agegroups'\)/.test(fn));
-  check('it verifies a bearer token', /verify\(getBearerToken\(event\)\)/.test(fn));
+  /* ⚠️ resolveSession, NOT verify(getBearerToken(...)) — which is what this
+     line asserted until Aug 2026. Verifying the token proves only that we
+     signed it and that it is under six months old; it cannot see that the
+     manager holding it was revoked. This endpoint serves documents scoped to an
+     age group, so a token that outlives its account is a document handed to
+     someone who is no longer on the committee. The negative half is the load-
+     bearing one: going back to verify() alone must fail this. */
+  check('it re-reads the account behind the bearer token',
+    /await resolveSession\(event\)/.test(fn) && !/\bverify\(getBearerToken/.test(fn));
   check('it uses the shared canRead on the download path', /D\.canRead\(doc, sess\)/.test(fn));
 
   /* NEGATIVE — the split holds. A rule added to this file is a rule nothing
@@ -253,9 +261,22 @@ section('documents.js — the door, and the split');
      body-size test, where `MAX_BODY_BYTES` appearing before `JSON.parse` was
      satisfied by the const declaration at the top of the file. */
   check('a signed-out request is refused, by a real early return',
-    /if \(!session\) return fail\(401, 'Please sign in\.'\);/.test(fn));
-  check('…before the stores are opened',
-    fn.search(/if \(!session\) return fail\(401/) < fn.indexOf("blobStore('docfiles')"));
+    /if \(!auth\.ok\) return fail\(auth\.status, auth\.error\);/.test(fn));
+  /* ⚠️ -1 IS LESS THAN EVERYTHING. This pair used to read
+        fn.search(/…/) < fn.indexOf("blobStore('docfiles')")
+     and search() answers -1 when the pattern is ABSENT — so the moment the
+     guard was rewritten, the position check went on passing by matching
+     nothing at all. It survived a rewrite of the very line it watches without
+     going red once. Both positions are now required to EXIST before they are
+     compared, which is the only thing that makes an ordering check mean
+     anything. Same family as the two lessons in the comment above. */
+  {
+    const guardAt = fn.search(/if \(!auth\.ok\) return fail\(auth\.status/);
+    const storeAt = fn.indexOf("blobStore('docfiles')");
+    check('…before the stores are opened',
+      guardAt !== -1 && storeAt !== -1 && guardAt < storeAt,
+      `guard at ${guardAt}, store at ${storeAt}`);
+  }
   check('writing is organiser-only, in the function', /Only organisers can change documents/.test(fn));
   check('…and that gate sits before the body is parsed',
     fn.indexOf('Only organisers can change documents') < fn.indexOf('JSON.parse'));

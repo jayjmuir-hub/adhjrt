@@ -411,6 +411,382 @@ them contains a flex row the blanket rule matches.
 **Suite: 792/792 faults, 34 clean, 39 files.** Six new faults, all six on the
 review's findings.
 
+---
+
+## 9 Aug 2026 — session revocation closed (branch `fix/review-aug-2026`, NOT deployed)
+
+An outside code review of the whole repo found nine issues; this is the first
+of them fixed. **Revoke, Reject and an organiser's password reset were all
+cosmetic** — they changed the accounts blob and nothing else, so the person's
+token kept working for up to 182 days. A revoked *organiser* could re-approve
+themselves. Durable detail in `RESTORE.md` → "Revoke actually ends a session".
+
+`resolveSession()` in `_auth.js` is the new door; all 13 call sites moved to it
+(11 required, 2 optional). `accounts-admin.js` stamps `sessionsValidFrom` on
+revoke and on a reset.
+
+**Suite: 801/801 faults, 35 clean, 40 files.** Nine new faults; the clean
+baseline went 34 → **35**, which is the proof `test-session-revocation.js` is a
+new FILE that ran undamaged rather than checks bolted onto an existing suite.
+
+⚠️ **Three PRE-EXISTING faults had to be re-anchored** (44, 288, 408) because
+they quoted the exact lines the fix replaced. They reported COULD NOT INJECT,
+which is a failed run and not a silent pass — the mechanism worked.
+
+⚠️ **A fourth anchor failed for a different reason worth knowing:**
+`seed()` normalises the temp copy to LF (line 206), so a fault anchor written
+with this repo's own CRLF never matches. Write `\n` in fault strings, always.
+
+⚠️ **Two of the nine faults exist because my first attempt at the check passed
+against the bug.** The `|| 0` on `sessionsValidFrom` was documented — by me — as
+what keeps pre-Aug-2026 accounts signed in; injecting its removal proved that
+false (`x < NaN` is already false), and the comment in `_auth.js` was corrected
+to say what actually carries it. Separately, removing the account lookup made
+the suite die on a stack trace rather than fail the check that claims to guard
+it; the suite now wraps the call so a throw goes red on the right line.
+
+⚠️ **Behaviour changes to expect on deploy:** a manager hitting an
+organiser-only endpoint now gets **403, not 401** (401 told a signed-in person
+"Not signed in", which sent them to re-enter a password that would not help); a
+deleted account gets 401 rather than my-account.js's 404; a transient blob
+failure now gives **503 "try again"** rather than letting the request through.
+**Existing sign-ins survive** — accounts with no `sessionsValidFrom` are
+unaffected, so this does not log the committee out on deploy.
+
+---
+
+## 9 Aug 2026 — result storage moved to one blob per match (same branch, NOT deployed)
+
+The second review finding. Results were one blob per age group,
+read-modify-written, which carried two defects the write-and-verify could not
+see: **a failed read fell through to an empty slice and the caller wrote THAT
+back as the whole group** (fourteen results gone, green tick shown), and **two
+managers scoring the same group could both be told it saved** while one score
+no longer existed. Durable detail in `RESTORE.md` → "Results storage".
+
+One blob per match removes the cause instead of narrowing the window: a save
+writes exactly one key. **No migration, deliberately** — both older layouts stay
+on disk and are read as fallbacks, so nothing is in flight and a rollback loses
+only what was saved while the change was live. Clearing writes a tombstone
+rather than deleting, or the fallback would resurrect the cleared result.
+
+Card counts were sanitised in the same commit (they were the one figure taking
+the client's value raw — `-3` and `null` were both storable and both served to
+the public Standings page).
+
+**Suite: 809/809 faults, 36 clean, 41 files.** Eight new faults.
+
+⚠️ **One of those eight exists because my first rewrite introduced a NEW bug and
+all 32 checks passed.** `readGroup` merged the group blob over the legacy slice
+while `readAll` replaced it — so a result cleared under the old layout stayed
+gone in the public view and came back from the dead on the manager's own
+dashboard. Every supersession check went through `readAll`; nothing asserted the
+two readers agree. **Two callers, two merges; a test of one says nothing about
+the other.**
+
+---
+
+## 9 Aug 2026 — login rate limiting fixed (same branch, NOT deployed)
+
+Third review finding, and the one that would have bitten on the day. One bucket,
+keyed on the connection address alone, incremented **before** the password was
+checked. Every manager at Zayed Sports City shares one connection address, so
+ten CORRECT sign-ins used the whole venue's budget and the eleventh manager to
+arrive would have been refused with the right password. Durable detail in
+`RESTORE.md` → "Signing in is rate limited per ACCOUNT".
+
+Now two buckets — per account (10/15 min) and a per-connection sweep backstop
+(50/15 min) — with **only failed attempts counting**, and a correct password
+clearing the per-account bucket. The username-enumeration timing leak went in
+the same commit (bcrypt now always runs, against a published dummy hash;
+measured 63 ms vs 64 ms).
+
+**Suite: 817/817 faults, 37 clean, 42 files.** Eight new faults.
+
+⚠️ **TWO BUGS FOUND BY WRITING THE TEST, NOT BY THE REVIEW:**
+
+1. **`readWindow()` measured expiry against the module's one-hour constant, not
+   the caller's window.** Every 15-minute limit — login AND signup — really
+   lasted an hour, while telling the person to retry in fifteen minutes. Found
+   by the first test that ever advanced a clock past a bucket's own window.
+2. **My headline check did not guard what I said it did.** "Fifteen managers all
+   get in" passes even with the bucket put back to connection-wide, because
+   nothing increments on success any more. It guards the failures-only half
+   only; the per-account half is held by a different check. Found by injecting
+   the half I thought it covered. The claim in the test header was corrected.
+
+⚠️ **Four PRE-EXISTING faults (83, 182, 403, 405) had to be re-anchored** and
+one existing suite (`test-unified-login.js`) gained two checks for the new
+shape. All four reported COULD NOT INJECT rather than passing silently.
+
+---
+
+## 9 Aug 2026 — head metadata moved into the real `<head>` (same branch, NOT deployed)
+
+Fourth and sixth review findings, done together because they share a file.
+Every crawler-facing tag lived in `<helmet>` in the `<body>` and was moved into
+`document.head` by JavaScript at boot — so **every link to this site shared on
+WhatsApp, Facebook, LinkedIn or Slack arrived as a bare grey URL**, on a site
+distributed entirely by parents forwarding links. Durable detail in
+`RESTORE.md` → "Page metadata lives in the real `<head>`".
+
+It also **silently voided a security claim**: `netlify.toml` said the unlisted
+club form was protected partly because the page carries `noindex`. It did not —
+the tag only existed after JS ran. That comment has been corrected in place, and
+the tag is now where a crawler sees it.
+
+`/app` gained a canonical (it was reachable as both `/app` and `/app.html` with
+nothing joining them) and share tags. `/legal` was added to `sitemap.xml`.
+`/netlify/*`, `/netlify.toml` and `/package.json` are now 404'd — ⚠️ **not yet
+verified on a deploy**; do it on a free branch deploy with an unruled sibling
+returning 200 as the control.
+
+**Suite: 823/823 faults, 38 clean, 43 files.** Six new faults. The clean
+baseline has gone 34 → 38 across the four fixes on this branch.
+
+⚠️ **THREE SEPARATE THINGS BROKE ON THE SAME MISTAKE IN ONE SITTING, ALL MINE:
+a comment that mentions a string is indistinguishable from the string.**
+
+1. My `<head>` comment contained the word `<helmet>`, so my own verification
+   script sliced from the comment instead of the tag and reported tags "still in
+   the helmet" that had been moved correctly.
+2. The same comment contained a literal script tag, which `test-about-board.js`
+   read as opening a script region — it then reported the rest of the file as
+   script body and failed the encodeCase check.
+3. A comment naming the club form's path failed `test-intake.js`, which proves
+   the path's absence with a plain substring search over the file.
+
+**Real tags start a line; prose never does.** Match structurally, and do not
+name a string in a comment that sits inside the file a checker greps.
+
+---
+
+## 9 Aug 2026 — image weight (same branch, NOT deployed)
+
+Fifth review finding. The hero background was a **1.8 MB PNG** — the Largest
+Contentful Paint, bigger than the rest of the homepage put together, pulled in
+full by every parent on venue mobile data before the page could paint. Durable
+detail in `RESTORE.md` → "Image weight".
+
+Now avif/webp at two widths in a `<picture>`: **1.8 MB → 30 KB**. Same treatment
+for `venue-map` (527 KB → 16 KB) and `format-action` (227 KB → 114 KB).
+`sponsors-logos.png` deleted — 371 KB with zero references anywhere in the repo.
+Encoded with ffmpeg, quality chosen by measuring SSIM (hero 0.958, map 0.967)
+rather than by guessing a CRF.
+
+**Suite: 830/830 faults, 39 clean, 44 files.** Seven new faults.
+
+⚠️ **THE PROVER'S BASELINE EARNED ITS KEEP.** My first version of
+`test-image-weight.js` weighed files on disk, which fails on the prover's temp
+copy — `seed()` reads with `utf8` and mangles binaries, so `assets/` is not
+seeded there. The suite failed UNDAMAGED, the clean count stayed at 38 instead
+of rising to 39, and every one of its faults would have reported "caught" while
+proving nothing. That is exactly the failure the baseline exists to detect and
+it detected it. Split into markup checks (everywhere, and what the faults aim
+at) and weight checks (only where the bytes exist), with the mode printed.
+
+⚠️ **FOURTH AND FIFTH TIME on the prose-contains-a-tag trap in one branch.** My
+hero-`<picture>` regex matched a `<picture>` written inside an existing comment;
+anchoring it to the start of a line did not help, because that comment is
+indented. The fix is to strip HTML comments before matching — these files
+genuinely contain prose about markup, and no pattern can tell the two apart.
+
+⚠️ **Two checks of my own passed against the bug and had to be tightened:**
+`action-run-sm` matched anywhere in the `<picture>` (so dropping it from the
+AVIF source alone stayed green), and `test-about-board.js` located the board's
+`<picture>` as "the first one in the file" — true only while the board was the
+only one on the page. Both now match by content, per source.
+
+---
+
+## 9 Aug 2026 — accessibility (same branch, NOT deployed)
+
+Eighth review finding. **Not one form control on the site had an accessible
+name** — 60 label/control pairs associated, 30 `aria-label`s added where there
+is no visible label. The `/app` bottom sheet declared `aria-modal` and had no
+Escape handler, no focus management and no trap; its submit buttons changed
+label but were never disabled. Durable detail in `RESTORE.md` → "Accessibility".
+
+**Suite: 838/838 faults, 40 clean, 45 files.** Eight new faults.
+
+⚠️ **MY BULK TRANSFORMER EDITED TEXT INSIDE COMMENTS.** It added `id=` to an
+`<input type="date">` written as *prose* in two explanatory comments, then
+pointed two real labels at those non-existent controls. Caught by the new
+suite's own "every label's `for=` resolves to a control" check. **Eighth time in
+this branch that prose containing a tag was read as the tag** — and the ninth
+was writing the warning about it: the first draft of
+`tests/test-accessibility.js` spelled out a JavaScript block comment's
+delimiters inside a JavaScript block comment and would not parse.
+
+⚠️ **Two of my own checks passed against the bug, again:**
+`/sheetReturnFocus/.test(code)` survived deleting both the capture and the
+restore, because one bookkeeping line kept the substring alive — all 49 checks
+passed against a sheet that no longer returned focus. And the ordering check
+beside it compared `indexOf` results with a bare `<`, where **−1 is less than
+everything** — the same trap already fixed once in `test-documents.js` this
+month. Both now prove the positions exist before comparing them.
+
+⚠️ **Five pre-existing faults had to be re-anchored** because I inserted
+`aria-label` in the MIDDLE of existing tags rather than appending. Appending
+would have broken nothing. All five reported COULD NOT INJECT.
+
+✅ **THE REVIEW IS FULLY CLOSED — all nine findings plus the housekeeping.**
+⚠️ What is NOT done: nothing is merged to `main`, so **production still runs the
+old code**. And everything behind a login — revocation, per-match score storage,
+the rate limit — has been proven only by the suite, never on a deploy. Doing the
+revoke test on the preview is the single most valuable remaining check.
+
+`fix/review-aug-2026` pushed; PR #16 opened purely to get a free Deploy Preview.
+**Production is untouched.** Branch deploys are set to "all branches" but no
+`fix-review-aug-2026--…` host ever appeared; the PR preview did, so that is the
+route that works here.
+
+Preview: `https://deploy-preview-16--adhquins-jrt.netlify.app`
+
+**The before/after that discriminates** — same paths, production vs preview, at
+the same moment:
+
+| path | production | preview | verdict |
+|---|---|---|---|
+| `/netlify/functions/_auth.js` | **200** | **404** | ✅ real hole, now closed |
+| `/package.json` | **200** | **404** | ✅ real, now closed |
+| `/netlify.toml` | 404 | 404 | ❌ **never was exposed** |
+| `/` (control) | 200 | 200 | ✅ site still works |
+| `/robots.txt` (control) | 200 | 200 | ✅ |
+| `/no-such-page-xyz` (control) | 404 | 404 | ✅ 404s are real |
+
+⚠️ **The controls earned their place twice.** The first attempt used a
+branch-deploy URL that did not exist — every path returned 404 including the
+homepage, which looks exactly like "the rules work" if you only check the three
+paths you expect to be hidden.
+
+⚠️ **TWO CLAIMS I REPEATED FROM THE REVIEW WERE WRONG, AND I HAD NOT MEASURED
+EITHER.**
+
+1. **`/netlify.toml` was never served.** 404 on production already. Its rule is
+   redundant; kept as a cheap pin, but recorded as an error rather than
+   quietly left looking like a fix.
+2. **The head metadata was not ABSENT, it was in the BODY.** Measured:
+   production serves `<title>` at line 14 and `og:title` at line 182 with
+   `</head>` at line 7; the club form's `noindex` at line 19. All present in
+   the served HTML, all below `</head>`, where head-only metadata is out of
+   spec and unreliably honoured. The move to `<head>` is still correct — the
+   preview puts them at lines 34/39 and 34, inside head — but I wrote "did not
+   exist" and "arrived as a bare grey URL" in a commit message and a code
+   comment without ever fetching the page. **I described a WEAK control as an
+   ABSENT one, in a note criticising this repo for asserting unverified
+   properties.**
+
+✅ **Also measured live:** hero image 1,801 KB on production → **30 KB** on the
+preview.
+
+⚠️ **Still unmeasured on a deploy:** everything behind a login — revocation,
+score storage, the rate limit. Those need a signed-in session on the preview
+and have only been proven by the suite.
+
+## 9 Aug 2026 — the sign-in dead end, found by Jay failing to sign in
+
+Not from the review. **Jay could not sign in to the deploy preview because he
+typed his email address**, and the answer was "Incorrect username or password."
+with nowhere to go from there. The field is labelled USERNAME; that was not
+enough, because a browser autofills an email into anything that looks like a
+login and on the live site the password manager had been filling the username
+for him.
+
+**If the person who BUILT the site gets caught by this, a coach who signed up in
+July will too — on tournament morning, at a pitch, with no one to ask.**
+
+Fixed in the message and beside the field, both surfaces:
+> Incorrect username or password. **Sign in with your username, not your email address.**
+
+⚠️ **"Just accept the email too" was considered and rejected.** Only
+Google-created accounts store an email at all (`google-auth.js`); password
+accounts have none. Accepting emails would work for some managers and fail for
+others with an identical message — worse than the current behaviour. One rule
+true for everybody is the only kind worth printing.
+
+⚠️ **The refusal still must not say WHICH half was wrong** — naming a valid
+username confirms the account exists. Held by a fault.
+
+⚠️ **`test-unified-login.js` had pinned the exact sentence**, so improving the
+copy broke three checks. Rewritten to capture the refusal text ONCE and compare
+every other refusal against that — the property is "one message for every
+refusal", not any particular wording. The wording can now improve freely and the
+day two refusals diverge, it still fails.
+
+**Suite: 842/842 faults, 40 clean, 45 files.** Four new faults.
+
+⚠️ **Also confirmed while diagnosing: Google sign-in cannot work on a deploy
+preview.** `Error 400: origin_mismatch` — the preview host is not in the OAuth
+client's authorised JavaScript origins, and should not be added permanently
+because every PR gets a different host. Test Google on production only. Nothing
+in this branch touches that path.
+
+## 9 Aug 2026 — validate-not-coerce: the last four review findings (same branch)
+
+Four bugs of one shape, all fixed. Durable detail in `RESTORE.md` →
+"Validate on a write; coerce only on a read".
+
+1. **A failed teams-sheet read minted a DUPLICATE team code** — two squads, one
+   identity, in the draw and the standings and every match id. Now refuses.
+2. **A single player registration had no server-side age check at all** — only
+   the coach's bulk roster was checked. The parent path, which is the primary
+   one, was unguarded.
+3. **`scoring-rules.js` coerced malformed input into tries-only and answered
+   200 ok**, silently zeroing conversions, penalties and drop goals for an age
+   group while echoing the stored figures back as if intended.
+4. **`mergeVenue` could produce a tournament day with no pitches**, because
+   `normaliseSplits()` returns `{}` — truthy — and `||` cannot tell empty from
+   absent. The write path had the right guard all along; the reader had its own
+   broken copy. One shared `resolveSplits()` now.
+
+**Suite: 850/850 faults, 41 clean, 46 files.** Eight new faults.
+
+⚠️ **A PROVER FAULT HAD ITS PREMISE INVERTED, not merely moved.** Fault 260
+asserted "a failed numbering read does not cost the registration" — the trade
+that turned out to be backwards. Repointed at the half that still holds (the
+refusal must be a clean 503, never an exception escaping `handleSubmission`)
+with the inversion written down in place. Repoint never delete — **and say so
+when the thing repointed was wrong rather than relocated.**
+
+⚠️ **My own age-check test passed for the wrong reason first.** It used invented
+field names, so the submission was refused at the required-field step and never
+reached the age rule — it would have passed identically with no age check in the
+code. Rewritten with the real field names from the spec, and with the in-age
+CONTROL asserted *before* the refusal so a check that rejected everything cannot
+look like a working gate.
+
+## 9 Aug 2026 — housekeeping done; the review is fully closed
+
+Durable detail in `RESTORE.md` → "Dependencies, the password ceiling, and the
+scoring model".
+
+- **`package-lock.json` committed** — 49 packages pinned. Netlify was
+  re-resolving four caret ranges on every deploy. ⚠️ 404'd in the same commit
+  that created it: the root IS the site.
+- **`bcryptjs` 2.4.3 → ^3.0.2** (lock resolves 3.0.3). Verified against the real
+  package: `require()` works, old `$2a$` hashes still verify, nobody is locked
+  out.
+- **Password ceiling at 72 BYTES**, because bcrypt silently discards everything
+  past it. Measured: an 80-character password equals its first 72. Counted in
+  bytes, not characters — one emoji is four, and on a UAE site that matters.
+- **`test-scoring-model.js`** — the scoring model is carried twice and nothing
+  asserted the copies agree. Same duplication that already broke the pitch model
+  and the registration rules; this one decides what a match was won by.
+- **Service worker** bounded to 60 entries, navigations and shell only, cache
+  key dated. It was caching every asset forever and `adhjrt-v1` had never been
+  bumped, so the escape hatch had never been exercised.
+- **184 KB of dead JS deleted** after verifying nothing loads or reads it.
+
+**Suite: 855/855 faults, 42 clean, 47 files.** Five new faults. The clean
+baseline has gone **34 → 42** across this branch.
+
+⚠️ **The review claimed the three dead JS files had "zero references". They did
+not** — `support.js`, `deck-stage.js` and `image-slot.js` all mention them, and
+so does `test-design-polish.js`. All the mentions turned out to be in COMMENTS,
+so the deletion was right, but "grep found nothing" was not what the evidence
+said and checking took four greps rather than one.
+
 ## Where things stand
 
 | | |

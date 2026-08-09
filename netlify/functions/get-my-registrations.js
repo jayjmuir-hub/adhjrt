@@ -13,7 +13,7 @@
 // get-registrations.js and submission-created.js, and is read-only on the
 // sheets (spreadsheets.readonly scope).
 
-const { verify, getBearerToken } = require('./_auth');
+const { resolveSession } = require('./_auth');
 /* Service-account auth and the private-key repair, in one place — they used
    to be written out in this file and two others. See _sheets.js. */
 const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
@@ -51,10 +51,12 @@ async function readRows(auth, spreadsheetId, columns) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const session = verify(getBearerToken(event));
-    if (!session) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    /* `sess`, not `auth` — getReadAuth() below already owns that name here. */
+    const sess = await resolveSession(event);
+    if (!sess.ok) {
+      return { statusCode: sess.status, body: JSON.stringify({ ok: false, error: sess.error }) };
     }
+    const session = sess.session;
 
     // Decide what this session may see, from the TOKEN only. Organizers and
     // the "*" admin-manager see every group; an ordinary manager sees exactly

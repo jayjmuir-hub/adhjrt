@@ -310,8 +310,25 @@ function mergeVenue(saved) {
       && (src.splits || Array.isArray(src.pitches));
     if (!usable) { out[d] = DEFAULT_VENUE[d]; continue; }
     /* A blob saved before splits existed carries only `pitches`; infer the
-       splits back out of it so nothing needs migrating by hand. */
-    const splits = normaliseSplits(src.splits) || splitsFromPitches(src.pitches);
+       splits back out of it so nothing needs migrating by hand.
+
+       ⚠️ EMPTY IS NOT THE SAME AS ABSENT, and this line used to treat them as
+       the same. normaliseSplits() returns {} — truthy — whenever src.splits is
+       an object whose keys are ALL unrecognised, so `|| splitsFromPitches(...)`
+       never fired and the fallback was dead. derivePitches({}) is [], and
+       pitches are always derived below, so the day loaded with NO PLAYING
+       SURFACES AT ALL while `groups` still listed age groups assigned to
+       pitches the layout now said did not exist. The public fixtures page and
+       every pitch reference for that day break silently, and the module-level
+       CACHE keeps serving the broken layout for the life of the instance.
+
+       validateVenue() — the WRITE path — has always had the right guard three
+       hundred lines below. This is the READ path, and the two had drifted. The
+       resolution is now one shared function so they cannot drift again. */
+    const splits = resolveSplits(src);
+    /* Nothing usable after both routes: fall back to the default day rather
+       than build one with no surfaces on it. */
+    if (!splits) { out[d] = DEFAULT_VENUE[d]; continue; }
     out[d] = {
       date:  typeof src.date === 'string' ? src.date : DEFAULT_VENUE[d].date,
       label: typeof src.label === 'string' ? src.label : DEFAULT_VENUE[d].label,
@@ -337,6 +354,30 @@ function normaliseSplits(splits) {
     if (MAIN_PITCHES.indexOf(main) >= 0 && SPLITS.indexOf(n) >= 0) out[main] = n;
   });
   return out;
+}
+
+/* ⚠️ THE ONE PLACE SPLITS ARE RESOLVED, used by BOTH the read path
+   (mergeVenue) and the write path (validateVenue). They had their own copies
+   and drifted: validateVenue tested `!splits || !Object.keys(splits).length`,
+   mergeVenue tested only `normaliseSplits(...) || splitsFromPitches(...)`.
+
+   normaliseSplits() returns {} — TRUTHY — whenever every key is unrecognised,
+   so on the read path the `||` never fired, derivePitches({}) gave [], and a
+   day loaded with NO PITCHES while still listing age groups assigned to them.
+   Empty is not absent; `||` cannot tell them apart, and the one function that
+   knew it was the one the public reader did not call.
+
+   Returns null when neither route yields a usable split, so each caller can
+   decide what that means — the reader falls back to the default day, the
+   writer reports "has no pitches" to the organiser. */
+function resolveSplits(src) {
+  const norm = normaliseSplits(src && src.splits);
+  if (norm && Object.keys(norm).length) return norm;
+  if (src && Array.isArray(src.pitches)) {
+    const fromPitches = splitsFromPitches(src.pitches);
+    if (fromPitches && Object.keys(fromPitches).length) return fromPitches;
+  }
+  return null;
 }
 
 /* Cached per function instance. The layout is decided weeks out and read on
@@ -410,11 +451,11 @@ function validateVenue(input) {
 
     /* Splits are the input. A payload with only `pitches` is accepted and
        converted, so an older client — or a blob edited by hand — still saves. */
-    let splits = normaliseSplits(src.splits);
-    if (!splits || !Object.keys(splits).length) {
-      if (Array.isArray(src.pitches)) splits = splitsFromPitches(src.pitches);
-      else { errors.push(`${def.label} has no pitches.`); continue; }
-    }
+    /* ⚠️ Same resolution as the read path, via the one shared function — see
+       resolveSplits(). This block used to carry its own correct copy while
+       mergeVenue carried its own broken one. */
+    const splits = resolveSplits(src);
+    if (!splits) { errors.push(`${def.label} has no pitches.`); continue; }
 
     /* Anything the panel could not have sent is named rather than dropped —
        silently ignoring a pitch nobody recognises is how a layout ends up

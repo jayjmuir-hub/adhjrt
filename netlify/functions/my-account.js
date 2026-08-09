@@ -28,7 +28,7 @@
 // a session for it, and the Google identity, by producing a valid token.
 // google-auth.js still never attaches itself to anyone silently.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, verify, getBearerToken, passwordProblem, signInMethodOf } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, passwordProblem, signInMethodOf } = require('./_auth');
 const { verifyGoogleIdToken } = require('./_googleAuth');
 const { readSignIn } = require('./_signins');
 
@@ -57,12 +57,16 @@ function publicView(a) {
 }
 
 exports.handler = async (event) => {
-  const session = verify(getBearerToken(event));
-  if (!session) return fail(401, 'Not signed in.');
+  const auth = await resolveSession(event);
+  if (!auth.ok) return fail(auth.status, auth.error);
+  const session = auth.session;
 
   try {
     const all = await loadAccounts();
     const me = all.findIndex((a) => a.username === session.username);
+    /* resolveSession already proved this account exists, so reaching here means
+       it was deleted between the two reads. Kept rather than trusted away: it
+       is one comparison, and every index below depends on it. */
     if (me === -1) return fail(404, 'Your account no longer exists.');
 
     if (event.httpMethod === 'GET') {

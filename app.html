@@ -6,6 +6,29 @@
 <title>ADH JRT — Match Day</title>
 <meta name="description" content="Fixtures, live scores and standings for the Abu Dhabi Harlequins Junior Rugby Tournament, 7-8 November 2026.">
 
+<!-- ⚠️ CANONICAL, BECAUSE THIS PAGE HAS TWO URLs. The repo root IS the deployed
+     site and /app is a 200 rewrite, not a redirect, so /app.html stays reachable
+     alongside it and robots.txt says Allow: /. Without this line the two are
+     separate indexable URLs for identical content, splitting whatever ranking
+     the page earns. /app is the one in sitemap.xml, so /app is the canonical. -->
+<link rel="canonical" href="https://adhjrt.com/app">
+
+<!-- ⚠️ SHARE TAGS. This is the page most likely to be forwarded on a match day
+     — "scores are here" into a parents' WhatsApp group — and it had none, so
+     that message arrived as a bare grey URL. Same card as the homepage and the
+     scores page; see the note in Quins JRT.dc.html about why these live in the
+     real <head> and never in <helmet>. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">
+<meta property="og:title" content="Match Day — ADH JRT 2026">
+<meta property="og:description" content="Fixtures, live scores and standings, updating through both days of the tournament.">
+<meta property="og:url" content="https://adhjrt.com/app">
+<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Match Day — ADH JRT 2026">
+<meta name="twitter:description" content="Fixtures, live scores and standings, updating through both days of the tournament.">
+<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
+
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0C0C0E">
 <meta name="mobile-web-app-capable" content="yes">
@@ -715,14 +738,77 @@ function go(v){ S.view = v; buildNav(); render(true); window.scrollTo(0,0); }
 $('goHome').onclick = () => { closeSheet(); go('today'); };
 
 /* ---------------- sheet ---------------- */
+/* ⚠️ THE SHEET SAYS role="dialog" aria-modal="true" AND FOR A LONG TIME DID
+   NONE OF WHAT THAT PROMISES. It had no Escape handler, never moved focus into
+   itself, never gave focus back, and did not stop Tab walking into the page
+   behind it. This is the ONLY interaction surface in /app - sign-in, score
+   entry and follow-a-team all happen in here - so "the dialog is unusable by
+   keyboard and confusing to a screen reader" meant the whole app was.
+
+   Every other page in this repo already did it properly (see the Escape
+   handlers in Quins JRT.dc.html, Organizer.dc.html and Manager.dc.html, each
+   registered on open and removed on unmount). This file was the outlier, so
+   the pattern below is deliberately theirs.
+
+   ⚠️ THE LISTENER IS REMOVED ON CLOSE, NOT LEFT ATTACHED. The sheet opens and
+   closes dozens of times in a match day; an accumulating keydown handler is a
+   leak that gets slower every time somebody checks a score. */
+let sheetReturnFocus = null;   // what to give focus back to when we close
+
+function onSheetKey(e){
+  if (e.key === 'Escape'){ e.preventDefault(); closeSheet(); return; }
+  if (e.key !== 'Tab') return;
+  /* Focus trap. Without it Tab leaves the dialog and walks the page behind,
+     which for a sighted keyboard user means the focus ring simply vanishes. */
+  const f = $('sheet').querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+}
+
+/* ⚠️ CHANGING THE LABEL IS NOT DISABLING THE BUTTON, and for a long time this
+   file only did the first. "Saving…" appeared and the button stayed live, so a
+   double-tap pitch-side - on a phone, in the sun, on a slow connection, which
+   is exactly when people tap twice - sent two submitResult or two login POSTs.
+   Every DC page in this repo already binds disabled="{{ busy }}"; /app was the
+   one that did not.
+
+   busy() sets both and returns a restore function, so the failure branches
+   cannot put the label back and forget the disabled flag - the two can only
+   move together. */
+function busy(id, label){
+  const b = $(id); if (!b) return () => {};
+  const was = b.textContent;
+  b.textContent = label; b.disabled = true;
+  return () => { b.textContent = was; b.disabled = false; };
+}
+
 function openSheet(title, html){
+  /* Remember where focus came from BEFORE anything moves, so closing can put
+     it back on the control that opened the sheet rather than at the top. */
+  sheetReturnFocus = document.activeElement;
   $('sheetTitle').textContent = title; $('sheetBody').innerHTML = html;
   $('sheet').classList.add('on'); $('scrim').classList.add('on');
   document.body.style.overflow = 'hidden';   // the page must not scroll behind the sheet
+  document.addEventListener('keydown', onSheetKey);
+  /* Focus the first real control, or the close button if the sheet is just
+     text (the venue map, for instance). Deferred a frame: the sheet animates
+     in, and focusing a element that is still display:none does nothing. */
+  requestAnimationFrame(() => {
+    const target = $('sheet').querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])') || $('sheetClose');
+    if (target) target.focus();
+  });
 }
 function closeSheet(){
   $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
   document.body.style.overflow = '';
+  document.removeEventListener('keydown', onSheetKey);
+  /* ⚠️ Give focus BACK. Without this it lands on <body> and the next Tab
+     starts from the top of the page, which after entering a score means
+     tabbing through the whole app again to reach the next match. */
+  if (sheetReturnFocus && typeof sheetReturnFocus.focus === 'function') sheetReturnFocus.focus();
+  sheetReturnFocus = null;
 }
 const sheetOpen = () => $('sheet').classList.contains('on');
 $('sheetClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
@@ -1276,7 +1362,11 @@ function act(a){
   }
   if (a === 'tools')   { location.href = '/manager'; return; }
   if (a === 'venuemap') return openSheet('Venue map',
-    `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
+    `<picture>
+      <source type="image/avif" srcset="/assets/venue-map.avif">
+      <source type="image/webp" srcset="/assets/venue-map.webp">
+      <img class="vmap" src="/assets/venue-map.webp" alt="Zayed Sports City pitch layout" width="792" height="547" loading="lazy">
+    </picture>
      <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">
        Zayed Sports City, Abu Dhabi · enter via Gate 16.</p>`);
   if (a === 'teamkey') return openSheet('Team key', teamKeyContent());
@@ -1314,8 +1404,8 @@ function openTeamPick(){
 
 function signIn(){
   openSheet('Sign in', `<div id="loginErr"></div>
-    <div class="field"><label>Username</label><input id="lu" autocomplete="username" autocapitalize="none"></div>
-    <div class="field"><label>Password</label><input id="lp" type="password" autocomplete="current-password"></div>
+    <div class="field"><label for="lu">Username</label><input id="lu" aria-describedby="lu-hint" autocomplete="username" autocapitalize="none"><div id="lu-hint" style="font-size:12px;color:#8a92a0;margin-top:4px">Your username, not your email address.</div></div>
+    <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password"></div>
     <button class="btn btn-p" id="lgo">Sign in</button>
     <p class="muted" style="margin-top:16px;font-size:13px;line-height:1.6">
       Managers use the account they created with their age group invite code.
@@ -1323,7 +1413,7 @@ function signIn(){
   $('lgo').onclick = async () => {
     const u = $('lu').value.trim(), p = $('lp').value;
     if (!u || !p) { $('loginErr').innerHTML = '<div class="err">Enter your username and password.</div>'; return; }
-    $('lgo').textContent = 'Signing in…';
+    const doneLogin = busy('lgo', 'Signing in…');
     let r = await api.login(u, p);
     if (!r.ok) { const o = await orgApi.login(u, p); if (o.ok) r = o; }
     if (r.ok) {
@@ -1332,8 +1422,10 @@ function signIn(){
       if (ag && ag !== '*' && S.ageGroups.some(a => a.id === ag)) await load(ag); else render();
       toast('Signed in');
     } else {
-      $('loginErr').innerHTML = '<div class="err">Wrong username or password. Managers use their age group account; organisers use their organiser account.</div>';
-      $('lgo').textContent = 'Sign in';
+      /* ⚠️ The email sentence first - it is the mistake people actually make.
+         See the note in netlify/functions/login.js. */
+      $('loginErr').innerHTML = '<div class="err">Wrong username or password. Sign in with your username, not your email address. Managers use their age group account; organisers use their organiser account.</div>';
+      doneLogin();
     }
   };
 }
@@ -1396,7 +1488,7 @@ function openMatch(id){
   openSheet('Enter score', head + `<div id="scErr"></div>
     ${sideInputs('home', m.home ? tBadge(m.home) : 'Home')}
     ${sideInputs('away', m.away ? tBadge(m.away) : 'Away')}
-    <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo">
+    <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="wo" aria-label="Walkover">
       <option value="">No walk-over</option>
       <option value="home" ${r&&r.walkover==='home'?'selected':''}>${esc(m.home?tShort(m.home):'Home')} awarded the match</option>
       <option value="away" ${r&&r.walkover==='away'?'selected':''}>${esc(m.away?tShort(m.away):'Away')} awarded the match</option>
@@ -1442,17 +1534,17 @@ function openMatch(id){
   };
 
   const doClear = async () => {
-    $('sclr').textContent = 'Clearing…';
+    const doneClear = busy('sclr', 'Clearing…');
     const res = await api.clearResult(m.id, S.session);
     if (res.ok) { closeSheet(); toast('Result cleared'); await afterWrite(); }
-    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not clear.')}</div>`; $('sclr').textContent = 'Clear result'; }
+    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not clear.')}</div>`; doneClear(); }
   };
   if (r && $('sclr')) $('sclr').onclick = () =>
     askInSheet('Clear this result? The match goes back to unplayed and the pool table is recalculated.', 'Clear result', 'btn-p', doClear);
 
   const doSave = async () => {
     const wo = $('wo').value;
-    $('sgo').textContent = 'Saving…';
+    const doneSave = busy('sgo', 'Saving…');
     const payload = { walkover: wo || null };
     ['home','away'].forEach(side => parts.forEach(k => {
       payload[side + k.charAt(0).toUpperCase() + k.slice(1)] = Number(($(`${side}-${k}`)||{}).value || 0);
@@ -1467,7 +1559,7 @@ function openMatch(id){
       toast(res.stored ? `Saved ${res.stored.homeScore}–${res.stored.awayScore}` : 'Result saved');
       await afterWrite();
     }
-    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; $('sgo').textContent='Save result'; }
+    else { $('scErr').innerHTML = `<div class="err">${esc(res.error||'Could not save.')}</div>`; doneSave(); }
   };
 
   $('sgo').onclick = () => {

@@ -159,8 +159,16 @@ section('GET returns your own account, and never a secret');
   eq('a Google-created account reports Google', g.account.signInMethod, 'Google');
 
   eq('signed out is refused', parse(await call(null, 'GET')).status, 401);
-  eq('a token for an account that no longer exists is a 404, not a 500',
-    parse(await call(TOKENS.ghost, 'GET')).status, 404);
+  /* ⚠️ 401 SINCE AUG 2026, AND IT WAS 404. The handler's own 404 is no longer
+     the first thing a deleted account meets: resolveSession re-reads the
+     accounts list before the handler body runs and refuses there. The 404 is
+     kept below it for the case where the account is deleted BETWEEN the two
+     reads, so it is unreachable in this test rather than gone.
+     The status matters more than it looks — 401 is what tells the page to send
+     someone back to sign-in, which is the correct thing to do with a login that
+     no longer exists. A 500 here would be the real regression. */
+  eq('a token for an account that no longer exists is refused, not a 500',
+    parse(await call(TOKENS.ghost, 'GET')).status, 401);
 }
 
 /* ====================================================================== */
@@ -283,10 +291,14 @@ section('accounts-admin.js stays organiser-only — the other-people actions are
   const { readRepo } = require('./_lib');
   const admin = readRepo(path.join('netlify', 'functions', 'accounts-admin.js'));
   check('its door is still requireOrganizer',
-    /const session = requireOrganizer\(event\);/.test(admin),
+    /const auth = await requireOrganizer\(event\);/.test(admin),
     'a My account card on /manager is exactly what would tempt someone to relax this');
   check('…and requireOrganizer still checks the role',
-    /session && session\.role === 'organizer' \? session : null/.test(admin));
+    /r\.session\.role !== 'organizer'/.test(admin));
+  /* Added Aug 2026 with resolveSession: the role check alone was never enough,
+     because a REVOKED organiser's token still carried role:'organizer'. */
+  check('…and re-reads the account behind the token',
+    /await resolveSession\(event\)/.test(admin));
   check('the account listing still strips passwordHash AND googleSub',
     /accounts\.map\(\(\{ passwordHash, googleSub, \.\.\.rest \}\)/.test(admin),
     'the card is now what renders this listing');

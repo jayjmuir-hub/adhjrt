@@ -548,6 +548,26 @@ function validateSubmission(form, clean) {
     }
   }
 
+  /* ⚠️ AND THE SAME RULE FOR A SINGLE PLAYER, which had NO server-side age
+     check at all until Aug 2026. The block above is gated on `roster`, and
+     `roster` is only ever populated for team-registration — so a coach entering
+     a whole squad was checked and a parent entering one child was not.
+
+     That is the asymmetry the wrong way round. The player form is the primary
+     path, it is the one that collects `play-up-consent`, and step 4 above
+     verified only that the age-group NAME was one of the fifteen — not that the
+     child belonged in it. POST a dob of 2000-01-01 with 'U8 Tag' and it was
+     accepted, appended to the players sheet, and confirmed by email.
+
+     The browser's _playerAgeCheck() blocks it, which is exactly why this has to
+     exist: the whole stated purpose of this gateway is that a browser-only rule
+     is not a rule. Same function, same message, same 'playUp passes' behaviour
+     as the roster above — one rule, applied to both doors. */
+  if (!roster && d.dob) {
+    const solo = ageGroupCheck(text(d.dob), groupName);
+    if (solo.status === 'blocked') return bad(solo.message, 'dob');
+  }
+
   /* 8. LENGTH. Last, so a coach fixes the obvious things first. */
   for (const f of spec.fields) {
     const max = LONG_FIELDS.indexOf(f) >= 0 ? MAX_NOTES_CHARS : MAX_FIELD_CHARS;
@@ -775,9 +795,22 @@ async function handleSubmission(body, deps) {
     }
   }
 
-  /* 5. THE TEAM CODE, teams only. A failed numbering read costs the tidy number,
-        not the registration — an organiser can renumber in the sheet, and the
-        alternative is refusing a real entry because a read timed out. */
+  /* 5. THE TEAM CODE, teams only.
+        ⚠️ THIS COMMENT USED TO SAY "a failed numbering read costs the tidy
+        number, not the registration". THAT WAS WRONG, and the trade it
+        described was the wrong way round. On a failed read `existing` stayed
+        `[]`, `nextTeamCode` saw no prior codes, and it returned ADH1 — so if
+        Abu Dhabi Harlequins already had an ADH1 in that age group, two
+        different squads ended up carrying the SAME code.
+
+        A team code is not decoration. `_teams.js` spells it out: the code is
+        the team's identity in the draw, the standings, the knockout and every
+        match id, so a duplicate "silently puts one team in two pools with a
+        full set of fixtures in each". That is not a tidiness cost.
+
+        A parked submission an organiser re-enters by hand is recoverable in
+        five minutes. A duplicate code is discovered on a tournament morning by
+        a coach who cannot find their pool. Refuse, and say so. */
   const data = { ...cleaned.clean };
   delete data[HONEYPOT];
   const submittedAt = new Date(now).toISOString();
@@ -791,13 +824,23 @@ async function handleSubmission(body, deps) {
        leaves a phantom team in the draw. */
     row = clubRow(data, submittedAt);
   } else if (form === 'team-registration') {
-    let existing = [];
+    let existing;
     try {
       existing = await d.readTeamsSheet();
     } catch (err) {
+      /* ⚠️ REFUSE. See the note above: numbering from an empty list mints a
+         code that already exists, and nothing downstream can tell the two
+         teams apart afterwards. */
       log(`could not read the teams sheet for numbering - ${err && err.message}`);
+      return { status: 503, body: { ok: false, error: NOT_SAVED } };
     }
-    teamCode = nextTeamCode(data.club, data['age-group'], Array.isArray(existing) ? existing : []);
+    if (!Array.isArray(existing)) {
+      /* Same reasoning: a shape we do not recognise is not evidence that the
+         sheet is empty. */
+      log(`teams sheet returned a non-array (${typeof existing}) - refusing rather than numbering from scratch`);
+      return { status: 503, body: { ok: false, error: NOT_SAVED } };
+    }
+    teamCode = nextTeamCode(data.club, data['age-group'], existing);
     /* The confirmation email prints the code, so it has to be on the data
        before the mailer sees it. */
     data['team-name'] = teamCode;

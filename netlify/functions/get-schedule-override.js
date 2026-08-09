@@ -16,7 +16,7 @@
 // Either way the response carries the publish state, so the editor can show
 // whether this age group is live and when it went out.
 
-const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { optionalSession, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { draftKey, publishedKey, isTournamentWindow } = require('./_publish');
 
 exports.handler = async (event) => {
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
        answer below — a bad or missing token quietly gets the published view
        rather than an error, so a stale login cannot blank the page. */
     if (params.draft === '1') {
-      const session = verify(getBearerToken(event));
+      const session = await optionalSession(event);
       if (session && hasAgeGroupAccess(session, ageGroupId)) {
         const draft = await store.get(draftKey(ageGroupId), { type: 'json' });
         return {

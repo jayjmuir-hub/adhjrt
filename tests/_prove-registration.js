@@ -47,6 +47,25 @@ const NEEDED = [
      by test-documents.js; documents.js is read as text by it. */
   'netlify/functions/_documents.js',
   'netlify/functions/documents.js',
+  /* Session revocation (Aug 2026). ⚠️ SIXTH TIME — see the note above, and it
+     went the same way again: test-session-revocation.js REQUIRES _auth.js
+     rather than reading it as text, so leaving it out of this list does not
+     produce a missing-file message, it produces MODULE_NOT_FOUND and every
+     fault aimed at the door reports as a dead suite. accounts-admin.js is read
+     as text by test-accounts.js and test-my-account.js for the requireOrganizer
+     assertions, which is why it has to ride along too. */
+  'netlify/functions/_auth.js',
+  'netlify/functions/_password.js',
+  /* The scoring model is carried twice - _scoring.js on the server,
+     scores-data.js in the browser. test-scoring-model.js requires the first
+     and parses the second, so BOTH have to ride along or its faults report
+     as a dead suite rather than as drift. */
+  'netlify/functions/_scoring.js',
+  'netlify/functions/_signins.js',
+  'netlify/functions/accounts-admin.js',
+  /* Per-match result storage (Aug 2026) — test-results-storage.js REQUIRES
+     _results.js rather than reading it as text. */
+  'netlify/functions/_results.js',
   'Scores & Standings.dc.html',
   /* test-manager-dc-draw.js drives the Manager Dashboard — added Aug 2026
      with the withTeamNames faults. Absent from this list, any test reading it
@@ -235,6 +254,9 @@ function run(file) {
 }
 
 const INTAKE_F = path.join('netlify', 'functions', '_intake.js');
+const SD = 'scores-data.js';
+const SCORING_MODEL_F = path.join('netlify', 'functions', '_scoring.js');
+const PASSWORD_F = path.join('netlify', 'functions', '_password.js');
 /* The confirmation block from _intake.js, verbatim, so a fault can move it
    rather than duplicate it. If this stops matching, the fault refuses to inject
    and that is a FAILURE of this script, not a pass. */
@@ -249,7 +271,16 @@ const MAIL_BLOCK = [
 ].join('\n');
 
 const REG = path.join('netlify', 'functions', '_registration.js');
-const SD = 'scores-data.js';
+/* The session door — see the nine faults at the end of FAULTS. */
+const AUTH_F = path.join('netlify', 'functions', '_auth.js');
+/* Match-result storage — see the eight faults after those. */
+const RESULTS_F = path.join('netlify', 'functions', '_results.js');
+/* Login rate limiting — see the eight faults after THOSE. */
+const LOGIN_F = path.join('netlify', 'functions', 'login.js');
+const RATELIMIT_F = path.join('netlify', 'functions', '_ratelimit.js');
+/* Validate-not-coerce - see the eight faults at the end. */
+const SCORING_F = path.join('netlify', 'functions', 'scoring-rules.js');
+const VENUE_F = path.join('netlify', 'functions', '_venue.js');
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
    Same discipline as MAIL_BLOCK above: a fault that MOVES a block has to carry
@@ -708,9 +739,13 @@ const FAULTS = [
   {
     name: 'a signed-out request reaches the store before the session is checked',
     suite: 'test-documents.js',
+    /* Re-anchored Aug 2026: the guard became `if (!auth.ok) …` when the door
+       started re-reading the account. The fault is unchanged in spirit — `&&
+       false` leaves the sentence exactly where it was, which is what defeats a
+       position-only check. */
     apply: () => patch('netlify/functions/documents.js',
-      "    if (!session) return fail(401, 'Please sign in.');",
-      "    if (!session && false) return fail(401, 'Please sign in.');"),
+      '    if (!auth.ok) return fail(auth.status, auth.error);',
+      '    if (!auth.ok && false) return fail(auth.status, auth.error);'),
     expect: ['refused, by a real early return'],
   },
   {
@@ -1038,8 +1073,11 @@ const FAULTS = [
       const f = path.join('netlify', 'functions', 'login.js');
       patch(f, "const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');",
         "const { loadAccounts, verifyPassword, sign, blobStore, passwordProblem } = require('./_auth');");
-      patch(f, "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
-        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {");
+      /* Re-anchored Aug 2026: the verifyPassword call moved out of this
+         condition into an `ok` above it, so the door could always run bcrypt
+         and stop leaking which usernames exist by how fast it answered. */
+      patch(f, '    if (!account || !account.passwordHash || !ok) {',
+        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !account.passwordHash || !ok) {");
     },
     expect: ['does NOT check password length'],
   },
@@ -1877,7 +1915,7 @@ const FAULTS = [
     name: 'the window never expires at all',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
-      '  if (now - windowStart >= WINDOW_MS) return null;', ''),
+      '  if (now - windowStart >= (windowMs || WINDOW_MS)) return null;', ''),
     expect: ['allowed again the moment the hour is up'],
   },
   {
@@ -2562,12 +2600,27 @@ const FAULTS = [
     expect: ['the mailer is told the team code'],
   },
   {
-    name: 'a failed numbering read costs the whole registration',
+    /* ⚠️ REPOINTED, NOT DELETED — and its PREMISE was INVERTED in Aug 2026.
+       This fault used to make a failed numbering read throw, aimed at the check
+       'a failed numbering read does not cost the registration'. Both encoded a
+       trade that was the wrong way round: numbering from an empty list mints a
+       code that ALREADY EXISTS, and per _teams.js a duplicate code silently
+       puts one team in two pools with a full set of fixtures in each. Refusing
+       is now the correct behaviour, so the old fault could no longer be
+       injected and the check it named no longer exists.
+
+       The inverted case — numbering from scratch again — has its own fault at
+       the end of this file. What is kept HERE is the half that still matters
+       and was never separately guarded: the refusal must be a clean 503 with
+       the NOT_SAVED message, never an exception escaping handleSubmission,
+       because a submission that throws is parked by nothing and told to
+       nobody. */
+    name: 'a failed numbering read throws out of handleSubmission instead of refusing cleanly',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
-      '    } catch (err) {\n      log(`could not read the teams sheet for numbering - ${err && err.message}`);\n    }',
-      '    } catch (err) {\n      throw err;\n    }'),
-    expect: ['a failed numbering read does not cost the registration'],
+      '      log(`could not read the teams sheet for numbering - ${err && err.message}`);',
+      '      throw err;'),
+    expect: ['a failed numbering read does not throw out of handleSubmission'],
   },
   {
     name: 'a dropped field stops being logged, so nothing is ever noticed',
@@ -2792,8 +2845,12 @@ const FAULTS = [
   {
     name: 'a reader loses its _auth require (the bug that actually shipped)',
     suite: 'test-functions-load.js',
+    /* Re-anchored Aug 2026 — the import became resolveSession when the door
+       started re-reading the account. Still the same fault: drop the require
+       and the handler throws a ReferenceError, which becomes a 500, which
+       looks exactly like "there is no data". */
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      "const { verify, getBearerToken } = require('./_auth');\n", ''),
+      "const { resolveSession } = require('./_auth');\n", ''),
     expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
   },
   {
@@ -2974,7 +3031,7 @@ const FAULTS = [
     name: 'the age-group picker is deleted from the scoring card',
     suite: 'test-organizer-tournament.js',
     apply: () => patch('Organizer.dc.html',
-      '<select value="{{ tournAgeId }}" onChange="{{ onTournAge }}"', '<select value="{{ tournAgeId }}"'),
+      '<select value="{{ tournAgeId }}" aria-label="Age group" onChange="{{ onTournAge }}"', '<select value="{{ tournAgeId }}"'),
     expect: ['the tab\'s age-group picker'],
   },
   {
@@ -3459,8 +3516,8 @@ const FAULTS = [
     name: 'the Organiser option creeps back onto the signup role picker',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      '      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
-      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
+      '      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
+      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
     expect: ['no role picker survives on either signup view', 'the page never offers "Organiser" as something to sign up as'],
   },
   {
@@ -3867,8 +3924,8 @@ const FAULTS = [
     name: 'login.js loses the Google-account (no passwordHash) guard',
     suite: 'test-unified-login.js',
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      "if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
-      "if (!account || !(await verifyPassword(password || '', account.passwordHash))) {"),
+      "if (!account || !account.passwordHash || !ok) {",
+      "if (!account || !ok) {"),
     expect: ['the Google-account (no passwordHash) guard is present'],
   },
   {
@@ -3883,8 +3940,8 @@ const FAULTS = [
     name: 'login.js moves to its own rate bucket, buying attackers a second guess budget',
     suite: 'test-unified-login.js',
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:login`,',
-      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:signin`,'),
+      'const connectionBucket = (event) => `${clientIp(event)}:login`;',
+      'const connectionBucket = (event) => `${clientIp(event)}:signin`;'),
     expect: ['login.js counts into the :login bucket'],
   },
   {
@@ -3912,9 +3969,10 @@ const FAULTS = [
   {
     name: 'my-account.js grows an organiser-only door, so a manager cannot reach their own account again',
     suite: 'test-my-account.js',
+    /* Re-anchored Aug 2026 for resolveSession. */
     apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
-      "  const session = verify(getBearerToken(event));\n  if (!session) return fail(401, 'Not signed in.');",
-      "  const session = verify(getBearerToken(event));\n  if (!session || session.role !== 'organizer') return fail(401, 'Not signed in.');"),
+      '  const auth = await resolveSession(event);\n  if (!auth.ok) return fail(auth.status, auth.error);',
+      "  const auth = await resolveSession(event);\n  if (!auth.ok || auth.session.role !== 'organizer') return fail(401, 'Not signed in.');"),
     expect: ['a MANAGER can read their own account'],
   },
   {
@@ -5339,10 +5397,10 @@ const FAULTS = [
     suite: 'test-manager-dc-score-sheet.js',
     apply: () => {
       patch('Manager.dc.html',
-        '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player"',
+        '<input id="f--label-style-display" value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player"',
         '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHomeMoved }}" placeholder="{{ sheetHomeName }} player"');
       patch('Manager.dc.html',
-        '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player"',
+        '<input id="f--label-style-display-2" value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player"',
         '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" data-legacy="{{ onSheetSpiritHome }}" placeholder="{{ sheetAwayName }} player"');
     },
     expect: ['directly after the home Cards row'],
@@ -7410,7 +7468,7 @@ const FAULTS = [
     name: 'a /signin input is removed, so the pinned count of six no longer holds',
     suite: 'test-design-polish.js',
     apply: () => patch('Signin.dc.html',
-      '<input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
+      '<input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
       '<span data-was-an-input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"'),
     expect: ['the page still has six inputs'],
   },
@@ -7480,6 +7538,617 @@ const FAULTS = [
     apply: () => patch(ORG, "      const hit = (ags || []).find((a) => a.hasStandings);",
       "      const hit = (ags || []).find((a) => a.id !== 'u6' && a.id !== 'u7');"),
     expect: ['festival ids are NOT hardcoded'],
+  },
+
+  /* ==================================================================== */
+  /* SESSION REVOCATION — resolveSession() in _auth.js (Aug 2026).
+
+     Nine faults, because this is the door. Until this change every guarded
+     endpoint called verify() and stopped: an organiser pressing Revoke changed
+     the accounts blob and NOTHING ELSE, so the revoked person's phone kept
+     working for up to 182 days — still reading their age group's children's
+     dates of birth and medical notes.
+
+     ⚠️ TWO OF THESE NINE ARE HERE BECAUSE MY FIRST ATTEMPT AT THEM PASSED.
+     The `|| 0` on sessionsValidFrom was originally claimed — by me, in a
+     comment — to be what kept pre-Aug-2026 accounts signed in. Injecting its
+     removal proved that false: Number(undefined) is NaN and `x < NaN` is
+     already false, so the guard is JavaScript's, not the code's. The fault
+     below therefore aims at the mutation that DOES break it — a live
+     `|| Date.now()` default, which reads almost identically and refuses every
+     request ever made. The comment in _auth.js was corrected to match.
+     And 'the account lookup is removed' had to be paired with a catching
+     wrapper in the suite: without one the injected fault threw, killed the
+     file, and failed the run on a stack trace rather than on the check that
+     claims to guard it — the right verdict by the wrong route. */
+  {
+    name: 'the approved flag is no longer checked (Revoke goes back to cosmetic)',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (!account.approved) return', '  if (false) return'),
+    expect: ['a revoked manager is refused', 'a revoked organiser is refused'],
+  },
+  {
+    name: 'the sessionsValidFrom clock is no longer compared (a reset stops ending sessions)',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (payload.iat < validFrom) {', '  if (false) {'),
+    expect: ['a token minted before the reset is refused'],
+  },
+  {
+    name: 'sessionsValidFrom defaults to now, signing everyone out on every request',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, 'Number(account.sessionsValidFrom) || 0',
+      'Number(account.sessionsValidFrom) || Date.now()'),
+    expect: ['an account with no sessionsValidFrom is let in'],
+  },
+  {
+    name: 'the account lookup is removed, so a deleted account still gets in',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (!account) return', '  if (false) return'),
+    expect: ['with 401 — there is nothing left to be approved'],
+  },
+  {
+    /* The subtle one. Every source check that greps for resolveSession still
+       passes; only re-deriving from the ACCOUNT makes a demotion take effect. */
+    name: 'role is read back off the token instead of the account',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '      role: account.role,', '      role: payload.role,'),
+    expect: ['an organiser demoted to manager is no longer an organiser'],
+  },
+  {
+    name: 'age group is read back off the token instead of the account',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, "      ageGroupId: account.role === 'manager' ? (account.ageGroupId || '') : '',",
+      "      ageGroupId: payload.ageGroupId || '',"),
+    expect: ['a manager moved to another age group carries the NEW one'],
+  },
+  {
+    /* ⚠️ The one that would be invisible in production until it mattered. */
+    name: 'a failed accounts read fails OPEN',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F,
+      "    return { ok: false, status: 503, error: 'Could not check your sign-in just now. Please try again.' };",
+      '    accounts = [];'),
+    expect: ['and answers 503, never 401'],
+  },
+  {
+    /* The opposite mistake, and the one that bites on tournament morning: a
+       transient blob blip answered as "not signed in" sends a manager hunting
+       for a password they have not typed since August. */
+    name: 'a failed accounts read answers 401 instead of 503',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, 'status: 503', 'status: 401'),
+    expect: ['and answers 503, never 401'],
+  },
+  {
+    name: 'optionalSession reverts to bare verify(), skipping the account check',
+    suite: 'test-session-revocation.js',
+    /* ⚠️ \n, NOT \r\n. seed() normalises the temp copy to LF (line 206), so an
+       anchor written with the repo's own CRLF never matches and the fault
+       reports COULD NOT INJECT — which is a failed run, not a pass, but it
+       costs a cycle to work out why. Cost me one. */
+    apply: () => patch(AUTH_F,
+      '  const r = await resolveSession(event);\n  return r.ok ? r.session : null;',
+      '  return verify(getBearerToken(event));'),
+    expect: ['a revoked token gives null'],
+  },
+
+  /* ==================================================================== */
+  /* RESULT STORAGE — one blob per match (Aug 2026).
+
+     Results were one blob per age group, read-modify-written, which carried two
+     defects a code review found: a failed read fell through to an empty slice
+     and the caller wrote THAT back as the whole group (fourteen results gone,
+     green tick shown); and two managers scoring the same group could both be
+     told it saved while one score no longer existed.
+
+     ⚠️ ONE OF THESE EIGHT EXISTS BECAUSE MY FIRST REWRITE INTRODUCED A NEW BUG
+     AND ALL 32 CHECKS PASSED. readGroup merged the group blob over the legacy
+     slice while readAll REPLACED it, so a result cleared under the old layout
+     stayed gone in the public view and came back from the dead on the manager's
+     own dashboard. Every supersession check went through readAll; nothing
+     asserted the two readers agree. They do now, and 'group blob merges
+     instead of replacing' is the fault that holds it. */
+  {
+    name: 'readMatch swallows a read error and answers "no result" (defect a)',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    throw new Error(`could not read ${matchKey(matchId)}: ${err.message}`);',
+      '    return null;'),
+    expect: ['readMatch THROWS rather than answering null'],
+  },
+  {
+    name: 'a failed blob LIST is treated as an empty list',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    throw new Error(`could not list ${prefix}: ${err.message}`);', '    return;'),
+    expect: ['a failed LIST throws too'],
+  },
+  {
+    /* Without a tombstone, the fallback to the older layouts resurrects the
+       very result that was just cleared. */
+    name: 'clearing deletes the key instead of writing a tombstone',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '  await store.setJSON(matchKey(matchId), { cleared: true, clearedAt: new Date().toISOString() });',
+      '  await store.delete(matchKey(matchId));'),
+    expect: ['a tombstone was written, not a delete', 'and the match reads as absent'],
+  },
+  {
+    name: 'tombstones stop being recognised, so cleared results come back',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, 'const isTombstone = (v) => !!v && typeof v === \'object\' && v.cleared === true;',
+      'const isTombstone = () => false;'),
+    expect: ['and the match reads as absent'],
+  },
+  {
+    /* The quiet one: 'm:u12' also matches 'm:u12g:…'. */
+    name: 'the match prefix loses its trailing colon, so U12 reads U12G',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, 'const matchPrefix = (agId) => `m:${agId}:`;',
+      'const matchPrefix = (agId) => `m:${agId}`;'),
+    expect: ['u12 sees only its own match'],
+  },
+  {
+    name: 'a per-match blob stops superseding the older layouts in readGroup',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    else merged[matchId] = value;\n  });\n\n  return merged;',
+      '    else if (!merged[matchId]) merged[matchId] = value;\n  });\n\n  return merged;'),
+    expect: ['readGroup agrees with readAll about which wins'],
+  },
+  {
+    name: 'the group blob merges over the legacy slice instead of replacing it',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '      Object.keys(merged).forEach((id) => delete merged[id]);\n      Object.assign(merged, own);',
+      '      Object.assign(merged, own);'),
+    expect: ['including for a match only the group blob has'],
+  },
+  {
+    /* The regression that undoes the whole change: back to one key per group,
+       and with it the read-modify-write and both defects. */
+    name: 'writeMatch regresses to writing the whole age-group key',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, '  await store.setJSON(matchKey(matchId), entry);',
+      '  await store.setJSON(groupKey(groupOf(matchId)), { [matchId]: entry });'),
+    expect: ['two matches are two blobs', 'keyed by match, not by group'],
+  },
+
+  /* ==================================================================== */
+  /* LOGIN RATE LIMITING (Aug 2026).
+
+     One bucket, keyed on the connection address alone, incremented BEFORE the
+     password was checked. Every manager at Zayed Sports City shares one
+     x-nf-client-connection-ip, so ten CORRECT sign-ins exhausted the venue's
+     entire budget and the eleventh manager to arrive on tournament morning was
+     refused with the right password on the first try.
+
+     ⚠️ ONE OF THESE EIGHT IS FOR A BUG THE TEST FOUND RATHER THAN THE REVIEW:
+     readWindow() measured expiry against the module's one-hour WINDOW_MS
+     instead of the caller's, so every 15-minute limit (login AND signup) really
+     lasted an hour while telling the person to retry in fifteen minutes.
+     Nothing had ever advanced a clock in a rate-limit test before. */
+  {
+    name: 'the login bucket goes back to being connection-wide',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      'const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);',
+      'const perAccount = await peekRate(store, connectionBucket(event), now, ACCOUNT_RATE_OPTS);'),
+    expect: ['mgr2 on the same wifi is unaffected'],
+  },
+  {
+    name: 'successful sign-ins are counted against the limit again',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      '    const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);',
+      '    await recordFailure(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);\n    const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);'),
+    expect: ['and the count started again from zero'],
+  },
+  {
+    name: 'a correct password stops forgiving the fumbles before it',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    await forget(store, accountBucket(event, uname));', '    // forget removed'),
+    expect: ['and the count started again from zero'],
+  },
+  {
+    /* Laundering: sign in correctly every 49 guesses and sweep for ever. */
+    name: 'forget clears the connection bucket too, so a sweep can be laundered',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    await forget(store, accountBucket(event, uname));',
+      '    await forget(store, accountBucket(event, uname));\n    await forget(store, connectionBucket(event));'),
+    expect: ['did NOT launder the sweep'],
+  },
+  {
+    name: 'the connection backstop is dropped, so a username sweep is unlimited',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    if (!perConnection.ok) return tooManyResponse(perConnection);',
+      '    // backstop removed'),
+    expect: ['a sweep of unknown usernames is eventually refused'],
+  },
+  {
+    /* Restores the short-circuit: bcrypt only runs when the username exists, so
+       a real one answers in tens of milliseconds and an unknown one instantly. */
+    name: 'the username-enumeration timing fix is reverted',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      '    if (!account || !account.passwordHash || !ok) {',
+      "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {"),
+    expect: ['the old short-circuiting chain is gone'],
+  },
+  {
+    name: 'peekRate starts counting what it reads',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(RATELIMIT_F,
+      "    const win = readWindow(await store.get(keyFor(address), { type: 'json' }), now, windowMs);",
+      "    const win = readWindow(await store.get(keyFor(address), { type: 'json' }), now, windowMs);\n    await store.setJSON(keyFor(address), { count: ((win && win.count) || 0) + 1, windowStart: (win && win.windowStart) || now });"),
+    expect: ['and nothing was counted against the connection', 'and peeking does NOT count'],
+  },
+  {
+    name: 'window expiry goes back to the module constant, so 15 minutes lasts an hour',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(RATELIMIT_F, '  if (now - windowStart >= (windowMs || WINDOW_MS)) return null;',
+      '  if (now - windowStart >= WINDOW_MS) return null;'),
+    expect: ['a filled bucket is clear again after the window'],
+  },
+
+  /* ==================================================================== */
+  /* HEAD METADATA (Aug 2026).
+
+     The .dc.html pages had a nearly empty literal <head> and kept every
+     crawler-facing tag in <helmet> inside the <body>, which support.js moves
+     into document.head after boot. Scrapers do not run JavaScript, so every
+     link to this site shared on WhatsApp, Facebook, LinkedIn or Slack arrived
+     as a bare grey URL — on a site distributed entirely by parents forwarding
+     links. It also silently voided netlify.toml's claim that /register-club
+     "carries noindex": the tag existed only after JS ran.
+
+     ⚠️ THE NEGATIVE HALF IS THE LOAD-BEARING HALF. A tag being in <head>
+     passes just as well when a copy is ALSO still in the helmet, and the helmet
+     is appended to document.head — so a leftover is a second <title> on the
+     live page. Two of these five aim at exactly that. */
+  {
+    name: 'noindex goes back into the helmet, where no crawler sees it',
+    suite: 'test-head-metadata.js',
+    apply: () => {
+      patch('Club.dc.html', '<meta name="robots" content="noindex, nofollow">\n<title>', '<title>');
+      patch('Club.dc.html', '<helmet>\n', '<helmet>\n<meta name="robots" content="noindex, nofollow">\n');
+    },
+    expect: ['noindex is in the literal <head>'],
+  },
+  {
+    name: 'a duplicate <title> is left behind in the helmet',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('Quins JRT.dc.html', '<helmet>\n',
+      '<helmet>\n<title>Abu Dhabi Harlequins Junior Rugby Tournament 2026 | ADH JRT</title>\n'),
+    expect: ['and NONE left in <helmet>', 'exactly one <title> in the whole file'],
+  },
+  {
+    name: 'app.html loses the canonical that separates /app from /app.html',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('app.html', '<link rel="canonical" href="https://adhjrt.com/app">\n', ''),
+    expect: ['canonical is https://adhjrt.com/app'],
+  },
+  {
+    name: 'the /netlify/* 404 rule is dropped, serving the functions source again',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('netlify.toml',
+      '[[redirects]]\n  from = "/netlify/*"\n  to = "/404.html"\n  status = 404\n  force = true\n', ''),
+    expect: ['/netlify/* is 404'],
+  },
+  {
+    /* The mistake this repo has now made three times: a redirect pointing at
+       itself is silently DROPPED by Netlify rather than applied. */
+    name: 'the /netlify/* rule is pointed at itself, so Netlify drops it',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('netlify.toml', '  from = "/netlify/*"\n  to = "/404.html"',
+      '  from = "/netlify/*"\n  to = "/netlify/:splat"'),
+    expect: ['/netlify/* is 404', 'none of the new rules points at itself'],
+  },
+  {
+    /* Listing the silent link would undo the whole point of it. */
+    name: 'the silent link is added to sitemap.xml',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('sitemap.xml', '  <url>\n    <loc>https://adhjrt.com/legal</loc>',
+      '  <url>\n    <loc>https://adhjrt.com/register-club</loc>\n  </url>\n  <url>\n    <loc>https://adhjrt.com/legal</loc>'),
+    expect: ['sitemap does NOT list /register-club'],
+  },
+
+  /* ==================================================================== */
+  /* IMAGE WEIGHT (Aug 2026).
+
+     assets/action-run.png was 1.8 MB and was the hero background - the Largest
+     Contentful Paint, pulled in full by every parent on venue mobile data
+     before the hero could paint, and bigger than the rest of the page put
+     together. The About-section board photos three screens further down already
+     had the avif/webp + -sm treatment AND a generator script; the one image
+     that gated first paint had never been through it.
+
+     ⚠️ The 'phone variant' fault is here because my first version of that
+     check passed against it: it looked for 'action-run-sm' anywhere inside the
+     <picture>, so dropping it from the AVIF srcset alone stayed green while
+     every AVIF-capable phone pulled the full-width file. Per-source now. */
+  {
+    name: 'the hero falls back to the 1.8 MB PNG again',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/action-run.webp" alt="" width="1297"',
+      '<img src="assets/action-run.png" alt="" width="1297"'),
+    expect: ['no page names action-run.png in markup', 'falls back to webp, never to the PNG'],
+  },
+  {
+    name: 'the hero loses fetchpriority, so the LCP queues behind the fonts',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, ' fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%"',
+      ' decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%"'),
+    expect: ['fetchpriority="high"'],
+  },
+  {
+    /* Lazy on an above-the-fold LCP delays the very thing being optimised. */
+    name: 'the hero is lazy-loaded',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, 'height="1212" fetchpriority="high"', 'height="1212" loading="lazy" fetchpriority="high"'),
+    expect: ['is NOT lazy-loaded'],
+  },
+  {
+    name: 'the hero loses width/height, so the page shifts as it decodes',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/action-run.webp" alt="" width="1297" height="1212"',
+      '<img src="assets/action-run.webp" alt=""'),
+    expect: ['carries width and height'],
+  },
+  {
+    name: 'the hero drops its AVIF source, costing every modern browser the smaller file',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME,
+      '<source type="image/avif" srcset="assets/action-run-sm.avif 700w, assets/action-run.avif 1297w" sizes="100vw">',
+      '<!-- avif source removed -->'),
+    expect: ['offers avif'],
+  },
+  {
+    name: 'the phone variant is dropped from the AVIF source only',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, 'srcset="assets/action-run-sm.avif 700w, assets/action-run.avif 1297w"',
+      'srcset="assets/action-run.avif 1297w"'),
+    expect: ['the avif source offers a phone variant'],
+  },
+  {
+    name: 'the venue map reverts to the 527 KB PNG',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/venue-map.webp" alt="Zayed Sports City pitch map" width="792"',
+      '<img src="assets/venue-map.png" alt="Zayed Sports City pitch map" width="792"'),
+    /* ⚠️ EITHER LABEL IS THE RIGHT CATCH, and which one fires depends on the
+       copy. In the real repo the PNG is present, so the 200 KB ceiling trips.
+       In this prover's temp copy assets/ is only partially seeded, so the file
+       is absent and the existence check trips first instead. Both mean "a page
+       is naming the heavy PNG again", which is the thing being guarded — but
+       listing only the size label made this report as a MISS. */
+    expect: ['no page names venue-map.png in markup'],
+  },
+
+  /* ==================================================================== */
+  /* ACCESSIBILITY (Aug 2026).
+
+     Not one form control on the site was programmatically labelled - the
+     labels existed and were styled, but nothing associated them, so a screen
+     reader announced "edit text, blank" for club name, contact email, every
+     age-group count box and the username and password fields. And the /app
+     bottom sheet declared role="dialog" aria-modal="true" while doing none of
+     it: no Escape, no focus moved in, no focus returned, no trap.
+
+     ⚠️ Two of these eight are for checks of MINE that passed against the bug.
+     '3. focus is given BACK' was `/sheetReturnFocus/.test(code)` - deleting the
+     capture AND the restore left one bookkeeping line behind, the substring
+     still matched, and all 49 checks passed against a sheet that no longer
+     returned focus. The ordering check beside it compared indexOf results with
+     a bare `<`, and -1 is less than everything. Both now prove the positions
+     exist before comparing them. */
+  {
+    name: 'a label loses its for=, so the field is announced as blank again',
+    suite: 'test-accessibility.js',
+    apply: () => patch('Signin.dc.html', '<label for="f-username"', '<label'),
+    expect: ['controls with no accessible name'],
+  },
+  {
+    name: 'a control loses its id, orphaning the label that points at it',
+    suite: 'test-accessibility.js',
+    apply: () => patch('Signin.dc.html', '<input id="f-username" ', '<input '),
+    expect: ['controls with no accessible name', "every label's for= resolves to a control"],
+  },
+  {
+    name: 'Escape stops closing the sheet',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "  if (e.key === 'Escape'){ e.preventDefault(); closeSheet(); return; }", ''),
+    expect: ['1. Escape closes it'],
+  },
+  {
+    name: 'focus is never captured, so closing the sheet drops focus to the body',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', '  sheetReturnFocus = document.activeElement;', ''),
+    expect: ['3a. focus is captured before the sheet opens',
+      'openSheet captures where focus came from BEFORE it moves it'],
+  },
+  {
+    name: 'focus is never given back',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html',
+      "  if (sheetReturnFocus && typeof sheetReturnFocus.focus === 'function') sheetReturnFocus.focus();", ''),
+    expect: ['3b.'],
+  },
+  {
+    /* An accumulating keydown handler on a sheet that opens dozens of times a
+       match day gets slower every time somebody checks a score. */
+    name: 'the keydown listener is never removed',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "  document.removeEventListener('keydown', onSheetKey);", ''),
+    expect: ['removed on close', 'the remove is in closeSheet'],
+  },
+  {
+    name: 'busy() changes the label but stops disabling the button',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', '  b.textContent = label; b.disabled = true;', '  b.textContent = label;'),
+    expect: ['busy() helper that sets BOTH label and disabled'],
+  },
+  {
+    /* The original defect, restored exactly: label changes, button stays live,
+       a double-tap pitch-side sends two POSTs. */
+    name: 'saving goes back to a bare textContent with no disable',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "    const doneSave = busy('sgo', 'Saving…');",
+      "    $('sgo').textContent = 'Saving…';"),
+    expect: ['goes through busy(), not a bare textContent'],
+  },
+
+  /* ==================================================================== */
+  /* THE USERNAME/EMAIL DEAD END (Aug 2026).
+
+     Found by Jay failing to sign in to a deploy preview with his email address.
+     The field is labelled USERNAME and that was not enough - a browser
+     autofills an email into anything that looks like a login. If the person who
+     BUILT the site gets caught, a coach who signed up in July will too, on
+     tournament morning, with "Incorrect username or password." and nowhere
+     to go.
+
+     ⚠️ The hint has to be true for EVERY account. Only Google-created accounts
+     store an email, so "try your email instead" would work for some managers
+     and fail for others with an identical message - worse than silence. */
+  {
+    name: 'the refusal stops naming the username/email trap',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      "error: 'Incorrect username or password. Sign in with your username, not your email address.'",
+      "error: 'Incorrect username or password.'"),
+    expect: ['names the username/email trap'],
+  },
+  {
+    /* The security half: the message must not reveal which of the two was
+       wrong, or it hands a guesser the account list. */
+    name: 'the refusal starts saying WHICH half was wrong',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      "      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password. Sign in with your username, not your email address.' }) };",
+      "      return { statusCode: 401, body: JSON.stringify({ ok: false, error: account ? 'Incorrect password.' : 'No such user. Sign in with your username, not your email address.' }) };"),
+    expect: ['an unknown username gets the IDENTICAL message'],
+  },
+  {
+    name: 'the sign-in page loses the hint beside the username box',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch('Signin.dc.html',
+      '<div id="username-hint" style="font-size:12px;color:#7A828E;margin:0 0 16px">Your username, not your email address.</div>', ''),
+    expect: ['Signin.dc.html: the username field has a visible hint'],
+  },
+  {
+    /* A hint the screen reader reads as loose text after the box is a hint the
+       person using it never hears attached to anything. */
+    name: 'the hint is no longer tied to the input',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch('Signin.dc.html', ' aria-describedby="username-hint"', ''),
+    expect: ['tied to the input with aria-describedby'],
+  },
+
+  /* ==================================================================== */
+  /* VALIDATE, DO NOT COERCE (Aug 2026) - four bugs of one shape.
+
+     Something the code could not make sense of was quietly turned into
+     something it could, and the caller was told it had worked. Coercion is
+     RIGHT on a read (a blob nobody can parse must not take the tournament
+     down) and WRONG on a write, where somebody is telling you what the truth
+     IS. Three of the four were a read-shaped rule applied at a write. */
+  {
+    name: 'scoring-rules takes a string where a list belongs, and stores tries-only',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!Array.isArray(rules[ag])) {', '        if (false) {'),
+    expect: ['a string instead of a list is REFUSED'],
+  },
+  {
+    name: 'scoring-rules accepts a wrong-cased age group, writing a key nothing reads',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!groups.includes(ag)) {', '        if (false) {'),
+    expect: ['an unknown age-group key is refused'],
+  },
+  {
+    name: 'scoring-rules accepts a scoring component that does not exist',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (unknown.length) {', '        if (false) {'),
+    expect: ['an unknown component is refused'],
+  },
+  {
+    name: 'scoring-rules lets an empty list through to become tries-only',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(SCORING_F, '        if (!rules[ag].length) {', '        if (false) {'),
+    expect: ['an empty list is refused rather than becoming tries-only'],
+  },
+  {
+    name: 'mergeVenue goes back to the || fallback that empty splits defeat',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(VENUE_F, '    const splits = resolveSplits(src);',
+      '    const splits = normaliseSplits(src.splits) || splitsFromPitches(src.pitches);'),
+    expect: ['an all-unrecognised splits object does not empty the day'],
+  },
+  {
+    name: 'resolveSplits stops telling EMPTY apart from ABSENT',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(VENUE_F, '  if (norm && Object.keys(norm).length) return norm;', '  if (norm) return norm;'),
+    expect: ['an all-unrecognised splits object does not empty the day'],
+  },
+  {
+    name: 'a single player registration loses its server-side age check',
+    suite: 'test-validate-not-coerce.js',
+    apply: () => patch(INTAKE_F, '  if (!roster && d.dob) {', '  if (false) {'),
+    expect: ['a wildly out-of-age child is refused'],
+  },
+  {
+    name: 'a failed teams-sheet read numbers from scratch again, minting a duplicate code',
+    suite: 'test-intake.js',
+    /* Single-line anchor on purpose: patch() replaces the FIRST occurrence and
+       the catch block is the first of the two 503 returns. */
+    apply: () => patch(INTAKE_F,
+      '      return { status: 503, body: { ok: false, error: NOT_SAVED } };',
+      '      existing = [];'),
+    expect: ['a failed numbering read REFUSES rather than minting a duplicate code'],
+  },
+
+  /* ==================================================================== */
+  /* HOUSEKEEPING (Aug 2026) — the scoring model, and the password ceiling. */
+  {
+    /* The duplication that has already gone wrong twice here (pitch model,
+       registration rules). The server totals a result from _scoring.js; the
+       browser builds the form and the running total from scores-data.js. */
+    name: 'a try is worth a different number in the browser than on the server',
+    apply: () => patch(SD, 'const SCORE_POINTS = { tries: 5,', 'const SCORE_POINTS = { tries: 4,'),
+    suite: 'test-scoring-model.js',
+    expect: ['tries is worth the same on both sides', 'the points tables match exactly'],
+  },
+  {
+    name: 'an age group scores different things on the two sides',
+    suite: 'test-scoring-model.js',
+    apply: () => patch(SD, "  u12:['tries','conversions'],", "  u12:['tries','conversions','penalties'],"),
+    expect: ['u12 scores the same things on both sides'],
+  },
+  {
+    /* _scoring.js's own comment says FESTIVAL_AGE_IDS mirrors hasStandings:false
+       and nothing kept them in step. */
+    name: 'the festival list and hasStandings drift apart',
+    suite: 'test-scoring-model.js',
+    apply: () => patch(SCORING_MODEL_F, "const FESTIVAL_AGE_IDS = ['u6', 'u7'];", "const FESTIVAL_AGE_IDS = ['u6', 'u7', 'u8'];"),
+    expect: ['the festival lists match'],
+  },
+  {
+    /* bcrypt discards everything past 72 BYTES, so without this a 100-character
+       passphrase and its first 72 characters are the same password. */
+    name: 'the password ceiling is removed, so bcrypt silently truncates',
+    suite: 'test-accounts.js',
+    apply: () => patch(PASSWORD_F,
+      '  if (passwordBytes(password) > MAX_PASSWORD_BYTES) return PASSWORD_TOO_LONG;', ''),
+    expect: ['a password past bcrypt 72-byte limit is refused'],
+  },
+  {
+    /* 72 BYTES, not characters — one emoji is four. Counting characters lets a
+       60-character password of non-Latin text through to be truncated. */
+    name: 'the ceiling counts characters instead of bytes',
+    suite: 'test-accounts.js',
+    apply: () => patch(PASSWORD_F,
+      "const passwordBytes = (s) => Buffer.byteLength(String(s), 'utf8');",
+      'const passwordBytes = (s) => String(s).length;'),
+    expect: ['the limit is counted in BYTES, not characters'],
   },
 ];
 

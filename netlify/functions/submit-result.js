@@ -13,9 +13,9 @@
 // why it is split that way. Requires the same SESSION_SECRET as the other
 // auth functions.
 
-const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { resolveSession, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
-const { readGroup, writeGroup } = require('./_results');
+const { readMatch, writeMatch, clearMatch } = require('./_results');
 const { MAX_FIELD_CHARS } = require('./_intake');
 
 // 30 Jul: every free-text field on the public registration form is capped at
@@ -27,36 +27,53 @@ const clip = (s) => String(s || '').trim().slice(0, MAX_FIELD_CHARS) || null;
 
 const WALKOVER_SCORE = 20;
 
-/* Netlify Blobs has no compare-and-set - a write is a plain overwrite of the
-   whole object. Splitting results one blob per age group (see _results.js)
-   means a save can now only ever collide with another save in the SAME group,
-   which on a tournament day is one manager plus maybe an organiser. The window
-   that remains is: both read the group, both write, and the second write -
-   which never saw the first one's score - silently drops it.
+/* A card count is a small non-negative whole number or it is nothing. The cap
+   is not arithmetic — it is there so a fat-fingered 99999 cannot be stored and
+   served as fact. Fifteen is far beyond any real match. */
+const MAX_CARDS = 15;
+const cardCount = (v) => Math.min(MAX_CARDS, Math.max(0, Math.floor(Number(v) || 0)));
 
-   Closing it properly needs an atomic compare-and-set the platform doesn't
-   offer, so do the next best thing: write, then read the group back and check
-   our own entry actually survived. If it didn't, someone overwrote us - read
-   the CURRENT group, merge our score into that, write again. Three attempts,
-   then give up and TELL the manager it didn't save. Returning a false OK is the
-   one outcome that must never happen: a score reported as saved but missing
-   isn't noticed until the standings are wrong.
+/* ⚠️ THE READ-MODIFY-WRITE IS GONE, AND WITH IT THE REASON THIS FUNCTION USED
+   TO NEED A RETRY LOOP AT ALL. Results are now one blob per match
+   (see _results.js), so saving a score writes exactly one key: its own. There
+   is no group object to read, mutate and put back, so there is nothing another
+   manager's save can be lost inside.
 
-   `submittedAt` is the fingerprint checked for - it is our own timestamp, so
-   finding it back proves OUR write is the one that stuck, not merely that
-   somebody stored something for this match.
+   What was here before read the whole age group, changed one entry, wrote the
+   whole group back, then read it back to check its own entry survived. That
+   check could not see the ordinary interleaving — A reads, B reads, A writes,
+   A verifies OK, B writes, B verifies OK — in which A's score is destroyed and
+   BOTH managers are told it saved. This file's own header called a false OK
+   the one outcome that must never happen; that path produced one.
+
+   The write-then-read-back is KEPT, because it is still worth having for a
+   different reason: it turns a silent storage failure into a 409 the manager
+   can act on. It just no longer carries the weight of a concurrency fix.
+   `submittedAt` is the fingerprint — our own timestamp, so finding it back
+   proves OUR write stuck, not merely that somebody stored something.
+
+   Two people saving the SAME match is still last-write-wins. That is correct
+   and always was: one match has one score, and the second person is correcting
+   the first rather than racing them.
 
    Cost: one extra blob read per save. At ~600 matches over two days, nothing. */
 const SAVE_ATTEMPTS = 3;
 
-async function writeAndVerify(store, agId, apply, isDone) {
+async function saveAndVerify(store, matchId, entry) {
   for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
-    const results = await readGroup(store, agId);
-    apply(results);
-    await writeGroup(store, agId, results);
-    const after = await readGroup(store, agId);
-    if (isDone(after)) return true;
-    console.warn(`submit-result: ${agId} write did not stick (attempt ${attempt} of ${SAVE_ATTEMPTS}) - retrying`);
+    await writeMatch(store, matchId, entry);
+    const after = await readMatch(store, matchId);
+    if (after && after.submittedAt === entry.submittedAt) return true;
+    console.warn(`submit-result: ${matchId} write did not stick (attempt ${attempt} of ${SAVE_ATTEMPTS}) - retrying`);
+  }
+  return false;
+}
+
+async function clearAndVerify(store, matchId) {
+  for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt++) {
+    await clearMatch(store, matchId);
+    if (!(await readMatch(store, matchId))) return true;
+    console.warn(`submit-result: ${matchId} clear did not stick (attempt ${attempt} of ${SAVE_ATTEMPTS}) - retrying`);
   }
   return false;
 }
@@ -64,9 +81,13 @@ async function writeAndVerify(store, agId, apply, isDone) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const session = verify(getBearerToken(event));
-    if (!session || (session.role !== 'manager' && session.role !== 'organizer')) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    const auth = await resolveSession(event);
+    if (!auth.ok) {
+      return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+    }
+    const session = auth.session;
+    if (session.role !== 'manager' && session.role !== 'organizer') {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed.' }) };
     }
 
     const { matchId, data } = JSON.parse(event.body || '{}');
@@ -88,22 +109,23 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'This age group is a festival — no scores are kept for it.' }) };
     }
 
-    /* Results are stored one blob per age group — see _results.js for why.
-       readGroup returns only this age group's results, so a save here can never
-       clobber a manager saving a different group at the same moment. */
+    /* Results are stored one blob per MATCH — see _results.js for why. A save
+       writes only its own key, so it cannot clobber any other match's score,
+       in this age group or any other. */
     const store = blobStore('results');
 
     /* Clearing has to REMOVE the entry, not write zeros. A 0-0 draw is a real
        rugby result worth two league points each, so an emptied form saved as
        0-0 would quietly award points for a match that was never played. */
     if (data.clear === true) {
-      const existing = await readGroup(store, agId);
-      if (!existing[matchId]) return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
-      const gone = await writeAndVerify(
-        store, agId,
-        (r) => { delete r[matchId]; },
-        (r) => !r[matchId],
-      );
+      /* ⚠️ readMatch THROWS on a read failure rather than answering "nothing
+         there". It used to swallow the error, which made a failed read look
+         exactly like an already-clear match — so a result that was still very
+         much present got reported as cleared and the manager moved on. */
+      if (!(await readMatch(store, matchId))) {
+        return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
+      }
+      const gone = await clearAndVerify(store, matchId);
       if (!gone) {
         return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'Could not confirm the result was cleared. Reload and try again.' }) };
       }
@@ -140,18 +162,20 @@ exports.handler = async (event) => {
       awayPenalties: wo ? 0 : (awayParts.penalties || 0),
       homeDrops: wo ? 0 : (homeParts.drops || 0),
       awayDrops: wo ? 0 : (awayParts.drops || 0),
-      homeCards: Number(data.homeCards || 0), awayCards: Number(data.awayCards || 0),
+      /* ⚠️ SAME SANITISING AS EVERY OTHER FIGURE — see pick() above. These two
+         were the exception until Aug 2026 and took the client's value raw, so
+         {"homeCards": -3} stored -3, and {"homeCards": "abc"} became NaN, which
+         JSON.stringify writes as null. The verify only compares submittedAt, so
+         both were confirmed with a 200, and get-results.js serves them
+         unauthenticated to every visitor's Standings page. */
+      homeCards: cardCount(data.homeCards), awayCards: cardCount(data.awayCards),
       walkover: wo,
       spiritNomineeHome: clip(data.spiritNomineeHome),
       spiritNomineeAway: clip(data.spiritNomineeAway),
       submittedBy: session.username, submittedAt: new Date().toISOString(),
     };
 
-    const saved = await writeAndVerify(
-      store, agId,
-      (r) => { r[matchId] = entry; },
-      (r) => !!r[matchId] && r[matchId].submittedAt === entry.submittedAt,
-    );
+    const saved = await saveAndVerify(store, matchId, entry);
     if (!saved) {
       return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'Could not confirm the score was saved. Reload the match and enter it again.' }) };
     }

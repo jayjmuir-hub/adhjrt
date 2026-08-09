@@ -142,6 +142,34 @@ section('The password floor');
   check('an empty password is refused', !!AUTH.passwordProblem(''));
   check('a non-string is refused', !!AUTH.passwordProblem(undefined) && !!AUTH.passwordProblem(null) && !!AUTH.passwordProblem(12345678901));
   check('a long enough password is accepted', AUTH.passwordProblem('x'.repeat(AUTH.MIN_PASSWORD_LENGTH)) === null);
+
+  /* ⚠️ AND A CEILING, ADDED AUG 2026. bcrypt DISCARDS everything past 72 bytes
+     before hashing — silently, with no error — so a 100-character passphrase
+     and its first 72 characters are THE SAME PASSWORD, and the person who chose
+     the long one believes they have more protection than they do.
+
+     MEASURED against real bcryptjs 3.0.3 rather than taken from the docs:
+     compare('a'.repeat(72), hash('a'.repeat(80))) returns TRUE. */
+  check('there is a ceiling too', typeof AUTH.MAX_PASSWORD_BYTES === 'number');
+  check('…and it is the real bcrypt limit, 72', AUTH.MAX_PASSWORD_BYTES === 72, String(AUTH.MAX_PASSWORD_BYTES));
+  check('a password past bcrypt 72-byte limit is refused', !!AUTH.passwordProblem('a'.repeat(80)));
+  check('…and one exactly at the limit is accepted', AUTH.passwordProblem('a'.repeat(72)) === null);
+
+  /* ⚠️ COUNTED IN BYTES, NOT CHARACTERS. One emoji is four bytes and an
+     accented or Arabic character is two or three, so a 60-character password
+     can exceed 72 bytes. Counting characters would let it through to be
+     truncated — the exact failure the ceiling exists to prevent, for the users
+     most likely to hit it on a UAE tournament site. */
+  check('the limit is counted in BYTES, not characters',
+    !!AUTH.passwordProblem('🏉'.repeat(20)), '20 emoji is 80 bytes but only 20 characters');
+  check('…and a normal-length password with accents is still fine',
+    AUTH.passwordProblem('contraseña-válida') === null);
+
+  /* ⚠️ REFUSED, NEVER TRIMMED. Silently cutting to 72 would store a password
+     the person cannot reproduce by typing what they chose. */
+  check('the refusal explains why a longer one is not actually longer',
+    /bcrypt|ignores|not actually longer/i.test(AUTH.passwordProblem('a'.repeat(80)) || ''),
+    AUTH.passwordProblem('a'.repeat(80)));
   check('the refusal says what is needed', /at least 10 characters/.test(AUTH.passwordProblem('a')), AUTH.passwordProblem('a'));
 
   /* The number is written down twice — once server-side as the authority, once
@@ -202,8 +230,16 @@ section('Creating a login — manager or organiser');
   check('a duplicate username is still refused', /That username is already taken/.test(admin));
 
   /* Organiser-only, still. */
-  check('every action still requires an organiser session', /const session = requireOrganizer\(event\);/.test(admin));
-  check('…checked from the signed token, not the request', /session\.role === 'organizer'/.test(admin));
+  check('every action still requires an organiser session', /const auth = await requireOrganizer\(event\);/.test(admin));
+  check('…checked from the signed token, not the request', /r\.session\.role !== 'organizer'/.test(admin));
+  /* ⚠️ AND THE DOOR RE-READS THE ACCOUNT. requireOrganizer used to be
+     verify() + a role check, which cannot see a revocation — so a revoked
+     organiser still opened this file and could set their own approved flag
+     back to true, making revocation reversible by the person being revoked.
+     `await` in the check above is not decoration; it is the blob read. */
+  check('…and the door re-reads the account, not just the token',
+    /await resolveSession\(event\)/.test(admin) && !/\bverify\(getBearerToken/.test(admin),
+    'requireOrganizer must not go back to verify() alone — see test-session-revocation.js');
 }
 
 /* ====================================================================== */

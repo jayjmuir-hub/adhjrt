@@ -17,15 +17,19 @@
 // deliberate — before it existed, one drag in the fixture editor changed the
 // live site instantly.
 
-const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { resolveSession, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { draftKey } = require('./_publish');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const session = verify(getBearerToken(event));
-    if (!session || (session.role !== 'manager' && session.role !== 'organizer')) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    const auth = await resolveSession(event);
+    if (!auth.ok) {
+      return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+    }
+    const session = auth.session;
+    if (session.role !== 'manager' && session.role !== 'organizer') {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed.' }) };
     }
 
     const { ageGroupId, schedule, reset } = JSON.parse(event.body || '{}');

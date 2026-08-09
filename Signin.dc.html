@@ -4,6 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<!-- ============================================================
+     CRAWLER-FACING METADATA — MUST STAY IN THE REAL <head>.
+     ============================================================
+     ⚠️ THIS BLOCK USED TO LIVE INSIDE <helmet> IN THE <body>, and
+     support.js moved it into document.head at runtime. That works in a
+     browser and fails everywhere else: Facebook, WhatsApp, LinkedIn,
+     Slack and Twitter scrapers do not execute JavaScript, so a link to
+     this site shared anywhere arrived as a bare grey URL with no title,
+     no description and no card — on a site whose entire distribution is
+     parents forwarding links to each other.
+
+     The same mechanism silently voided a SECURITY claim: netlify.toml
+     said the unlisted club form was safe partly because "the page
+     carries noindex". It did not. The tag only existed after JS ran, and
+     a crawler that ignores JS ignored it too. (The path is deliberately
+     not written out here - see netlify.toml.)
+
+     ⚠️ EVERYTHING HERE IS A CONSTANT. Nothing in this block needs the
+     component engine, which is why none of it belongs in <helmet>. Put
+     new title/description/canonical/og/twitter/robots/JSON-LD tags HERE.
+     Fonts, icons, the manifest and every script tag stay in the helmet -
+     those are for browsers, which do run JavaScript.
+
+     ⚠️ DO NOT ALSO LEAVE A COPY IN THE HELMET. The helmet is appended to
+     document.head, so a duplicate becomes two title tags on the live
+     page. test-head-metadata.js asserts there is exactly one of each.
+     ============================================================ -->
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in — ADH JRT</title>
 </head>
 <body>
 <x-dc>
@@ -11,8 +40,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<meta name="robots" content="noindex, nofollow">
-<title>Sign in — ADH JRT</title>
 <link rel="icon" type="image/png" href="/assets/crest.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="theme-color" content="#F3F2EF">
@@ -77,11 +104,20 @@
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Sign in</div>
       <p style="color:#454D58;font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
 
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-      <input name="username" autocomplete="username" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
+      <label for="f-username" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
+      <input id="f-username" name="username" autocomplete="username" aria-describedby="username-hint" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 4px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
+      <!-- ⚠️ NOT DECORATION. Jay, who built this site, could not sign in to a
+           deploy preview because he typed his email address - the browser
+           autofills one into anything that looks like a login, and the label
+           above saying USERNAME did not stop it. If the person who built it
+           gets caught, a coach who signed up in July on tournament morning
+           certainly will.
+           aria-describedby ties it to the field, so a screen reader reads the
+           hint as part of the box rather than as loose text after it. -->
+      <div id="username-hint" style="font-size:12px;color:#7A828E;margin:0 0 16px">Your username, not your email address.</div>
+      <label for="f-password" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input name="password" autocomplete="current-password" type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input id="f-password" name="password" autocomplete="current-password" type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
       </div>
       <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
@@ -126,20 +162,20 @@
            picker, its blurb and the organiser/admin label switching all went
            with it. Organiser accounts are made in the back office:
            /organizer -> Accounts -> Create a login. -->
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
-      <input value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
+      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
+      <input id="f--label-style-font-si" value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
       <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
         <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Your login username will be</div>
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ signupUserPreview }}</div>
       </div>
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
+      <label for="f-new-password" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
       </div>
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <label for="f-invite-code" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input id="f-invite-code" name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
       </div>
       <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
@@ -159,9 +195,9 @@
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ googleUserPreview }}</div>
       </div>
 
-      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <label for="f-invite-code-2" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input name="invite-code" autocomplete="off" type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
+        <input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
         <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
       </div>
       <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>

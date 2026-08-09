@@ -512,26 +512,30 @@ It covers the registration path, venue and pitches, the draw editor and
 score sheet (component-driven), auth and the unified login, the public
 pages, sponsors, light mode, the design-audit fixes and the About-section
 photo ring, the doc-claim suite, the age-group picker and the documents
-shelf — **38 files** — plus `_prove-registration.js`, the fault-injection
-script (**719 faults**, measured on jay-pc 7 Aug 2026, all of which must be caught by the
-check that claims to guard them, and none of which may be "caught" by the suite
-throwing). The counts drift upward with every feature; trust `runall.ps1`'s own
-output over this sentence — it has been written down here as 17, 171, 333 and
-370 while being something else, because nothing asserts a number in prose.
+shelf — plus `_prove-registration.js`, the fault-injection script: every fault
+must be caught by the check that claims to guard it, and none may be "caught"
+by the suite throwing.
+
+⚠️ **THE COUNTS ARE DELIBERATELY NOT WRITTEN HERE ANY MORE.** This paragraph
+carried "38 files / 719 faults" and had been wrong as 17, 171, 333 and 370
+before that; `tests/README.md` carried a different pair, `state-of-play.md` a
+third. Five re-syncs in, the lesson took: **a number in prose is a number
+nothing asserts, so it rots the moment the next feature lands.** Run the suite
+and read its own last line. If you want a count that cannot go stale, make
+`test-doc-claims.js` derive it — do not type it here.
 
 ⚠️ **The prover's second number is the one to read.** It ends
 `N/N faults caught by the named check; M suite(s) clean on an undamaged copy`.
 **When you add a test file, M must go UP.** A suite that fails undamaged fails
 for every fault too, so all of its faults report "caught" while proving
-nothing. M was 29 before `test-about-board.js`, 30 with it, 32 by 6 Aug and
-**33, measured 7 Aug 2026** with `test-documents.js`.
+nothing. So: **M going UP is the proof a new suite ran undamaged; M staying PUT
+is the proof an existing suite was extended.** Which of those two you expected
+is the thing to check — not the absolute value, which is recorded in
+`claude/state-of-play.md` and nowhere else.
 
-⚠️ **`runall.ps1` prints 39 `--- <file>` headers.** That is 38 test files
-plus the prover's own header. Counted from a real run on 7 Aug 2026; this
-sentence has previously said 37 and 38 and been wrong both times.
-This file said 37 while there were 36 files and nobody noticed, which is the
-same class of stale-number-in-prose the paragraph above warns about — trust
-`runall.ps1`'s own output, never this sentence.
+⚠️ **`runall.ps1` prints one `--- <file>` header per test file, plus one for
+the prover itself.** The absolute number is not written here for the reason
+above; this sentence said 37, then 38, then 39, and was wrong every time.
 
 **A test file must not fall over on a fault.** Reaching blind into a lookup that
 a fault makes `undefined` throws, kills the process, and every check after that

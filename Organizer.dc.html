@@ -4,6 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<!-- ============================================================
+     CRAWLER-FACING METADATA — MUST STAY IN THE REAL <head>.
+     ============================================================
+     ⚠️ THIS BLOCK USED TO LIVE INSIDE <helmet> IN THE <body>, and
+     support.js moved it into document.head at runtime. That works in a
+     browser and fails everywhere else: Facebook, WhatsApp, LinkedIn,
+     Slack and Twitter scrapers do not execute JavaScript, so a link to
+     this site shared anywhere arrived as a bare grey URL with no title,
+     no description and no card — on a site whose entire distribution is
+     parents forwarding links to each other.
+
+     The same mechanism silently voided a SECURITY claim: netlify.toml
+     said the unlisted club form was safe partly because "the page
+     carries noindex". It did not. The tag only existed after JS ran, and
+     a crawler that ignores JS ignored it too. (The path is deliberately
+     not written out here - see netlify.toml.)
+
+     ⚠️ EVERYTHING HERE IS A CONSTANT. Nothing in this block needs the
+     component engine, which is why none of it belongs in <helmet>. Put
+     new title/description/canonical/og/twitter/robots/JSON-LD tags HERE.
+     Fonts, icons, the manifest and every script tag stay in the helmet -
+     those are for browsers, which do run JavaScript.
+
+     ⚠️ DO NOT ALSO LEAVE A COPY IN THE HELMET. The helmet is appended to
+     document.head, so a duplicate becomes two title tags on the live
+     page. test-head-metadata.js asserts there is exactly one of each.
+     ============================================================ -->
+<meta name="robots" content="noindex, nofollow">
+<title>Organizer — ADH JRT</title>
 </head>
 <body>
 <x-dc>
@@ -19,8 +48,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<meta name="robots" content="noindex, nofollow">
-<title>Organizer — ADH JRT</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#F3F2EF">
 <meta name="mobile-web-app-capable" content="yes">
@@ -337,13 +364,13 @@
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
               <div>
-                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
-                <input type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                <label for="f--label-style-font-si" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
+                <input id="f--label-style-font-si" type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rOpensEchoColor }}">{{ rOpensEcho }}</div>
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
-                <input type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                <label for="f--label-style-font-si-2" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
+                <input id="f--label-style-font-si-2" type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rClosesEchoColor }}">{{ rClosesEcho }}</div>
               </div>
             </div>
@@ -409,11 +436,11 @@
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Share a document</div>
             <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Managers see these on their own dashboard. <b style="color:#454D58">Choose who each one is for</b> &mdash; a manager only sees documents tagged for everyone or for their own age group. PDF, PNG, JPG, XLSX or DOCX, up to 4&nbsp;MB. Nothing here is ever public.</p>
 
-            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
-            <input value="{{ docTitle }}" onInput="{{ onDocTitle }}" placeholder="Saturday draw" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+            <label for="f--label-style-display" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
+            <input id="f--label-style-display" value="{{ docTitle }}" onInput="{{ onDocTitle }}" placeholder="Saturday draw" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
 
-            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-            <input value="{{ docDesc }}" onInput="{{ onDocDesc }}" placeholder="Pools and kick-off times, updated 6 November" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+            <label for="f--label-style-display-2" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input id="f--label-style-display-2" value="{{ docDesc }}" onInput="{{ onDocDesc }}" placeholder="Pools and kick-off times, updated 6 November" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
 
             <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
@@ -434,7 +461,7 @@
               <div style="font-size:13px;color:#5A626E">{{ docDropLabel }}</div>
               <div style="font-size:11px;color:#98A0AC;margin-top:3px">PDF, PNG, JPG, XLSX or DOCX · up to 4 MB</div>
             </div>
-            <input type="file" onChange="{{ onPickDocFile }}" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" style="font-size:13px;margin-bottom:6px" />
+            <input type="file" onChange="{{ onPickDocFile }}" aria-label="Choose a document to upload" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" style="font-size:13px;margin-bottom:6px" />
             <div style="font-size:12px;color:#5A626E;margin-bottom:14px">{{ docFileLabel }}</div>
 
             <button onClick="{{ onUploadDoc }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer">Upload</button>
@@ -505,11 +532,11 @@
                      was shared and when. Replacing a file is delete + upload. -->
                 <sc-if value="{{ row.isEditing }}" hint-placeholder-val="{{ false }}">
                   <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.10)">
-                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
-                    <input value="{{ docEditTitle }}" onInput="{{ onDocEditTitle }}" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+                    <label for="f--label-style-display-3" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
+                    <input id="f--label-style-display-3" value="{{ docEditTitle }}" onInput="{{ onDocEditTitle }}" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
 
-                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description</label>
-                    <input value="{{ docEditDesc }}" onInput="{{ onDocEditDesc }}" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+                    <label for="f--label-style-display-4" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description</label>
+                    <input id="f--label-style-display-4" value="{{ docEditDesc }}" onInput="{{ onDocEditDesc }}" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
 
                     <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
                     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
@@ -577,7 +604,7 @@
             <div style="margin-top:14px;padding:16px;border:1px solid #B00020;border-radius:12px;background:#FFF5F6">
               <div style="font-weight:700;font-size:14px;color:#B00020;margin-bottom:6px">Delete “{{ purgeTitle }}” for good?</div>
               <p style="font-size:12px;color:#5A626E;margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Stop sharing, which only takes it off the managers&rsquo; list. Type the document&rsquo;s title to confirm.</p>
-              <input value="{{ docPurgeText }}" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+              <input value="{{ docPurgeText }}" aria-label="Type the document title to confirm deletion" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
               <div style="display:flex;gap:8px">
                 <sc-if value="{{ purgeArmed }}" hint-placeholder-val="{{ false }}">
                   <button onClick="{{ onConfirmPurge }}" style="background:#B00020;color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Delete for good</button>
@@ -602,7 +629,7 @@
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Scoring for {{ tournAgeName }}</div>
             <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
 
-            <select value="{{ tournAgeId }}" onChange="{{ onTournAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;margin-bottom:16px">
+            <select value="{{ tournAgeId }}" aria-label="Age group" onChange="{{ onTournAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;margin-bottom:16px">
               <sc-for list="{{ tournAgeOptions }}" as="ta" hint-placeholder-count="15">
                 <option value="{{ ta.id }}">{{ ta.name }}</option>
               </sc-for>
@@ -610,8 +637,8 @@
 
             <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px">
               <sc-for list="{{ scoreTypeToggles }}" as="t" hint-placeholder-count="4">
-                <label style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
-                  <input type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
+                <label for="f--label-style-display-5" style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
+                  <input id="f--label-style-display-5" type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
                   {{ t.label }} <span style="color:#5A626E;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
                 </label>
               </sc-for>
@@ -664,14 +691,14 @@
       <!-- filters -->
       <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
-          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
-          <select value="{{ clubFilter }}" onChange="{{ onClubFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <input value="{{ search }}" aria-label="Search registrations" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <select value="{{ clubFilter }}" aria-label="Filter by club" onChange="{{ onClubFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
             <option value="">All clubs</option>
             <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
               <option value="{{ c }}">{{ c }}</option>
             </sc-for>
           </select>
-          <select value="{{ ageFilter }}" onChange="{{ onAgeFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <select value="{{ ageFilter }}" aria-label="Filter by age group" onChange="{{ onAgeFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
             <option value="">All age groups</option>
             <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
               <option value="{{ a }}">{{ a }}</option>
@@ -694,8 +721,8 @@
                 <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">A read-only look at any age group's draw, results and standings — <b style="color:#454D58">including before it is published</b>. To change a draw or enter a score, use <b style="color:#454D58">/manager</b> and its age-group switcher.</p>
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
-                <label style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC">Age group</label>
-                <select value="{{ fxvAgeId }}" onChange="{{ onFxvAge }}" style="font-size:16px;padding:10px 12px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;background:#FFFFFF;color:#1A1C1F;min-height:44px">
+                <label for="f--label-style-font-si-3" style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC">Age group</label>
+                <select id="f--label-style-font-si-3" value="{{ fxvAgeId }}" onChange="{{ onFxvAge }}" style="font-size:16px;padding:10px 12px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;background:#FFFFFF;color:#1A1C1F;min-height:44px">
                   <sc-for list="{{ fxvAgeOptions }}" as="g" hint-placeholder-count="4">
                     <option value="{{ g.id }}">{{ g.name }}</option>
                   </sc-for>
@@ -911,7 +938,20 @@
                        and drop it. -->
                   <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
                     <div id="{{ vm.mapId }}" style="{{ vm.mapBoxStyle }}">
-                      <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                      <!-- ⚠️ The drag markers are positioned as PERCENTAGES of
+                           this element's box, so the box must not change shape.
+                           <picture> is a plain wrapper with no box of its own
+                           and the img keeps inset:0 against the same positioned
+                           ancestor, so the geometry is untouched - but that is
+                           the thing to re-check if this markup is ever edited.
+                           527 KB PNG -> 16 KB avif / 39 KB webp. The PNG's
+                           alpha channel was fully opaque everywhere (measured),
+                           so dropping it costs nothing. -->
+                      <picture>
+                        <source type="image/avif" srcset="assets/venue-map.avif">
+                        <source type="image/webp" srcset="assets/venue-map.webp">
+                        <img src="assets/venue-map.webp" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                      </picture>
                       <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
                         <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
                           <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">
@@ -1032,7 +1072,7 @@
                       <div style="width:18px;color:#5A626E;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
                       <div style="font-size:18px;font-weight:700;color:#1A1C1F">{{ g.name }}</div>
                     </div>
-                    <select value="{{ g.dayValue }}" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                    <select value="{{ g.dayValue }}" aria-label="Tournament day for this age group" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:light">
                       <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
                         <option value="{{ dop.value }}">{{ dop.label }}</option>
                       </sc-for>
@@ -1051,8 +1091,8 @@
                           <div style="display:inline-flex;align-items:center;gap:9px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:11px;padding:7px 13px">
                             <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
                             <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
-                              <label style="display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:{{ pt.color }};cursor:pointer">
-                                <input type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:19px;height:19px;accent-color:#17A34A">
+                              <label for="f--label-style-display-6" style="display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:{{ pt.color }};cursor:pointer">
+                                <input id="f--label-style-display-6" type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:19px;height:19px;accent-color:#17A34A">
                                 {{ pt.short }}
                               </label>
                             </sc-for>
@@ -1086,21 +1126,21 @@
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <div>
-                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NAME</label>
-                <input value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-4" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NAME</label>
+                <input id="f--label-style-font-si-4" value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">USERNAME</label>
-                <input value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-5" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">USERNAME</label>
+                <input id="f--label-style-font-si-5" value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <div>
-                <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">PASSWORD</label>
-                <input value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-6" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">PASSWORD</label>
+                <input id="f--label-style-font-si-6" value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
               </div>
               <sc-if value="{{ cmIsManager }}" hint-placeholder-val="{{ true }}">
                 <div>
-                  <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">AGE GROUP</label>
-                  <select value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                  <label for="f--label-style-font-si-7" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">AGE GROUP</label>
+                  <select id="f--label-style-font-si-7" value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
                     <option value="">Select&hellip;</option>
                     <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
                       <option value="{{ ag.id }}">{{ ag.name }}</option>
@@ -1110,8 +1150,8 @@
               </sc-if>
               <sc-if value="{{ cmIsOrganizer }}" hint-placeholder-val="{{ false }}">
                 <div>
-                  <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">TITLE (OPTIONAL)</label>
-                  <input value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                  <label for="f--label-style-font-si-8" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">TITLE (OPTIONAL)</label>
+                  <input id="f--label-style-font-si-8" value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
                 </div>
               </sc-if>
             </div>
@@ -1455,14 +1495,14 @@
           <sc-if value="{{ acctIsMe }}" hint-placeholder-val="{{ true }}">
             <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
               <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Change password</div>
-              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
+              <label for="f-current-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <input id="f-current-password" name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
                 <button type="button" onClick="{{ onToggleAcctCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctCurrentToggleLabel }}</button>
               </div>
-              <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
+              <label for="f-new-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+                <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
                 <button type="button" onClick="{{ onToggleAcctNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctNewToggleLabel }}</button>
               </div>
               <div style="font-size:12px;color:#69727E;margin-bottom:10px">Passwords are at least {{ acctMinPassword }} characters.</div>
@@ -1519,7 +1559,7 @@
       <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
         <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4;white-space:pre-line">{{ modalTitle }}</div>
         <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
-          <input value="{{ modalValue }}" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:11px 13px;color:#1A1C1F;font-size:14px;margin-bottom:18px">
+          <input value="{{ modalValue }}" aria-label="Password" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:11px 13px;color:#1A1C1F;font-size:14px;margin-bottom:18px">
         </sc-if>
         <div style="display:flex;justify-content:flex-end;gap:10px">
           <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#343A42;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>

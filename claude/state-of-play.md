@@ -289,6 +289,20 @@ at that commit; ⚠️ **`Compare` was found 30 commits behind `main` at merge t
 and fast-forwarded in the same breath**, which is the rule that stops it becoming
 the next `club-manager-page`.
 
+⚠️ **THE DOCS RECORD OF THIS DEPLOY REACHED `main` WITHOUT A BUILD, AND THE
+MECHANIC IS WORTH KNOWING.** The commit that wrote the paragraph you are reading
+was already pushed to `dev` **without** the skip-ci marker, and Netlify reads the
+**tip** commit of the push — so amending was out (the commit was published) and
+the marker had to go on a **new tip above it**. A marker on the tip suppresses the
+build for everything behind it, which is normally the bug and here is the whole
+point. Verified the way it has to be: **the deploy id did NOT move** —
+`6a783af707db59000800e3f4` before and after. **0 credits.**
+⚠️ **The inverse of this is the 6 Aug incident**: a marker that survived a
+fast-forward onto `main` and left it merged-but-undeployed while the dashboard
+showed the old commit as published. Same mechanism, opposite intent — which is
+why the marker is only ever written deliberately, and never into a message that
+merely *discusses* it.
+
 **Verified on production after the deploy, not inferred:** the deploy id moved
 `6a7741aa…` → `6a783af7…` and reached `ready`; eight pages answer 200; the new
 `tools/render-audit.js` answers **404** alongside `/tests/*`, `/claude/*`,

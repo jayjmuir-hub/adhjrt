@@ -630,14 +630,11 @@ month. Both now prove the positions exist before comparing them.
 `aria-label` in the MIDDLE of existing tags rather than appending. Appending
 would have broken nothing. All five reported COULD NOT INJECT.
 
-⚠️ **THE REVIEW IS NOW FULLY ADDRESSED.** What remains is housekeeping, none of
-it user-facing: no `package-lock.json` (Netlify re-resolves dependency ranges on
-every deploy); `bcryptjs` 2.x from 2017, where 3.x adds a guard for bcrypt's
-silent 72-byte password truncation and there is no length ceiling anywhere;
-184 KB of dead JS (`deck-stage.js`, `image-slot.js`, `doc-page.js`) served with
-zero references; `sw.js` caches unboundedly and `CACHE = 'adhjrt-v1'` has never
-been bumped; and `_scoring.js` and `scores-data.js` hold duplicate points tables
-with nothing asserting they match.
+✅ **THE REVIEW IS FULLY CLOSED — all nine findings plus the housekeeping.**
+⚠️ What is NOT done: nothing is merged to `main`, so **production still runs the
+old code**. And everything behind a login — revocation, per-match score storage,
+the rate limit — has been proven only by the suite, never on a deploy. Doing the
+revoke test on the preview is the single most valuable remaining check.
 
 `fix/review-aug-2026` pushed; PR #16 opened purely to get a free Deploy Preview.
 **Production is untouched.** Branch deploys are set to "all branches" but no
@@ -758,6 +755,37 @@ reached the age rule — it would have passed identically with no age check in t
 code. Rewritten with the real field names from the spec, and with the in-age
 CONTROL asserted *before* the refusal so a check that rejected everything cannot
 look like a working gate.
+
+## 9 Aug 2026 — housekeeping done; the review is fully closed
+
+Durable detail in `RESTORE.md` → "Dependencies, the password ceiling, and the
+scoring model".
+
+- **`package-lock.json` committed** — 49 packages pinned. Netlify was
+  re-resolving four caret ranges on every deploy. ⚠️ 404'd in the same commit
+  that created it: the root IS the site.
+- **`bcryptjs` 2.4.3 → ^3.0.2** (lock resolves 3.0.3). Verified against the real
+  package: `require()` works, old `$2a$` hashes still verify, nobody is locked
+  out.
+- **Password ceiling at 72 BYTES**, because bcrypt silently discards everything
+  past it. Measured: an 80-character password equals its first 72. Counted in
+  bytes, not characters — one emoji is four, and on a UAE site that matters.
+- **`test-scoring-model.js`** — the scoring model is carried twice and nothing
+  asserted the copies agree. Same duplication that already broke the pitch model
+  and the registration rules; this one decides what a match was won by.
+- **Service worker** bounded to 60 entries, navigations and shell only, cache
+  key dated. It was caching every asset forever and `adhjrt-v1` had never been
+  bumped, so the escape hatch had never been exercised.
+- **184 KB of dead JS deleted** after verifying nothing loads or reads it.
+
+**Suite: 855/855 faults, 42 clean, 47 files.** Five new faults. The clean
+baseline has gone **34 → 42** across this branch.
+
+⚠️ **The review claimed the three dead JS files had "zero references". They did
+not** — `support.js`, `deck-stage.js` and `image-slot.js` all mention them, and
+so does `test-design-polish.js`. All the mentions turned out to be in COMMENTS,
+so the deletion was right, but "grep found nothing" was not what the evidence
+said and checking took four greps rather than one.
 
 ## Where things stand
 

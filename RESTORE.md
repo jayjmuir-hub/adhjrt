@@ -1038,6 +1038,67 @@ moved.**
 
 ---
 
+## Dependencies, the password ceiling, and the scoring model
+
+**`package-lock.json` is committed.** Without it Netlify ran `npm install` and
+re-resolved four caret ranges on **every deploy**, so two deploys of the same
+commit could ship different dependency trees, and a compromised patch release of
+any transitive package installed itself. 49 packages are now pinned.
+⚠️ It is 404'd in `netlify.toml` in the same commit that created it — the root
+IS the site, so a new root file is a new public URL by default, and a lockfile
+naming 49 exact versions is a better fingerprinting target than `package.json`.
+
+**`bcryptjs` 2.4.3 → 3.x.** 2.4.3 was the last 2.x, from 2017. Verified against
+the real package before committing, not from the changelog: `require()` still
+works (the UMD fallback covers the ESM-first move), new hashes are `$2b$`, and
+**existing `$2a$` hashes still verify** — no committee member is locked out.
+
+**⚠️ A PASSWORD CEILING, BECAUSE BCRYPT SILENTLY TRUNCATES AT 72 BYTES.**
+Everything past the 72nd byte is discarded before hashing — no error, no
+warning. **Measured:** `compare('a'.repeat(72), hash('a'.repeat(80)))` is
+`true`. So a 100-character passphrase and its first 72 characters were the same
+password, and the person who chose the long one believed otherwise.
+
+- **72 BYTES, NOT CHARACTERS.** The limit is on the UTF-8 encoding. One emoji is
+  four bytes; Arabic and accented characters are two or three. A 60-character
+  password can exceed 72 bytes — and on a UAE tournament site, the people most
+  likely to hit that are exactly the ones a character count would fail.
+- **Refused, never trimmed.** Cutting to 72 silently would store a password the
+  person cannot reproduce by typing what they chose.
+- **Still a set-time rule only**, like the floor. An existing longer password
+  was already truncated by bcrypt, so it keeps working at login.
+
+**⚠️ THE SCORING MODEL IS CARRIED TWICE AND NOW HAS A TEST SAYING SO.**
+`_scoring.js` (`POINTS`, `BY_AGE`, `FESTIVAL_AGE_IDS`) totals a submitted
+result; `scores-data.js` (`SCORE_POINTS`, `SCORE_BY_AGE`, `hasStandings`) builds
+the entry form and the running total. They agreed — nothing made them.
+
+This duplication has already gone wrong **twice** here: the pitch model and the
+registration rules each drifted and each got a `patchShared()`-style helper
+afterwards. The scoring model never did, and it is the one that decides what a
+match was won by. Drift would look like: the form shows 24, the standings show
+something else, and the first person to notice is a coach who thinks the table
+is wrong. `test-scoring-model.js` compares both tables key by key, checks
+`FESTIVAL_AGE_IDS` against `hasStandings:false`, and totals a worked example
+through both paths.
+
+**Service worker.** Was caching **every** successful same-origin GET with no cap
+and no eviction — one homepage visit wrote the hero plus 44 board-image variants
+into Cache Storage permanently. Network-first meant that was never a staleness
+bug; it was a storage bug, and on a nearly-full phone the browser evicts the
+**whole origin's** storage rather than the oldest entry, taking the offline
+fallback with it. Now: navigations and shell assets only, capped at 60 entries,
+oldest-first. ⚠️ `CACHE` is dated rather than numbered and **had never once been
+bumped**, so the documented escape hatch for a poisoned entry had never been
+exercised.
+
+**184 KB of dead JavaScript deleted** — `deck-stage.js`, `image-slot.js`,
+`doc-page.js`. Verified before deleting: no `<script src>`, no `require`, no
+`import`, no custom-element tag anywhere, and no test reads them. The only
+mentions were in each other's comments.
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

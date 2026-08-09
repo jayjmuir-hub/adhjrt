@@ -280,3 +280,14 @@
   to = "/404.html"
   status = 404
   force = true
+
+# package-lock.json arrived Aug 2026 and is 22 KB naming 49 packages and their
+# exact versions — a strictly better fingerprinting target than package.json,
+# which is 404'd directly above. Added in the same commit that created the file,
+# rather than being noticed later, because the root IS the site here and a new
+# root file is a new public URL by default.
+[[redirects]]
+  from = "/package-lock.json"
+  to = "/404.html"
+  status = 404
+  force = true

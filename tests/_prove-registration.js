@@ -56,6 +56,11 @@ const NEEDED = [
      assertions, which is why it has to ride along too. */
   'netlify/functions/_auth.js',
   'netlify/functions/_password.js',
+  /* The scoring model is carried twice - _scoring.js on the server,
+     scores-data.js in the browser. test-scoring-model.js requires the first
+     and parses the second, so BOTH have to ride along or its faults report
+     as a dead suite rather than as drift. */
+  'netlify/functions/_scoring.js',
   'netlify/functions/_signins.js',
   'netlify/functions/accounts-admin.js',
   /* Per-match result storage (Aug 2026) — test-results-storage.js REQUIRES
@@ -249,6 +254,9 @@ function run(file) {
 }
 
 const INTAKE_F = path.join('netlify', 'functions', '_intake.js');
+const SD = 'scores-data.js';
+const SCORING_MODEL_F = path.join('netlify', 'functions', '_scoring.js');
+const PASSWORD_F = path.join('netlify', 'functions', '_password.js');
 /* The confirmation block from _intake.js, verbatim, so a fault can move it
    rather than duplicate it. If this stops matching, the fault refuses to inject
    and that is a FAILURE of this script, not a pass. */
@@ -273,7 +281,6 @@ const RATELIMIT_F = path.join('netlify', 'functions', '_ratelimit.js');
 /* Validate-not-coerce - see the eight faults at the end. */
 const SCORING_F = path.join('netlify', 'functions', 'scoring-rules.js');
 const VENUE_F = path.join('netlify', 'functions', '_venue.js');
-const SD = 'scores-data.js';
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
    Same discipline as MAIL_BLOCK above: a fault that MOVES a block has to carry
@@ -8097,6 +8104,51 @@ const FAULTS = [
       '      return { status: 503, body: { ok: false, error: NOT_SAVED } };',
       '      existing = [];'),
     expect: ['a failed numbering read REFUSES rather than minting a duplicate code'],
+  },
+
+  /* ==================================================================== */
+  /* HOUSEKEEPING (Aug 2026) — the scoring model, and the password ceiling. */
+  {
+    /* The duplication that has already gone wrong twice here (pitch model,
+       registration rules). The server totals a result from _scoring.js; the
+       browser builds the form and the running total from scores-data.js. */
+    name: 'a try is worth a different number in the browser than on the server',
+    apply: () => patch(SD, 'const SCORE_POINTS = { tries: 5,', 'const SCORE_POINTS = { tries: 4,'),
+    suite: 'test-scoring-model.js',
+    expect: ['tries is worth the same on both sides', 'the points tables match exactly'],
+  },
+  {
+    name: 'an age group scores different things on the two sides',
+    suite: 'test-scoring-model.js',
+    apply: () => patch(SD, "  u12:['tries','conversions'],", "  u12:['tries','conversions','penalties'],"),
+    expect: ['u12 scores the same things on both sides'],
+  },
+  {
+    /* _scoring.js's own comment says FESTIVAL_AGE_IDS mirrors hasStandings:false
+       and nothing kept them in step. */
+    name: 'the festival list and hasStandings drift apart',
+    suite: 'test-scoring-model.js',
+    apply: () => patch(SCORING_MODEL_F, "const FESTIVAL_AGE_IDS = ['u6', 'u7'];", "const FESTIVAL_AGE_IDS = ['u6', 'u7', 'u8'];"),
+    expect: ['the festival lists match'],
+  },
+  {
+    /* bcrypt discards everything past 72 BYTES, so without this a 100-character
+       passphrase and its first 72 characters are the same password. */
+    name: 'the password ceiling is removed, so bcrypt silently truncates',
+    suite: 'test-accounts.js',
+    apply: () => patch(PASSWORD_F,
+      '  if (passwordBytes(password) > MAX_PASSWORD_BYTES) return PASSWORD_TOO_LONG;', ''),
+    expect: ['a password past bcrypt 72-byte limit is refused'],
+  },
+  {
+    /* 72 BYTES, not characters — one emoji is four. Counting characters lets a
+       60-character password of non-Latin text through to be truncated. */
+    name: 'the ceiling counts characters instead of bytes',
+    suite: 'test-accounts.js',
+    apply: () => patch(PASSWORD_F,
+      "const passwordBytes = (s) => Buffer.byteLength(String(s), 'utf8');",
+      'const passwordBytes = (s) => String(s).length;'),
+    expect: ['the limit is counted in BYTES, not characters'],
   },
 ];
 

@@ -267,6 +267,9 @@ const REG = path.join('netlify', 'functions', '_registration.js');
 const AUTH_F = path.join('netlify', 'functions', '_auth.js');
 /* Match-result storage — see the eight faults after those. */
 const RESULTS_F = path.join('netlify', 'functions', '_results.js');
+/* Login rate limiting — see the eight faults after THOSE. */
+const LOGIN_F = path.join('netlify', 'functions', 'login.js');
+const RATELIMIT_F = path.join('netlify', 'functions', '_ratelimit.js');
 const SD = 'scores-data.js';
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
@@ -1060,8 +1063,11 @@ const FAULTS = [
       const f = path.join('netlify', 'functions', 'login.js');
       patch(f, "const { loadAccounts, verifyPassword, sign, blobStore } = require('./_auth');",
         "const { loadAccounts, verifyPassword, sign, blobStore, passwordProblem } = require('./_auth');");
-      patch(f, "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
-        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {");
+      /* Re-anchored Aug 2026: the verifyPassword call moved out of this
+         condition into an `ok` above it, so the door could always run bcrypt
+         and stop leaking which usernames exist by how fast it answered. */
+      patch(f, '    if (!account || !account.passwordHash || !ok) {',
+        "    if (passwordProblem(password)) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Password too short.' }) };\n    if (!account || !account.passwordHash || !ok) {");
     },
     expect: ['does NOT check password length'],
   },
@@ -1899,7 +1905,7 @@ const FAULTS = [
     name: 'the window never expires at all',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_ratelimit.js'),
-      '  if (now - windowStart >= WINDOW_MS) return null;', ''),
+      '  if (now - windowStart >= (windowMs || WINDOW_MS)) return null;', ''),
     expect: ['allowed again the moment the hour is up'],
   },
   {
@@ -3893,8 +3899,8 @@ const FAULTS = [
     name: 'login.js loses the Google-account (no passwordHash) guard',
     suite: 'test-unified-login.js',
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      "if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {",
-      "if (!account || !(await verifyPassword(password || '', account.passwordHash))) {"),
+      "if (!account || !account.passwordHash || !ok) {",
+      "if (!account || !ok) {"),
     expect: ['the Google-account (no passwordHash) guard is present'],
   },
   {
@@ -3909,8 +3915,8 @@ const FAULTS = [
     name: 'login.js moves to its own rate bucket, buying attackers a second guess budget',
     suite: 'test-unified-login.js',
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:login`,',
-      'const rate = await checkRate(blobStore(\'config\'), `${clientIp(event)}:signin`,'),
+      'const connectionBucket = (event) => `${clientIp(event)}:login`;',
+      'const connectionBucket = (event) => `${clientIp(event)}:signin`;'),
     expect: ['login.js counts into the :login bucket'],
   },
   {
@@ -7681,6 +7687,83 @@ const FAULTS = [
     apply: () => patch(RESULTS_F, '  await store.setJSON(matchKey(matchId), entry);',
       '  await store.setJSON(groupKey(groupOf(matchId)), { [matchId]: entry });'),
     expect: ['two matches are two blobs', 'keyed by match, not by group'],
+  },
+
+  /* ==================================================================== */
+  /* LOGIN RATE LIMITING (Aug 2026).
+
+     One bucket, keyed on the connection address alone, incremented BEFORE the
+     password was checked. Every manager at Zayed Sports City shares one
+     x-nf-client-connection-ip, so ten CORRECT sign-ins exhausted the venue's
+     entire budget and the eleventh manager to arrive on tournament morning was
+     refused with the right password on the first try.
+
+     ⚠️ ONE OF THESE EIGHT IS FOR A BUG THE TEST FOUND RATHER THAN THE REVIEW:
+     readWindow() measured expiry against the module's one-hour WINDOW_MS
+     instead of the caller's, so every 15-minute limit (login AND signup) really
+     lasted an hour while telling the person to retry in fifteen minutes.
+     Nothing had ever advanced a clock in a rate-limit test before. */
+  {
+    name: 'the login bucket goes back to being connection-wide',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      'const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);',
+      'const perAccount = await peekRate(store, connectionBucket(event), now, ACCOUNT_RATE_OPTS);'),
+    expect: ['mgr2 on the same wifi is unaffected'],
+  },
+  {
+    name: 'successful sign-ins are counted against the limit again',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      '    const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);',
+      '    await recordFailure(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);\n    const perAccount = await peekRate(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);'),
+    expect: ['and the count started again from zero'],
+  },
+  {
+    name: 'a correct password stops forgiving the fumbles before it',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    await forget(store, accountBucket(event, uname));', '    // forget removed'),
+    expect: ['and the count started again from zero'],
+  },
+  {
+    /* Laundering: sign in correctly every 49 guesses and sweep for ever. */
+    name: 'forget clears the connection bucket too, so a sweep can be laundered',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    await forget(store, accountBucket(event, uname));',
+      '    await forget(store, accountBucket(event, uname));\n    await forget(store, connectionBucket(event));'),
+    expect: ['did NOT launder the sweep'],
+  },
+  {
+    name: 'the connection backstop is dropped, so a username sweep is unlimited',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F, '    if (!perConnection.ok) return tooManyResponse(perConnection);',
+      '    // backstop removed'),
+    expect: ['a sweep of unknown usernames is eventually refused'],
+  },
+  {
+    /* Restores the short-circuit: bcrypt only runs when the username exists, so
+       a real one answers in tens of milliseconds and an unknown one instantly. */
+    name: 'the username-enumeration timing fix is reverted',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      '    if (!account || !account.passwordHash || !ok) {',
+      "    if (!account || !account.passwordHash || !(await verifyPassword(password || '', account.passwordHash))) {"),
+    expect: ['the old short-circuiting chain is gone'],
+  },
+  {
+    name: 'peekRate starts counting what it reads',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(RATELIMIT_F,
+      "    const win = readWindow(await store.get(keyFor(address), { type: 'json' }), now, windowMs);",
+      "    const win = readWindow(await store.get(keyFor(address), { type: 'json' }), now, windowMs);\n    await store.setJSON(keyFor(address), { count: ((win && win.count) || 0) + 1, windowStart: (win && win.windowStart) || now });"),
+    expect: ['and nothing was counted against the connection', 'and peeking does NOT count'],
+  },
+  {
+    name: 'window expiry goes back to the module constant, so 15 minutes lasts an hour',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(RATELIMIT_F, '  if (now - windowStart >= (windowMs || WINDOW_MS)) return null;',
+      '  if (now - windowStart >= WINDOW_MS) return null;'),
+    expect: ['a filled bucket is clear again after the window'],
   },
 ];
 

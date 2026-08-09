@@ -179,6 +179,16 @@ section('Rate limiting: same budget, same shared bucket as the old endpoints');
     uniSrc.includes('`${clientIp(event)}:login`'));
   check('…with the 10-per-15-minutes budget',
     uniSrc.includes('{ max: 10, windowMs: 15 * 60 * 1000 }'));
+  /* ⚠️ AND A SECOND, PER-ACCOUNT BUCKET, ONLY FAILURES COUNTING (Aug 2026).
+     The single connection-wide bucket above was incremented before the password
+     was checked, so ten CORRECT sign-ins used up the whole venue's budget — and
+     every manager at Zayed Sports City shares one connection address. The
+     :login bucket is kept as the sweep backstop with a much higher ceiling.
+     Behaviour is proven in test-login-ratelimit.js; these two hold the shape. */
+  check('…plus a per-account bucket, so one person cannot lock out the venue',
+    uniSrc.includes('`${clientIp(event)}:${uname}:login`'));
+  check('…and the counter is only touched on a FAILED attempt',
+    /await recordFailure\(/.test(uniSrc) && !/await checkRate\(/.test(uniSrc));
 }
 
 /* ====================================================================== */

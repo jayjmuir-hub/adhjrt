@@ -484,8 +484,42 @@ dashboard. Every supersession check went through `readAll`; nothing asserted the
 two readers agree. **Two callers, two merges; a test of one says nothing about
 the other.**
 
-⚠️ **Still open from the same review**, worst first: login is rate-limited per-IP so the venue
-wifi locks managers out after 10 attempts; all `<head>` metadata on the
+---
+
+## 9 Aug 2026 — login rate limiting fixed (same branch, NOT deployed)
+
+Third review finding, and the one that would have bitten on the day. One bucket,
+keyed on the connection address alone, incremented **before** the password was
+checked. Every manager at Zayed Sports City shares one connection address, so
+ten CORRECT sign-ins used the whole venue's budget and the eleventh manager to
+arrive would have been refused with the right password. Durable detail in
+`RESTORE.md` → "Signing in is rate limited per ACCOUNT".
+
+Now two buckets — per account (10/15 min) and a per-connection sweep backstop
+(50/15 min) — with **only failed attempts counting**, and a correct password
+clearing the per-account bucket. The username-enumeration timing leak went in
+the same commit (bcrypt now always runs, against a published dummy hash;
+measured 63 ms vs 64 ms).
+
+**Suite: 817/817 faults, 37 clean, 42 files.** Eight new faults.
+
+⚠️ **TWO BUGS FOUND BY WRITING THE TEST, NOT BY THE REVIEW:**
+
+1. **`readWindow()` measured expiry against the module's one-hour constant, not
+   the caller's window.** Every 15-minute limit — login AND signup — really
+   lasted an hour, while telling the person to retry in fifteen minutes. Found
+   by the first test that ever advanced a clock past a bucket's own window.
+2. **My headline check did not guard what I said it did.** "Fifteen managers all
+   get in" passes even with the bucket put back to connection-wide, because
+   nothing increments on success any more. It guards the failures-only half
+   only; the per-account half is held by a different check. Found by injecting
+   the half I thought it covered. The claim in the test header was corrected.
+
+⚠️ **Four PRE-EXISTING faults (83, 182, 403, 405) had to be re-anchored** and
+one existing suite (`test-unified-login.js`) gained two checks for the new
+shape. All four reported COULD NOT INJECT rather than passing silently.
+
+⚠️ **Still open from the same review**, worst first: all `<head>` metadata on the
 `.dc.html` pages is injected by JS, so shared links have no title or card **and
 `/register-club` does not actually carry `noindex` in the served HTML** — the
 `netlify.toml` comment claiming it does is wrong; the hero PNG is 1.8 MB;

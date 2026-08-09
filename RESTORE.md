@@ -2057,6 +2057,54 @@ and far short of anything useful to an abuser.
 - A window stamped in the **future** is treated as stale. Clock skew between
   instances must not lock somebody out for longer than the window.
 
+### Signing in is rate limited per ACCOUNT, and only failures count
+
+`ACCOUNT_RATE_OPTS` / `CONNECTION_RATE_OPTS` in `login.js`, on top of
+`peekRate()` / `recordFailure()` / `forget()` in `_ratelimit.js`.
+
+**Two buckets, and a correct password costs nothing against either.**
+
+| Bucket | Budget | Job |
+|---|---|---|
+| `${ip}:${username}:login` | 10 / 15 min | stands between a script and ONE manager's password |
+| `${ip}:login` | 50 / 15 min | backstop against a sweep through a LIST of usernames |
+
+**⚠️ What was wrong, because it would have shown up on the day.** There was one
+bucket, keyed on the connection address alone, and `checkRate()` incremented it
+**before the password was ever looked at**. Every manager at Zayed Sports City
+shares one `x-nf-client-connection-ip`. So ten *correct* sign-ins exhausted the
+whole venue's budget exactly as fast as ten wrong ones, and the eleventh manager
+to arrive on the morning of 7 November would have been refused — right password,
+first attempt — for fifteen minutes.
+
+- **Peek, then record.** Reading a counter has no side effect, so an attempt
+  that turns out to be correct spends nothing. Only the failure branch calls
+  `recordFailure`.
+- **A correct password CLEARS the per-account bucket** (`forget`). Four fumbles
+  then a success must leave a clean slate, or a manager walks around all morning
+  one mistake from a lockout they already recovered from.
+- **⚠️ It must NOT clear the connection bucket.** That one is watching for a
+  username sweep; if knowing one correct password reset it, a sweep could be
+  laundered by signing in every 49 guesses. There is a fault for exactly that.
+- **⚠️ `bcrypt` runs even when the username does not exist**, against
+  `DUMMY_HASH`. The old `!account || !passwordHash || await verifyPassword(...)`
+  chain short-circuited, so a real username answered in tens of milliseconds and
+  an unknown one instantly — enough to sort a wordlist into real accounts and
+  everything else before spending a single guess. Measured at 63 ms vs 64 ms
+  against a real cost-10 hash.
+- Proven by `tests/test-login-ratelimit.js`, which drives the real handler
+  through the fifteen-manager scenario against a SHARED store. Eight faults.
+  ⚠️ Note the header comment there: "all fifteen get in" guards the
+  *failures-only* half, not the *per-account* half — that one is held by "mgr2
+  on the same wifi is unaffected". Found by injecting the per-account half and
+  watching the fifteen-manager check pass anyway.
+
+**⚠️ `readWindow()` takes the caller's `windowMs`, and used to use the module's
+one-hour constant.** Every 15-minute limit — login *and* signup — really lasted
+an hour, while `retryAfterSecs` was computed from the caller's window and told
+the person to try again in fifteen minutes. Found in Aug 2026 by the first test
+that ever advanced a clock past a bucket's *own* window.
+
 ### Signup attempts are rate limited too
 
 `SIGNUP_RATE_OPTS` / `checkSignupRate()` / `tooManyResponse()` in

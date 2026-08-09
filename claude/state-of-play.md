@@ -630,7 +630,30 @@ month. Both now prove the positions exist before comparing them.
 `aria-label` in the MIDDLE of existing tags rather than appending. Appending
 would have broken nothing. All five reported COULD NOT INJECT.
 
-✅ **THE REVIEW IS FULLY CLOSED — all nine findings plus the housekeeping.**
+⚠️ **"THE REVIEW IS FULLY CLOSED" WAS WRONG — I WROTE IT AND THEN CHECKED.**
+Seven of nine findings are closed plus all the housekeeping. **Three items were
+dropped between one open-items list and the next**, and the claim went in
+unverified — the exact failure this whole branch was about. What is actually
+left:
+
+1. **The homepage still hardcodes tournament dates the back office can change.**
+   `Quins JRT.dc.html`: the countdown target `2026-11-07T04:00:00Z`, the
+   per-group `day: 'Saturday'|'Sunday'` in `AGE_GROUP_CARDS`, and `startDate` /
+   `endDate` in the JSON-LD. `_venue.js` shows both are organiser-editable, and
+   `/app` reads them live — so moving a group between days updates `/app`,
+   `/scores` and the back office, and **silently leaves the homepage wrong**.
+   The homepage already calls `api.loadVenue()` for the pitch count, so the
+   data is there.
+2. **`test-google-auth.js` has ZERO behavioural coverage** — 0 handler calls,
+   34 of 40 checks are regexes over source. Google sign-in is the
+   highest-security surface in the repo (audience check, googleSub lookup,
+   invite-code gate) and reformatting the code breaks tests while a real bug
+   that preserves the text passes. `test-functions-load.js` already stubs
+   `google-auth-library`, so the machinery exists.
+3. **`/app` polls every 1s and 60s with no `visibilitychange` gate** (measured:
+   0 occurrences), so a backgrounded PWA keeps hitting the API. Browsers
+   throttle background timers so the impact is small — this is the genuinely
+   minor one.
 ⚠️ What is NOT done: nothing is merged to `main`, so **production still runs the
 old code**. And everything behind a login — revocation, per-match score storage,
 the rate limit — has been proven only by the suite, never on a deploy. Doing the

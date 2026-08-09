@@ -61,6 +61,11 @@ const NEEDED = [
      and parses the second, so BOTH have to ride along or its faults report
      as a dead suite rather than as drift. */
   'netlify/functions/_scoring.js',
+  /* test-google-auth-behaviour.js DRIVES both of these rather than reading
+     them as text, so they have to be in the temp copy. */
+  'netlify/functions/google-auth.js',
+  'netlify/functions/_googleAuth.js',
+  'netlify/functions/_signins.js',
   'netlify/functions/_signins.js',
   'netlify/functions/accounts-admin.js',
   /* Per-match result storage (Aug 2026) — test-results-storage.js REQUIRES
@@ -257,6 +262,8 @@ const INTAKE_F = path.join('netlify', 'functions', '_intake.js');
 const SD = 'scores-data.js';
 const SCORING_MODEL_F = path.join('netlify', 'functions', '_scoring.js');
 const PASSWORD_F = path.join('netlify', 'functions', '_password.js');
+const GOOGLE_F = path.join('netlify', 'functions', 'google-auth.js');
+const GOOGLE_V = path.join('netlify', 'functions', '_googleAuth.js');
 /* The confirmation block from _intake.js, verbatim, so a fault can move it
    rather than duplicate it. If this stops matching, the fault refuses to inject
    and that is a FAILURE of this script, not a pass. */
@@ -8149,6 +8156,85 @@ const FAULTS = [
       "const passwordBytes = (s) => Buffer.byteLength(String(s), 'utf8');",
       'const passwordBytes = (s) => String(s).length;'),
     expect: ['the limit is counted in BYTES, not characters'],
+  },
+
+  /* ==================================================================== */
+  /* HOMEPAGE DATES + GOOGLE SIGN-IN BEHAVIOUR (Aug 2026).
+
+     The homepage wrote out the countdown target and each group's day by hand
+     while /app, /scores and the back office read the same facts from the venue
+     layout an organiser can edit - so moving a group updated everywhere except
+     the page a parent lands on first. The file's own comment said "the test is
+     what catches it" and named a test-venue.js that does not exist.
+
+     And test-google-auth.js had 40 checks of which 34 were regexes over source,
+     never calling the handler - on the highest-security surface in the repo. */
+  {
+    name: 'the homepage day split goes back to the hardcoded Saturday/Sunday',
+    suite: 'test-homepage-dates.js',
+    apply: () => {
+      patch(HOME, "this.dayOfCard(g) === 'day1'", "g.day === 'Saturday'");
+      patch(HOME, "this.dayOfCard(g) === 'day2'", "g.day === 'Sunday'");
+    },
+    expect: ['the day split asks the layout, not the hardcoded string'],
+  },
+  {
+    name: 'the countdown stops being re-derived from the layout',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch(HOME, 'const t = Date.parse(`${venue.day1.date}T04:00:00Z`);', 'const t = NaN;'),
+    expect: ['the target is re-derived from the fetched layout'],
+  },
+  {
+    name: 'a card is moved to a day the layout disagrees with',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch(HOME, "{ age: 'U13', name: 'U13", "{ age: 'U13', day: 'Saturday', name: 'U13"),
+    expect: ['u13 is on the same day in both'],
+  },
+  {
+    /* Structured data cannot be derived - crawlers do not run JS - so it is
+       pinned to the default layout instead. */
+    name: 'the JSON-LD tournament dates drift from the layout',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch(HOME, '"startDate":"2026-11-07"', '"startDate":"2026-11-14"'),
+    expect: ['startDate matches day one of the default layout'],
+  },
+  {
+    name: 'the Google token audience is no longer pinned to our client id',
+    suite: 'test-google-auth-behaviour.js',
+    apply: () => patch(GOOGLE_V, 'verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID })',
+      'verifyIdToken({ idToken, audience: undefined })'),
+    expect: ['a token for a DIFFERENT client id is refused'],
+  },
+  {
+    name: 'a Google token for an unverified email is accepted',
+    suite: 'test-google-auth-behaviour.js',
+    apply: () => patch(GOOGLE_V, '    if (payload.email_verified === false) return null;', ''),
+    expect: ['an UNVERIFIED email is refused'],
+  },
+  {
+    /* Matching on email would let whoever controls an address take over the
+       account that used it. */
+    name: 'the account lookup matches on EMAIL instead of the Google subject',
+    suite: 'test-google-auth-behaviour.js',
+    apply: () => patch(GOOGLE_F, 'const existing = accounts.find((a) => a.googleSub === identity.sub);',
+      'const existing = accounts.find((a) => a.email === identity.email);'),
+    expect: ['a matching EMAIL with a different Google subject does NOT sign in'],
+  },
+  {
+    name: 'a brand-new Google manager lands APPROVED instead of pending',
+    suite: 'test-google-auth-behaviour.js',
+    apply: () => patch(GOOGLE_F, "      approved: role === 'organizer' ? isFirstOrganizer : false,", '      approved: true,'),
+    expect: ['but it lands PENDING, not signed in'],
+  },
+  {
+    /* ORGANIZER_INVITE_CODE is deleted in Netlify on purpose - its absence is
+       what closes organiser self-signup. */
+    name: 'organiser self-signup reopens when the env var is absent',
+    suite: 'test-google-auth-behaviour.js',
+    apply: () => patch(GOOGLE_F,
+      '      if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
+      '      if (false) {'),
+    expect: ['an organiser signup is refused while the env var is absent'],
   },
 ];
 

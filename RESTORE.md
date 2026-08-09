@@ -1099,6 +1099,70 @@ mentions were in each other's comments.
 
 ---
 
+## The homepage reads the tournament dates from the layout
+
+**Three facts were written out by hand on the homepage** while `/app`,
+`/scores` and the back office all read them from the venue layout an organiser
+can edit: the countdown target, each group's Saturday/Sunday in
+`AGE_GROUP_CARDS`, and `startDate`/`endDate` in the JSON-LD. **So moving a group
+between days updated everywhere except the page a parent lands on first.**
+
+⚠️ **The file already knew.** The comment above `AGE_GROUP_CARDS` said the table
+"has to be edited to match — the test is what catches it", and named a
+`test-venue.js` that does not exist. **A test named in a comment is not a test.**
+
+Two of the three are now derived; the third cannot be, and that asymmetry is the
+point:
+
+| | how it works now |
+|---|---|
+| Countdown target | `Date.parse(venue.day1.date + 'T04:00:00Z')` — 08:00 in Abu Dhabi. The hardcoded value stays as the first-frame value and the fallback. |
+| Saturday/Sunday split | `dayOfCard()` → `api.isDayOne()`, the same function `/app` and `/scores` use, so all three agree by construction. Falls back to the table. |
+| **JSON-LD dates** | **Still hardcoded, and must be.** Structured data is read by crawlers that do not run JavaScript — the whole reason it lives in the real `<head>`. `test-homepage-dates.js` PINS it to `DEFAULT_VENUE` instead. |
+
+- **No extra request.** The layout was already being fetched on this page for
+  the pitch count; only two lines were added inside that block.
+- **⚠️ Everything falls back to the written-down table.** `loadVenue()` itself
+  falls back to `DEFAULT_VENUE`, and if anything is missing or malformed the
+  hardcoded day and target stand. The page must never end up with no date
+  because a fetch failed. The per-card lookup has its own try/catch so one
+  unknown id cannot empty the map and move every group to Saturday.
+- **⚠️ The JSON-LD pin is the weaker guarantee and is labelled as such.** It
+  catches the dates drifting from `DEFAULT_VENUE`. It **cannot** catch an
+  organiser changing the dates in the back office — nothing static can. If the
+  tournament moves, the JSON-LD needs a human edit, and that check is what makes
+  it impossible to forget rather than a substitute for it.
+
+## Google sign-in is tested by being DRIVEN, not by grepping its source
+
+`test-google-auth.js` had 40 checks of which **34 were regexes over source
+text**, and it never called the handler once — on the highest-security surface
+in the repo: the audience check, the `googleSub` lookup, the invite-code gate,
+and the rule deciding whether a new account is approved. That cuts both ways:
+reformatting `(a) => a.googleSub` to `a => a.googleSub` broke three tests
+without a bug, and any bug leaving the text intact passed.
+
+`test-google-auth-behaviour.js` drives both files with a stubbed `OAuth2Client`.
+What it holds: a token for a different client id is refused; an unverified email
+is refused; the account lookup is by **`googleSub`, never email** (matching on
+email would let whoever controls an address take over the account that used it);
+a pending account is refused rather than signed in; a new manager lands
+**pending** and bound to the age group its code names; a Google account keeps a
+**null** `passwordHash`; and organiser self-signup stays shut while
+`ORGANIZER_INVITE_CODE` is absent from Netlify — which is deliberate, and
+"fixing" the missing variable reopens the door.
+
+⚠️ **THE STUB HAD TO MODEL THE REAL FAILURE, AND THE FIRST VERSION DID NOT.** It
+threw whenever the caller's `audience` was not our client id — so injecting
+"stop pinning the audience" made every sign-in fail, and the check that names
+that exact risk went on passing, because it expects `null` and got `null`. The
+fault was caught by twenty-three unrelated checks and not by the one guarding
+it. What unpinning really does is REMOVE the restriction, so a token minted for
+someone else's site is **accepted**. The stub now models that, and the right
+check goes red. **A stub that cannot express the vulnerability cannot test it.**
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

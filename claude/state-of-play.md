@@ -848,6 +848,43 @@ revoke test is the one worth doing: sign in on a phone, revoke that account from
 /organizer, refresh — it should be locked out immediately, where before it would
 have kept working for up to six months.
 
+## 9 Aug 2026 — the last two review findings (`fix/homepage-dates-and-google-tests`)
+
+The two items I had wrongly reported as closed. Durable detail in `RESTORE.md`.
+
+**1. The homepage no longer disagrees with the venue layout.** The countdown
+target and the Saturday/Sunday split are now derived from the layout an
+organiser can edit — the same `isDayOne()` `/app` and `/scores` use, so all
+three agree by construction. No extra request: the layout was already being
+fetched on that page for the pitch count. Everything falls back to the
+written-down table if the fetch fails.
+
+⚠️ **The JSON-LD dates stay hardcoded and MUST.** Structured data is read by
+crawlers that do not run JavaScript. They are pinned to `DEFAULT_VENUE` by a
+test instead — which catches drift from the default but **cannot** catch an
+organiser changing the dates in the back office. If the tournament moves, the
+JSON-LD needs a human edit; the check makes that hard to forget, it does not do
+it for you.
+
+**2. Google sign-in is now driven, not grepped.** `test-google-auth.js` had 34
+of 40 checks as regexes over source and never called the handler — on the
+highest-security surface in the repo.
+
+**Suite: 864/864 faults, 44 clean, 49 files.** Nine new faults.
+
+⚠️ **MY STUB COULD NOT EXPRESS THE VULNERABILITY IT WAS TESTING.** The first
+version threw whenever the caller's `audience` was not our client id — so
+injecting "stop pinning the audience" made every sign-in fail, and the check
+that names that exact risk went on PASSING, because it expects null and got
+null. Twenty-three unrelated checks caught the fault; the one guarding it did
+not. What unpinning really does is remove the restriction, so a foreign token is
+ACCEPTED. **A stub that cannot express the failure cannot test for it** — and
+the prover's "failed, but not on any of" report is what surfaced it.
+
+⚠️ **Two faults CRASHED the suite instead of failing a named check**, because
+assertions read `r.session._role` on a response that had become `needsSignup`.
+An explicit "a session came back at all" now precedes every session read.
+
 ## Where things stand
 
 | | |

@@ -54,15 +54,23 @@
 # so a Disallow would advertise the path to exactly the people it is hidden
 # from. noindex does the same job without naming it anywhere public.
 #
-# ⚠️ CORRECTED 9 Aug 2026 — "the page carries noindex" WAS NOT TRUE when this
-# comment was written, and had never been true. The tag sat inside <helmet> in
-# the BODY, and support.js moved it into document.head at runtime — so it
-# existed only after JavaScript ran, and a crawler that ignores JavaScript
-# ignored it too. The sentence above described a control that was not there.
-# The tag is now in the literal <head> of Club.dc.html, where a crawler sees it
-# without executing anything, and test-head-metadata.js holds it there.
-# The lesson is not about this tag: a comment asserting a security property is
-# worth nothing unless something checks the property.
+# ⚠️ QUALIFIED 9 Aug 2026, AND THE FIRST VERSION OF THIS NOTE OVERSTATED IT.
+# The tag sat inside <helmet>, which is in the BODY — so the served HTML did
+# contain it, but below </head>, where the robots directive is out of spec and
+# unreliably honoured (most crawlers stop parsing head-only metadata at
+# </head>). It is now in the literal <head> of Club.dc.html, which is where it
+# has to be to count, and test-head-metadata.js holds it there.
+#
+# ⚠️ I first wrote here that the tag "was not true / had never been true" — i.e.
+# that it did not exist at all. MEASURED afterwards on a deploy preview against
+# production: /register-club served the robots tag in both, at line 19 (body) on
+# production and line 34 (head) on the preview. So the control was WEAK, not
+# ABSENT, and I had described it from reading the code rather than from
+# fetching the page. Correcting a claim about verification by making another
+# unverified claim is its own lesson.
+#
+# The original point stands and is the reason both notes exist: a comment
+# asserting a property is worth nothing unless something checks the property.
 [[redirects]]
   from = "/register-club"
   to = "/Club.dc.html"
@@ -238,9 +246,14 @@
 # nothing new to anyone who thinks to look on github.com — but "already public
 # elsewhere" is not a reason to serve it from the site as well.
 #
-# netlify.toml itself is served for the same reason, and it is the file that
-# names the /register-club silent link. package.json exposes the exact
-# dependency ranges to anyone fingerprinting for a known-vulnerable version.
+# package.json exposes the exact dependency ranges to anyone fingerprinting for
+# a known-vulnerable version. MEASURED: production served it at 200.
+#
+# ⚠️ netlify.toml was NOT being served — measured at 404 on production before
+# any of this landed, so its rule below is redundant. It is kept because it
+# costs nothing and pins the behaviour if Netlify ever changes, but the claim
+# that this file was exposed was WRONG and is recorded here rather than quietly
+# dropped. I took it from a review and did not check it.
 #
 # ⚠️ `to` MUST be a different path — a redirect pointing at itself is silently
 # DROPPED by Netlify rather than applied. That mistake sat unnoticed on the

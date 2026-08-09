@@ -122,7 +122,17 @@ section('netlify.toml no longer claims something that was never true');
 
 {
   const toml = readRepo('netlify.toml');
-  check('the corrected note about the noindex claim is present', /CORRECTED 9 Aug 2026/.test(toml));
+  /* ⚠️ The note has been rewritten twice: first to say the noindex "was not
+     true", then again when a deploy preview measured the tag PRESENT on
+     production but in the body. Pinning an exact phrase made this check fail on
+     its own correction, so it now asserts the two things that must survive any
+     rewording — that the claim is qualified, and that the measurement is
+     recorded rather than the sentence quietly edited. */
+  check('the noindex claim carries a dated correction', /9 Aug 2026/.test(toml));
+  check('…and says where the tag actually was, not just that it was wrong',
+    /body/i.test(toml) && /head/i.test(toml));
+  check('…and the redundant netlify.toml rule is recorded as redundant',
+    /redundant/i.test(toml));
   /* The three paths the site was serving that are not part of the site. */
   ['/netlify/*', '/netlify.toml', '/package.json'].forEach((p) => {
     const re = new RegExp(`from = "${p.replace(/[.*]/g, (c) => '\\' + c)}"[\\s\\S]{0,120}?status = 404`);

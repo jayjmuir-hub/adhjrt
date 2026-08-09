@@ -827,16 +827,21 @@ The `.dc.html` pages have a nearly empty literal `<head>` — charset, viewport,
 one script — because `support.js` compiles `<helmet>` out of the `<body>` into
 `document.head` after boot. Until Aug 2026 **every** head tag lived there.
 
-**⚠️ That works in a browser and nowhere else.** Facebook, WhatsApp, LinkedIn,
-Slack and Twitter scrapers do not execute JavaScript. So every link to this site
-shared anywhere arrived as a bare grey URL — no title, no description, no card —
-on a site whose entire distribution is parents forwarding links to each other.
+**⚠️ That puts every head tag BELOW `</head>`, and the first version of this
+section said something stronger and wrong.** MEASURED on a deploy preview
+against production: production serves `<title>` at line 14 and `og:title` at
+line 182 with `</head>` at line 7 — so the tags are in the served HTML, in the
+**body**. Not absent, as I first wrote here, but in a place where head-only
+metadata is out of spec and unreliably honoured: most scrapers stop looking at
+`</head>`, and Open Graph and `robots` are specified as head-only.
 
-**⚠️ And it silently voided a security claim.** `netlify.toml` said the unlisted
-club form was protected partly because "the page carries noindex". It did not:
-the tag existed only after JS ran, and the crawlers that ignore JS are the ones
-that would have found the page. *A comment asserting a security property is
-worth nothing unless something checks the property.*
+So the move is right and the severity was overstated. **I described a control
+that was WEAK as one that was ABSENT, from reading the code rather than
+fetching the page** — while writing a note criticising this very file for
+asserting an unverified property. Both halves of that are the lesson.
+
+The same applies to the club form's `noindex`: present on production at line 19
+(body), now at line 34 (head).
 
 **The rule now:**
 

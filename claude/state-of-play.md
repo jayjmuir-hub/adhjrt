@@ -643,6 +643,56 @@ have been DELETED rather than re-synced a fifth time.** They disagreed with
 each other and with this file on four separate occasions. This file is the one
 place a count belongs, because rotting is its job.
 
+## 9 Aug 2026 — the branch was MEASURED on a deploy preview (PR #16)
+
+`fix/review-aug-2026` pushed; PR #16 opened purely to get a free Deploy Preview.
+**Production is untouched.** Branch deploys are set to "all branches" but no
+`fix-review-aug-2026--…` host ever appeared; the PR preview did, so that is the
+route that works here.
+
+Preview: `https://deploy-preview-16--adhquins-jrt.netlify.app`
+
+**The before/after that discriminates** — same paths, production vs preview, at
+the same moment:
+
+| path | production | preview | verdict |
+|---|---|---|---|
+| `/netlify/functions/_auth.js` | **200** | **404** | ✅ real hole, now closed |
+| `/package.json` | **200** | **404** | ✅ real, now closed |
+| `/netlify.toml` | 404 | 404 | ❌ **never was exposed** |
+| `/` (control) | 200 | 200 | ✅ site still works |
+| `/robots.txt` (control) | 200 | 200 | ✅ |
+| `/no-such-page-xyz` (control) | 404 | 404 | ✅ 404s are real |
+
+⚠️ **The controls earned their place twice.** The first attempt used a
+branch-deploy URL that did not exist — every path returned 404 including the
+homepage, which looks exactly like "the rules work" if you only check the three
+paths you expect to be hidden.
+
+⚠️ **TWO CLAIMS I REPEATED FROM THE REVIEW WERE WRONG, AND I HAD NOT MEASURED
+EITHER.**
+
+1. **`/netlify.toml` was never served.** 404 on production already. Its rule is
+   redundant; kept as a cheap pin, but recorded as an error rather than
+   quietly left looking like a fix.
+2. **The head metadata was not ABSENT, it was in the BODY.** Measured:
+   production serves `<title>` at line 14 and `og:title` at line 182 with
+   `</head>` at line 7; the club form's `noindex` at line 19. All present in
+   the served HTML, all below `</head>`, where head-only metadata is out of
+   spec and unreliably honoured. The move to `<head>` is still correct — the
+   preview puts them at lines 34/39 and 34, inside head — but I wrote "did not
+   exist" and "arrived as a bare grey URL" in a commit message and a code
+   comment without ever fetching the page. **I described a WEAK control as an
+   ABSENT one, in a note criticising this repo for asserting unverified
+   properties.**
+
+✅ **Also measured live:** hero image 1,801 KB on production → **30 KB** on the
+preview.
+
+⚠️ **Still unmeasured on a deploy:** everything behind a login — revocation,
+score storage, the rate limit. Those need a signed-in session on the preview
+and have only been proven by the suite.
+
 ## Where things stand
 
 | | |

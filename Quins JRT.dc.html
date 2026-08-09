@@ -2431,8 +2431,8 @@
     </sc-if>
     <sc-if value="{{ showFixtureFilter }}" hint-placeholder-val="{{ false }}">
       <div data-reveal style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:30px">
-        <label style="font-size:13px;font-weight:700;color:#5d5a54;letter-spacing:.4px;text-transform:uppercase">Filter by team</label>
-        <select value="{{ fixtureTeamFilter }}" onChange="{{ onFixtureTeamChange }}" style="font-weight:700;font-size:14px;padding:9px 16px;border-radius:9px;border:1.5px solid #e2ded4;background:#fff;color:#14151A;cursor:pointer">
+        <label for="f--label-style-font-si" style="font-size:13px;font-weight:700;color:#5d5a54;letter-spacing:.4px;text-transform:uppercase">Filter by team</label>
+        <select id="f--label-style-font-si" value="{{ fixtureTeamFilter }}" onChange="{{ onFixtureTeamChange }}" style="font-weight:700;font-size:14px;padding:9px 16px;border-radius:9px;border:1.5px solid #e2ded4;background:#fff;color:#14151A;cursor:pointer">
           <option value="">All teams</option>
           <sc-for list="{{ fixtureTeamSelectOptions }}" as="t" hint-placeholder-count="9">
             <option value="{{ t.code }}">{{ t.name }}</option>
@@ -2964,8 +2964,8 @@
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
-                  <select value="{{ teamForm.club }}" onChange="{{ onTeamClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-2" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
+                  <select id="f--label-style-font-si-2" value="{{ teamForm.club }}" onChange="{{ onTeamClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                     <option value="">Select a club&hellip;</option>
                     <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
                       <option value="{{ c }}">{{ c }}</option>
@@ -2973,12 +2973,12 @@
                     <option value="__other__">Other &mdash; my club isn't listed</option>
                   </select>
                   <sc-if value="{{ teamClubIsOther }}" hint-placeholder-val="{{ false }}">
-                    <input value="{{ teamClubOtherVal }}" onInput="{{ onTeamClubOther }}" placeholder="Type your club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                    <input value="{{ teamClubOtherVal }}" aria-label="Your club's full name" onInput="{{ onTeamClubOther }}" placeholder="Type your club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                   </sc-if>
                 </div>
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP ENTERING</label>
-                  <select value="{{ teamForm.ageGroup }}" onChange="{{ onTeamAgeGroup }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-3" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP ENTERING</label>
+                  <select id="f--label-style-font-si-3" value="{{ teamForm.ageGroup }}" onChange="{{ onTeamAgeGroup }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                     <option value="">Select an age group&hellip;</option>
                     <sc-for list="{{ teamAgeGroupOptions }}" as="ag" hint-placeholder-count="8">
                       <option value="{{ ag }}">{{ ag }}</option>
@@ -2995,8 +2995,8 @@
 
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PREFERRED POOL</label>
-                  <select value="{{ teamForm.preferredPool }}" onChange="{{ onPreferredPool }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-4" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PREFERRED POOL</label>
+                  <select id="f--label-style-font-si-4" value="{{ teamForm.preferredPool }}" onChange="{{ onPreferredPool }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                     <option value="">Select a pool&hellip;</option>
                     <sc-for list="{{ poolOptions }}" as="t" hint-placeholder-count="5">
                       <option value="{{ t }}">{{ t }}</option>
@@ -3006,22 +3006,22 @@
                 </div>
                 <div>
                   <div style="display:flex;align-items:baseline;justify-content:space-between">
-                    <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">NUMBER OF PLAYERS</label>
+                    <label for="f--label-style-font-si-5" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">NUMBER OF PLAYERS</label>
                     <span style="font-size:11px;font-weight:700;color:#7f8794">max {{ squadCap }}</span>
                   </div>
-                  <input type="number" min="1" max="{{ squadCap }}" value="{{ teamForm.numPlayers }}" onInput="{{ onTeamNumPlayers }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <input id="f--label-style-font-si-5" type="number" min="1" max="{{ squadCap }}" value="{{ teamForm.numPlayers }}" onInput="{{ onTeamNumPlayers }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH NAME</label>
-                <input value="{{ teamForm.headCoachName }}" onInput="{{ onHeadCoachName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                <label for="f--label-style-font-si-6" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH NAME</label>
+                <input id="f--label-style-font-si-6" value="{{ teamForm.headCoachName }}" onInput="{{ onHeadCoachName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
               </div>
 
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH EMAIL</label>
-                  <input type="email" value="{{ teamForm.headCoachEmail }}" onInput="{{ onHeadCoachEmail }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-7" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH EMAIL</label>
+                  <input id="f--label-style-font-si-7" type="email" value="{{ teamForm.headCoachEmail }}" onInput="{{ onHeadCoachEmail }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">HEAD COACH MOBILE</label>
@@ -3030,20 +3030,20 @@
                       <svg width="20" height="14" viewBox="0 0 20 14" style="flex:none;border-radius:2px"><rect width="20" height="14" fill="#fff"/><rect width="20" height="4.67" fill="#00732F"/><rect y="9.33" width="20" height="4.67" fill="#000"/><rect width="6" height="14" fill="#FF0000"/></svg>
                       +971
                     </div>
-                    <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ teamForm.headCoachPhone }}" onInput="{{ onHeadCoachPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
+                    <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ teamForm.headCoachPhone }}" aria-label="Head coach mobile number" onInput="{{ onHeadCoachPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
                   </div>
                 </div>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER NAME</label>
-                <input value="{{ teamForm.managerName }}" onInput="{{ onManagerName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                <label for="f--label-style-font-si-8" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER NAME</label>
+                <input id="f--label-style-font-si-8" value="{{ teamForm.managerName }}" onInput="{{ onManagerName }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
               </div>
 
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER EMAIL</label>
-                  <input type="email" value="{{ teamForm.managerEmail }}" onInput="{{ onManagerEmail }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-9" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER EMAIL</label>
+                  <input id="f--label-style-font-si-9" type="email" value="{{ teamForm.managerEmail }}" onInput="{{ onManagerEmail }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
                 <div>
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">TEAM MANAGER MOBILE</label>
@@ -3052,14 +3052,14 @@
                       <svg width="20" height="14" viewBox="0 0 20 14" style="flex:none;border-radius:2px"><rect width="20" height="14" fill="#fff"/><rect width="20" height="4.67" fill="#00732F"/><rect y="9.33" width="20" height="4.67" fill="#000"/><rect width="6" height="14" fill="#FF0000"/></svg>
                       +971
                     </div>
-                    <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ teamForm.managerPhone }}" onInput="{{ onManagerPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
+                    <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ teamForm.managerPhone }}" aria-label="Team manager mobile number" onInput="{{ onManagerPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
                   </div>
                 </div>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">SPECIAL REQUESTS / NOTES</label>
-                <textarea value="{{ teamForm.notes }}" onInput="{{ onTeamNotes }}" rows="3" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;resize:vertical;font-family:inherit"></textarea>
+                <label for="f--label-style-font-si-10" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">SPECIAL REQUESTS / NOTES</label>
+                <textarea id="f--label-style-font-si-10" value="{{ teamForm.notes }}" onInput="{{ onTeamNotes }}" rows="3" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;resize:vertical;font-family:inherit"></textarea>
               </div>
 
               <div>
@@ -3076,8 +3076,8 @@
                   <sc-for list="{{ teamPlayerRows }}" as="p" hint-placeholder-count="0">
                     <div style="display:flex;flex-direction:column;gap:4px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06)">
                       <div class="reg-playerrow" style="display:grid;grid-template-columns:1fr 1fr 0.7fr 1.15fr 0.85fr 32px;gap:8px;align-items:center">
-                        <input value="{{ p.firstName }}" onInput="{{ p.onFirstName }}" placeholder="First name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
-                        <input value="{{ p.lastName }}" onInput="{{ p.onLastName }}" placeholder="Last name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
+                        <input value="{{ p.firstName }}" aria-label="Player first name" onInput="{{ p.onFirstName }}" placeholder="First name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
+                        <input value="{{ p.lastName }}" aria-label="Player last name" onInput="{{ p.onLastName }}" placeholder="Last name" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 12px;color:#fff;font-size:14px">
                         <select value="{{ p.dobDay }}" onChange="{{ p.onDobDay }}" aria-label="Player day of birth" style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 6px;color:#fff;font-size:13px">
                           <option value="">Day</option>
                           <sc-for list="{{ dobDayOptions }}" as="d" hint-placeholder-count="31"><option value="{{ d }}">{{ d }}</option></sc-for>
@@ -3146,12 +3146,12 @@
             <div style="display:flex;flex-direction:column;gap:18px;margin-top:26px">
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYER FIRST NAME</label>
-                  <input value="{{ playerForm.playerFirstName }}" onInput="{{ onPlayerFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-12" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYER FIRST NAME</label>
+                  <input id="f--label-style-font-si-12" value="{{ playerForm.playerFirstName }}" onInput="{{ onPlayerFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYER LAST NAME</label>
-                  <input value="{{ playerForm.playerLastName }}" onInput="{{ onPlayerLastName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-13" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PLAYER LAST NAME</label>
+                  <input id="f--label-style-font-si-13" value="{{ playerForm.playerLastName }}" onInput="{{ onPlayerLastName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
               </div>
 
@@ -3188,8 +3188,8 @@
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
-                <select value="{{ playerForm.club }}" onChange="{{ onPlayerClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                <label for="f--label-style-font-si-15" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">CLUB</label>
+                <select id="f--label-style-font-si-15" value="{{ playerForm.club }}" onChange="{{ onPlayerClub }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                   <option value="">Select a club&hellip;</option>
                   <sc-for list="{{ playerClubOptions }}" as="c" hint-placeholder-count="9">
                     <option value="{{ c }}">{{ c }}</option>
@@ -3197,13 +3197,13 @@
                   <option value="__other__">Other &mdash; club not listed</option>
                 </select>
                 <sc-if value="{{ playerClubIsOther }}" hint-placeholder-val="{{ false }}">
-                  <input value="{{ playerClubOtherVal }}" onInput="{{ onPlayerClubOther }}" placeholder="Type the club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <input value="{{ playerClubOtherVal }}" aria-label="The club's full name" onInput="{{ onPlayerClubOther }}" placeholder="Type the club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </sc-if>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
-                <select value="{{ playerForm.ageGroup }}" onChange="{{ onPlayerAgeGroup }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                <label for="f--label-style-font-si-16" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP</label>
+                <select id="f--label-style-font-si-16" value="{{ playerForm.ageGroup }}" onChange="{{ onPlayerAgeGroup }}" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                   <option value="">Select an age group&hellip;</option>
                   <sc-for list="{{ playerAgeOptions }}" as="ag" hint-placeholder-count="8">
                     <option value="{{ ag }}">{{ ag }}</option>
@@ -3216,8 +3216,8 @@
                 <sc-if value="{{ playerPlayUpNeeded }}" hint-placeholder-val="{{ false }}">
                   <div style="margin-top:10px;background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.4);border-radius:10px;padding:14px 16px">
                     <div style="font-size:13px;color:#f5c518;font-weight:700;margin-bottom:10px">{{ playerPlayUpPrompt }}</div>
-                    <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:600;color:#fff;cursor:pointer">
-                      <input type="checkbox" checked="{{ playerForm.playUpConsent }}" onChange="{{ onPlayerPlayUpConsent }}" style="margin-top:2px;width:18px;height:18px;flex:none;accent-color:#f5c518">
+                    <label for="f--label-style-display" style="display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:600;color:#fff;cursor:pointer">
+                      <input id="f--label-style-display" type="checkbox" checked="{{ playerForm.playUpConsent }}" onChange="{{ onPlayerPlayUpConsent }}" style="margin-top:2px;width:18px;height:18px;flex:none;accent-color:#f5c518">
                       <span>I consent, as parent/guardian, to the player playing up as described above. <span style="color:#E11B22">*</span></span>
                     </label>
                   </div>
@@ -3226,12 +3226,12 @@
 
               <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT / GUARDIAN FIRST NAME</label>
-                  <input value="{{ playerForm.parentFirstName }}" onInput="{{ onPlayerParentFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-17" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT / GUARDIAN FIRST NAME</label>
+                  <input id="f--label-style-font-si-17" value="{{ playerForm.parentFirstName }}" onInput="{{ onPlayerParentFirstName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
                 <div>
-                  <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT / GUARDIAN LAST NAME</label>
-                  <input value="{{ playerForm.parentLastName }}" onInput="{{ onPlayerParentLastName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                  <label for="f--label-style-font-si-18" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT / GUARDIAN LAST NAME</label>
+                  <input id="f--label-style-font-si-18" value="{{ playerForm.parentLastName }}" onInput="{{ onPlayerParentLastName }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
               </div>
 
@@ -3242,39 +3242,39 @@
                     <svg width="20" height="14" viewBox="0 0 20 14" style="flex:none;border-radius:2px"><rect width="20" height="14" fill="#fff"/><rect width="20" height="4.67" fill="#00732F"/><rect y="9.33" width="20" height="4.67" fill="#000"/><rect width="6" height="14" fill="#FF0000"/></svg>
                     +971
                   </div>
-                  <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ playerForm.parentPhone }}" onInput="{{ onPlayerParentPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
+                  <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ playerForm.parentPhone }}" aria-label="Parent or guardian mobile number" onInput="{{ onPlayerParentPhone }}" style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px">
                 </div>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT EMAIL</label>
-                <input type="email" value="{{ playerForm.parentEmail }}" onInput="{{ onPlayerParentEmail }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
+                <label for="f--label-style-font-si-19" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">PARENT EMAIL</label>
+                <input id="f--label-style-font-si-19" type="email" value="{{ playerForm.parentEmail }}" onInput="{{ onPlayerParentEmail }}" required style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
               </div>
 
               <div>
                 <div style="display:flex;align-items:baseline;justify-content:space-between">
                   <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">EMERGENCY CONTACT</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#aeb4bf;cursor:pointer">
-                    <input type="checkbox" checked="{{ playerForm.emergencySame }}" onChange="{{ onEmergencySame }}" style="width:15px;height:15px;accent-color:#17A34A">
+                  <label for="f--label-style-display-2" style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#aeb4bf;cursor:pointer">
+                    <input id="f--label-style-display-2" type="checkbox" checked="{{ playerForm.emergencySame }}" onChange="{{ onEmergencySame }}" style="width:15px;height:15px;accent-color:#17A34A">
                     Same as parent/guardian above
                   </label>
                 </div>
                 <div class="reg-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
-                  <input value="{{ playerForm.emergencyFirstName }}" onInput="{{ onEmergencyFirstName }}" disabled="{{ playerForm.emergencySame }}" placeholder="First name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
-                  <input value="{{ playerForm.emergencyLastName }}" onInput="{{ onEmergencyLastName }}" disabled="{{ playerForm.emergencySame }}" placeholder="Last name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
+                  <input value="{{ playerForm.emergencyFirstName }}" aria-label="Emergency contact first name" onInput="{{ onEmergencyFirstName }}" disabled="{{ playerForm.emergencySame }}" placeholder="First name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
+                  <input value="{{ playerForm.emergencyLastName }}" aria-label="Emergency contact last name" onInput="{{ onEmergencyLastName }}" disabled="{{ playerForm.emergencySame }}" placeholder="Last name" required style="width:100%;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
                 </div>
                 <div style="display:flex;margin-top:10px">
                   <div style="background:#1c1d20;border:1px solid rgba(255,255,255,0.15);border-right:none;border-radius:9px 0 0 9px;padding:0 14px;color:#8b93a3;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex:none">
                     <svg width="20" height="14" viewBox="0 0 20 14" style="flex:none;border-radius:2px"><rect width="20" height="14" fill="#fff"/><rect width="20" height="4.67" fill="#00732F"/><rect y="9.33" width="20" height="4.67" fill="#000"/><rect width="6" height="14" fill="#FF0000"/></svg>
                     +971
                   </div>
-                  <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ playerForm.emergencyPhone }}" onInput="{{ onEmergencyPhone }}" disabled="{{ playerForm.emergencySame }}" required style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
+                  <input type="tel" inputMode="numeric" maxLength="9" placeholder="501234567" value="{{ playerForm.emergencyPhone }}" aria-label="Emergency contact mobile number" onInput="{{ onEmergencyPhone }}" disabled="{{ playerForm.emergencySame }}" required style="flex:1;min-width:0;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:0 9px 9px 0;padding:12px 14px;color:#fff;font-size:15px;opacity:{{ emergencyFieldOpacity }}">
                 </div>
               </div>
 
               <div>
-                <label style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">MEDICAL / ALLERGY NOTES</label>
-                <textarea value="{{ playerForm.medicalNotes }}" onInput="{{ onPlayerMedical }}" rows="3" placeholder="e.g. asthma, allergies, medication" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;resize:vertical;font-family:inherit"></textarea>
+                <label for="f--label-style-font-si-20" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">MEDICAL / ALLERGY NOTES</label>
+                <textarea id="f--label-style-font-si-20" value="{{ playerForm.medicalNotes }}" onInput="{{ onPlayerMedical }}" rows="3" placeholder="e.g. asthma, allergies, medication" style="width:100%;margin-top:6px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px;resize:vertical;font-family:inherit"></textarea>
               </div>
 
               <div>
@@ -3288,8 +3288,8 @@
                   <p style="margin-top:12px">By completing and signing this consent form, and by my son / daughter participating in the Tournament, I am confirming that I have read and accepted the terms above and have given permission for my son / daughter to participate in the Tournament. Such consent shall be irrevocable, worldwide and perpetual.</p>
                   <p style="margin-top:12px">By checking this box, as the Parent/Guardian, I confirm and agree for the player named above to participate in the Tournament under the terms described above.</p>
                 </div>
-                <label style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer">
-                  <input type="checkbox" checked="{{ playerForm.consent }}" onChange="{{ onPlayerConsent }}" style="margin-top:2px;width:18px;height:18px;flex:none;accent-color:#17A34A">
+                <label for="f--label-style-display-3" style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer">
+                  <input id="f--label-style-display-3" type="checkbox" checked="{{ playerForm.consent }}" onChange="{{ onPlayerConsent }}" style="margin-top:2px;width:18px;height:18px;flex:none;accent-color:#17A34A">
                   <span>I have read and agree to the Medical Declaration &amp; Consent above. <span style="color:#E11B22">*</span></span>
                 </label>
               </div>

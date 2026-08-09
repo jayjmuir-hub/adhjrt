@@ -3006,7 +3006,7 @@ const FAULTS = [
     name: 'the age-group picker is deleted from the scoring card',
     suite: 'test-organizer-tournament.js',
     apply: () => patch('Organizer.dc.html',
-      '<select value="{{ tournAgeId }}" onChange="{{ onTournAge }}"', '<select value="{{ tournAgeId }}"'),
+      '<select value="{{ tournAgeId }}" aria-label="Age group" onChange="{{ onTournAge }}"', '<select value="{{ tournAgeId }}"'),
     expect: ['the tab\'s age-group picker'],
   },
   {
@@ -3491,8 +3491,8 @@ const FAULTS = [
     name: 'the Organiser option creeps back onto the signup role picker',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      '      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
-      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
+      '      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
+      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
     expect: ['no role picker survives on either signup view', 'the page never offers "Organiser" as something to sign up as'],
   },
   {
@@ -5372,10 +5372,10 @@ const FAULTS = [
     suite: 'test-manager-dc-score-sheet.js',
     apply: () => {
       patch('Manager.dc.html',
-        '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player"',
+        '<input id="f--label-style-display" value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player"',
         '<input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHomeMoved }}" placeholder="{{ sheetHomeName }} player"');
       patch('Manager.dc.html',
-        '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player"',
+        '<input id="f--label-style-display-2" value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player"',
         '<input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" data-legacy="{{ onSheetSpiritHome }}" placeholder="{{ sheetAwayName }} player"');
     },
     expect: ['directly after the home Cards row'],
@@ -7443,7 +7443,7 @@ const FAULTS = [
     name: 'a /signin input is removed, so the pinned count of six no longer holds',
     suite: 'test-design-polish.js',
     apply: () => patch('Signin.dc.html',
-      '<input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
+      '<input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
       '<span data-was-an-input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"'),
     expect: ['the page still has six inputs'],
   },
@@ -7897,6 +7897,79 @@ const FAULTS = [
        is naming the heavy PNG again", which is the thing being guarded — but
        listing only the size label made this report as a MISS. */
     expect: ['no page names venue-map.png in markup'],
+  },
+
+  /* ==================================================================== */
+  /* ACCESSIBILITY (Aug 2026).
+
+     Not one form control on the site was programmatically labelled - the
+     labels existed and were styled, but nothing associated them, so a screen
+     reader announced "edit text, blank" for club name, contact email, every
+     age-group count box and the username and password fields. And the /app
+     bottom sheet declared role="dialog" aria-modal="true" while doing none of
+     it: no Escape, no focus moved in, no focus returned, no trap.
+
+     ⚠️ Two of these eight are for checks of MINE that passed against the bug.
+     '3. focus is given BACK' was `/sheetReturnFocus/.test(code)` - deleting the
+     capture AND the restore left one bookkeeping line behind, the substring
+     still matched, and all 49 checks passed against a sheet that no longer
+     returned focus. The ordering check beside it compared indexOf results with
+     a bare `<`, and -1 is less than everything. Both now prove the positions
+     exist before comparing them. */
+  {
+    name: 'a label loses its for=, so the field is announced as blank again',
+    suite: 'test-accessibility.js',
+    apply: () => patch('Signin.dc.html', '<label for="f-username"', '<label'),
+    expect: ['controls with no accessible name'],
+  },
+  {
+    name: 'a control loses its id, orphaning the label that points at it',
+    suite: 'test-accessibility.js',
+    apply: () => patch('Signin.dc.html', '<input id="f-username" ', '<input '),
+    expect: ['controls with no accessible name', "every label's for= resolves to a control"],
+  },
+  {
+    name: 'Escape stops closing the sheet',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "  if (e.key === 'Escape'){ e.preventDefault(); closeSheet(); return; }", ''),
+    expect: ['1. Escape closes it'],
+  },
+  {
+    name: 'focus is never captured, so closing the sheet drops focus to the body',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', '  sheetReturnFocus = document.activeElement;', ''),
+    expect: ['3a. focus is captured before the sheet opens',
+      'openSheet captures where focus came from BEFORE it moves it'],
+  },
+  {
+    name: 'focus is never given back',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html',
+      "  if (sheetReturnFocus && typeof sheetReturnFocus.focus === 'function') sheetReturnFocus.focus();", ''),
+    expect: ['3b.'],
+  },
+  {
+    /* An accumulating keydown handler on a sheet that opens dozens of times a
+       match day gets slower every time somebody checks a score. */
+    name: 'the keydown listener is never removed',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "  document.removeEventListener('keydown', onSheetKey);", ''),
+    expect: ['removed on close', 'the remove is in closeSheet'],
+  },
+  {
+    name: 'busy() changes the label but stops disabling the button',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', '  b.textContent = label; b.disabled = true;', '  b.textContent = label;'),
+    expect: ['busy() helper that sets BOTH label and disabled'],
+  },
+  {
+    /* The original defect, restored exactly: label changes, button stays live,
+       a double-tap pitch-side sends two POSTs. */
+    name: 'saving goes back to a bare textContent with no disable',
+    suite: 'test-accessibility.js',
+    apply: () => patch('app.html', "    const doneSave = busy('sgo', 'Saving…');",
+      "    $('sgo').textContent = 'Saving…';"),
+    expect: ['goes through busy(), not a bare textContent'],
   },
 ];
 

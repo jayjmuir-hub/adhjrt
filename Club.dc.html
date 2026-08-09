@@ -118,20 +118,20 @@
       <div style="margin-top:28px;background:#151517;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:26px">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
           <div>
-            <label class="lbl">Club name</label>
-            <input class="fld" value="{{ club }}" onInput="{{ onClub }}">
+            <label for="f--label-class-lbl-clu" class="lbl">Club name</label>
+            <input id="f--label-class-lbl-clu" class="fld" value="{{ club }}" onInput="{{ onClub }}">
           </div>
           <div>
-            <label class="lbl">Contact name</label>
-            <input class="fld" value="{{ contactName }}" onInput="{{ onContactName }}">
+            <label for="f--label-class-lbl-con" class="lbl">Contact name</label>
+            <input id="f--label-class-lbl-con" class="fld" value="{{ contactName }}" onInput="{{ onContactName }}">
           </div>
           <div>
-            <label class="lbl">Contact email</label>
-            <input class="fld" type="email" value="{{ contactEmail }}" onInput="{{ onContactEmail }}">
+            <label for="f--label-class-lbl-con-2" class="lbl">Contact email</label>
+            <input id="f--label-class-lbl-con-2" class="fld" type="email" value="{{ contactEmail }}" onInput="{{ onContactEmail }}">
           </div>
           <div>
-            <label class="lbl">Contact phone (optional)</label>
-            <input class="fld" value="{{ contactPhone }}" onInput="{{ onContactPhone }}">
+            <label for="f--label-class-lbl-con-3" class="lbl">Contact phone (optional)</label>
+            <input id="f--label-class-lbl-con-3" class="fld" value="{{ contactPhone }}" onInput="{{ onContactPhone }}">
           </div>
         </div>
 
@@ -141,8 +141,8 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px">
             <sc-for list="{{ groupBoxes }}" as="g" hint-placeholder-count="15">
               <div style="background:#0C0C0E;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px">
-                <label class="lbl" style="font-size:10px">{{ g.name }}</label>
-                <input class="fld" style="margin-top:4px;padding:8px 10px;font-size:15px" inputmode="numeric" value="{{ g.value }}" onInput="{{ g.onInput }}">
+                <label for="f--label-class-lbl-sty" class="lbl" style="font-size:10px">{{ g.name }}</label>
+                <input id="f--label-class-lbl-sty" class="fld" style="margin-top:4px;padding:8px 10px;font-size:15px" inputmode="numeric" value="{{ g.value }}" onInput="{{ g.onInput }}">
               </div>
             </sc-for>
           </div>
@@ -150,15 +150,15 @@
         </div>
 
         <div style="margin-top:22px">
-          <label class="lbl">Anything we should know? (optional)</label>
-          <textarea class="fld" rows="3" value="{{ notes }}" onInput="{{ onNotes }}"></textarea>
+          <label for="f--label-class-lbl-any" class="lbl">Anything we should know? (optional)</label>
+          <textarea id="f--label-class-lbl-any" class="fld" rows="3" value="{{ notes }}" onInput="{{ onNotes }}"></textarea>
         </div>
 
         <!-- The honeypot. Hidden from people, irresistible to bots, and the
              server answers a filled one with a reply byte-identical to a real
              success so nothing can be learned from it. -->
         <div style="position:absolute;left:-9999px" aria-hidden="true">
-          <label>Do not fill this in <input name="bot-field" value="{{ botField }}" onInput="{{ onBotField }}" tabindex="-1" autocomplete="off"></label>
+          <label for="f-bot-field">Do not fill this in <input id="f-bot-field" name="bot-field" value="{{ botField }}" onInput="{{ onBotField }}" tabindex="-1" autocomplete="off"></label>
         </div>
 
         <sc-if value="{{ error }}" hint-placeholder-val=""><div style="margin-top:18px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:10px;padding:12px 14px;color:#ff9a9a;font-size:14px;font-weight:600;line-height:1.5">{{ error }}</div></sc-if>

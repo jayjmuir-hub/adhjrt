@@ -597,11 +597,40 @@ AVIF source alone stayed green), and `test-about-board.js` located the board's
 `<picture>` as "the first one in the file" — true only while the board was the
 only one on the page. Both now match by content, per source.
 
-⚠️ **Still open from the same review**, worst first: **no form control
-anywhere on the site has a programmatic label**, so a screen reader announces
-"edit text, blank" for club name, contact email and every age-group count box;
-the `/app` bottom sheet claims `aria-modal` but has no Escape handler, no focus
-management and no focus trap, and its submit buttons can be double-tapped;
+---
+
+## 9 Aug 2026 — accessibility (same branch, NOT deployed)
+
+Eighth review finding. **Not one form control on the site had an accessible
+name** — 60 label/control pairs associated, 30 `aria-label`s added where there
+is no visible label. The `/app` bottom sheet declared `aria-modal` and had no
+Escape handler, no focus management and no trap; its submit buttons changed
+label but were never disabled. Durable detail in `RESTORE.md` → "Accessibility".
+
+**Suite: 838/838 faults, 40 clean, 45 files.** Eight new faults.
+
+⚠️ **MY BULK TRANSFORMER EDITED TEXT INSIDE COMMENTS.** It added `id=` to an
+`<input type="date">` written as *prose* in two explanatory comments, then
+pointed two real labels at those non-existent controls. Caught by the new
+suite's own "every label's `for=` resolves to a control" check. **Eighth time in
+this branch that prose containing a tag was read as the tag** — and the ninth
+was writing the warning about it: the first draft of
+`tests/test-accessibility.js` spelled out a JavaScript block comment's
+delimiters inside a JavaScript block comment and would not parse.
+
+⚠️ **Two of my own checks passed against the bug, again:**
+`/sheetReturnFocus/.test(code)` survived deleting both the capture and the
+restore, because one bookkeeping line kept the substring alive — all 49 checks
+passed against a sheet that no longer returned focus. And the ordering check
+beside it compared `indexOf` results with a bare `<`, where **−1 is less than
+everything** — the same trap already fixed once in `test-documents.js` this
+month. Both now prove the positions exist before comparing them.
+
+⚠️ **Five pre-existing faults had to be re-anchored** because I inserted
+`aria-label` in the MIDDLE of existing tags rather than appending. Appending
+would have broken nothing. All five reported COULD NOT INJECT.
+
+⚠️ **Still open from the same review**, worst first:
 duplicate team codes on a failed sheet read; no server-side age check on a
 single player registration; `scoring-rules.js` silently rewrites a group to
 tries-only on a malformed value and answers 200; `mergeVenue` can produce a day

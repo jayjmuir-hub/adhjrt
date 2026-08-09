@@ -190,7 +190,7 @@
           <sc-if value="{{ isOrganiser }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:8px;flex:none">
               <span style="font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#5A626E;white-space:nowrap">Viewing as</span>
-              <select value="{{ ageId }}" onChange="{{ onSwitchAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:8px 10px;color:#1A1C1F;font-size:13px;font-weight:700;flex:none">
+              <select value="{{ ageId }}" aria-label="Age group" onChange="{{ onSwitchAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:8px 10px;color:#1A1C1F;font-size:13px;font-weight:700;flex:none">
                 <sc-for list="{{ ageSwitcherOptions }}" as="ag" hint-placeholder-count="3">
                   <option value="{{ ag.id }}">{{ ag.name }}</option>
                 </sc-for>
@@ -437,7 +437,7 @@
                 <sc-for list="{{ importRowsView }}" as="ir" hint-placeholder-count="4">
                   <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid rgba(0,0,0,0.08)">
                     <div style="flex:1"><b style="font-size:14px">{{ ir.title }}</b><div style="color:#5A626E;font-size:12px">{{ ir.sub }}</div></div>
-                    <select value="{{ ir.poolId }}" onChange="{{ ir.onPoolChange }}" disabled="{{ ir.disabled }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:13px">
+                    <select value="{{ ir.poolId }}" aria-label="Pool for this team" onChange="{{ ir.onPoolChange }}" disabled="{{ ir.disabled }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:13px">
                       <sc-for list="{{ ir.poolOptions }}" as="po" hint-placeholder-count="2">
                         <option value="{{ po.id }}">{{ po.name }}</option>
                       </sc-for>
@@ -478,17 +478,17 @@
                 </sc-for>
               </div>
               <div style="display:flex;gap:8px;margin-top:12px">
-                <input value="{{ p.newTeamValue }}" onInput="{{ p.onNewTeamInput }}" placeholder="New team name" style="flex:1;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <input value="{{ p.newTeamValue }}" aria-label="New team name" onInput="{{ p.onNewTeamInput }}" placeholder="New team name" style="flex:1;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
                 <button onClick="{{ p.onAddTeam }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:700;font-size:13px;padding:11px 16px;border-radius:9px;cursor:pointer;white-space:nowrap">+ Add</button>
               </div>
               <div style="margin-top:16px">
                 <sc-for list="{{ p.slotRows }}" as="sl" hint-placeholder-count="3">
                   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-                    <input type="time" value="{{ sl.time }}" onChange="{{ sl.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                    <input type="time" value="{{ sl.time }}" aria-label="Kick-off time" onChange="{{ sl.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
                     <div onClick="{{ sl.onHomeClick }}" style="{{ sl.homeStyle }}">{{ sl.homeLabel }}</div>
                     <span style="flex:none;color:#5A626E">v</span>
                     <div onClick="{{ sl.onAwayClick }}" style="{{ sl.awayStyle }}">{{ sl.awayLabel }}</div>
-                    <select value="{{ sl.pitch }}" onChange="{{ sl.onPitchChange }}" style="width:92px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 8px;color:#1A1C1F;font-size:13px">
+                    <select value="{{ sl.pitch }}" aria-label="Pitch" onChange="{{ sl.onPitchChange }}" style="width:92px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 8px;color:#1A1C1F;font-size:13px">
                       <sc-for list="{{ sl.pitchOptions }}" as="o" hint-placeholder-count="3">
                         <option value="{{ o }}">{{ o }}</option>
                       </sc-for>
@@ -513,11 +513,11 @@
                 <span style="flex:1 1 130px;font-size:11.5px;color:#454D58;overflow-wrap:break-word">{{ k.round }}
                   <button onClick="{{ k.onRenameRound }}" aria-label="Rename" style="background:transparent;border:none;color:#5A626E;font-size:12px;padding:2px 4px;cursor:pointer">✎</button>
                 </span>
-                <input type="time" value="{{ k.time }}" onChange="{{ k.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                <input type="time" value="{{ k.time }}" aria-label="Knockout kick-off time" onChange="{{ k.onTimeChange }}" style="width:118px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 10px;color:#1A1C1F;font-size:14px;color-scheme:light">
                 <div onClick="{{ k.onHomeClick }}" style="{{ k.homeStyle }}">{{ k.homeLabel }}</div>
                 <span style="flex:none;color:#5A626E">v</span>
                 <div onClick="{{ k.onAwayClick }}" style="{{ k.awayStyle }}">{{ k.awayLabel }}</div>
-                <select value="{{ k.pitch }}" onChange="{{ k.onPitchChange }}" style="width:92px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 8px;color:#1A1C1F;font-size:13px">
+                <select value="{{ k.pitch }}" aria-label="Knockout pitch" onChange="{{ k.onPitchChange }}" style="width:92px;flex:none;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:9px 8px;color:#1A1C1F;font-size:13px">
                   <sc-for list="{{ k.pitchOptions }}" as="o" hint-placeholder-count="3">
                     <option value="{{ o }}">{{ o }}</option>
                   </sc-for>
@@ -702,7 +702,7 @@
                runs, the "Loading…" card above is the ONLY thing shown, not a
                search box over empty "(0)" shells (design audit, Aug 2026). -->
           <sc-if value="{{ regReady }}" hint-placeholder-val="{{ false }}">
-          <input value="{{ regSearch }}" onInput="{{ onRegSearch }}" placeholder="Search player, club, coach or parent…" style="width:100%;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <input value="{{ regSearch }}" aria-label="Search registrations" onInput="{{ onRegSearch }}" placeholder="Search player, club, coach or parent…" style="width:100%;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
 
           <sc-if value="{{ hasRegUnmatched }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:12px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;padding:11px 13px;color:#8F6400;font-size:13px;font-weight:600">{{ regUnmatchedNote }}</div>
@@ -774,20 +774,20 @@
           </div>
           <sc-for list="{{ sheetHomeFields }}" as="f" hint-placeholder-count="2">
             <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-              <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">{{ f.label }} <span style="color:#5A626E;font-weight:500;font-size:12px">{{ f.pts }}</span></label>
-              <input type="number" inputmode="numeric" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" disabled="{{ f.disabled }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px;opacity:{{ f.opacity }}">
+              <label for="f--label-style-flex-1-" style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">{{ f.label }} <span style="color:#5A626E;font-weight:500;font-size:12px">{{ f.pts }}</span></label>
+              <input id="f--label-style-flex-1-" type="number" inputmode="numeric" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" disabled="{{ f.disabled }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px;opacity:{{ f.opacity }}">
             </div>
           </sc-for>
           <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-            <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
-            <input type="number" inputmode="numeric" min="0" step="1" value="{{ sheetHomeCards }}" onInput="{{ onSheetHomeCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
+            <label for="f--label-style-flex-1--2" style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
+            <input id="f--label-style-flex-1--2" type="number" inputmode="numeric" min="0" step="1" value="{{ sheetHomeCards }}" onInput="{{ onSheetHomeCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
           </div>
           <!-- The nominee lives inside each team's box, directly under Cards —
                parked at the bottom of the sheet it was routinely missed. -->
           <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
             <div style="padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-              <label style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
-              <input value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
+              <label for="f--label-style-display" style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
+              <input id="f--label-style-display" value="{{ sheetSpiritHome }}" onInput="{{ onSheetSpiritHome }}" placeholder="{{ sheetHomeName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
             </div>
           </sc-if>
         </div>
@@ -798,18 +798,18 @@
           </div>
           <sc-for list="{{ sheetAwayFields }}" as="f" hint-placeholder-count="2">
             <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-              <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">{{ f.label }} <span style="color:#5A626E;font-weight:500;font-size:12px">{{ f.pts }}</span></label>
-              <input type="number" inputmode="numeric" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" disabled="{{ f.disabled }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px;opacity:{{ f.opacity }}">
+              <label for="f--label-style-flex-1--3" style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">{{ f.label }} <span style="color:#5A626E;font-weight:500;font-size:12px">{{ f.pts }}</span></label>
+              <input id="f--label-style-flex-1--3" type="number" inputmode="numeric" min="0" step="1" value="{{ f.value }}" onInput="{{ f.onInput }}" disabled="{{ f.disabled }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px;opacity:{{ f.opacity }}">
             </div>
           </sc-for>
           <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-            <label style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
-            <input type="number" inputmode="numeric" min="0" step="1" value="{{ sheetAwayCards }}" onInput="{{ onSheetAwayCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
+            <label for="f--label-style-flex-1--4" style="flex:1;font-size:13.5px;font-weight:600;color:#1A1C1F">Cards</label>
+            <input id="f--label-style-flex-1--4" type="number" inputmode="numeric" min="0" step="1" value="{{ sheetAwayCards }}" onInput="{{ onSheetAwayCards }}" style="width:88px;text-align:center;font-weight:700;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px;color:#1A1C1F;font-size:14px">
           </div>
           <sc-if value="{{ sheetShowSpirit }}" hint-placeholder-val="{{ false }}">
             <div style="padding:10px 14px;border-top:1px solid rgba(0,0,0,0.08)">
-              <label style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
-              <input value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
+              <label for="f--label-style-display-2" style="display:block;font-size:11px;font-weight:700;color:#0E6B33;letter-spacing:.5px;margin-bottom:6px">SPIRIT OF RUGBY NOMINEE — ONE PER SIDE</label>
+              <input id="f--label-style-display-2" value="{{ sheetSpiritAway }}" onInput="{{ onSheetSpiritAway }}" placeholder="{{ sheetAwayName }} player" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 14px;color:#1A1C1F;font-size:14px">
             </div>
           </sc-if>
         </div>
@@ -888,14 +888,14 @@
 
           <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
             <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Change password</div>
-            <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
+            <label for="f-current-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
             <div style="position:relative;margin:6px 0 12px">
-              <input name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+              <input id="f-current-password" name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
               <button type="button" onClick="{{ onToggleAcctCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctCurrentToggleLabel }}</button>
             </div>
-            <label style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
+            <label for="f-new-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
             <div style="position:relative;margin:6px 0 12px">
-              <input name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
+              <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
               <button type="button" onClick="{{ onToggleAcctNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctNewToggleLabel }}</button>
             </div>
             <div style="font-size:12px;color:#69727E;margin-bottom:10px">Passwords are at least {{ acctMinPassword }} characters.</div>
@@ -929,7 +929,7 @@
       <div style="width:100%;max-width:480px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:14px;padding:22px">
         <div style="font-size:15px;line-height:1.6;white-space:pre-wrap;color:#1A1C1F">{{ modalTitle }}</div>
         <sc-if value="{{ modalIsPrompt }}" hint-placeholder-val="{{ false }}">
-          <input value="{{ modalValue }}" onInput="{{ onModalValue }}" style="width:100%;margin-top:14px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <input value="{{ modalValue }}" aria-label="Confirm" onInput="{{ onModalValue }}" style="width:100%;margin-top:14px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
         </sc-if>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
           <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer">Cancel</button>

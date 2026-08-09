@@ -928,6 +928,57 @@ passed must never look the same.
 
 ---
 
+## Accessibility — naming, and the one dialog
+
+**Every form control has an accessible name.** Until Aug 2026 not one did. The
+labels existed and were styled — `<label class="lbl">Club name</label>` with a
+sibling `<input>` — but nothing associated them: no `for`, no `id`, no
+`aria-label`, no wrapping. A screen reader announced *"edit text, blank"* for
+club name, contact name, contact email, phone, every age-group count box, and
+username and password. Those are the forms parents and coaches must complete to
+enter the tournament.
+
+- **`for`/`id` where a visible label sits beside the control** (60 pairs). The
+  id is derived from the control's `name` where it has one.
+- **`aria-label` where there is no visible label** — filters, search boxes, the
+  pitch and time selects in the draw editor, `/app`'s sign-in and walkover.
+- **⚠️ The honeypot must stay unnamed.** It is `aria-hidden="true"` and
+  `tabIndex="-1"` on purpose: naming it would invite the one person who cannot
+  see it to fill it in, which is exactly what it exists to detect.
+- **⚠️ A `<label>` heading a GROUP takes no `for`.** "PLAYERS" and "DATE OF
+  BIRTH" head a list and three selects respectively; the selects carry their own
+  `aria-label`s (Day/Month/Year of birth). Pointing a group heading at one
+  member of the group names the wrong thing.
+
+**The `/app` bottom sheet now behaves like the dialog it declares itself to be.**
+It said `role="dialog" aria-modal="true"` and did none of it: no Escape handler,
+focus never moved in, focus never came back, and Tab walked straight into the
+page behind. It is the **only** interaction surface in `/app` — sign-in, score
+entry and follow-a-team all happen inside it. Every other page in the repo
+already handled Escape and removed its listener on unmount; this file was the
+outlier, so the fix is deliberately their pattern.
+
+- Escape closes; focus moves to the first control on open (deferred one frame,
+  because the sheet animates in); focus returns to whatever opened it; Tab wraps
+  inside. **⚠️ The keydown listener is removed on close** — the sheet opens
+  dozens of times on a match day and an accumulating handler gets slower each
+  time somebody checks a score.
+
+**Submit buttons cannot be double-tapped.** They changed *label* to "Saving…"
+and stayed live, so a double-tap pitch-side — on a phone, in the sun, on a slow
+connection, which is when people tap twice — sent two `submitResult` or two
+`login` POSTs. `busy(id, label)` sets the label **and** `disabled`, and returns
+a restore function, so a failure branch cannot put one back and forget the
+other.
+
+**⚠️ Do not insert an attribute in the MIDDLE of an existing tag.** Adding
+`aria-label` between `value=` and `onChange=` broke four unrelated fault anchors
+in `_prove-registration.js` that quoted those opening tags. They reported
+COULD NOT INJECT rather than passing silently, so nothing was lost — but
+appending at the end of the tag would have cost nothing and broken nothing.
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

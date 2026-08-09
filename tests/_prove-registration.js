@@ -7827,6 +7827,77 @@ const FAULTS = [
       '  <url>\n    <loc>https://adhjrt.com/register-club</loc>\n  </url>\n  <url>\n    <loc>https://adhjrt.com/legal</loc>'),
     expect: ['sitemap does NOT list /register-club'],
   },
+
+  /* ==================================================================== */
+  /* IMAGE WEIGHT (Aug 2026).
+
+     assets/action-run.png was 1.8 MB and was the hero background - the Largest
+     Contentful Paint, pulled in full by every parent on venue mobile data
+     before the hero could paint, and bigger than the rest of the page put
+     together. The About-section board photos three screens further down already
+     had the avif/webp + -sm treatment AND a generator script; the one image
+     that gated first paint had never been through it.
+
+     ⚠️ The 'phone variant' fault is here because my first version of that
+     check passed against it: it looked for 'action-run-sm' anywhere inside the
+     <picture>, so dropping it from the AVIF srcset alone stayed green while
+     every AVIF-capable phone pulled the full-width file. Per-source now. */
+  {
+    name: 'the hero falls back to the 1.8 MB PNG again',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/action-run.webp" alt="" width="1297"',
+      '<img src="assets/action-run.png" alt="" width="1297"'),
+    expect: ['no page names action-run.png in markup', 'falls back to webp, never to the PNG'],
+  },
+  {
+    name: 'the hero loses fetchpriority, so the LCP queues behind the fonts',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, ' fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%"',
+      ' decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%"'),
+    expect: ['fetchpriority="high"'],
+  },
+  {
+    /* Lazy on an above-the-fold LCP delays the very thing being optimised. */
+    name: 'the hero is lazy-loaded',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, 'height="1212" fetchpriority="high"', 'height="1212" loading="lazy" fetchpriority="high"'),
+    expect: ['is NOT lazy-loaded'],
+  },
+  {
+    name: 'the hero loses width/height, so the page shifts as it decodes',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/action-run.webp" alt="" width="1297" height="1212"',
+      '<img src="assets/action-run.webp" alt=""'),
+    expect: ['carries width and height'],
+  },
+  {
+    name: 'the hero drops its AVIF source, costing every modern browser the smaller file',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME,
+      '<source type="image/avif" srcset="assets/action-run-sm.avif 700w, assets/action-run.avif 1297w" sizes="100vw">',
+      '<!-- avif source removed -->'),
+    expect: ['offers avif'],
+  },
+  {
+    name: 'the phone variant is dropped from the AVIF source only',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, 'srcset="assets/action-run-sm.avif 700w, assets/action-run.avif 1297w"',
+      'srcset="assets/action-run.avif 1297w"'),
+    expect: ['the avif source offers a phone variant'],
+  },
+  {
+    name: 'the venue map reverts to the 527 KB PNG',
+    suite: 'test-image-weight.js',
+    apply: () => patch(HOME, '<img src="assets/venue-map.webp" alt="Zayed Sports City pitch map" width="792"',
+      '<img src="assets/venue-map.png" alt="Zayed Sports City pitch map" width="792"'),
+    /* ⚠️ EITHER LABEL IS THE RIGHT CATCH, and which one fires depends on the
+       copy. In the real repo the PNG is present, so the 200 KB ceiling trips.
+       In this prover's temp copy assets/ is only partially seeded, so the file
+       is absent and the existence check trips first instead. Both mean "a page
+       is naming the heavy PNG again", which is the thing being guarded — but
+       listing only the size label made this report as a MISS. */
+    expect: ['no page names venue-map.png in markup'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

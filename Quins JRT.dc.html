@@ -1914,8 +1914,29 @@
   <!-- ============ HERO ============ -->
   <section id="top" style="position:relative;background:#0C0C0E;color:#fff;overflow:hidden">
     <!-- background photo slot -->
+    <!-- ⚠️ THIS IS THE LARGEST CONTENTFUL PAINT ON THE SITE, and it used to be a
+         1.8 MB PNG - larger than the whole of the rest of this page put
+         together, downloaded in full by every parent on venue mobile data
+         before the hero could finish painting. The board photos in the About
+         section three screens further down already had the avif/webp + -sm
+         treatment; the one image that actually gates first paint did not.
+
+         Same four-file shape as assets/board/: two formats, two widths.
+         30 KB avif / 66 KB webp full, 13 KB / 26 KB at 700px. Measured against
+         the PNG at SSIM 0.958 - the source is kept in the repo as the master
+         to re-encode from, but is no longer served to anyone.
+
+         ⚠️ fetchpriority="high" because it IS the LCP element. Without it the
+         browser discovers it at normal priority behind the stylesheet and the
+         fonts, which is the opposite of what a background hero photo needs.
+         ⚠️ NOT loading="lazy" - it is above the fold; lazy would delay the very
+         thing being optimised here. The decorative copy further down IS lazy. -->
     <div style="position:absolute;inset:0;opacity:.62">
-      <img src="assets/action-run.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%">
+      <picture>
+        <source type="image/avif" srcset="assets/action-run-sm.avif 700w, assets/action-run.avif 1297w" sizes="100vw">
+        <source type="image/webp" srcset="assets/action-run-sm.webp 700w, assets/action-run.webp 1297w" sizes="100vw">
+        <img src="assets/action-run.webp" alt="" width="1297" height="1212" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:66% 32%">
+      </picture>
     </div>
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,#0C0C0E 34%,rgba(12,12,14,0.55) 100%);pointer-events:none"></div>
 
@@ -2309,7 +2330,14 @@
   <!-- ============ FORMAT / AGE GROUPS ============ -->
   <section id="format" style="background:#0C0C0E;color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A);z-index:2"></div>
-    <div style="position:absolute;inset:0;opacity:.32;pointer-events:none;z-index:0"><img class="fmt-bgimg" src="assets/format-action.jpg" alt=""></div>
+    <!-- Decorative, at 32% opacity, below the fold: lazy and low priority.
+         227 KB jpg -> 114 KB avif / 147 KB webp, with 700px variants for
+         phones. Kept larger than the hero because this one is 1544px wide. -->
+    <div style="position:absolute;inset:0;opacity:.32;pointer-events:none;z-index:0"><picture>
+      <source type="image/avif" srcset="assets/format-action-sm.avif 700w, assets/format-action.avif 1544w" sizes="100vw">
+      <source type="image/webp" srcset="assets/format-action-sm.webp 700w, assets/format-action.webp 1544w" sizes="100vw">
+      <img class="fmt-bgimg" src="assets/format-action.webp" alt="" width="1544" height="608" loading="lazy" decoding="async" fetchpriority="low">
+    </picture></div>
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,12,14,0.45),rgba(12,12,14,0.68));pointer-events:none;z-index:0"></div>
     <!-- Vignette: fades the photo to black on all four edges, same #0C0C0E the
          section background already is, same idea as the hero's left-edge fade
@@ -2542,7 +2570,14 @@
   <!-- ============ RESULTS & STANDINGS ============ -->
   <section id="results" style="background:#0C0C0E;color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A);z-index:2"></div>
-    <div style="position:absolute;inset:0;opacity:.13;pointer-events:none;z-index:0"><img src="assets/action-run.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 28%"></div>
+    <!-- The same photo again, at 13% opacity, well below the fold. Lazy and
+         low priority here - the exact opposite of the hero copy above, because
+         nothing waits for it. The -sm variants are plenty at this opacity. -->
+    <div style="position:absolute;inset:0;opacity:.13;pointer-events:none;z-index:0"><picture>
+      <source type="image/avif" srcset="assets/action-run-sm.avif">
+      <source type="image/webp" srcset="assets/action-run-sm.webp">
+      <img src="assets/action-run-sm.webp" alt="" width="700" height="654" loading="lazy" decoding="async" fetchpriority="low" style="width:100%;height:100%;object-fit:cover;object-position:center 28%">
+    </picture></div>
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,12,14,0.6),rgba(12,12,14,0.85));pointer-events:none;z-index:0"></div>
     <div style="position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:100px 32px">
       <div style="text-align:center;margin-bottom:12px" data-reveal>
@@ -2582,7 +2617,11 @@
   <section id="venue" style="background:#EDEBE6">
     <div class="m-stack" style="max-width:1200px;margin:0 auto;padding:100px 32px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
       <div style="border-radius:18px;overflow:hidden;height:420px;box-shadow:0 20px 50px rgba(0,0,0,.18);background:#fff" data-reveal>
-        <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" style="width:100%;height:100%;object-fit:contain;background:#fff">
+        <picture>
+          <source type="image/avif" srcset="assets/venue-map.avif">
+          <source type="image/webp" srcset="assets/venue-map.webp">
+          <img src="assets/venue-map.webp" alt="Zayed Sports City pitch map" width="792" height="547" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:contain;background:#fff">
+        </picture>
       </div>
       <div>
         <div style="font-weight:800;letter-spacing:2px;color:#E11B22;font-size:14px;text-transform:uppercase;margin-bottom:16px">Getting there</div>

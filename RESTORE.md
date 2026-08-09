@@ -879,6 +879,55 @@ deploy** — prove it on a free branch deploy with an unruled sibling returning
 
 ---
 
+## Image weight — what the pages actually serve
+
+Every photo the markup names is `.avif` + `.webp`, at two widths, in a
+`<picture>`. **No page names a `.png` or `.jpg` original.** The masters stay in
+the repo to re-encode from; they are simply never served.
+
+| | was | now |
+|---|---|---|
+| `action-run` (hero, the LCP) | 1.8 MB PNG | 30 KB avif / 66 KB webp, 13/26 KB at 700px |
+| `venue-map` | 527 KB PNG | 16 KB avif / 39 KB webp |
+| `format-action` | 227 KB JPG | 114 KB avif / 147 KB webp, 33/42 KB at 700px |
+| `sponsors-logos.png` | 371 KB, **zero references anywhere** | deleted |
+
+**⚠️ The hero was the whole point.** It is the Largest Contentful Paint, it sat
+behind the hero at 62% opacity, and at 1.8 MB it was bigger than the rest of the
+homepage put together — pulled in full by every parent on venue mobile data
+before the page could finish painting. The About-section board photos three
+screens further down had had the full treatment *and* a generator script since
+July; the one image that actually gated first paint had never been through it.
+
+- **`fetchpriority="high"` on the hero, and never `loading="lazy"`.** It is
+  above the fold and it IS the LCP — lazy there delays the exact thing being
+  optimised. The two decorative copies further down are the opposite: `lazy`
+  and `fetchpriority="low"`.
+- **`width`/`height` on every one**, so the box is reserved before decode.
+- **The `<img>` fallback is the WebP, never the original.** A browser that fails
+  the whole source list is the one least able to afford 1.8 MB.
+- **⚠️ Both `<source>` elements need the phone variant**, not just one.
+  `test-image-weight.js` originally looked for `action-run-sm` anywhere inside
+  the `<picture>` — so dropping it from the AVIF srcset alone stayed green while
+  every AVIF-capable phone (most of them) pulled the full-width file.
+- Encoded with `ffmpeg` (`libaom-av1`, `libwebp`), quality chosen by measuring:
+  hero SSIM 0.958 at CRF 24, venue map 0.967 at CRF 26. The venue map's PNG was
+  RGBA but **fully opaque everywhere** (measured with `alphaextract`), so
+  dropping the alpha channel costs nothing.
+- **⚠️ The venue map's drag markers are positioned as percentages of the image
+  box.** `<picture>` is a plain wrapper with no box of its own and the `img`
+  keeps `inset:0` against the same positioned ancestor, so the geometry is
+  unchanged — but that is what to re-check if that markup is edited.
+
+**⚠️ `test-image-weight.js` runs in two modes and says which.** The on-disk size
+checks need real bytes; `_prove-registration.js` seeds its temp copy with
+`readFileSync(…,'utf8')`, which mangles binaries, so `assets/` is not seeded
+there. In that copy the **markup** checks still run and are what every fault
+aims at; the weight checks are skipped and the mode is printed. Skipped and
+passed must never look the same.
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

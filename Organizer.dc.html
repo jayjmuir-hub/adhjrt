@@ -938,7 +938,20 @@
                        and drop it. -->
                   <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
                     <div id="{{ vm.mapId }}" style="{{ vm.mapBoxStyle }}">
-                      <img src="assets/venue-map.png" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                      <!-- ⚠️ The drag markers are positioned as PERCENTAGES of
+                           this element's box, so the box must not change shape.
+                           <picture> is a plain wrapper with no box of its own
+                           and the img keeps inset:0 against the same positioned
+                           ancestor, so the geometry is untouched - but that is
+                           the thing to re-check if this markup is ever edited.
+                           527 KB PNG -> 16 KB avif / 39 KB webp. The PNG's
+                           alpha channel was fully opaque everywhere (measured),
+                           so dropping it costs nothing. -->
+                      <picture>
+                        <source type="image/avif" srcset="assets/venue-map.avif">
+                        <source type="image/webp" srcset="assets/venue-map.webp">
+                        <img src="assets/venue-map.webp" alt="Zayed Sports City pitch map" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none">
+                      </picture>
                       <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
                         <sc-if value="{{ blk.placed }}" hint-placeholder-val="{{ true }}">
                           <div style="{{ blk.mapStyle }}" title="{{ blk.mapTitle }}" onPointerDown="{{ blk.onDown }}" onPointerMove="{{ blk.onMove }}" onPointerUp="{{ blk.onUp }}" onPointerCancel="{{ blk.onUp }}">

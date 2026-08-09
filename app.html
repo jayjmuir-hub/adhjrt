@@ -1299,7 +1299,11 @@ function act(a){
   }
   if (a === 'tools')   { location.href = '/manager'; return; }
   if (a === 'venuemap') return openSheet('Venue map',
-    `<img class="vmap" src="/assets/venue-map.png" alt="Zayed Sports City pitch layout" loading="lazy">
+    `<picture>
+      <source type="image/avif" srcset="/assets/venue-map.avif">
+      <source type="image/webp" srcset="/assets/venue-map.webp">
+      <img class="vmap" src="/assets/venue-map.webp" alt="Zayed Sports City pitch layout" width="792" height="547" loading="lazy">
+    </picture>
      <p class="muted" style="margin-top:14px;font-size:13px;line-height:1.6">
        Zayed Sports City, Abu Dhabi · enter via Gate 16.</p>`);
   if (a === 'teamkey') return openSheet('Team key', teamKeyContent());

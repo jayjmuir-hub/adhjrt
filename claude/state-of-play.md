@@ -559,8 +559,45 @@ a comment that mentions a string is indistinguishable from the string.**
 **Real tags start a line; prose never does.** Match structurally, and do not
 name a string in a comment that sits inside the file a checker greps.
 
-⚠️ **Still open from the same review**, worst first: the hero PNG is **1.8 MB**
-and is larger than the rest of the homepage put together; **no form control
+---
+
+## 9 Aug 2026 — image weight (same branch, NOT deployed)
+
+Fifth review finding. The hero background was a **1.8 MB PNG** — the Largest
+Contentful Paint, bigger than the rest of the homepage put together, pulled in
+full by every parent on venue mobile data before the page could paint. Durable
+detail in `RESTORE.md` → "Image weight".
+
+Now avif/webp at two widths in a `<picture>`: **1.8 MB → 30 KB**. Same treatment
+for `venue-map` (527 KB → 16 KB) and `format-action` (227 KB → 114 KB).
+`sponsors-logos.png` deleted — 371 KB with zero references anywhere in the repo.
+Encoded with ffmpeg, quality chosen by measuring SSIM (hero 0.958, map 0.967)
+rather than by guessing a CRF.
+
+**Suite: 830/830 faults, 39 clean, 44 files.** Seven new faults.
+
+⚠️ **THE PROVER'S BASELINE EARNED ITS KEEP.** My first version of
+`test-image-weight.js` weighed files on disk, which fails on the prover's temp
+copy — `seed()` reads with `utf8` and mangles binaries, so `assets/` is not
+seeded there. The suite failed UNDAMAGED, the clean count stayed at 38 instead
+of rising to 39, and every one of its faults would have reported "caught" while
+proving nothing. That is exactly the failure the baseline exists to detect and
+it detected it. Split into markup checks (everywhere, and what the faults aim
+at) and weight checks (only where the bytes exist), with the mode printed.
+
+⚠️ **FOURTH AND FIFTH TIME on the prose-contains-a-tag trap in one branch.** My
+hero-`<picture>` regex matched a `<picture>` written inside an existing comment;
+anchoring it to the start of a line did not help, because that comment is
+indented. The fix is to strip HTML comments before matching — these files
+genuinely contain prose about markup, and no pattern can tell the two apart.
+
+⚠️ **Two checks of my own passed against the bug and had to be tightened:**
+`action-run-sm` matched anywhere in the `<picture>` (so dropping it from the
+AVIF source alone stayed green), and `test-about-board.js` located the board's
+`<picture>` as "the first one in the file" — true only while the board was the
+only one on the page. Both now match by content, per source.
+
+⚠️ **Still open from the same review**, worst first: **no form control
 anywhere on the site has a programmatic label**, so a screen reader announces
 "edit text, blank" for club name, contact email and every age-group count box;
 the `/app` bottom sheet claims `aria-modal` but has no Escape handler, no focus

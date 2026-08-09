@@ -736,14 +736,39 @@ row added later without the class, wrong on a phone, and nothing says so. On the
 file carrying the draw editor and score entry, the loud failure is the safer one.
 The cost is the both-spellings rule below, which is not optional.
 
-⚠️ **`/organizer`'s BLOCK HAS NO MEASURED BEFORE/AFTER AND `/manager`'s DOES.**
-`/manager`'s numbers came from a real signed-in session at 430px (106px of
-sideways scroll, 1/1 controls under 16px, 9/11 tap targets under 44px, all zero
-after). For `/organizer` the only rendered measurement taken was **3/3 controls
-under 16px, and the wide tables scrolling in their own boxes with no page-level
-sideways scroll at 430px**. So the zoom-on-focus half fixes an observed fault
-and the flex-wrap half is insurance against one that was never observed. Stated
-plainly here because the two blocks look identical and are not equally evidenced.
+**All three blocks are measured in a RENDERED page — `tools/render-audit.js`.**
+Headless Chromium, computed styles and bounding boxes out of a live DOM, with a
+fabricated local-only session for the two pages that render nothing without one.
+⚠️ **The desktop column is a control, not an extra:** if the phone numbers came
+from anywhere other than the `@media` block, desktop would match them.
+
+| | `/signin` | `/organizer` | `/manager` |
+|---|---|---|---|
+| control font-size, phone | **16px** | **16px** | **16px** |
+| control font-size, desktop (control) | 15px | 14px | 13px |
+| controls under 16px, phone → desktop | 0 → 2 | 0 → 3 | 0 → 1 |
+| buttons under 44px, phone → desktop | 0/2 → 1 | 0/13 → 13 | 0/8 → 8 |
+| page sideways scroll | 0px | 0px | 0px |
+| flex rows matched / wrapping, phone | — | 13 / **13** | 6 / **6** |
+| …wrapping at desktop | — | 6 | 2 |
+| overflowing elements / unreachable | 0 / 0 | 21 / **0** | 0 / 0 |
+
+⚠️ **"FLEX ROWS MATCHED" IS THE ROW THAT MATTERS**, because it asks the live DOM
+whether the attribute selectors select anything at all — the exact thing that
+made the first `/manager` block a silent no-op that read as correct in the diff.
+
+⚠️ **`/organizer`'s 21 OVERFLOWING ELEMENTS ARE NOT A FAULT.** Every one has a
+real scrolling ancestor (`unreachable` is 0) — it is the five wide tables doing
+what they are supposed to do. Overflow is counted three ways on purpose:
+`sidewaysPx` alone reads **0** under an `overflow-x:hidden` clip while content
+sits off-screen and unreachable, which is exactly how the first `/manager` fix
+was declared a success.
+
+⚠️ **WHAT NO EMULATOR CAN PROVE, AND CHROMIUM IS AN EMULATOR HERE:** that iOS
+Safari then behaves. These readings show the 16px rule **applies**; whether
+WebKit therefore declines to zoom on focus, and how a fixed bottom strip sits
+under Safari's collapsing toolbar, are real-device behaviours. **A real handset
+is still the only answer to that half.**
 
 ⚠️ **`/organizer`'s FIVE WIDE TABLES NEED NOTHING AND MUST NOT BE "FIXED".**
 Every table carrying a `min-width` — 460, 700, 760, 1100, 1200 — already sits

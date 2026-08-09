@@ -357,6 +357,48 @@ needs `access-control-allow-origin`**, because the tags are `crossorigin` with
 SRI hashes and without the header the integrity check fails and React never
 boots, which looks exactly like the original problem.
 
+**⚠️ A RENDERED READING IS AVAILABLE IN THE SANDBOX AND FOR WEEKS NOBODY TOOK
+ONE.** Every mobile claim in this project was made from source reading or
+DevTools emulation, while headless Chromium sat pre-installed the whole time.
+`tools/render-audit.js` renders the real `.dc.html` files and reads computed
+styles and bounding boxes out of a live DOM — which is the only way to answer the
+question a source read cannot: **does this selector match anything?** The source
+spells an inline style `display:flex` and the renderer emits `display: flex`, and
+a rule written against the source spelling matches nothing while reading as
+perfect in the diff. Four obstacles have to be cleared and each one, uncleared,
+produces a confident wrong answer:
+
+1. **unpkg and Google Fonts are unreachable here**, so the page loads as an
+   UNRENDERED TEMPLATE that still contains real `<input>` elements — a naive
+   query finds them and reports a font-size. Vendor the three scripts from npm
+   and fulfil them with Playwright's `route()`. ⚠️ **The fulfilled response needs
+   `access-control-allow-origin`**, because the tags are `crossorigin`; without it
+   React never boots and it looks exactly like the original problem.
+2. **`/organizer` and `/manager` render nothing without a session** — they bounce
+   to `/signin`, so every count comes back 0, which reads exactly like "no
+   problems found". Inject a fabricated token into `localStorage`; the server is
+   what authorises anything, so it buys layout and nothing else. **Assert that the
+   dashboard actually rendered**, or the zeroes are meaningless.
+3. **Measure a desktop width as a CONTROL.** "0 controls under 16px at 390px" is
+   worth nothing on its own — the phone/desktop DIFFERENCE is the evidence that
+   the `@media` block is what is doing the work.
+4. **`sidewaysPx` alone lies.** Under `overflow-x:hidden` it reads 0 while content
+   sits off-screen and unreachable. Count elements past the right edge separately
+   and split them by whether the nearest overflow ancestor is a real scroller
+   (fine — that is a wide table) or a clip (a bug).
+
+⚠️ **And the predicate that checked whether the render worked was itself wrong.**
+`document.body.innerHTML.includes('{{')` matches the DC source inside the
+invisible `<script type="text/x-dc">`, so a fully-rendered page reported
+"still a template". Count VISIBLE unrendered bindings, skipping `<script>`.
+**The instrument agreeing with the intention, one layer further out than usual.**
+
+⚠️ **Chromium is still an emulator.** These readings prove a rule APPLIES. They
+cannot prove iOS Safari then behaves — zoom-on-focus and the collapsing toolbar
+are real-WebKit behaviours. A real handset remains the only answer to that half,
+and saying "measured in a rendered page" must not be allowed to blur into
+"verified on a phone".
+
 **⚠️ CHECK THE ARTEFACT, NOT THE CONTAINER IT WAS MADE IN.**
 
 **⚠️ BYTES DO NOT SURVIVE BEING RE-EMITTED THROUGH THE MODEL — not even

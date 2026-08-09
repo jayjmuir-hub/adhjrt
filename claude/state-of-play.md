@@ -457,6 +457,15 @@ Jay clicks the green button.
    — which is real-iOS-only behaviour and does not reproduce in an emulator at
    any width. Both are one-line fixes if wrong. **This is the single largest
    unverified claim in the 8 Aug work.**
+   ⚠️ **NARROWED, NOT CLOSED, LATE ON 8 AUG.** `tools/render-audit.js` now takes
+   a genuine rendered reading — computed styles and bounding boxes in headless
+   Chromium, with a desktop width as the control — for `/signin`, `/organizer`
+   **and** `/manager`. `/signin` has therefore now been measured, closing half of
+   the sentence above it, and `/manager`'s shipped block was independently
+   re-verified by a different instrument. **What none of it can say is whether
+   WebKit then behaves**, because Chromium is an emulator too. Do not let
+   "measured in a rendered page" blur into "verified on a phone" — the handset
+   job is unchanged, and `/scores` still has not been looked at.
 1b. **`/app`'s bottom tab bar is width-gated only** —
    `@media(min-width:820px)` hides it. A phone whose browser is in desktop mode
    reports 980px and loses the primary navigation entirely (see the `/app`
@@ -482,11 +491,13 @@ Jay clicks the green button.
    classes fail quietly and locally, and this is the file carrying the draw
    editor. Reasoning in `RESTORE.md` § Phone layout. ⚠️ **Its wide tables were
    NOT touched** — all five already scroll inside their own boxes, checked line
-   by line, and a test now counts scrollers against wide tables. ⚠️ **No
-   before/after was measured in a rendered signed-in session**, unlike
-   `/manager`'s — the only rendered reading is the 3/3 sub-16px controls from
-   8 Aug. Said plainly in RESTORE because the two blocks look identically
-   evidenced and are not.
+   by line, and a test now counts scrollers against wide tables. ✅ **MEASURED IN
+   A RENDERED PAGE** by the new `tools/render-audit.js`: at 390px, 0/3 controls
+   under 16px (16px against 14px at desktop), 0/13 buttons under 44px (13/13 at
+   desktop), 0px sideways scroll, and **13 of 13 flex rows both matched and
+   wrapping** — which is the reading that proves the attribute selectors select
+   anything at all. Its 21 overflowing elements all sit inside real scrollers
+   (unreachable = 0): the wide tables, working as intended.
 4c. ~~**`Signin.dc.html` has 2/2 inputs under 16px.**~~ **DONE 8 Aug, on `dev`
    — and it was SIX inputs, not two.** All six at `font-size:15px`. Two rules:
    16px on inputs, 44px floor on buttons. The "2/2" was wrong in this file and in

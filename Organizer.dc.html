@@ -82,15 +82,39 @@
      Checked line by line, not assumed. Removing a min-width to make a table
      "fit" would squash a twelve-column table into 390px.
 
-     ⚠️ HONESTY ABOUT WHAT WAS MEASURED, BECAUSE /manager's EQUIVALENT BLOCK
-     CARRIES REAL BEFORE/AFTER NUMBERS AND THIS ONE DOES NOT. The counts above
-     are static counts of the source. Nothing here has been measured in a
-     rendered, signed-in session at 390 or 430px — /organizer renders nothing
-     without an organiser login. What WAS measured, on 8 Aug before this block:
-     3/3 form controls under 16px, and the wide tables scrolling in their own
-     boxes with no page-level sideways scroll at 430px. So the zoom-on-focus
-     half is a known fault being fixed; the flex-wrap half is insurance against
-     a fault that was not observed. Said plainly rather than implied. */
+     ⚠️ MEASURED IN A RENDERED PAGE, NOT JUST IN THE SOURCE — `tools/render-audit.js`.
+     Headless Chromium, a fabricated local-only session so the dashboard renders
+     at all, computed styles and bounding boxes read out of the live DOM. The
+     DESKTOP column is the control: if the phone numbers were coming from
+     anywhere other than this @media block, it would match them.
+
+                              390px   430px   1000px (control)
+       controls under 16px       0       0        3 of 3
+       control font-size       16px    16px      14px
+       buttons under 44px      0/13    0/13      13 of 13
+       page sideways scroll     0px     0px       0px
+       flex rows MATCHED         13      13        13
+        ...of those, wrapping    13      13         6
+       overflowing elements      21      20        10
+       ...unreachable (clipped)   0       0         0
+
+     ⚠️ "flex rows MATCHED" IS THE ONE TO READ. It asks the LIVE DOM whether the
+     attribute selectors below select anything, which is the exact thing that
+     made the first /manager version of this block a silent no-op. 13 matched and
+     13 wrapping on a phone against 6 on desktop means the rule is both matching
+     and applying.
+
+     ⚠️ THE 21 OVERFLOWING ELEMENTS ARE NOT A FAULT AND MUST NOT BE "FIXED".
+     Every one of them has a real scrolling ancestor — `unreachable` is 0 — which
+     is the five wide tables doing what they are supposed to do inside their own
+     overflow boxes. The page itself does not scroll sideways. Overflow is
+     counted three ways here precisely because `sidewaysPx` alone reads 0 under
+     an `overflow-x:hidden` clip while content sits off-screen and unreachable.
+
+     ⚠️ WHAT IS STILL NOT PROVEN, AND CHROMIUM CANNOT PROVE IT: that iOS Safari
+     then behaves. The 16px rule demonstrably APPLIES; whether WebKit therefore
+     declines to zoom on focus is real-device behaviour and does not reproduce in
+     any emulator. A real handset is the only answer to that half. */
   @media(max-width:760px){
     /* ⚠️ BOTH SPELLINGS, AND IT IS NOT BELT-AND-BRACES. The source writes
        `display:flex`; the DC renderer RE-EMITS every inline style WITH SPACES,

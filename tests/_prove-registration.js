@@ -58,6 +58,9 @@ const NEEDED = [
   'netlify/functions/_password.js',
   'netlify/functions/_signins.js',
   'netlify/functions/accounts-admin.js',
+  /* Per-match result storage (Aug 2026) — test-results-storage.js REQUIRES
+     _results.js rather than reading it as text. */
+  'netlify/functions/_results.js',
   'Scores & Standings.dc.html',
   /* test-manager-dc-draw.js drives the Manager Dashboard — added Aug 2026
      with the withTeamNames faults. Absent from this list, any test reading it
@@ -262,6 +265,8 @@ const MAIL_BLOCK = [
 const REG = path.join('netlify', 'functions', '_registration.js');
 /* The session door — see the nine faults at the end of FAULTS. */
 const AUTH_F = path.join('netlify', 'functions', '_auth.js');
+/* Match-result storage — see the eight faults after those. */
+const RESULTS_F = path.join('netlify', 'functions', '_results.js');
 const SD = 'scores-data.js';
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
@@ -7594,6 +7599,88 @@ const FAULTS = [
       '  const r = await resolveSession(event);\n  return r.ok ? r.session : null;',
       '  return verify(getBearerToken(event));'),
     expect: ['a revoked token gives null'],
+  },
+
+  /* ==================================================================== */
+  /* RESULT STORAGE — one blob per match (Aug 2026).
+
+     Results were one blob per age group, read-modify-written, which carried two
+     defects a code review found: a failed read fell through to an empty slice
+     and the caller wrote THAT back as the whole group (fourteen results gone,
+     green tick shown); and two managers scoring the same group could both be
+     told it saved while one score no longer existed.
+
+     ⚠️ ONE OF THESE EIGHT EXISTS BECAUSE MY FIRST REWRITE INTRODUCED A NEW BUG
+     AND ALL 32 CHECKS PASSED. readGroup merged the group blob over the legacy
+     slice while readAll REPLACED it, so a result cleared under the old layout
+     stayed gone in the public view and came back from the dead on the manager's
+     own dashboard. Every supersession check went through readAll; nothing
+     asserted the two readers agree. They do now, and 'group blob merges
+     instead of replacing' is the fault that holds it. */
+  {
+    name: 'readMatch swallows a read error and answers "no result" (defect a)',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    throw new Error(`could not read ${matchKey(matchId)}: ${err.message}`);',
+      '    return null;'),
+    expect: ['readMatch THROWS rather than answering null'],
+  },
+  {
+    name: 'a failed blob LIST is treated as an empty list',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    throw new Error(`could not list ${prefix}: ${err.message}`);', '    return;'),
+    expect: ['a failed LIST throws too'],
+  },
+  {
+    /* Without a tombstone, the fallback to the older layouts resurrects the
+       very result that was just cleared. */
+    name: 'clearing deletes the key instead of writing a tombstone',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '  await store.setJSON(matchKey(matchId), { cleared: true, clearedAt: new Date().toISOString() });',
+      '  await store.delete(matchKey(matchId));'),
+    expect: ['a tombstone was written, not a delete', 'and the match reads as absent'],
+  },
+  {
+    name: 'tombstones stop being recognised, so cleared results come back',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, 'const isTombstone = (v) => !!v && typeof v === \'object\' && v.cleared === true;',
+      'const isTombstone = () => false;'),
+    expect: ['and the match reads as absent'],
+  },
+  {
+    /* The quiet one: 'm:u12' also matches 'm:u12g:…'. */
+    name: 'the match prefix loses its trailing colon, so U12 reads U12G',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, 'const matchPrefix = (agId) => `m:${agId}:`;',
+      'const matchPrefix = (agId) => `m:${agId}`;'),
+    expect: ['u12 sees only its own match'],
+  },
+  {
+    name: 'a per-match blob stops superseding the older layouts in readGroup',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '    else merged[matchId] = value;\n  });\n\n  return merged;',
+      '    else if (!merged[matchId]) merged[matchId] = value;\n  });\n\n  return merged;'),
+    expect: ['readGroup agrees with readAll about which wins'],
+  },
+  {
+    name: 'the group blob merges over the legacy slice instead of replacing it',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F,
+      '      Object.keys(merged).forEach((id) => delete merged[id]);\n      Object.assign(merged, own);',
+      '      Object.assign(merged, own);'),
+    expect: ['including for a match only the group blob has'],
+  },
+  {
+    /* The regression that undoes the whole change: back to one key per group,
+       and with it the read-modify-write and both defects. */
+    name: 'writeMatch regresses to writing the whole age-group key',
+    suite: 'test-results-storage.js',
+    apply: () => patch(RESULTS_F, '  await store.setJSON(matchKey(matchId), entry);',
+      '  await store.setJSON(groupKey(groupOf(matchId)), { [matchId]: entry });'),
+    expect: ['two matches are two blobs', 'keyed by match, not by group'],
   },
 ];
 

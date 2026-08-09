@@ -220,7 +220,7 @@ good reason.
 | `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`. Dependency-free on purpose — see Accounts below |
 | `get-results.js` | public read of all match results (merges every age group's blob) |
 | `submit-result.js` | write one result; re-verifies role + age group from the token; write-and-verify retry |
-| `_results.js` | results storage layout — one blob per age group, legacy merge (see Results storage below) |
+| `_results.js` | results storage layout — one blob per MATCH, two older layouts read as fallbacks (see Results storage below) |
 | `get-schedule-override.js` / `save-schedule-override.js` | custom draw + kickoff times + pitches (draft/published, see Publishing below) |
 | `publish-schedule.js` | makes an age group's fixtures public, or withdraws them |
 | `_publish.js` | draft/published keys, publish permission rule |
@@ -248,7 +248,7 @@ good reason.
 It is named below in the historical account of that removal; it does not
 exist. This table listed it as live until 7 Aug 2026.
 
-Storage: **Netlify Blobs** (`results` — one blob per age group, see **Results
+Storage: **Netlify Blobs** (`results` — one blob per match, see **Results
 storage** below; `accounts`; schedule overrides) plus two **Google Sheets** for
 registrations.
 
@@ -1234,7 +1234,8 @@ on tournament morning, while an organiser approves somebody, means one write
 silently discards the other and the approval just quietly did not happen.
 
 That is not hypothetical. It is exactly the bug that lost match results in July
-2026 and forced the results store to be split one blob per age group — see
+2026 and forced the results store to be split, first one blob per age group and
+then (Aug 2026, after that was not enough) one blob per match — see
 **Results storage** above. One key per person means two people signing in at
 the same moment touch two different keys and cannot collide at all, and no
 sign-in can ever damage an account record. `test-my-account.js` **proves** it
@@ -1324,31 +1325,79 @@ parent contact details.
 
 ---
 
-## Results storage (the old layout is gone)
+## Results storage — one blob per MATCH
 
-Match results live in the `results` Blobs store, **one JSON object per age
-group**, key `ag:<ageGroupId>`, results keyed by match id inside it. All of it
-goes through `_results.js` — `readGroup` / `writeGroup` / `readAll`. Nothing
-else should touch the store directly.
+Match results live in the `results` Blobs store, **one JSON object per match**,
+key `m:<matchId>`. All of it goes through `_results.js` — `readMatch` /
+`writeMatch` / `clearMatch` / `readGroup` / `readAll`. Nothing else should touch
+the store directly.
 
-- **Why it was split.** Everything used to sit in one object under the key
-  `all`. Blobs has no compare-and-set, so a write is a whole-object overwrite:
-  two managers in two different age groups saving in the same second both read
-  `all`, both wrote it back, and the second one — which had never seen the
-  first's score — silently deleted it. With 15 groups scoring at once on a
-  tournament day that was the single biggest match-day risk.
-- **The legacy `all` key is read-only.** `readGroup` falls back to the matching
-  slice of `all` when a group blob doesn't exist yet, and `readAll` layers the
-  per-group blobs over it. Nothing writes or deletes `all` — it is the pre-split
-  history and stays as a safety net. Don't "tidy" it away.
-- **Same-group collisions are handled by write-and-verify.** `submit-result.js`
-  writes, reads the group back, and looks for its own `submittedAt`. If it
-  isn't there, someone overwrote it — re-read, merge, write again, three
-  attempts, then return **409 and an error the manager can see**. Never return
-  `ok:true` without that read-back: a score reported as saved but missing isn't
-  noticed until the standings are wrong. The reply carries `stored:{homeScore,
+**Three layouts have existed, and all three are still READ.** In increasing
+order of authority: `all` (everything in one object), `ag:<ageGroupId>` (one per
+age group), `m:<matchId>` (one per match, current). A per-match blob wins
+whenever it exists.
+
+- **Why it changed the first time.** Blobs has no compare-and-set, so a write is
+  a whole-object overwrite. On layout 1, two managers in two different age
+  groups saving in the same second both read `all`, both wrote it back, and the
+  second — which had never seen the first's score — silently deleted it.
+- **Why it changed again (Aug 2026).** Splitting per age group removed the
+  cross-group collision but kept the read-modify-write, and a code review found
+  that carried two defects the write-and-verify could not see:
+  - **A failed read destroyed the group.** `readGroup` swallowed the error and
+    returned the empty legacy slice; the caller wrote that back as the WHOLE
+    group. Fourteen U16B results stored, one blob timeout while saving the
+    fifteenth, and the blob became `{match15}`. The verifier checked only its
+    own entry, so it passed and the manager saw a green tick.
+  - **Two writers both got a green tick.** A reads, B reads, A writes, A
+    verifies OK, B writes, B verifies OK — A's score is gone and both people
+    were told it saved. A manager plus an organiser scoring the same group is
+    the anticipated case, not an edge one.
+- **One blob per match removes the cause rather than narrowing the window.** A
+  save writes exactly one key: its own. There is no read-modify-write on the
+  write path, so there is nothing another save can be lost inside. Two people
+  saving the SAME match is still last-write-wins, which is correct — one match
+  has one score, and the second person is correcting the first.
+- **⚠️ There is no migration and there must never be one.** Nothing is copied or
+  deleted on deploy. Old results keep being served from wherever they already
+  live until someone edits that match, at which point its own blob appears and
+  takes over for that match alone. No window where a result is in neither place;
+  rolling the change back loses only what was saved while it was live.
+- **⚠️ Clearing writes a TOMBSTONE (`{cleared:true}`), never a delete.** Deleting
+  `m:<matchId>` would let the next read fall through to the older layouts and
+  resurrect the very result just cleared. Tombstones are small and permanent;
+  that is the price of not needing a migration.
+- **⚠️ The trailing colon in the list prefix is load-bearing.** Match ids start
+  with the age-group id, so `m:u12` would also list every `m:u12g:…` blob and
+  hand U12G's scores to U12. `matchPrefix()` includes the colon.
+- **⚠️ The write path and the read path have OPPOSITE failure rules, on
+  purpose.** `readMatch` and the per-match list THROW on a read failure, because
+  treating "I could not ask" as "there is nothing there" is precisely how the
+  first defect happened. `readAll` — the public Standings reader — degrades to
+  whatever could be read instead, because serving a stale score is recoverable
+  and a blank table on a tournament afternoon is not.
+- **⚠️ `readGroup` and `readAll` must agree about which layout wins.** A group
+  blob REPLACES the legacy slice for its group; it does not merge over it. My
+  first rewrite merged in `readGroup` while `readAll` replaced, so a result
+  cleared under layout 2 stayed gone in the public view and came back from the
+  dead on the manager's own dashboard. Nothing had ever asserted the two readers
+  agree; a fault now holds it.
+- **The write-and-verify is KEPT but no longer load-bearing for concurrency.**
+  `submit-result.js` writes, reads the match back, and looks for its own
+  `submittedAt`; three attempts, then **409 and an error the manager can see**.
+  Its job now is turning a silent storage failure into something actionable.
+  Never return `ok:true` without it. The reply carries `stored:{homeScore,
   awayScore,walkover}` and both score screens display those figures rather than
   echoing the form.
+- **Card counts are sanitised like every other figure.** They were the one
+  exception until Aug 2026 and took the client's value raw, so `-3` stored as
+  `-3` and `"abc"` became `NaN`, which `JSON.stringify` writes as `null`. Both
+  were confirmed with a 200 and served to the public Standings page. Now
+  `Math.min(15, Math.max(0, Math.floor(...)))` like the rest.
+- Proven by `tests/test-results-storage.js`, which drives the real layer against
+  a fake store with dials for read and list failure — both defects are about
+  what happens BETWEEN a read and a write, so neither is reachable without one.
+  Eight faults in `_prove-registration.js`.
 - **U6 and U7 refuse scores at the API**, not just in the UI (`FESTIVAL_AGE_IDS`
   in `_scoring.js`). Clearing stays allowed so results stored before that check
   existed can still be removed.

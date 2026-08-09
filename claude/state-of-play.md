@@ -453,9 +453,38 @@ failure now gives **503 "try again"** rather than letting the request through.
 **Existing sign-ins survive** — accounts with no `sessionsValidFrom` are
 unaffected, so this does not log the committee out on deploy.
 
-⚠️ **Still open from the same review**, worst first: the score-save path can
-silently wipe an age group's results on a failed read and reports success to
-both writers in a two-manager race; login is rate-limited per-IP so the venue
+---
+
+## 9 Aug 2026 — result storage moved to one blob per match (same branch, NOT deployed)
+
+The second review finding. Results were one blob per age group,
+read-modify-written, which carried two defects the write-and-verify could not
+see: **a failed read fell through to an empty slice and the caller wrote THAT
+back as the whole group** (fourteen results gone, green tick shown), and **two
+managers scoring the same group could both be told it saved** while one score
+no longer existed. Durable detail in `RESTORE.md` → "Results storage".
+
+One blob per match removes the cause instead of narrowing the window: a save
+writes exactly one key. **No migration, deliberately** — both older layouts stay
+on disk and are read as fallbacks, so nothing is in flight and a rollback loses
+only what was saved while the change was live. Clearing writes a tombstone
+rather than deleting, or the fallback would resurrect the cleared result.
+
+Card counts were sanitised in the same commit (they were the one figure taking
+the client's value raw — `-3` and `null` were both storable and both served to
+the public Standings page).
+
+**Suite: 809/809 faults, 36 clean, 41 files.** Eight new faults.
+
+⚠️ **One of those eight exists because my first rewrite introduced a NEW bug and
+all 32 checks passed.** `readGroup` merged the group blob over the legacy slice
+while `readAll` replaced it — so a result cleared under the old layout stayed
+gone in the public view and came back from the dead on the manager's own
+dashboard. Every supersession check went through `readAll`; nothing asserted the
+two readers agree. **Two callers, two merges; a test of one says nothing about
+the other.**
+
+⚠️ **Still open from the same review**, worst first: login is rate-limited per-IP so the venue
 wifi locks managers out after 10 attempts; all `<head>` metadata on the
 `.dc.html` pages is injected by JS, so shared links have no title or card **and
 `/register-club` does not actually carry `noindex` in the served HTML** — the

@@ -413,7 +413,7 @@ review's findings.
 
 ---
 
-## 9 Aug 2026 — session revocation closed (branch `fix/review-aug-2026`, NOT deployed)
+## 9 Aug 2026 — session revocation closed (LIVE — merged in #16)
 
 An outside code review of the whole repo found nine issues; this is the first
 of them fixed. **Revoke, Reject and an organiser's password reset were all
@@ -455,7 +455,7 @@ unaffected, so this does not log the committee out on deploy.
 
 ---
 
-## 9 Aug 2026 — result storage moved to one blob per match (same branch, NOT deployed)
+## 9 Aug 2026 — result storage moved to one blob per match (LIVE — merged in #16)
 
 The second review finding. Results were one blob per age group,
 read-modify-written, which carried two defects the write-and-verify could not
@@ -486,7 +486,7 @@ the other.**
 
 ---
 
-## 9 Aug 2026 — login rate limiting fixed (same branch, NOT deployed)
+## 9 Aug 2026 — login rate limiting fixed (LIVE — merged in #16)
 
 Third review finding, and the one that would have bitten on the day. One bucket,
 keyed on the connection address alone, incremented **before** the password was
@@ -521,7 +521,7 @@ shape. All four reported COULD NOT INJECT rather than passing silently.
 
 ---
 
-## 9 Aug 2026 — head metadata moved into the real `<head>` (same branch, NOT deployed)
+## 9 Aug 2026 — head metadata moved into the real `<head>` (LIVE — merged in #16)
 
 Fourth and sixth review findings, done together because they share a file.
 Every crawler-facing tag lived in `<helmet>` in the `<body>` and was moved into
@@ -561,7 +561,7 @@ name a string in a comment that sits inside the file a checker greps.
 
 ---
 
-## 9 Aug 2026 — image weight (same branch, NOT deployed)
+## 9 Aug 2026 — image weight (LIVE — merged in #16)
 
 Fifth review finding. The hero background was a **1.8 MB PNG** — the Largest
 Contentful Paint, bigger than the rest of the homepage put together, pulled in
@@ -599,7 +599,7 @@ only one on the page. Both now match by content, per source.
 
 ---
 
-## 9 Aug 2026 — accessibility (same branch, NOT deployed)
+## 9 Aug 2026 — accessibility (LIVE — merged in #16)
 
 Eighth review finding. **Not one form control on the site had an accessible
 name** — 60 label/control pairs associated, 30 `aria-label`s added where there
@@ -786,6 +786,44 @@ not** — `support.js`, `deck-stage.js` and `image-slot.js` all mention them, an
 so does `test-design-polish.js`. All the mentions turned out to be in COMMENTS,
 so the deletion was right, but "grep found nothing" was not what the evidence
 said and checking took four greps rather than one.
+
+## ✅ 9 Aug 2026 — THE REVIEW BRANCH IS MERGED AND LIVE (`321e8fd`, PR #16)
+
+Ten commits from `fix/review-aug-2026`. **Production deploy — 15 credits.**
+Everything below was MEASURED on adhjrt.com after the merge, not inferred.
+
+**No longer served** (all 404, having been 200 before the merge except where
+noted): `/netlify/functions/_auth.js`, `/package.json`, `/package-lock.json`
+(new file, 404 from birth), `/deck-stage.js`, `/image-slot.js`, `/doc-page.js`.
+
+**Controls, all 200:** `/`, `/robots.txt`, `/scores`, `/app`, `/signin`,
+`/rules`, `/legal`, `/register-club`. `/no-such-xyz` 404.
+
+**Head metadata is in the real `<head>`:** `</head>` at line 48, `<title>` at
+34, `og:title` at 39. `/register-club`'s robots tag at line 34, inside head —
+the claim `netlify.toml` had been making for months is finally true.
+
+**Hero image:** 30 KB avif served; the 1,801 KB PNG is still on disk as the
+re-encode master and is named by nothing.
+
+**The login endpoint survived the bcryptjs 2.4.3 → 3.x upgrade** — a fake
+account gets a clean 401 with the new username/email hint, not a 500. All five
+public function endpoints 200.
+
+⚠️ **THE BUILD MARKER IS `sw.js`'s CACHE KEY, and use it rather than a 404.**
+`adhjrt-v1` = old code, `adhjrt-2026-08-09` = this deploy. I first waited for
+the preview by polling `/package-lock.json` for a 404 — which it returns on the
+OLD build too, because the file did not exist there. The loop exited instantly
+and everything after it measured the wrong build, reporting deleted files as
+still served. **A missing file and a hidden file are indistinguishable; wait on
+something that becomes PRESENT.**
+
+⚠️ **STILL UNMEASURED ON PRODUCTION: everything behind a login.** Revocation,
+per-match score storage and the rate limit have been proven by the suite and by
+the preview's public surface, never by a signed-in session on adhjrt.com. The
+revoke test is the one worth doing: sign in on a phone, revoke that account from
+/organizer, refresh — it should be locked out immediately, where before it would
+have kept working for up to six months.
 
 ## Where things stand
 

@@ -9,7 +9,7 @@
 //
 // Setup: the same GOOGLE_SERVICE_ACCOUNT_* / GOOGLE_SHEET_ID_* vars as
 // submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
-const { verify, getBearerToken } = require('./_auth');
+const { resolveSession } = require('./_auth');
 
 /* Service-account auth and the private-key repair, in one place — they used
    to be written out in this file and two others. See _sheets.js. */
@@ -32,9 +32,13 @@ async function readRows(auth, spreadsheetId, columns) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const session = verify(getBearerToken(event));
-    if (!session || session.role !== 'organizer') {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    /* `sess`, not `auth` — getReadAuth() below already owns that name here. */
+    const sess = await resolveSession(event);
+    if (!sess.ok) {
+      return { statusCode: sess.status, body: JSON.stringify({ ok: false, error: sess.error }) };
+    }
+    if (sess.session.role !== 'organizer') {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Only tournament organisers can see every age group’s registrations.' }) };
     }
 
     const auth = getReadAuth();

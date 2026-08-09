@@ -35,6 +35,7 @@ $tests = @(
   'test-venue-map.js',
   'test-venue-splits.js',
   'test-session-permissions.js',
+  'test-session-revocation.js',
   'test-agegroups.js',
   'test-intake.js',
   'test-functions-load.js',

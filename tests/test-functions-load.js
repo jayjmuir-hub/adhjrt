@@ -63,12 +63,34 @@ function installStubs() {
       /* list() included because get-results.js calls it and warns loudly when
          it is missing. A stub gap that prints a warning on every run is noise,
          and noise is where a real failure hides. */
-      getStore: () => ({
-        get: async () => null,
-        setJSON: async () => {},
-        delete: async () => {},
-        list: async () => ({ blobs: [] }),
-      }),
+      /* ⚠️ THE ACCOUNTS STORE MUST ANSWER, and it did not have to before Aug
+         2026. A signed token used to be the whole of the door, so a stub that
+         answered null to everything was enough to get past it. resolveSession()
+         now re-reads the account behind every token — which is the entire point
+         of that change — so a null accounts list means "this login no longer
+         exists" and every authenticated check below 401s.
+
+         ⚠️ These two accounts must stay in step with the sign() payloads
+         further down (`test-organiser`, `test-manager`/u16b). A token whose
+         username is not in this list is now correctly refused, so a mismatch
+         here reads as a broken door rather than as a broken fixture. */
+      getStore: (arg) => {
+        const name = typeof arg === 'string' ? arg : (arg && arg.name);
+        return {
+          get: async (key) => {
+            if (name === 'accounts' && key === 'list') {
+              return [
+                { username: 'test-organiser', role: 'organizer', approved: true, name: 'Test Organiser' },
+                { username: 'test-manager', role: 'manager', ageGroupId: 'u16b', approved: true, name: 'Test Manager' },
+              ];
+            }
+            return null;
+          },
+          setJSON: async () => {},
+          delete: async () => {},
+          list: async () => ({ blobs: [] }),
+        };
+      },
     },
     bcryptjs: {
       hashSync: () => 'stub', compareSync: () => false,
@@ -245,7 +267,13 @@ async function callIt(f, mod, method) {
     const mtoken = sign({ username: 'test-manager', role: 'manager', ageGroupId: 'u16b' });
     const mev = { ...EVENTS['GET'], headers: { authorization: `Bearer ${mtoken}` } };
     const res = await loaded['get-registrations.js'].handler(mev);
-    eq('get-registrations.js refuses a manager', res && res.statusCode, 401);
+    /* 403, not 401. It was 401 until Aug 2026 because one condition covered
+       both "no session" and "wrong role" — so a signed-in manager was told
+       "Not signed in", which is false and sends them to re-enter a password
+       that will not help. Now the two are separate: resolveSession answers the
+       first, the role check answers the second. ⚠️ 401 here again would mean
+       the two have been re-merged. */
+    eq('get-registrations.js refuses a manager', res && res.statusCode, 403);
     const res2 = await loaded['get-my-registrations.js'].handler(mev);
     check('get-my-registrations.js lets a manager in', res2 && res2.statusCode === 200,
       String(res2 && res2.statusCode));

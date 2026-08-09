@@ -14,14 +14,18 @@
 //      auto-generated draw. Anyone who had already seen the fixtures will find
 //      them gone, so the UI should warn before calling this.
 
-const { verify, getBearerToken, blobStore } = require('./_auth');
+const { optionalSession, blobStore } = require('./_auth');
 const { draftKey, publishedKey, publishDenialReason } = require('./_publish');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   try {
-    const session = verify(getBearerToken(event));
+    /* optionalSession, not resolveSession, because publishDenialReason() below
+       owns the whole refusal — it takes a null session and produces the right
+       message for it. A revoked token now arrives here as null and is refused
+       by that one path, exactly as a missing token always was. */
+    const session = await optionalSession(event);
     const { ageGroupId, action } = JSON.parse(event.body || '{}');
 
     if (!ageGroupId) {

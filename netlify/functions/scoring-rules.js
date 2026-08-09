@@ -15,7 +15,7 @@
 // group's laws mid-tournament would silently change how every score in that
 // group totals.
 
-const { verify, getBearerToken, blobStore } = require('./_auth');
+const { resolveSession, blobStore } = require('./_auth');
 const { loadRules, cleanRules, BY_AGE, POINTS } = require('./_scoring');
 
 const json = (statusCode, body) => ({
@@ -32,8 +32,9 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod === 'POST') {
-      const session = verify(getBearerToken(event));
-      if (!session) return json(401, { ok: false, error: 'Not signed in.' });
+      const auth = await resolveSession(event);
+      if (!auth.ok) return json(auth.status, { ok: false, error: auth.error });
+      const session = auth.session;
       if (session.role !== 'organizer') {
         return json(403, { ok: false, error: 'Only tournament organisers can change the scoring rules.' });
       }

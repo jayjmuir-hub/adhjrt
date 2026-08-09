@@ -13,7 +13,7 @@
 // why it is split that way. Requires the same SESSION_SECRET as the other
 // auth functions.
 
-const { verify, getBearerToken, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { resolveSession, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
 const { readGroup, writeGroup } = require('./_results');
 const { MAX_FIELD_CHARS } = require('./_intake');
@@ -64,9 +64,13 @@ async function writeAndVerify(store, agId, apply, isDone) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const session = verify(getBearerToken(event));
-    if (!session || (session.role !== 'manager' && session.role !== 'organizer')) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Not signed in.' }) };
+    const auth = await resolveSession(event);
+    if (!auth.ok) {
+      return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+    }
+    const session = auth.session;
+    if (session.role !== 'manager' && session.role !== 'organizer') {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed.' }) };
     }
 
     const { matchId, data } = JSON.parse(event.body || '{}');

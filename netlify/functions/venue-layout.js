@@ -27,7 +27,7 @@
 //   pitches it owns affect every other age group, so this is a tournament-wide
 //   decision — same reasoning as scoring-rules.js.
 
-const { verify, getBearerToken, blobStore } = require('./_auth');
+const { resolveSession, optionalSession, blobStore } = require('./_auth');
 const {
   DEFAULT_VENUE, DEFAULT_POSITIONS,
   loadVenue, validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
@@ -57,15 +57,18 @@ exports.handler = async (event) => {
       };
 
       if ((event.queryStringParameters || {}).usage === '1') {
-        const session = verify(getBearerToken(event));
+        /* Optional: the layout itself is public, the usage counts are not. A
+           revoked token now simply gets the layout without them. */
+        const session = await optionalSession(event);
         if (session && session.role === 'organizer') body.usage = await countPitchUsage(blobStore('schedules'), venue);
       }
       return json(200, body);
     }
 
     if (event.httpMethod === 'POST') {
-      const session = verify(getBearerToken(event));
-      if (!session) return json(401, { ok: false, error: 'Not signed in.' });
+      const auth = await resolveSession(event);
+      if (!auth.ok) return json(auth.status, { ok: false, error: auth.error });
+      const session = auth.session;
       if (session.role !== 'organizer') {
         return json(403, {
           ok: false,

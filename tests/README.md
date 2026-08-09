@@ -65,9 +65,11 @@ claiming to guard that behaviour**. A suite that dies with an exception "fails"
 for every fault and proves nothing.
 
 Run it after changing either the code under test or the tests themselves. Every
-fault has to be caught by name — **719 of them, measured 7 Aug 2026**, and the number
-climbs with every feature. Trust the run's own last line over this sentence; it
-prints `N/N faults caught` and the count of suites clean on an undamaged copy.
+fault has to be caught by name. ⚠️ **The count is not written here.** It said
+719 while `CLAUDE.md` said something else and `state-of-play.md` said a third
+thing — the fourth such disagreement — so it has been removed rather than
+corrected a fifth time. Read the run's own last line: it prints `N/N faults
+caught` and the count of suites clean on an undamaged copy.
 
 ---
 
@@ -94,10 +96,10 @@ first place. See step 1 above.
 | `test-intake.js` | the sheet column order, the round trip between the writer and the two readers, the allow-list, the validation rules, the rate limit, the whole submission flow and the thinness of the function itself — 468 checks |
 | `test-functions-load.js` | loads and CALLS every Netlify function, signed out and signed in — the only test that executes them at all — 170 checks |
 | `test-accounts.js` | creating manager and organiser logins, password resets, the length floor — 89 checks |
-| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. **719 faults, 33 suites clean undamaged — measured 7 Aug 2026.** ⚠️ This row said 630/31 while `CLAUDE.md` said 672/33 and `state-of-play.md` said 653/32. Three files, three numbers, none of them right. Trust `runall.ps1`'s own output |
+| `_prove-registration.js` | the fault injection. Not a test; a check on the tests. ⚠️ **No count here on purpose** — this row said 630/31 while `CLAUDE.md` said 672/33 and `state-of-play.md` said 653/32; corrected to 719/33 on 7 Aug and stale again within two days. Read the run's own last line. Current figures live in `claude/state-of-play.md`, the one file whose job is to rot |
 | `test-about-board.js` | the About section: the coverflow carousel and its right-edge bleed, the encodeCase trap that broke the page live, the `sizes` agreement, the photo files, the CSS traps that stop a 3D scene painting, the two boot bugs, the crest/bat pairing, the header condense loop and the two drop-down animations — 238 checks |
 | `test-doc-claims.js` | the claims in `CLAUDE.md` that give instructions and that nothing else would contradict: what a deploy actually costs, that a branch deploy outlives its branch and reads production's data, and the four earlier corrections that had nothing holding them in place. Two checks are DERIVED so the two copies of the deploy cost cannot drift apart, and the retracted advice is asserted to survive *as a tombstone* — presence and absence both pass on the broken file, so only its POSITION discriminates — 31 checks |
-| `runall.ps1` | the explicit list — **the whole suite**. It names **38 test files** (counted 7 Aug 2026; this said 36); the rows above are a selection, not all of them. A file not named in `runall.ps1` never runs again and nothing will tell you. |
+| `runall.ps1` | the explicit list — **the whole suite**; the rows above are a selection, not all of them. A file not named in `runall.ps1` never runs again and nothing will tell you. ⚠️ The file count is not written here (it said 36, then 38, both stale) — and neither is the per-row `— N checks` figure above, which is unasserted prose of exactly the same kind and is known to be behind in several rows. |
 
 ⚠️ **The per-file check counts above are a snapshot and they drift.** They are
 not asserted by anything. `runall.ps1`'s own output is the current answer; this

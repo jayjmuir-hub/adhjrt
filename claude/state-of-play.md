@@ -411,6 +411,63 @@ them contains a flex row the blanket rule matches.
 **Suite: 792/792 faults, 34 clean, 39 files.** Six new faults, all six on the
 review's findings.
 
+---
+
+## 9 Aug 2026 — session revocation closed (branch `fix/review-aug-2026`, NOT deployed)
+
+An outside code review of the whole repo found nine issues; this is the first
+of them fixed. **Revoke, Reject and an organiser's password reset were all
+cosmetic** — they changed the accounts blob and nothing else, so the person's
+token kept working for up to 182 days. A revoked *organiser* could re-approve
+themselves. Durable detail in `RESTORE.md` → "Revoke actually ends a session".
+
+`resolveSession()` in `_auth.js` is the new door; all 13 call sites moved to it
+(11 required, 2 optional). `accounts-admin.js` stamps `sessionsValidFrom` on
+revoke and on a reset.
+
+**Suite: 801/801 faults, 35 clean, 40 files.** Nine new faults; the clean
+baseline went 34 → **35**, which is the proof `test-session-revocation.js` is a
+new FILE that ran undamaged rather than checks bolted onto an existing suite.
+
+⚠️ **Three PRE-EXISTING faults had to be re-anchored** (44, 288, 408) because
+they quoted the exact lines the fix replaced. They reported COULD NOT INJECT,
+which is a failed run and not a silent pass — the mechanism worked.
+
+⚠️ **A fourth anchor failed for a different reason worth knowing:**
+`seed()` normalises the temp copy to LF (line 206), so a fault anchor written
+with this repo's own CRLF never matches. Write `\n` in fault strings, always.
+
+⚠️ **Two of the nine faults exist because my first attempt at the check passed
+against the bug.** The `|| 0` on `sessionsValidFrom` was documented — by me — as
+what keeps pre-Aug-2026 accounts signed in; injecting its removal proved that
+false (`x < NaN` is already false), and the comment in `_auth.js` was corrected
+to say what actually carries it. Separately, removing the account lookup made
+the suite die on a stack trace rather than fail the check that claims to guard
+it; the suite now wraps the call so a throw goes red on the right line.
+
+⚠️ **Behaviour changes to expect on deploy:** a manager hitting an
+organiser-only endpoint now gets **403, not 401** (401 told a signed-in person
+"Not signed in", which sent them to re-enter a password that would not help); a
+deleted account gets 401 rather than my-account.js's 404; a transient blob
+failure now gives **503 "try again"** rather than letting the request through.
+**Existing sign-ins survive** — accounts with no `sessionsValidFrom` are
+unaffected, so this does not log the committee out on deploy.
+
+⚠️ **Still open from the same review**, worst first: the score-save path can
+silently wipe an age group's results on a failed read and reports success to
+both writers in a two-manager race; login is rate-limited per-IP so the venue
+wifi locks managers out after 10 attempts; all `<head>` metadata on the
+`.dc.html` pages is injected by JS, so shared links have no title or card **and
+`/register-club` does not actually carry `noindex` in the served HTML** — the
+`netlify.toml` comment claiming it does is wrong; the hero PNG is 1.8 MB;
+`/netlify/functions/*.js`, `/netlify.toml` and `/package.json` are served by the
+site; no form control anywhere has a programmatic label; there is no lockfile.
+
+**The counts that used to be duplicated in `CLAUDE.md` and `tests/README.md`
+have been DELETED rather than re-synced a fifth time.** They disagreed with
+each other and with this file on four separate occasions. This file is the one
+place a count belongs, because rotting is its job.
+
 ## Where things stand
 
 | | |

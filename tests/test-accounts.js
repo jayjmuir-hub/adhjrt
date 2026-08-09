@@ -202,8 +202,16 @@ section('Creating a login — manager or organiser');
   check('a duplicate username is still refused', /That username is already taken/.test(admin));
 
   /* Organiser-only, still. */
-  check('every action still requires an organiser session', /const session = requireOrganizer\(event\);/.test(admin));
-  check('…checked from the signed token, not the request', /session\.role === 'organizer'/.test(admin));
+  check('every action still requires an organiser session', /const auth = await requireOrganizer\(event\);/.test(admin));
+  check('…checked from the signed token, not the request', /r\.session\.role !== 'organizer'/.test(admin));
+  /* ⚠️ AND THE DOOR RE-READS THE ACCOUNT. requireOrganizer used to be
+     verify() + a role check, which cannot see a revocation — so a revoked
+     organiser still opened this file and could set their own approved flag
+     back to true, making revocation reversible by the person being revoked.
+     `await` in the check above is not decoration; it is the blob read. */
+  check('…and the door re-reads the account, not just the token',
+    /await resolveSession\(event\)/.test(admin) && !/\bverify\(getBearerToken/.test(admin),
+    'requireOrganizer must not go back to verify() alone — see test-session-revocation.js');
 }
 
 /* ====================================================================== */

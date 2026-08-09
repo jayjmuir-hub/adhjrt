@@ -47,6 +47,17 @@ const NEEDED = [
      by test-documents.js; documents.js is read as text by it. */
   'netlify/functions/_documents.js',
   'netlify/functions/documents.js',
+  /* Session revocation (Aug 2026). ⚠️ SIXTH TIME — see the note above, and it
+     went the same way again: test-session-revocation.js REQUIRES _auth.js
+     rather than reading it as text, so leaving it out of this list does not
+     produce a missing-file message, it produces MODULE_NOT_FOUND and every
+     fault aimed at the door reports as a dead suite. accounts-admin.js is read
+     as text by test-accounts.js and test-my-account.js for the requireOrganizer
+     assertions, which is why it has to ride along too. */
+  'netlify/functions/_auth.js',
+  'netlify/functions/_password.js',
+  'netlify/functions/_signins.js',
+  'netlify/functions/accounts-admin.js',
   'Scores & Standings.dc.html',
   /* test-manager-dc-draw.js drives the Manager Dashboard — added Aug 2026
      with the withTeamNames faults. Absent from this list, any test reading it
@@ -249,6 +260,8 @@ const MAIL_BLOCK = [
 ].join('\n');
 
 const REG = path.join('netlify', 'functions', '_registration.js');
+/* The session door — see the nine faults at the end of FAULTS. */
+const AUTH_F = path.join('netlify', 'functions', '_auth.js');
 const SD = 'scores-data.js';
 
 /* ---- the HSBC placements, verbatim ---------------------------------------
@@ -708,9 +721,13 @@ const FAULTS = [
   {
     name: 'a signed-out request reaches the store before the session is checked',
     suite: 'test-documents.js',
+    /* Re-anchored Aug 2026: the guard became `if (!auth.ok) …` when the door
+       started re-reading the account. The fault is unchanged in spirit — `&&
+       false` leaves the sentence exactly where it was, which is what defeats a
+       position-only check. */
     apply: () => patch('netlify/functions/documents.js',
-      "    if (!session) return fail(401, 'Please sign in.');",
-      "    if (!session && false) return fail(401, 'Please sign in.');"),
+      '    if (!auth.ok) return fail(auth.status, auth.error);',
+      '    if (!auth.ok && false) return fail(auth.status, auth.error);'),
     expect: ['refused, by a real early return'],
   },
   {
@@ -2792,8 +2809,12 @@ const FAULTS = [
   {
     name: 'a reader loses its _auth require (the bug that actually shipped)',
     suite: 'test-functions-load.js',
+    /* Re-anchored Aug 2026 — the import became resolveSession when the door
+       started re-reading the account. Still the same fault: drop the require
+       and the handler throws a ReferenceError, which becomes a 500, which
+       looks exactly like "there is no data". */
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      "const { verify, getBearerToken } = require('./_auth');\n", ''),
+      "const { resolveSession } = require('./_auth');\n", ''),
     expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
   },
   {
@@ -3912,9 +3933,10 @@ const FAULTS = [
   {
     name: 'my-account.js grows an organiser-only door, so a manager cannot reach their own account again',
     suite: 'test-my-account.js',
+    /* Re-anchored Aug 2026 for resolveSession. */
     apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
-      "  const session = verify(getBearerToken(event));\n  if (!session) return fail(401, 'Not signed in.');",
-      "  const session = verify(getBearerToken(event));\n  if (!session || session.role !== 'organizer') return fail(401, 'Not signed in.');"),
+      '  const auth = await resolveSession(event);\n  if (!auth.ok) return fail(auth.status, auth.error);',
+      "  const auth = await resolveSession(event);\n  if (!auth.ok || auth.session.role !== 'organizer') return fail(401, 'Not signed in.');"),
     expect: ['a MANAGER can read their own account'],
   },
   {
@@ -7480,6 +7502,98 @@ const FAULTS = [
     apply: () => patch(ORG, "      const hit = (ags || []).find((a) => a.hasStandings);",
       "      const hit = (ags || []).find((a) => a.id !== 'u6' && a.id !== 'u7');"),
     expect: ['festival ids are NOT hardcoded'],
+  },
+
+  /* ==================================================================== */
+  /* SESSION REVOCATION — resolveSession() in _auth.js (Aug 2026).
+
+     Nine faults, because this is the door. Until this change every guarded
+     endpoint called verify() and stopped: an organiser pressing Revoke changed
+     the accounts blob and NOTHING ELSE, so the revoked person's phone kept
+     working for up to 182 days — still reading their age group's children's
+     dates of birth and medical notes.
+
+     ⚠️ TWO OF THESE NINE ARE HERE BECAUSE MY FIRST ATTEMPT AT THEM PASSED.
+     The `|| 0` on sessionsValidFrom was originally claimed — by me, in a
+     comment — to be what kept pre-Aug-2026 accounts signed in. Injecting its
+     removal proved that false: Number(undefined) is NaN and `x < NaN` is
+     already false, so the guard is JavaScript's, not the code's. The fault
+     below therefore aims at the mutation that DOES break it — a live
+     `|| Date.now()` default, which reads almost identically and refuses every
+     request ever made. The comment in _auth.js was corrected to match.
+     And 'the account lookup is removed' had to be paired with a catching
+     wrapper in the suite: without one the injected fault threw, killed the
+     file, and failed the run on a stack trace rather than on the check that
+     claims to guard it — the right verdict by the wrong route. */
+  {
+    name: 'the approved flag is no longer checked (Revoke goes back to cosmetic)',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (!account.approved) return', '  if (false) return'),
+    expect: ['a revoked manager is refused', 'a revoked organiser is refused'],
+  },
+  {
+    name: 'the sessionsValidFrom clock is no longer compared (a reset stops ending sessions)',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (payload.iat < validFrom) {', '  if (false) {'),
+    expect: ['a token minted before the reset is refused'],
+  },
+  {
+    name: 'sessionsValidFrom defaults to now, signing everyone out on every request',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, 'Number(account.sessionsValidFrom) || 0',
+      'Number(account.sessionsValidFrom) || Date.now()'),
+    expect: ['an account with no sessionsValidFrom is let in'],
+  },
+  {
+    name: 'the account lookup is removed, so a deleted account still gets in',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '  if (!account) return', '  if (false) return'),
+    expect: ['with 401 — there is nothing left to be approved'],
+  },
+  {
+    /* The subtle one. Every source check that greps for resolveSession still
+       passes; only re-deriving from the ACCOUNT makes a demotion take effect. */
+    name: 'role is read back off the token instead of the account',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, '      role: account.role,', '      role: payload.role,'),
+    expect: ['an organiser demoted to manager is no longer an organiser'],
+  },
+  {
+    name: 'age group is read back off the token instead of the account',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, "      ageGroupId: account.role === 'manager' ? (account.ageGroupId || '') : '',",
+      "      ageGroupId: payload.ageGroupId || '',"),
+    expect: ['a manager moved to another age group carries the NEW one'],
+  },
+  {
+    /* ⚠️ The one that would be invisible in production until it mattered. */
+    name: 'a failed accounts read fails OPEN',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F,
+      "    return { ok: false, status: 503, error: 'Could not check your sign-in just now. Please try again.' };",
+      '    accounts = [];'),
+    expect: ['and answers 503, never 401'],
+  },
+  {
+    /* The opposite mistake, and the one that bites on tournament morning: a
+       transient blob blip answered as "not signed in" sends a manager hunting
+       for a password they have not typed since August. */
+    name: 'a failed accounts read answers 401 instead of 503',
+    suite: 'test-session-revocation.js',
+    apply: () => patch(AUTH_F, 'status: 503', 'status: 401'),
+    expect: ['and answers 503, never 401'],
+  },
+  {
+    name: 'optionalSession reverts to bare verify(), skipping the account check',
+    suite: 'test-session-revocation.js',
+    /* ⚠️ \n, NOT \r\n. seed() normalises the temp copy to LF (line 206), so an
+       anchor written with the repo's own CRLF never matches and the fault
+       reports COULD NOT INJECT — which is a failed run, not a pass, but it
+       costs a cycle to work out why. Cost me one. */
+    apply: () => patch(AUTH_F,
+      '  const r = await resolveSession(event);\n  return r.ok ? r.session : null;',
+      '  return verify(getBearerToken(event));'),
+    expect: ['a revoked token gives null'],
   },
 ];
 

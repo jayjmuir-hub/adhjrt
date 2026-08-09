@@ -1093,6 +1093,66 @@ Accounts → Create a login → Organiser. `test-signin-page.js` asserts the
 closure on the page source rather than on state — a check that drives a state
 the UI cannot reach proves nothing about what anyone can actually do.
 
+### Revoke actually ends a session — `resolveSession()`
+
+**A signed token is not a door on its own, and treating it as one made Revoke
+cosmetic.** `verify()` in `_auth.js` proves only that we signed the token and
+that it is under six months old. It cannot know the account behind it was
+revoked, rejected, demoted or had its password reset, because a token is a
+signed snapshot and this system keeps no session table.
+
+Every guarded endpoint used to call `verify()` and stop there. The consequence:
+an organiser pressing **Revoke** changed the accounts blob and changed nothing
+else. The revoked person's phone kept working — posting scores, publishing
+fixtures, reading their age group's children's dates of birth and medical notes
+— until the token aged out. `reject`, which deletes the account outright, was
+equally cosmetic. A revoked **organiser** was worse still: their token still
+passed the organiser check, so they could re-approve themselves and mint a
+fresh organiser account. Revocation was not merely delayed, it was **reversible
+by the person being revoked**. The only real remedy was rotating
+`SESSION_SECRET`, which signs the whole committee out at once.
+
+**`resolveSession(event)` is the door now.** It verifies the token, then loads
+the account and refuses if it is missing, unapproved, or if the token was minted
+before the account's `sessionsValidFrom` stamp. It costs one small blob read per
+authenticated request; that is the price of Revoke meaning anything.
+
+Three properties that are load-bearing and easy to undo by accident:
+
+- **Role and age group are re-derived from the ACCOUNT, never read off the
+  token.** This is what makes a *demotion* take effect — moving a manager from
+  u16b to u12, or an organiser down to manager, used to leave the old powers
+  live in the old token until it expired.
+- **A failed accounts read answers 503, never 401.** Fail closed, but say "try
+  again". A 401 would sign a manager out mid-tournament over a transient blob
+  blip and send them hunting for a password they have not typed since August.
+  `optionalSession()` — for endpoints where the public gets an answer too —
+  deliberately does the opposite and downgrades to the public view instead.
+- **A missing `sessionsValidFrom` must read as "no stamp".** It is absent on
+  every account created before Aug 2026. ⚠️ The `|| 0` is *not* what carries
+  that: `Number(undefined)` is `NaN` and `x < NaN` is already `false`. It is
+  there to stop the tidy-up that turns it into a live default — `|| Date.now()`
+  reads almost identically and refuses every request ever made. This was
+  measured by injecting the removal, not assumed; the first version of the
+  comment claimed the opposite and was wrong.
+
+`accounts-admin.js` stamps `sessionsValidFrom` on **revoke** and on an
+organiser's **password reset**. `reject` needs no stamp — the account is gone,
+and a token whose account cannot be found is refused on that alone.
+
+⚠️ **A self-service password change (`my-account.js`) does NOT yet stamp it**,
+so changing your own password does not sign your other devices out. That is a
+deliberate gap, not an oversight: stamping it would sign the person out of the
+device they were standing at. Closing it properly means minting a replacement
+token in the response and having the page store it.
+
+Proven by `tests/test-session-revocation.js`, which drives the real function
+with a stubbed accounts store so the list can change between calls — the only
+way to assert "the token stayed the same and the answer changed". Nine faults in
+`_prove-registration.js`. ⚠️ Two of those nine exist because the first version
+of the check passed against the bug: see the `|| 0` note above, and the throw
+that killed the file instead of failing the check that was watching it.
+
 ### My account
 
 Design: `claude/specs/spec-my-account.md`. **One card, two modes**, rendered on

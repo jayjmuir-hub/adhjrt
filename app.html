@@ -1404,8 +1404,8 @@ function openTeamPick(){
 
 function signIn(){
   openSheet('Sign in', `<div id="loginErr"></div>
-    <div class="field"><label>Username</label><input id="lu" aria-label="Username" autocomplete="username" autocapitalize="none"></div>
-    <div class="field"><label>Password</label><input id="lp" aria-label="Password" type="password" autocomplete="current-password"></div>
+    <div class="field"><label for="lu">Username</label><input id="lu" aria-describedby="lu-hint" autocomplete="username" autocapitalize="none"><div id="lu-hint" style="font-size:12px;color:#8a92a0;margin-top:4px">Your username, not your email address.</div></div>
+    <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password"></div>
     <button class="btn btn-p" id="lgo">Sign in</button>
     <p class="muted" style="margin-top:16px;font-size:13px;line-height:1.6">
       Managers use the account they created with their age group invite code.
@@ -1422,7 +1422,9 @@ function signIn(){
       if (ag && ag !== '*' && S.ageGroups.some(a => a.id === ag)) await load(ag); else render();
       toast('Signed in');
     } else {
-      $('loginErr').innerHTML = '<div class="err">Wrong username or password. Managers use their age group account; organisers use their organiser account.</div>';
+      /* ⚠️ The email sentence first - it is the mistake people actually make.
+         See the note in netlify/functions/login.js. */
+      $('loginErr').innerHTML = '<div class="err">Wrong username or password. Sign in with your username, not your email address. Managers use their age group account; organisers use their organiser account.</div>';
       doneLogin();
     }
   };

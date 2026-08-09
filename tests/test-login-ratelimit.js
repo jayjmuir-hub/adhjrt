@@ -254,6 +254,52 @@ const manager = (n) => ({
     check('and recording/clearing never throws at the caller', !threw);
   }
 
+  /* ==================================================================== */
+  section('⚠️ The refusal says WHICH identifier to use');
+
+  {
+    /* WHY THIS EXISTS. Jay - who built this site - could not sign in to a
+       deploy preview because he typed his email address. The field is labelled
+       USERNAME and that was not enough: a browser autofills an email into
+       anything that looks like a login. "Incorrect username or password." is
+       true, unhelpful, and a dead end. If the person who BUILT it gets caught,
+       a coach who signed up in July will too, on tournament morning.
+
+       ⚠️ THE HINT MUST BE THE SAME FOR EVERYONE. Only Google-created accounts
+       store an email at all (google-auth.js), so "try your email instead" would
+       work for some managers and fail for others with an identical message -
+       worse than saying nothing. "It is always the username" is true of every
+       account, which is why that is the sentence. */
+    store = makeStore();
+    accountsList = [manager(1)];
+    const body = JSON.parse((await post('mgr1', 'wrong')).body);
+    check('a wrong password names the username/email trap', /not your email/i.test(body.error), body.error);
+
+    /* ⚠️ AND IT MUST NOT SAY WHICH HALF WAS WRONG. Confirming a username exists
+       hands a guesser the account list. Same message either way. */
+    const unknown = JSON.parse((await post('no-such-person', 'wrong')).body);
+    eq('an unknown username gets the IDENTICAL message', unknown.error, body.error);
+
+    const src = require('fs').readFileSync(path.join(FN, 'login.js'), 'utf8');
+    check('…and the message never distinguishes the two',
+      !/no such (user|account)/i.test(src) && !/username not found/i.test(src));
+  }
+
+  /* Both sign-in surfaces carry the hint beside the field, not only in the
+     error - by then the person has already been stopped once. */
+  {
+    const { readRepo } = require('./_lib');
+    [['Signin.dc.html', 'username-hint'], ['app.html', 'lu-hint']].forEach(([page, id]) => {
+      const src = readRepo(page);
+      check(`${page}: the username field has a visible hint`,
+        new RegExp(`id="${id}"`).test(src) && /not your email address/i.test(src));
+      /* Tied to the input, so a screen reader reads it as part of the box
+         rather than as loose text that happens to follow it. */
+      check(`${page}: …and it is tied to the input with aria-describedby`,
+        new RegExp(`aria-describedby="${id}"`).test(src));
+    });
+  }
+
   Module._resolveFilename = realResolve;
   Module._load = realLoad;
   summary('test-login-ratelimit.js');

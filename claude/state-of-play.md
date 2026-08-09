@@ -693,6 +693,44 @@ preview.
 score storage, the rate limit. Those need a signed-in session on the preview
 and have only been proven by the suite.
 
+## 9 Aug 2026 — the sign-in dead end, found by Jay failing to sign in
+
+Not from the review. **Jay could not sign in to the deploy preview because he
+typed his email address**, and the answer was "Incorrect username or password."
+with nowhere to go from there. The field is labelled USERNAME; that was not
+enough, because a browser autofills an email into anything that looks like a
+login and on the live site the password manager had been filling the username
+for him.
+
+**If the person who BUILT the site gets caught by this, a coach who signed up in
+July will too — on tournament morning, at a pitch, with no one to ask.**
+
+Fixed in the message and beside the field, both surfaces:
+> Incorrect username or password. **Sign in with your username, not your email address.**
+
+⚠️ **"Just accept the email too" was considered and rejected.** Only
+Google-created accounts store an email at all (`google-auth.js`); password
+accounts have none. Accepting emails would work for some managers and fail for
+others with an identical message — worse than the current behaviour. One rule
+true for everybody is the only kind worth printing.
+
+⚠️ **The refusal still must not say WHICH half was wrong** — naming a valid
+username confirms the account exists. Held by a fault.
+
+⚠️ **`test-unified-login.js` had pinned the exact sentence**, so improving the
+copy broke three checks. Rewritten to capture the refusal text ONCE and compare
+every other refusal against that — the property is "one message for every
+refusal", not any particular wording. The wording can now improve freely and the
+day two refusals diverge, it still fails.
+
+**Suite: 842/842 faults, 40 clean, 45 files.** Four new faults.
+
+⚠️ **Also confirmed while diagnosing: Google sign-in cannot work on a deploy
+preview.** `Error 400: origin_mismatch` — the preview host is not in the OAuth
+client's authorised JavaScript origins, and should not be added permanently
+because every PR gets a different host. Test Google on production only. Nothing
+in this branch touches that path.
+
 ## Where things stand
 
 | | |

@@ -7971,6 +7971,53 @@ const FAULTS = [
       "    $('sgo').textContent = 'Saving…';"),
     expect: ['goes through busy(), not a bare textContent'],
   },
+
+  /* ==================================================================== */
+  /* THE USERNAME/EMAIL DEAD END (Aug 2026).
+
+     Found by Jay failing to sign in to a deploy preview with his email address.
+     The field is labelled USERNAME and that was not enough - a browser
+     autofills an email into anything that looks like a login. If the person who
+     BUILT the site gets caught, a coach who signed up in July will too, on
+     tournament morning, with "Incorrect username or password." and nowhere
+     to go.
+
+     ⚠️ The hint has to be true for EVERY account. Only Google-created accounts
+     store an email, so "try your email instead" would work for some managers
+     and fail for others with an identical message - worse than silence. */
+  {
+    name: 'the refusal stops naming the username/email trap',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      "error: 'Incorrect username or password. Sign in with your username, not your email address.'",
+      "error: 'Incorrect username or password.'"),
+    expect: ['names the username/email trap'],
+  },
+  {
+    /* The security half: the message must not reveal which of the two was
+       wrong, or it hands a guesser the account list. */
+    name: 'the refusal starts saying WHICH half was wrong',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch(LOGIN_F,
+      "      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password. Sign in with your username, not your email address.' }) };",
+      "      return { statusCode: 401, body: JSON.stringify({ ok: false, error: account ? 'Incorrect password.' : 'No such user. Sign in with your username, not your email address.' }) };"),
+    expect: ['an unknown username gets the IDENTICAL message'],
+  },
+  {
+    name: 'the sign-in page loses the hint beside the username box',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch('Signin.dc.html',
+      '<div id="username-hint" style="font-size:12px;color:#7A828E;margin:0 0 16px">Your username, not your email address.</div>', ''),
+    expect: ['Signin.dc.html: the username field has a visible hint'],
+  },
+  {
+    /* A hint the screen reader reads as loose text after the box is a hint the
+       person using it never hears attached to anything. */
+    name: 'the hint is no longer tied to the input',
+    suite: 'test-login-ratelimit.js',
+    apply: () => patch('Signin.dc.html', ' aria-describedby="username-hint"', ''),
+    expect: ['tied to the input with aria-describedby'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

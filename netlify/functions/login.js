@@ -126,7 +126,21 @@ exports.handler = async (event) => {
          cannot see a script working through a list of usernames. */
       await recordFailure(store, accountBucket(event, uname), now, ACCOUNT_RATE_OPTS);
       await recordFailure(store, connectionBucket(event), now, CONNECTION_RATE_OPTS);
-      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password.' }) };
+      /* ⚠️ THE EMAIL SENTENCE IS NOT PADDING. Jay - who built this site - could
+         not sign in to a deploy preview because he typed his email address, and
+         "Incorrect username or password." gave him nothing to work with. A
+         browser autofills an email into any field that looks like a login, so
+         the label saying USERNAME is not enough on its own.
+
+         ⚠️ AND THE HINT CANNOT BE "use your email instead" FOR SOME PEOPLE.
+         Only Google-created accounts store an email at all (google-auth.js);
+         password accounts have none, so accepting an email would work for some
+         managers and fail for others with the same message - worse than this.
+         One rule, true for everybody: it is always the username.
+
+         ⚠️ Still says nothing about WHICH half was wrong. Naming the username
+         as valid would confirm to a guesser that the account exists. */
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Incorrect username or password. Sign in with your username, not your email address.' }) };
     }
 
     /* The password was right. Clear the fumbles that came before it — but NOT

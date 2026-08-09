@@ -27,6 +27,32 @@
   button:active:not(:disabled){transform:scale(.98)}
   button:disabled{opacity:.45;cursor:not-allowed}
   a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+
+  /* ============ PHONE: STOP iOS ZOOMING ON FOCUS (8 Aug 2026) ============
+     ⚠️ THIS FILE CONTAINED NO @media RULE OF ANY KIND before this block.
+
+     ⚠️ iOS Safari zooms the whole page when a focused control's own computed
+     font-size is under 16px, AND IT DOES NOT ZOOM BACK OUT. The visitor is left
+     on a page that now overflows, on the one page every single account holder
+     has to use. It has to be on the CONTROL itself — Safari reads the focused
+     element, not an inherited value — and it does not reproduce in a desktop
+     emulator at any width, which is why it survived every earlier mobile pass.
+
+     ⚠️ SIX CONTROLS, NOT TWO. Both `RESTORE.md` § Phone layout and
+     `claude/state-of-play.md` gap 4c recorded this page as "2/2 inputs under
+     16px". Measured: SIX inputs, every one of them at `font-size:15px` — the
+     sign-in username and password, the sign-up name and new password, and the
+     invite-code field on each of the password and Google sign-up flows. One
+     rule still covers all six, so the fix did not change; the count was simply
+     wrong in two documents and is corrected in both. Fifteen against a
+     sixteen-pixel threshold is the whole bug.
+
+     Buttons get the 44px floor for the same reason the back offices do. There
+     are no selects on this page. */
+  @media(max-width:760px){
+    input,textarea{font-size:16px!important}
+    button{min-height:44px}
+  }
 </style>
 </helmet>
 

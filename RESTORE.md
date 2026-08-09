@@ -715,17 +715,46 @@ single media query.**
 | `app.html` | 11 | laid out for a phone |
 | `rules.html` / `legal.html` | 1 each | simple pages, fine |
 | **`Manager.dc.html`** | **0 → 1 block (8 Aug)** | first phone pass — makes it *work*, not a redesign |
-| **`Organizer.dc.html`** | **0** | ⚠️ **still none.** 62 flex rows, 274 inline font-sizes under 16px, 5 tables |
+| **`Organizer.dc.html`** | **0 → 1 block (8 Aug)** | first phone pass, same five blanket rules scoped to `.bo`. 62 flex rows, 278 inline font-sizes under 16px, 23 controls, 5 tables |
 | **`Scores & Standings.dc.html`** | **0** | deliberate — `/app` is the match-day phone answer (Jay, 8 Aug) |
-| **`Signin.dc.html`** | **0** | ⚠️ 2/2 inputs under 16px, so iOS zooms on focus |
+| **`Signin.dc.html`** | **0 → 1 block (8 Aug)** | ⚠️ **SIX inputs at 15px, not "2/2" as this table said until it was measured.** One rule covers all six |
 | **`Club.dc.html`** | **0** | uses `auto-fit minmax()`, so it collapses anyway |
 
-**The back-office block (`Manager.dc.html`) is five blanket rules scoped to a
-`.bo` class**, not fifty bespoke ones — the file has 44 flex rows and 176 inline
-font-size declarations under 16px, and naming each would be a larger, riskier
-diff that rots the moment a row is added. It wraps every flex row, gives every
-flex child `min-width:0`, forces controls to 16px, floors tap targets at 44px,
-and trims the shell padding.
+**Both back offices use the same five blanket rules scoped to a `.bo` class**,
+not fifty bespoke ones — naming each row would be a larger, riskier diff that
+rots the moment a row is added. They wrap every flex row, give every flex child
+`min-width:0`, force controls to 16px, floor tap targets at 44px, and trim the
+shell padding. `Manager.dc.html` has 44 flex rows and 176 inline sub-16px
+font-sizes; `Organizer.dc.html` has 62 and 278.
+
+⚠️ **THE CHOICE OF ATTRIBUTE SELECTORS OVER HAND-NAMED CLASSES IS DELIBERATE
+AND THE REASONING IS THE FAILURE MODE, NOT THE DIFF SIZE.** An attribute
+selector fails **loudly and globally** — if the renderer ever changes how it
+spells inline styles, the phone layout visibly breaks everywhere on that page at
+once and somebody notices. Hand-named classes fail **quietly and locally** — one
+row added later without the class, wrong on a phone, and nothing says so. On the
+file carrying the draw editor and score entry, the loud failure is the safer one.
+The cost is the both-spellings rule below, which is not optional.
+
+⚠️ **`/organizer`'s BLOCK HAS NO MEASURED BEFORE/AFTER AND `/manager`'s DOES.**
+`/manager`'s numbers came from a real signed-in session at 430px (106px of
+sideways scroll, 1/1 controls under 16px, 9/11 tap targets under 44px, all zero
+after). For `/organizer` the only rendered measurement taken was **3/3 controls
+under 16px, and the wide tables scrolling in their own boxes with no page-level
+sideways scroll at 430px**. So the zoom-on-focus half fixes an observed fault
+and the flex-wrap half is insurance against one that was never observed. Stated
+plainly here because the two blocks look identical and are not equally evidenced.
+
+⚠️ **`/organizer`'s FIVE WIDE TABLES NEED NOTHING AND MUST NOT BE "FIXED".**
+Every table carrying a `min-width` — 460, 700, 760, 1100, 1200 — already sits
+inside its own `overflow-x:auto` / `overflow:auto` box and is *supposed* to
+scroll there. Checked line by line. Dropping a `min-width` to make one "fit"
+squashes a twelve-column table into 390px. A test counts the wide tables and the
+scroll boxes and requires at least as many of the second as the first.
+
+**`/signin` is two rules, not five** — `input,textarea{font-size:16px!important}`
+and `button{min-height:44px}`. It has no `.bo` shell and no selects, and the
+whole page is one card, so scoping is unnecessary.
 
 ⚠️ **THREE TRAPS, ALL OF WHICH READ AS CORRECT CSS.**
 
@@ -748,9 +777,19 @@ and trims the shell padding.
 
 ⚠️ **iOS Safari zooms the page when a focused control's own computed font-size
 is under 16px, and does not zoom back out.** This is why the 16px rules exist on
-the registration modals and the back office. It has to be on the **control**,
-not a wrapper — Safari reads the focused element. **It does not reproduce in a
-desktop emulator at any width.**
+the registration modals, both back offices and `/signin`. It has to be on the
+**control**, not a wrapper — Safari reads the focused element. **It does not
+reproduce in a desktop emulator at any width**, which is why it survived every
+earlier mobile pass on the one page every account holder must use.
+
+⚠️ **AND THE COUNT OF AFFECTED CONTROLS WAS WRONG IN TWO DOCUMENTS.** `/signin`
+was recorded as *"2/2 inputs under 16px"* in this section and in
+`claude/state-of-play.md`. Measured: **six inputs, every one at 15px** — sign-in
+username and password, sign-up name and new password, and the invite-code field
+on each of the password and Google sign-up flows. One rule always covered all
+six, so the fix never changed; the recorded number was simply wrong. **A count in
+prose that nothing asserts is this repo's most repeated bug**, so a test now pins
+the six.
 
 ⚠️ **The registration modals only render while the window is OPEN**, which is
 why they went unlooked-at through every earlier mobile pass — the window was

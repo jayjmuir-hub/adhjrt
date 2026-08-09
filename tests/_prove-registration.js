@@ -7290,6 +7290,130 @@ const FAULTS = [
       "export { teamShort } from './scores-data.js';"),
     expect: ['re-exports getFixtures, getStandings and teamShort'],
   },
+
+  /* ---- the phone layout reaches /organizer and /signin (8 Aug 2026) ----
+     Gap 4b and 4c. Same five blanket rules /manager got, plus two on /signin.
+     ⚠️ Several of these faults are DECOYS AGAINST A COMMENT: both new blocks
+     document the trap they avoid, so their prose contains "@media",
+     "display:flex" and "overflow-x:hidden". A check that reads raw source would
+     pass while the live rule was gone. The checks strip comments first; these
+     faults are what prove the stripping is real. */
+  {
+    /* Kills the breakpoint without deleting the block, so every rule inside it
+       still reads correctly in a diff and none of them ever apply. */
+    name: 'the /organizer phone breakpoint is moved out of reach',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '  @media(max-width:760px){',
+      '  @media(max-width:99999px) and (min-width:99998px){'),
+    expect: ['it is the 760px phone breakpoint'],
+  },
+  {
+    /* ⚠️ THE COMMENT DECOY. Removes the class from the shell while leaving the
+       comment above it — which names `class="bo"` verbatim — untouched. A check
+       searching the raw file for that string passes; only one anchored on the
+       shell's own markup, after stripping, fails. */
+    name: 'the /organizer shell loses class="bo" but the comment naming it stays',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '<div class="bo" style="max-width:{{ dashboardMaxWidth }}',
+      '<div style="max-width:{{ dashboardMaxWidth }}'),
+    expect: ['the dashboard shell carries class="bo"'],
+  },
+  {
+    /* ⚠️ THE ONE THE /manager VERSION OF THIS CHECK ALREADY FAILED. Deletes the
+       RENDERED spelling — the one that actually matches what ships — from the
+       flex-wrap rule only. The spaced form still appears in the min-width:0 rule
+       below it, so a check looking for that spelling anywhere in the file passes
+       against a page whose rows no longer wrap. */
+    name: 'the /organizer flex-wrap rule loses the rendered spelling and keeps the source one',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG,
+      '.bo [style*="display:flex"],.bo [style*="display: flex"]{flex-wrap:wrap}',
+      '.bo [style*="display:flex"]{flex-wrap:wrap}'),
+    expect: ['the flex-wrap rule carries BOTH the source and the rendered spelling'],
+  },
+  {
+    /* Wrapping without min-width:0 does not shrink a row — a flex item defaults
+       to min-width:auto. The visible symptom is identical to no fix at all. */
+    name: 'the /organizer min-width:0 half of the wrap fix is deleted',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG,
+      '.bo [style*="display:flex"] > *,.bo [style*="display: flex"] > *{min-width:0}', ''),
+    expect: ['the min-width:0 rule carries both too'],
+  },
+  {
+    /* 15px reads as a deliberate-looking value and is under the threshold, so
+       the page still zooms. A presence-only check on the rule passes. */
+    name: 'the /organizer control font-size is set to 15px, just under the iOS threshold',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '.bo input,.bo select,.bo textarea{font-size:16px!important}',
+      '.bo input,.bo select,.bo textarea{font-size:15px!important}'),
+    expect: ['it is 16px, the iOS no-zoom threshold'],
+  },
+  {
+    name: 'the /organizer 44px tap-target floor is deleted',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '.bo button,.bo a[style*="padding"],.bo select{min-height:44px}', ''),
+    expect: ['tap targets have a 44px floor'],
+  },
+  {
+    name: 'the /organizer shell keeps its 24px desktop padding on a phone',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '.bo{padding-left:14px!important;padding-right:14px!important}', ''),
+    expect: ['the shell padding comes down on a phone'],
+  },
+  {
+    /* ⚠️ THE MISTAKE THE /manager BLOCK ACTUALLY MADE, reproduced here. It does
+       not fix an overflow, it hides one — and the audit then reports
+       sidewaysPx:0 while content sits off the side of the screen unreachable.
+       The block's own comment warns against it, which is why the check has to
+       read stripped source: unstripped, the warning IS the match. */
+    name: 'overflow-x:hidden is added to the /organizer shell, hiding an overflow instead of fixing it',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '.bo{padding-left:14px!important',
+      '.bo{overflow-x:hidden;padding-left:14px!important'),
+    expect: ['the organiser shell does NOT hide horizontal overflow'],
+  },
+  {
+    /* "Fixing" a wide table by letting it squash. Twelve columns into 390px. */
+    name: 'a wide /organizer table loses the min-width that makes it scroll in its own box',
+    suite: 'test-design-polish.js',
+    apply: () => patch(ORG, '<table style="width:100%;min-width:1200px">',
+      '<table style="width:100%">'),
+    expect: ['every wide organiser table still declares its min-width'],
+  },
+  {
+    name: 'the /signin phone breakpoint is moved out of reach',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html', '  @media(max-width:760px){',
+      '  @media(max-width:99999px) and (min-width:99998px){'),
+    expect: ['it is the 760px phone breakpoint'],
+  },
+  {
+    /* The whole point of the /signin change, undone by one character pair. */
+    name: 'the /signin input font-size is set to 15px, which is the bug it was written to fix',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html', 'input,textarea{font-size:16px!important}',
+      'input,textarea{font-size:15px!important}'),
+    expect: ['it is 16px, the iOS no-zoom threshold'],
+  },
+  {
+    name: 'the /signin button tap-target floor is deleted',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html', '    button{min-height:44px}\n', ''),
+    expect: ['buttons get the 44px floor'],
+  },
+  {
+    /* ⚠️ THE COUNT FAULT. Deletes one of the six inputs. The rule still covers
+       whatever remains, so nothing about the FIX breaks — but the docs recorded
+       this page as having two inputs when it has six, and a count nothing
+       asserts is what let that stand. This proves the number is pinned. */
+    name: 'a /signin input is removed, so the pinned count of six no longer holds',
+    suite: 'test-design-polish.js',
+    apply: () => patch('Signin.dc.html',
+      '<input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
+      '<span data-was-an-input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"'),
+    expect: ['the page still has six inputs'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

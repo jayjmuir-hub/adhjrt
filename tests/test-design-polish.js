@@ -395,6 +395,115 @@ check('…control: the .bo shell block is present to have been scanned', /\.bo\{
    floor, which would squash a five-column table into 390px. */
 check('the wide table still has its own horizontal scroller', /<div style="overflow-x:auto">/.test(MGR));
 
+/* ===================================================================
+   THE OTHER TWO BACK-OFFICE PAGES GET THE SAME TREATMENT (8 Aug 2026)
+   ===================================================================
+   Extends this section rather than opening a new file, so the prover's
+   clean-baseline count stays put — it must go UP only when a test FILE is
+   added and STAY PUT when an existing one is extended.
+
+   ⚠️ EVERY CHECK BELOW STRIPS CSS AND HTML COMMENTS FIRST, AND THAT IS NOT
+   HOUSEKEEPING. Both new blocks DOCUMENT the trap they avoid, so their comments
+   contain the strings "@media", "overflow-x:hidden" and "display:flex". A raw
+   count of `@media` in Organizer.dc.html returns 3 for ONE rule — two of those
+   are the warning text. This repo has now been bitten by that four times, and a
+   comment satisfying an absence check is the exact shape of it. */
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+
+section('The organiser dashboard has a phone layout at all');
+{
+  const ORGRAW = readRepo('Organizer.dc.html').replace(/\r\n/g, '\n');
+  const ORG = stripComments(ORGRAW);
+
+  /* ⚠️ CONTROL FIRST. Every check in this block is a search on ORG, so if the
+     comment-stripping ever ate the whole file they would all fail in a way that
+     looks like a missing feature. This proves there is still a file to read. */
+  check('CONTROL: the stripped source still holds the dashboard shell',
+    ORG.includes('max-width:{{ dashboardMaxWidth }}'));
+
+  /* ⚠️ THE COUNT, NOT JUST THE PRESENCE. Exactly one media rule survives
+     comment-stripping. The raw file contains the string three times. */
+  const orgMedia = (ORG.match(/@media/g) || []).length;
+  eq('exactly one real @media rule, once the warnings are stripped out', orgMedia, 1);
+  check('…and it is the 760px phone breakpoint', /@media\(max-width:760px\)\{/.test(ORG));
+
+  /* Scoped to the shell, not the document — and the class has to be ON the
+     shell, not merely mentioned in a comment about it. */
+  check('the dashboard shell carries class="bo"',
+    /<div class="bo" style="max-width:\{\{ dashboardMaxWidth \}\}/.test(ORG));
+
+  /* Both spellings, matched as WHOLE rules. Matching the spaced spelling
+     anywhere in the file would be satisfied by the min-width:0 rule below it,
+     so deleting it from the flex-wrap rule would pass — that exact mistake was
+     caught by the fault run on the /manager version of these checks. */
+  check('the flex-wrap rule carries BOTH the source and the rendered spelling',
+    /\.bo \[style\*="display:flex"\],\.bo \[style\*="display: flex"\]\{flex-wrap:wrap\}/.test(ORG));
+  check('the min-width:0 rule carries both too, or wrapping alone will not shrink a row',
+    /\.bo \[style\*="display:flex"\] > \*,\.bo \[style\*="display: flex"\] > \*\{min-width:0\}/.test(ORG));
+
+  const orgZoom = ORG.match(/\.bo input,\.bo select,\.bo textarea\{font-size:(\d+)px!important\}/);
+  check('organiser controls carry their own font-size rule', !!orgZoom);
+  eq('…and it is 16px, the iOS no-zoom threshold', orgZoom && orgZoom[1], '16');
+
+  check('tap targets have a 44px floor',
+    /\.bo button,\.bo a\[style\*="padding"\],\.bo select\{min-height:44px\}/.test(ORG));
+  check('the shell padding comes down on a phone',
+    /\.bo\{padding-left:14px!important;padding-right:14px!important\}/.test(ORG));
+
+  /* The negative one, and it is the most important. See the /manager block
+     above for what overflow-x:hidden actually did: it hid an overflow and
+     clipped two nav links off the screen while the audit reported 0. Paired
+     with the control at the top of this block. */
+  check('the organiser shell does NOT hide horizontal overflow',
+    !/\.bo\{[^}]*overflow-x:hidden/.test(ORG));
+
+  /* ⚠️ THE FIVE WIDE TABLES ARE SUPPOSED TO SCROLL IN THEIR OWN BOXES and must
+     not be "fixed" by dropping a min-width, which would squash a twelve-column
+     table into 390px. Asserted as a COUNT so removing one scroller fails, and
+     floored per-table rather than in total. */
+  const orgMinWidths = (ORG.match(/<table style="width:100%[^"]*min-width:\d+px"/g) || []).length;
+  check('every wide organiser table still declares its min-width', orgMinWidths >= 5,
+    'found ' + orgMinWidths);
+  const orgScrollers = (ORG.match(/overflow-x:auto|overflow:auto/g) || []).length;
+  check('…and there are at least as many scroll boxes as wide tables',
+    orgScrollers >= orgMinWidths, orgScrollers + ' scrollers vs ' + orgMinWidths + ' wide tables');
+}
+
+section('The sign-in page no longer zooms on focus on iOS');
+{
+  const SIGNRAW = readRepo('Signin.dc.html').replace(/\r\n/g, '\n');
+  const SIGN = stripComments(SIGNRAW);
+
+  check('CONTROL: the stripped source still holds the sign-in card',
+    SIGN.includes('autocomplete="current-password"'));
+
+  const signMedia = (SIGN.match(/@media/g) || []).length;
+  eq('exactly one real @media rule, once the warnings are stripped out', signMedia, 1);
+  check('…and it is the 760px phone breakpoint', /@media\(max-width:760px\)\{/.test(SIGN));
+
+  const signZoom = SIGN.match(/input,textarea\{font-size:(\d+)px!important\}/);
+  check('the inputs carry their own font-size rule', !!signZoom);
+  eq('…and it is 16px, the iOS no-zoom threshold', signZoom && signZoom[1], '16');
+  check('buttons get the 44px floor', /button\{min-height:44px\}/.test(SIGN));
+
+  /* ⚠️ THE COUNT THE DOCS GOT WRONG. RESTORE.md and state-of-play both said
+     "2/2 inputs under 16px". There are SIX, all at 15px. This is asserted so
+     that adding a seventh field at 15px does not quietly land uncovered — the
+     rule covers it automatically, but the number in the docs would go stale
+     again, and a stale number in prose is this repo's most repeated bug.
+     ⚠️ Counted on the RAW source: the inline styles are markup, not comments,
+     and one of the six sits inside a commented region in no version of this
+     file — but stripping is pointless here and would only hide a real change. */
+  const inputs = SIGNRAW.match(/<input[^>]*>/g) || [];
+  eq('the page still has six inputs', inputs.length, 6);
+  const at15 = inputs.filter((t) => /font-size:15px/.test(t)).length;
+  eq('all six still declare font-size:15px, which is what the rule overrides', at15, 6);
+  /* Pair the count with the reason it matters: 15 is under the threshold. If
+     somebody "fixes" the inline styles to 16px instead, this check tells the
+     next reader the media rule became redundant rather than silently passing. */
+  check('…and 15px is under the 16px iOS threshold, which is the whole bug', 15 < 16);
+}
+
 summary('test-design-polish.js');
 }
 

@@ -351,10 +351,10 @@ the header count on jay-pc.
 | **`/rules`** | **LIVE (`24fb84c`), button themed and centred (`f24ae0d`)** — placeholder page. ⚠️ **Jay owes the actual rules;** the block to replace is marked in `rules.html` and nothing else on that page needs touching. ⚠️ The button's `width:fit-content` wrapper is load-bearing — see `f24ae0d` above. |
 | **The About section** | **LIVE, 6 Aug.** A **coverflow carousel** — six cards recycling eleven photos, auto-advancing every 6s, no drag and no keys. ⚠️ **The box bleeds past its grid column to the right edge of the page**, which is what buys the width without shrinking the 66px heading; `100vw` counts the scrollbar and the centred section does not, so it subtracts `--sbw`. ⚠️ **The crest and flying bat are back** — badge is the HOLED `crest-shield.png` and it stands or falls with the bat. ⚠️ **Hidden below 760px and the photos are not fetched there.** ⚠️ `prefers-reduced-motion` does NOT stop the timer — with no controls there is nothing to press. Phone walkthrough still **pending**. |
 | HSBC | ⚠️ **FIVE placements on the homepage since 8 Aug, not three** — 19 / 128 / auto / 96 / **18px (new fixed bottom strip)** — plus **three** in `/app`. Never more than two visible at once; the pairings share breakpoint numbers (800 and 900 on the homepage, 359 in the app) and both are asserted. Full table in `RESTORE.md` § HSBC. Phone walkthrough **still pending**. |
-| **Phone layout** | **Homepage, registration modals, `/rules` and `/app` are done and LIVE (8 Aug).** ⚠️ **`Organizer.dc.html` still has ZERO media queries** — as do `Signin.dc.html` (2/2 inputs under 16px, so iOS zooms on focus) and `Scores & Standings.dc.html` (deliberate — Jay's call 8 Aug: `/app` is the match-day phone answer). Counts and the three traps are in `RESTORE.md` § Phone layout. |
+| **Phone layout** | **Homepage, registration modals, `/rules` and `/app` are LIVE (8 Aug). `/manager`, `/organizer` and `/signin` are DONE and sitting on `dev`, not yet merged.** Only `Scores & Standings.dc.html` still has zero media queries, deliberately — Jay's call 8 Aug: `/app` is the match-day phone answer. ⚠️ `/signin` was recorded here and in `RESTORE.md` as "2/2 inputs under 16px"; **measured, it is SIX, all at 15px.** One rule covers them and a test now pins the count. ⚠️ `/organizer`'s block has **no measured before/after**, unlike `/manager`'s — see `RESTORE.md` § Phone layout for exactly what was and was not measured. Counts and the three traps are there too. |
 | The real draw | **still placeholder clubs** in all 15 groups. Pitches and kick-off times are real; the pools wait on real registrations. Everything else waits on this. |
 | Results nav link | still an in-page `#results` jump — change to `/scores` only once the draw is real |
-| Tests | **39 files green; 773/773 faults caught; 34 suites clean undamaged; 40 `--- ` headers; `All green.`** — MEASURED TWICE at `7c78a16`: in the cloud sandbox on plain Node, **and** by `powershell tests/runall.ps1` on jay-pc, which agreed exactly. ⚠️ The header count was first read as **0** by a poll using `Select-String -SimpleMatch '^--- '`, which treats the regex literally — the trap already in `claude/lessons.md`, hit again. Re-read without it: 40, with a deliberately-unmatchable control returning 0. ⚠️ 12 stderr lines in that run are the prover's own injected faults (`verify is not defined` and friends), read rather than counted. ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
+| Tests | **39 files green; 786/786 faults caught; 34 suites clean undamaged; 40 `--- ` headers** — the fault count moved 773 → 786 with the `/organizer` and `/signin` phone work, and the clean baseline **stayed at 34, which is the proof those checks EXTENDED `test-design-polish.js` rather than arriving in a new file.** The 773/34/40 figures were measured twice at `7c78a16`, in the cloud sandbox on plain Node **and** by `powershell tests/runall.ps1` on jay-pc, which agreed exactly. ⚠️ The header count was first read as **0** by a poll using `Select-String -SimpleMatch '^--- '`, which treats the regex literally — the trap already in `claude/lessons.md`, hit again. Re-read without it: 40, with a deliberately-unmatchable control returning 0. ⚠️ 12 stderr lines in that run are the prover's own injected faults (`verify is not defined` and friends), read rather than counted. ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
 
 ## ⚠️ JOBS FOR JAY
 
@@ -474,20 +474,24 @@ Jay clicks the green button.
    switches silently, and re-picking the current group is a no-op.
 4. **Splitting oversized `Organizer.dc.html`** — not started, and it grew by a
    tab on 8 Aug (the read-only Fixtures & tables panel).
-4b. ⚠️ **`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL** — zero media queries,
-   62 flex rows, 274 inline font-sizes under 16px, 5 tables. Jay asked for it on
-   8 Aug and it was **deliberately not started**: `Manager.dc.html` was done
-   first and shipped so there was something working before touching the file
-   that carries the draw editor and score entry. **Two questions were put to Jay
-   and are unanswered:** (a) is "make it work" enough, as `/manager` got, or
-   does he want a real phone redesign — cards instead of table rows, a
-   collapsing toolbar; (b) keep the `.bo` attribute-selector approach, which
-   works but depends on how the renderer spells inline styles, or spend a much
-   bigger diff on real classes that cannot break that way. ⚠️ **Its wide tables
-   already scroll inside their own boxes and are NOT broken** — measured, no
-   page-level sideways scroll at 430px. Its 3/3 form controls under 16px are.
-4c. **`Signin.dc.html` has 2/2 inputs under 16px**, so iOS zooms on focus on the
-   page every account holder uses. One rule fixes it; not done.
+4b. ~~**`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL.**~~ **DONE 8 Aug, on
+   `dev`.** Both questions were answered by Jay: (a) **"make it work"**, the same
+   five blanket rules `/manager` got, not a redesign; (b) the technique question
+   he left open and it was decided on the failure mode — **attribute selectors,
+   both spellings** — because they fail loudly and globally where hand-named
+   classes fail quietly and locally, and this is the file carrying the draw
+   editor. Reasoning in `RESTORE.md` § Phone layout. ⚠️ **Its wide tables were
+   NOT touched** — all five already scroll inside their own boxes, checked line
+   by line, and a test now counts scrollers against wide tables. ⚠️ **No
+   before/after was measured in a rendered signed-in session**, unlike
+   `/manager`'s — the only rendered reading is the 3/3 sub-16px controls from
+   8 Aug. Said plainly in RESTORE because the two blocks look identically
+   evidenced and are not.
+4c. ~~**`Signin.dc.html` has 2/2 inputs under 16px.**~~ **DONE 8 Aug, on `dev`
+   — and it was SIX inputs, not two.** All six at `font-size:15px`. Two rules:
+   16px on inputs, 44px floor on buttons. The "2/2" was wrong in this file and in
+   `RESTORE.md`; both corrected, and a test pins the six so the number cannot go
+   stale again.
 5. **The team-code race** — in progress.
 6. **The adhjrt-sim suite on jay-pc is stale** and no longer coverage you are
    missing. Worth pruning that folder; the repo says so now.

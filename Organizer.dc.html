@@ -54,6 +54,79 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
   tbody tr:hover td{background:rgba(0,0,0,0.025)}
+
+  /* ============ PHONE LAYOUT — THE FIRST ONE THIS FILE HAS EVER HAD ============
+     8 Aug 2026. Jay asked for it after the /manager pass. ⚠️ THIS FILE
+     CONTAINED NO @media RULE OF ANY KIND before this block — it was never given
+     a phone layout, which is not the same as having one that broke.
+
+     ⚠️ MAKE IT WORK, NOT A REDESIGN. Jay's call, asked explicitly: no sideways
+     scroll, no zoom-on-focus, thumb-sized targets, toolbars that wrap. Laying
+     the back office out AS a phone screen — cards instead of table rows, a
+     collapsing toolbar — is a separate job and is deliberately not this.
+
+     WHY BLANKET RULES SCOPED TO `.bo` AND NOT SIXTY BESPOKE ONES. Counted in
+     this file: 62 inline `display:flex` rows, 278 inline font-size declarations
+     under 16px, 23 form controls. Naming each would be a far larger and riskier
+     diff on the file carrying the draw editor and score entry, and it would rot
+     the moment a row is added. Jay left the choice open and this is the one
+     taken: the failure mode of an attribute selector is LOUD AND GLOBAL (if the
+     renderer ever changes how it spells inline styles the phone layout visibly
+     breaks everywhere at once), where the failure mode of hand-named classes is
+     QUIET AND LOCAL (one row somebody added without the class, wrong on a phone,
+     and nothing says so).
+
+     ⚠️ THE FIVE TABLES NEED NOTHING AND MUST NOT BE "FIXED". Every one that
+     carries a min-width — 460, 700, 760, 1100, 1200 — already sits inside its
+     own `overflow-x:auto` / `overflow:auto` box and is SUPPOSED to scroll there.
+     Checked line by line, not assumed. Removing a min-width to make a table
+     "fit" would squash a twelve-column table into 390px.
+
+     ⚠️ HONESTY ABOUT WHAT WAS MEASURED, BECAUSE /manager's EQUIVALENT BLOCK
+     CARRIES REAL BEFORE/AFTER NUMBERS AND THIS ONE DOES NOT. The counts above
+     are static counts of the source. Nothing here has been measured in a
+     rendered, signed-in session at 390 or 430px — /organizer renders nothing
+     without an organiser login. What WAS measured, on 8 Aug before this block:
+     3/3 form controls under 16px, and the wide tables scrolling in their own
+     boxes with no page-level sideways scroll at 430px. So the zoom-on-focus
+     half is a known fault being fixed; the flex-wrap half is insurance against
+     a fault that was not observed. Said plainly rather than implied. */
+  @media(max-width:760px){
+    /* ⚠️ BOTH SPELLINGS, AND IT IS NOT BELT-AND-BRACES. The source writes
+       `display:flex`; the DC renderer RE-EMITS every inline style WITH SPACES,
+       so the live DOM says `display: flex`. A selector written against the
+       source spelling matches NOTHING in a browser — verified live on /manager,
+       where `el.matches('[style*="display:flex"]')` returned false and the
+       spaced form returned true. The first version of the /manager block had
+       only the no-space form and did nothing at all while reading as correct in
+       the diff. The source is not what ships.
+       ⚠️ `min-width:0` is the other half and the one people leave out: a flex
+       item defaults to `min-width:auto`, i.e. "never shrink below my content's
+       min-content width", so wrapping alone still leaves a row wider than the
+       screen. */
+    .bo [style*="display:flex"],.bo [style*="display: flex"]{flex-wrap:wrap}
+    .bo [style*="display:flex"] > *,.bo [style*="display: flex"] > *{min-width:0}
+
+    /* ⚠️ iOS SAFARI ZOOMS THE PAGE when a focused control's own computed
+       font-size is under 16px, and does not zoom back out. Has to be on the
+       CONTROL — Safari reads the focused element, not an inherited value. This
+       is the half of this block that fixes a fault somebody actually hit. */
+    .bo input,.bo select,.bo textarea{font-size:16px!important}
+
+    /* Thumb-sized targets. 44px is a floor, not a height — `min-height` leaves
+       a button that already exceeds it alone rather than squashing it to 44. */
+    .bo button,.bo a[style*="padding"],.bo select{min-height:44px}
+
+    /* The shell's own padding: 24px each side of a 390px screen is 12% of it. */
+    .bo{padding-left:14px!important;padding-right:14px!important}
+
+    /* ⚠️ THERE IS DELIBERATELY NO `overflow-x:hidden` HERE AND IT MUST NOT BE
+       ADDED. On /manager the first version had it, and it did not fix the 106px
+       overflow — it HID it, clipping two nav links off the side of the screen
+       where they could not even be scrolled to, while the audit reported
+       `sidewaysPx: 0` and called it fixed. A page that scrolls sideways is the
+       honest symptom. A negative check guards this. */
+  }
 </style>
 </helmet>
 
@@ -76,7 +149,12 @@
 
   <!-- ===================== DASHBOARD ===================== -->
   <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
-    <div style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
+    <!-- ⚠️ class="bo" IS WHAT SCOPES THE PHONE LAYOUT (see the @media block in
+         the style element above). Same class name as Manager.dc.html on
+         purpose — the two back offices get the identical treatment, and a
+         reader who has seen one recognises the other. Removing this class
+         silently removes the whole phone layout; a test asserts it is here. -->
+    <div class="bo" style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:20px">
         <div style="display:flex;align-items:center;gap:14px">
           <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#1A1C1F">

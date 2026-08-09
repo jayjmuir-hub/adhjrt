@@ -279,7 +279,26 @@ destination refspec"*. That drops the source as well, and a bare fetch asks for
 `HEAD`, which a `origin/dev..dev` bundle does not carry. Corrected to
 `git fetch <bundle> dev` with all three forms tabulated.
 
-## ⚠️ MANAGERS AND ORGANISERS COULD NOT SEE AN UNPUBLISHED DRAW (8 Aug, on `dev`)
+## ⚠️ MANAGERS AND ORGANISERS COULD NOT SEE AN UNPUBLISHED DRAW (8 Aug, LIVE)
+
+**Live at `f0abde9`** — one production deploy carried all five commits (the
+draft-visibility work, the `/organizer` and `/signin` phone layouts, the render
+harness and two docs corrections). **Batching worked as intended: five commits,
+ONE 15-credit deploy instead of five.** `main`, `dev` and `Compare` are all level
+at that commit; ⚠️ **`Compare` was found 30 commits behind `main` at merge time
+and fast-forwarded in the same breath**, which is the rule that stops it becoming
+the next `club-manager-page`.
+
+**Verified on production after the deploy, not inferred:** the deploy id moved
+`6a7741aa…` → `6a783af7…` and reached `ready`; eight pages answer 200; the new
+`tools/render-audit.js` answers **404** alongside `/tests/*`, `/claude/*`,
+`/CLAUDE.md` and `/RESTORE.md`, with `/` and `/robots.txt` at 200 in the same
+snapshot as controls and a nonexistent path 404ing to show the null result; the
+new rules are present in the **delivered bytes** of `/signin`, `/organizer` and
+`/app` (with a deliberately-absent string as a control); and
+`get-schedule-override?draft=1` returns `isDraft: false` both with **no** token
+and with a **bogus** one — the server verifying rather than the client asking
+nicely.
 
 Jay: *"the managers and organizers should be able to see fixtures, tables, and
 standings in their sections even if they aren't published, because they have to
@@ -351,7 +370,7 @@ the header count on jay-pc.
 | **`/rules`** | **LIVE (`24fb84c`), button themed and centred (`f24ae0d`)** — placeholder page. ⚠️ **Jay owes the actual rules;** the block to replace is marked in `rules.html` and nothing else on that page needs touching. ⚠️ The button's `width:fit-content` wrapper is load-bearing — see `f24ae0d` above. |
 | **The About section** | **LIVE, 6 Aug.** A **coverflow carousel** — six cards recycling eleven photos, auto-advancing every 6s, no drag and no keys. ⚠️ **The box bleeds past its grid column to the right edge of the page**, which is what buys the width without shrinking the 66px heading; `100vw` counts the scrollbar and the centred section does not, so it subtracts `--sbw`. ⚠️ **The crest and flying bat are back** — badge is the HOLED `crest-shield.png` and it stands or falls with the bat. ⚠️ **Hidden below 760px and the photos are not fetched there.** ⚠️ `prefers-reduced-motion` does NOT stop the timer — with no controls there is nothing to press. Phone walkthrough still **pending**. |
 | HSBC | ⚠️ **FIVE placements on the homepage since 8 Aug, not three** — 19 / 128 / auto / 96 / **18px (new fixed bottom strip)** — plus **three** in `/app`. Never more than two visible at once; the pairings share breakpoint numbers (800 and 900 on the homepage, 359 in the app) and both are asserted. Full table in `RESTORE.md` § HSBC. Phone walkthrough **still pending**. |
-| **Phone layout** | **Homepage, registration modals, `/rules` and `/app` are LIVE (8 Aug). `/manager`, `/organizer` and `/signin` are DONE and sitting on `dev`, not yet merged.** Only `Scores & Standings.dc.html` still has zero media queries, deliberately — Jay's call 8 Aug: `/app` is the match-day phone answer. ⚠️ `/signin` was recorded here and in `RESTORE.md` as "2/2 inputs under 16px"; **measured, it is SIX, all at 15px.** One rule covers them and a test now pins the count. ⚠️ `/organizer`'s block has **no measured before/after**, unlike `/manager`'s — see `RESTORE.md` § Phone layout for exactly what was and was not measured. Counts and the three traps are there too. |
+| **Phone layout** | **ALL of it is LIVE (8 Aug): homepage, registration modals, `/rules`, `/app`, `/manager`, `/organizer` and `/signin`.** Only `Scores & Standings.dc.html` still has zero media queries, deliberately — Jay's call 8 Aug: `/app` is the match-day phone answer. ⚠️ `/signin` was recorded here and in `RESTORE.md` as "2/2 inputs under 16px"; **measured, it is SIX, all at 15px.** One rule covers them and a test now pins the count. ✅ All three back-office blocks are **measured in a RENDERED page** by `tools/render-audit.js`, with a desktop width as the control — table in `RESTORE.md` § Phone layout, along with the counts and the three traps. |
 | The real draw | **still placeholder clubs** in all 15 groups. Pitches and kick-off times are real; the pools wait on real registrations. Everything else waits on this. |
 | Results nav link | still an in-page `#results` jump — change to `/scores` only once the draw is real |
 | Tests | **39 files green; 786/786 faults caught; 34 suites clean undamaged; 40 `--- ` headers** — the fault count moved 773 → 786 with the `/organizer` and `/signin` phone work, and the clean baseline **stayed at 34, which is the proof those checks EXTENDED `test-design-polish.js` rather than arriving in a new file.** The 773/34/40 figures were measured twice at `7c78a16`, in the cloud sandbox on plain Node **and** by `powershell tests/runall.ps1` on jay-pc, which agreed exactly. ⚠️ The header count was first read as **0** by a poll using `Select-String -SimpleMatch '^--- '`, which treats the regex literally — the trap already in `claude/lessons.md`, hit again. Re-read without it: 40, with a deliberately-unmatchable control returning 0. ⚠️ 12 stderr lines in that run are the prover's own injected faults (`verify is not defined` and friends), read rather than counted. ⚠️ The fault count went 719 → … → 759 → **773** across 8 Aug as each change added its own; **the number in prose is worth nothing — trust the runner's own output.** This row has previously been wrong as 37/653/32 while `CLAUDE.md` said 38/672/33 and `tests/README.md` said 36/630/31. ⚠️ **The baseline `M` going UP is the only proof a new suite ran undamaged, and it staying PUT is the proof an existing one was extended.** It moved 33 → **34** because `tests/test-draft-visibility.js` is a new FILE; it was added to `runall.ps1` in the same commit. |
@@ -483,8 +502,7 @@ Jay clicks the green button.
    switches silently, and re-picking the current group is a no-op.
 4. **Splitting oversized `Organizer.dc.html`** — not started, and it grew by a
    tab on 8 Aug (the read-only Fixtures & tables panel).
-4b. ~~**`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL.**~~ **DONE 8 Aug, on
-   `dev`.** Both questions were answered by Jay: (a) **"make it work"**, the same
+4b. ~~**`Organizer.dc.html` HAS NO PHONE LAYOUT AT ALL.**~~ **DONE AND LIVE 8 Aug.** Both questions were answered by Jay: (a) **"make it work"**, the same
    five blanket rules `/manager` got, not a redesign; (b) the technique question
    he left open and it was decided on the failure mode — **attribute selectors,
    both spellings** — because they fail loudly and globally where hand-named
@@ -498,7 +516,7 @@ Jay clicks the green button.
    wrapping** — which is the reading that proves the attribute selectors select
    anything at all. Its 21 overflowing elements all sit inside real scrollers
    (unreachable = 0): the wide tables, working as intended.
-4c. ~~**`Signin.dc.html` has 2/2 inputs under 16px.**~~ **DONE 8 Aug, on `dev`
+4c. ~~**`Signin.dc.html` has 2/2 inputs under 16px.**~~ **DONE AND LIVE 8 Aug
    — and it was SIX inputs, not two.** All six at `font-size:15px`. Two rules:
    16px on inputs, 44px floor on buttons. The "2/2" was wrong in this file and in
    `RESTORE.md`; both corrected, and a test pins the six so the number cannot go

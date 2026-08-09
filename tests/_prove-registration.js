@@ -7765,6 +7765,68 @@ const FAULTS = [
       '  if (now - windowStart >= WINDOW_MS) return null;'),
     expect: ['a filled bucket is clear again after the window'],
   },
+
+  /* ==================================================================== */
+  /* HEAD METADATA (Aug 2026).
+
+     The .dc.html pages had a nearly empty literal <head> and kept every
+     crawler-facing tag in <helmet> inside the <body>, which support.js moves
+     into document.head after boot. Scrapers do not run JavaScript, so every
+     link to this site shared on WhatsApp, Facebook, LinkedIn or Slack arrived
+     as a bare grey URL — on a site distributed entirely by parents forwarding
+     links. It also silently voided netlify.toml's claim that /register-club
+     "carries noindex": the tag existed only after JS ran.
+
+     ⚠️ THE NEGATIVE HALF IS THE LOAD-BEARING HALF. A tag being in <head>
+     passes just as well when a copy is ALSO still in the helmet, and the helmet
+     is appended to document.head — so a leftover is a second <title> on the
+     live page. Two of these five aim at exactly that. */
+  {
+    name: 'noindex goes back into the helmet, where no crawler sees it',
+    suite: 'test-head-metadata.js',
+    apply: () => {
+      patch('Club.dc.html', '<meta name="robots" content="noindex, nofollow">\n<title>', '<title>');
+      patch('Club.dc.html', '<helmet>\n', '<helmet>\n<meta name="robots" content="noindex, nofollow">\n');
+    },
+    expect: ['noindex is in the literal <head>'],
+  },
+  {
+    name: 'a duplicate <title> is left behind in the helmet',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('Quins JRT.dc.html', '<helmet>\n',
+      '<helmet>\n<title>Abu Dhabi Harlequins Junior Rugby Tournament 2026 | ADH JRT</title>\n'),
+    expect: ['and NONE left in <helmet>', 'exactly one <title> in the whole file'],
+  },
+  {
+    name: 'app.html loses the canonical that separates /app from /app.html',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('app.html', '<link rel="canonical" href="https://adhjrt.com/app">\n', ''),
+    expect: ['canonical is https://adhjrt.com/app'],
+  },
+  {
+    name: 'the /netlify/* 404 rule is dropped, serving the functions source again',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('netlify.toml',
+      '[[redirects]]\n  from = "/netlify/*"\n  to = "/404.html"\n  status = 404\n  force = true\n', ''),
+    expect: ['/netlify/* is 404'],
+  },
+  {
+    /* The mistake this repo has now made three times: a redirect pointing at
+       itself is silently DROPPED by Netlify rather than applied. */
+    name: 'the /netlify/* rule is pointed at itself, so Netlify drops it',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('netlify.toml', '  from = "/netlify/*"\n  to = "/404.html"',
+      '  from = "/netlify/*"\n  to = "/netlify/:splat"'),
+    expect: ['/netlify/* is 404', 'none of the new rules points at itself'],
+  },
+  {
+    /* Listing the silent link would undo the whole point of it. */
+    name: 'the silent link is added to sitemap.xml',
+    suite: 'test-head-metadata.js',
+    apply: () => patch('sitemap.xml', '  <url>\n    <loc>https://adhjrt.com/legal</loc>',
+      '  <url>\n    <loc>https://adhjrt.com/register-club</loc>\n  </url>\n  <url>\n    <loc>https://adhjrt.com/legal</loc>'),
+    expect: ['sitemap does NOT list /register-club'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

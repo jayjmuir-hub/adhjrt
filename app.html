@@ -6,6 +6,29 @@
 <title>ADH JRT — Match Day</title>
 <meta name="description" content="Fixtures, live scores and standings for the Abu Dhabi Harlequins Junior Rugby Tournament, 7-8 November 2026.">
 
+<!-- ⚠️ CANONICAL, BECAUSE THIS PAGE HAS TWO URLs. The repo root IS the deployed
+     site and /app is a 200 rewrite, not a redirect, so /app.html stays reachable
+     alongside it and robots.txt says Allow: /. Without this line the two are
+     separate indexable URLs for identical content, splitting whatever ranking
+     the page earns. /app is the one in sitemap.xml, so /app is the canonical. -->
+<link rel="canonical" href="https://adhjrt.com/app">
+
+<!-- ⚠️ SHARE TAGS. This is the page most likely to be forwarded on a match day
+     — "scores are here" into a parents' WhatsApp group — and it had none, so
+     that message arrived as a bare grey URL. Same card as the homepage and the
+     scores page; see the note in Quins JRT.dc.html about why these live in the
+     real <head> and never in <helmet>. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">
+<meta property="og:title" content="Match Day — ADH JRT 2026">
+<meta property="og:description" content="Fixtures, live scores and standings, updating through both days of the tournament.">
+<meta property="og:url" content="https://adhjrt.com/app">
+<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Match Day — ADH JRT 2026">
+<meta name="twitter:description" content="Fixtures, live scores and standings, updating through both days of the tournament.">
+<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
+
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0C0C0E">
 <meta name="mobile-web-app-capable" content="yes">

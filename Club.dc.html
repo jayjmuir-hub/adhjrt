@@ -4,6 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<!-- ============================================================
+     CRAWLER-FACING METADATA — MUST STAY IN THE REAL <head>.
+     ============================================================
+     ⚠️ THIS BLOCK USED TO LIVE INSIDE <helmet> IN THE <body>, and
+     support.js moved it into document.head at runtime. That works in a
+     browser and fails everywhere else: Facebook, WhatsApp, LinkedIn,
+     Slack and Twitter scrapers do not execute JavaScript, so a link to
+     this site shared anywhere arrived as a bare grey URL with no title,
+     no description and no card — on a site whose entire distribution is
+     parents forwarding links to each other.
+
+     The same mechanism silently voided a SECURITY claim: netlify.toml
+     said the unlisted club form was safe partly because "the page
+     carries noindex". It did not. The tag only existed after JS ran, and
+     a crawler that ignores JS ignored it too. (The path is deliberately
+     not written out here - see netlify.toml.)
+
+     ⚠️ EVERYTHING HERE IS A CONSTANT. Nothing in this block needs the
+     component engine, which is why none of it belongs in <helmet>. Put
+     new title/description/canonical/og/twitter/robots/JSON-LD tags HERE.
+     Fonts, icons, the manifest and every script tag stay in the helmet -
+     those are for browsers, which do run JavaScript.
+
+     ⚠️ DO NOT ALSO LEAVE A COPY IN THE HELMET. The helmet is appended to
+     document.head, so a duplicate becomes two title tags on the live
+     page. test-head-metadata.js asserts there is exactly one of each.
+     ============================================================ -->
+<meta name="robots" content="noindex, nofollow">
+<title>Register your club — ADH JRT</title>
 </head>
 <body>
 <x-dc>
@@ -16,8 +45,6 @@
      a public file, so listing the path there would ADVERTISE it to exactly
      the people it is hidden from. sitemap.xml omits it too, and nothing on
      adhjrt.com links to it. -->
-<meta name="robots" content="noindex, nofollow">
-<title>Register your club — ADH JRT</title>
 <link rel="icon" type="image/png" href="/assets/crest.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="theme-color" content="#0C0C0E">

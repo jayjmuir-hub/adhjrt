@@ -4,6 +4,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<!-- ============================================================
+     CRAWLER-FACING METADATA — MUST STAY IN THE REAL <head>.
+     ============================================================
+     ⚠️ THIS BLOCK USED TO LIVE INSIDE <helmet> IN THE <body>, and
+     support.js moved it into document.head at runtime. That works in a
+     browser and fails everywhere else: Facebook, WhatsApp, LinkedIn,
+     Slack and Twitter scrapers do not execute JavaScript, so a link to
+     this site shared anywhere arrived as a bare grey URL with no title,
+     no description and no card — on a site whose entire distribution is
+     parents forwarding links to each other.
+
+     The same mechanism silently voided a SECURITY claim: netlify.toml
+     said the unlisted club form was safe partly because "the page
+     carries noindex". It did not. The tag only existed after JS ran, and
+     a crawler that ignores JS ignored it too. (The path is deliberately
+     not written out here - see netlify.toml.)
+
+     ⚠️ EVERYTHING HERE IS A CONSTANT. Nothing in this block needs the
+     component engine, which is why none of it belongs in <helmet>. Put
+     new title/description/canonical/og/twitter/robots/JSON-LD tags HERE.
+     Fonts, icons, the manifest and every script tag stay in the helmet -
+     those are for browsers, which do run JavaScript.
+
+     ⚠️ DO NOT ALSO LEAVE A COPY IN THE HELMET. The helmet is appended to
+     document.head, so a duplicate becomes two title tags on the live
+     page. test-head-metadata.js asserts there is exactly one of each.
+     ============================================================ -->
+<title>Live Scores &amp; Standings | ADH JRT 2026</title>
+<meta name="description" content="Live pool results, standings and knockout brackets from the Abu Dhabi Harlequins Junior Rugby Tournament, 7-8 November 2026 at Zayed Sports City. All age groups, U6 to U18.">
+<link rel="canonical" href="https://adhjrt.com/scores">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">
+<meta property="og:title" content="Live Scores &amp; Standings — ADH JRT 2026">
+<meta property="og:description" content="Pool results, standings and brackets across all age groups, updating live on match days.">
+<meta property="og:url" content="https://adhjrt.com/scores">
+<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Live Scores &amp; Standings — ADH JRT 2026">
+<meta name="twitter:description" content="Pool results, standings and brackets across all age groups, updating live on match days.">
+<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
 </head>
 <body>
 <x-dc>
@@ -19,7 +59,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<title>Live Scores &amp; Standings | ADH JRT 2026</title>
 <link rel="icon" type="image/png" href="assets/crest.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0C0C0E">
@@ -40,18 +79,6 @@
 </script>
 
 
-<meta name="description" content="Live pool results, standings and knockout brackets from the Abu Dhabi Harlequins Junior Rugby Tournament, 7-8 November 2026 at Zayed Sports City. All age groups, U6 to U18.">
-<link rel="canonical" href="https://adhjrt.com/scores">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">
-<meta property="og:title" content="Live Scores &amp; Standings — ADH JRT 2026">
-<meta property="og:description" content="Pool results, standings and brackets across all age groups, updating live on match days.">
-<meta property="og:url" content="https://adhjrt.com/scores">
-<meta property="og:image" content="https://adhjrt.com/assets/share-card.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Live Scores &amp; Standings — ADH JRT 2026">
-<meta name="twitter:description" content="Pool results, standings and brackets across all age groups, updating live on match days.">
-<meta name="twitter:image" content="https://adhjrt.com/assets/share-card.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Barlow',system-ui,sans-serif;background:#0C0C0E;color:#fff;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}

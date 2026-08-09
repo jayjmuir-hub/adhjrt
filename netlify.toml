@@ -53,6 +53,16 @@
 # Deliberately NOT added to robots.txt as a Disallow: that file is public too,
 # so a Disallow would advertise the path to exactly the people it is hidden
 # from. noindex does the same job without naming it anywhere public.
+#
+# ⚠️ CORRECTED 9 Aug 2026 — "the page carries noindex" WAS NOT TRUE when this
+# comment was written, and had never been true. The tag sat inside <helmet> in
+# the BODY, and support.js moved it into document.head at runtime — so it
+# existed only after JavaScript ran, and a crawler that ignores JavaScript
+# ignored it too. The sentence above described a control that was not there.
+# The tag is now in the literal <head> of Club.dc.html, where a crawler sees it
+# without executing anything, and test-head-metadata.js holds it there.
+# The lesson is not about this tag: a comment asserting a security property is
+# worth nothing unless something checks the property.
 [[redirects]]
   from = "/register-club"
   to = "/Club.dc.html"
@@ -213,3 +223,47 @@
   for = "/assets/board/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# --- the functions source, and the config -------------------------------
+# ⚠️ SIXTH TIME. tests/, tools/, claude/, CLAUDE.md and RESTORE.md each got one
+# of these once somebody noticed; netlify/ was never considered. No publish
+# directory is set, so the repo root IS the deployed site — and `functions =
+# "netlify/functions"` points INSIDE it. Netlify's own documentation says to
+# keep the functions directory outside the publish directory precisely so the
+# source is not served as part of the site.
+#
+# This is the one directory in the repo whose source IS security logic:
+# _auth.js (session signing and the revocation check), _intake.js (the
+# CLUB_FORM_KEY gate), _googleAuth.js. The repo is public, so this discloses
+# nothing new to anyone who thinks to look on github.com — but "already public
+# elsewhere" is not a reason to serve it from the site as well.
+#
+# netlify.toml itself is served for the same reason, and it is the file that
+# names the /register-club silent link. package.json exposes the exact
+# dependency ranges to anyone fingerprinting for a known-vulnerable version.
+#
+# ⚠️ `to` MUST be a different path — a redirect pointing at itself is silently
+# DROPPED by Netlify rather than applied. That mistake sat unnoticed on the
+# tests/ rule for months while the comment above it claimed otherwise.
+#
+# ⚠️ NOT YET VERIFIED ON A DEPLOY. Per this file's own standard, prove it by
+# fetching /netlify/functions/_auth.js on a BRANCH deploy (free) and checking
+# for 404 WHILE an unruled sibling still returns 200 — a 404 alone proves
+# nothing, because a file that is simply absent 404s identically.
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/netlify.toml"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/package.json"
+  to = "/404.html"
+  status = 404
+  force = true

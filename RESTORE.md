@@ -821,6 +821,64 @@ why they went unlooked-at through every earlier mobile pass — the window was
 shut, so opening the home page on a phone showed no modal at all. **A screen
 that only renders in one state is not tested by looking at the page.**
 
+## Page metadata lives in the real `<head>`, never in `<helmet>`
+
+The `.dc.html` pages have a nearly empty literal `<head>` — charset, viewport,
+one script — because `support.js` compiles `<helmet>` out of the `<body>` into
+`document.head` after boot. Until Aug 2026 **every** head tag lived there.
+
+**⚠️ That works in a browser and nowhere else.** Facebook, WhatsApp, LinkedIn,
+Slack and Twitter scrapers do not execute JavaScript. So every link to this site
+shared anywhere arrived as a bare grey URL — no title, no description, no card —
+on a site whose entire distribution is parents forwarding links to each other.
+
+**⚠️ And it silently voided a security claim.** `netlify.toml` said the unlisted
+club form was protected partly because "the page carries noindex". It did not:
+the tag existed only after JS ran, and the crawlers that ignore JS are the ones
+that would have found the page. *A comment asserting a security property is
+worth nothing unless something checks the property.*
+
+**The rule now:**
+
+| Goes in the literal `<head>` | Stays in `<helmet>` |
+|---|---|
+| `<title>`, description, canonical | font preconnects and stylesheets |
+| all `og:` / `twitter:` tags | icons, manifest, theme-color |
+| `robots` (noindex) | every script |
+| JSON-LD | anything the engine templates |
+
+The split is simply *does a non-rendering crawler need it*. Everything in the
+left column is a constant — none of it ever needed the engine.
+
+- **⚠️ MOVE, never copy.** The helmet is appended to `document.head`, so a tag
+  left in both places becomes two `<title>` tags on the live page.
+  `test-head-metadata.js` checks each tag is present in `<head>` **and absent
+  from `<helmet>`** — the negative half is the load-bearing one.
+- **⚠️ Match tags line-anchored when writing checks over these files.** Three
+  separate things broke on this in one sitting: my own `<head>` comment
+  contained the word `<helmet>` and a verification script sliced from the
+  comment instead of the tag; the same comment contained a literal script tag,
+  which `test-about-board.js`'s scanner read as opening a script region and made
+  it report the rest of the file as script body; and a comment naming the club
+  form's path failed `test-intake.js`, which proves the path's absence with a
+  plain substring search. **Real tags start a line; prose never does. And a
+  comment warning about a string is indistinguishable from the string.**
+- `/app` gained a canonical and share tags. The repo root is the deployed site
+  and `/app` is a 200 rewrite, so `/app.html` stays reachable alongside it —
+  two indexable URLs for identical content with nothing joining them.
+- `/legal` was added to `sitemap.xml`; it is `robots: all` with its own
+  canonical and had simply never been listed.
+
+**Also served but not part of the site, now 404'd:** `/netlify/*` (the functions
+source — the one directory whose source *is* security logic), `/netlify.toml`
+and `/package.json`. Same reasoning as `tests/`, `tools/` and `claude/` before
+them; Netlify's own docs say to keep the functions directory outside the publish
+directory, and there is no publish directory here. ⚠️ **Not yet verified on a
+deploy** — prove it on a free branch deploy with an unruled sibling returning
+200 as the control, per this repo's standard.
+
+---
+
 ## Gotchas found the hard way
 
 - ⚠️ **NEVER WRITE A camelCase NAME FOLLOWED BY `=` INSIDE AN INLINE `<script>`

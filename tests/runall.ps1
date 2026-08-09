@@ -72,6 +72,7 @@ $tests = @(
   'test-light-mode.js',
   'test-design-polish.js',
   'test-back-office-links.js',
+  'test-head-metadata.js',
   'test-about-board.js',
   'test-doc-claims.js',
   'test-age-group-picker.js'

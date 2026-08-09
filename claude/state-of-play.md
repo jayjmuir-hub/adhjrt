@@ -519,12 +519,58 @@ measured 63 ms vs 64 ms).
 one existing suite (`test-unified-login.js`) gained two checks for the new
 shape. All four reported COULD NOT INJECT rather than passing silently.
 
-⚠️ **Still open from the same review**, worst first: all `<head>` metadata on the
-`.dc.html` pages is injected by JS, so shared links have no title or card **and
-`/register-club` does not actually carry `noindex` in the served HTML** — the
-`netlify.toml` comment claiming it does is wrong; the hero PNG is 1.8 MB;
-`/netlify/functions/*.js`, `/netlify.toml` and `/package.json` are served by the
-site; no form control anywhere has a programmatic label; there is no lockfile.
+---
+
+## 9 Aug 2026 — head metadata moved into the real `<head>` (same branch, NOT deployed)
+
+Fourth and sixth review findings, done together because they share a file.
+Every crawler-facing tag lived in `<helmet>` in the `<body>` and was moved into
+`document.head` by JavaScript at boot — so **every link to this site shared on
+WhatsApp, Facebook, LinkedIn or Slack arrived as a bare grey URL**, on a site
+distributed entirely by parents forwarding links. Durable detail in
+`RESTORE.md` → "Page metadata lives in the real `<head>`".
+
+It also **silently voided a security claim**: `netlify.toml` said the unlisted
+club form was protected partly because the page carries `noindex`. It did not —
+the tag only existed after JS ran. That comment has been corrected in place, and
+the tag is now where a crawler sees it.
+
+`/app` gained a canonical (it was reachable as both `/app` and `/app.html` with
+nothing joining them) and share tags. `/legal` was added to `sitemap.xml`.
+`/netlify/*`, `/netlify.toml` and `/package.json` are now 404'd — ⚠️ **not yet
+verified on a deploy**; do it on a free branch deploy with an unruled sibling
+returning 200 as the control.
+
+**Suite: 823/823 faults, 38 clean, 43 files.** Six new faults. The clean
+baseline has gone 34 → 38 across the four fixes on this branch.
+
+⚠️ **THREE SEPARATE THINGS BROKE ON THE SAME MISTAKE IN ONE SITTING, ALL MINE:
+a comment that mentions a string is indistinguishable from the string.**
+
+1. My `<head>` comment contained the word `<helmet>`, so my own verification
+   script sliced from the comment instead of the tag and reported tags "still in
+   the helmet" that had been moved correctly.
+2. The same comment contained a literal script tag, which `test-about-board.js`
+   read as opening a script region — it then reported the rest of the file as
+   script body and failed the encodeCase check.
+3. A comment naming the club form's path failed `test-intake.js`, which proves
+   the path's absence with a plain substring search over the file.
+
+**Real tags start a line; prose never does.** Match structurally, and do not
+name a string in a comment that sits inside the file a checker greps.
+
+⚠️ **Still open from the same review**, worst first: the hero PNG is **1.8 MB**
+and is larger than the rest of the homepage put together; **no form control
+anywhere on the site has a programmatic label**, so a screen reader announces
+"edit text, blank" for club name, contact email and every age-group count box;
+the `/app` bottom sheet claims `aria-modal` but has no Escape handler, no focus
+management and no focus trap, and its submit buttons can be double-tapped;
+duplicate team codes on a failed sheet read; no server-side age check on a
+single player registration; `scoring-rules.js` silently rewrites a group to
+tries-only on a malformed value and answers 200; `mergeVenue` can produce a day
+with zero pitches; the homepage hardcodes tournament dates the back office can
+change; there is no lockfile; 184 KB of dead JS is served; and `_scoring.js` and
+`scores-data.js` hold duplicate points tables with nothing asserting they match.
 
 **The counts that used to be duplicated in `CLAUDE.md` and `tests/README.md`
 have been DELETED rather than re-synced a fifth time.** They disagreed with

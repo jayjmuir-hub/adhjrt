@@ -933,6 +933,49 @@ passed must never look the same.
 
 ---
 
+## Keyboard access — the skip link, landmarks, and reduced motion
+
+**A skip link on the homepage, and only there.** It is the first focusable
+element on the page and invisible until focused. Without it a keyboard or
+screen-reader user tabs through the crest, the wordmark, seven nav links and the
+menu toggle before reaching content, on every visit. ⚠️ **It is deliberately NOT
+on the back-office pages** — those are single screens with two to six links
+before content, and a skip link there skips nothing.
+
+⚠️ **Off-screen, never `display:none`.** Hiding it that way removes it from the
+tab order, which is the usual way this ships broken: present in the markup,
+unreachable by the person it is for. `left:-9999px` with `.skip-link:focus{left:0}`.
+
+**One main landmark per page.** The homepage's is a wrapper inserted inside the
+existing `overflow:hidden` div — that div's overflow is load-bearing for the
+sticky header, so it stays. ⚠️ **It closes BEFORE the footer**; a landmark that
+swallows the footer is not a landmark. The other `.dc.html` pages had their
+outer wrapper *renamed* rather than wrapped, which is layout-neutral: both are
+`display:block`, none has a footer inside, and nothing in their CSS selects a
+bare `div` at that level. Checked before doing it.
+
+**The stat counter honours `prefers-reduced-motion`.** The stylesheet had a
+whole block for it — with a note explaining the preference is about MOVEMENT —
+and `animateStats()` ignored all of it, running a 1500 ms count-up regardless.
+
+⚠️ **THE GUARD SETS THE FINAL VALUES, IT DOES NOT SKIP THEM.** `statsP` drives
+what the stat row *displays*, so an early return that does not set it leaves the
+page reading "0+ CLUBS, 0+ PLAYERS, 0 AGE GROUPS" permanently — far worse than
+the animation it was avoiding. There is a fault for exactly that.
+
+**Focus rules** were added to `legal.html` and `rules.html`, and broadened from
+`a.btn` to every link on `404.html`.
+
+⚠️ **MY AUDIT OF THE FOCUS SITUATION WAS WRONG FIRST, and the correction is the
+useful part.** I reported "23 hover rules against 2 focus rules" from a raw grep
+for `:focus-visible`. One of those two lines was a GLOBAL rule covering `a`,
+`button`, `input`, `select` and `textarea` at once — so coverage was fine on
+that page and my number implied it was not. Measured properly, seven of ten
+pages already had a global rule and only two had none. **Count what a rule
+COVERS, not how many times a string appears.**
+
+---
+
 ## Accessibility — naming, and the one dialog
 
 **Every form control has an accessible name.** Until Aug 2026 not one did. The

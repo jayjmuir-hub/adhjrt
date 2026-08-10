@@ -149,7 +149,11 @@
 </style>
 </helmet>
 
-<div style="min-height:100vh">
+<!-- A main landmark rather than a plain div, so a screen reader can jump to it.
+     Renamed, NOT wrapped - both are display:block, this page has no footer
+     inside it, and nothing in its CSS selects a bare `div` at this level,
+     so the rename is layout-neutral. Checked before doing it. -->
+<main style="min-height:100vh">
 
   <!-- ===================== SIGNED OUT ===================== -->
   <!-- Sign-in lives on /signin now (one page, both roles — see
@@ -944,7 +948,7 @@
     <div style="position:fixed;left:50%;transform:translateX(-50%);bottom:28px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);color:#1A1C1F;padding:12px 20px;border-radius:100px;font-weight:600;font-size:14px;z-index:80;box-shadow:0 12px 32px rgba(0,0,0,0.5);max-width:88vw;text-align:center;line-height:1.35">{{ toast }}</div>
   </sc-if>
 
-</div>
+</main>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{}}">
 /* The five tabs. Fixtures & scoring comes first and is the landing tab —
    the old Today tab (next match + recent results) duplicated it and was

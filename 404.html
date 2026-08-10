@@ -32,7 +32,9 @@
   a.ghost{background:transparent;border:1px solid rgba(255,255,255,0.25)}
   a.btn:hover{filter:brightness(1.15)}
   a.btn:active{transform:scale(.98)}
-  a.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  /* Broadened from a.btn to every link: the page has other links and they
+     were left without a focus ring. */
+  a:focus-visible{outline:2px solid #fff;outline-offset:2px}
 </style>
 </head>
 <body>

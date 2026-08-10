@@ -232,6 +232,13 @@
   button:active:not(:disabled){transform:scale(.98)}
   button:disabled{opacity:.45;cursor:not-allowed}
   a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  /* The skip link. Off-screen until focused, then a real, visible control at
+     the top-left — NOT display:none, which would take it out of the tab order
+     and defeat the point. */
+  .skip-link{position:absolute;left:-9999px;top:0;z-index:100;background:#E11B22;color:#fff;
+    padding:12px 20px;border-radius:0 0 10px 0;font-family:'Barlow Semi Condensed',system-ui,sans-serif;
+    font-weight:800;font-size:15px;letter-spacing:.5px;text-transform:uppercase;text-decoration:none}
+  .skip-link:focus{left:0}
   ::selection{background:#E11B22;color:#fff}
   @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
@@ -1818,6 +1825,15 @@
      page instead of staying pinned. Moving the header above this div, as a
      sibling rather than a child, fixes that; nothing about the header's own
      look depends on being inside it (it carries its own background). -->
+  <!-- ⚠️ THE FIRST FOCUSABLE THING ON THE PAGE, and it is invisible until it is
+       focused. Without it a keyboard or screen-reader user tabs through the
+       crest, the wordmark, seven nav links and the menu toggle before reaching
+       any content — on every visit, on every page. It is styled as a normal
+       page control rather than hidden-forever because a skip link nobody can
+       see when focused is the usual way this gets shipped broken.
+       ⚠️ Its target is the main landmark below; the two go together. -->
+  <a href="#content" class="skip-link">Skip to content</a>
+
   <!-- ============ HEADER ============ -->
   <header style="position:sticky;top:0;z-index:50;background:rgba(12,12,14,0.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.08);animation:fadeIn .5s ease both">
     <!-- red->green signature line -->
@@ -1910,6 +1926,15 @@
   </header>
 
 <div style="overflow:hidden;background:#F3F1ED">
+<!-- ⚠️ THE MAIN LANDMARK WRAPS THE SECTIONS AND STOPS BEFORE THE FOOTER. A landmark that
+     swallows the footer is not a landmark. It carries no styles of its own and
+     sits inside the existing overflow wrapper rather than replacing it — the
+     wrapper's overflow:hidden is load-bearing for the sticky header (see the
+     note above it), so it stays exactly where it is.
+     Checked before adding: no CSS selector on this page depends on the
+     sections being direct children of that div. Every > combinator and
+     :nth-child rule is scoped inside .hdr-* or .m-stack-2. -->
+<main id="content">
 
   <!-- ============ HERO ============ -->
   <section id="top" style="position:relative;background:#0C0C0E;color:#fff;overflow:hidden">
@@ -2810,6 +2835,8 @@
       </div>
     </div>
   </section>
+
+  </main>
 
   <!-- ============ FOOTER ============ -->
   <footer style="background:#060606;color:#8a8f99;padding:60px 32px 40px">
@@ -3801,6 +3828,23 @@ class Component extends DCLogic {
   animateStats() {
     if (this._statsStarted) return;
     this._statsStarted = true;
+
+    /* ⚠️ HONOUR prefers-reduced-motion, WHICH THE CSS ALREADY DOES AND THIS DID
+       NOT. The stylesheet has a whole @media (prefers-reduced-motion:reduce)
+       block, with a note explaining that the preference is about MOVEMENT and
+       that killing fades as well leaves somebody with nothing to look at. This
+       function ignored all of it and ran a 1500ms count-up regardless — so a
+       visitor who has asked their operating system for less motion, because
+       movement triggers migraine or vertigo, got four numbers spinning anyway.
+
+       ⚠️ IT JUMPS TO THE FINAL VALUES, it does not skip them. statsP drives
+       what the stat row DISPLAYS, so returning early without setting it would
+       leave the page reading "0+ CLUBS, 0+ PLAYERS, 0 AGE GROUPS" for ever —
+       which is worse than the animation by a wide margin. */
+    const noMotion = typeof matchMedia === 'function'
+      && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (noMotion) { this.setState({ statsP: 1 }); return; }
+
     const start = performance.now(), dur = 1500;
     const step = (now) => {
       const t = Math.min(1, (now - start) / dur);

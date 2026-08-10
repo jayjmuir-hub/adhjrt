@@ -186,4 +186,91 @@ section('⚠️ Submit buttons cannot be double-tapped');
   });
 }
 
+/* ====================================================================== */
+section('Every page can be reached by keyboard, and says where it is');
+
+{
+  /* ⚠️ MY OWN EARLIER COUNT OF THIS WAS MISLEADING, and the correction is the
+     reason these checks are shaped this way. I reported "23 hover rules against
+     2 focus rules" from a raw grep for the string ':focus-visible'. One of
+     those two lines was a GLOBAL rule covering a, button, input, select and
+     textarea at once — so coverage was fine on that page and my number implied
+     it was not. Count what a rule COVERS, never how many times a string
+     appears. Measured properly, only legal.html and rules.html had none. */
+  const FOCUSABLE_PAGES = [...PAGES, 'legal.html', 'rules.html', '404.html'];
+  FOCUSABLE_PAGES.forEach((page) => {
+    const css = stripComments(readRepo(page));
+    /* A rule that names a focusable element type and gives it an outline. */
+    const hasRule = /(?:^|[,\s])(?:a|button|input|select|textarea)(?:\.[\w-]+)?:focus-visible[^{]*\{[^}]*outline/m.test(css);
+    check(`${page}: keyboard focus is visible somewhere`, hasRule,
+      'a page with no focus rule leaves keyboard users with no cursor at all');
+  });
+}
+
+{
+  /* The skip link earns its place on the homepage specifically: crest,
+     wordmark, seven nav links and a menu toggle stand between the top of the
+     page and the content, on every visit. It is NOT added to the single-screen
+     back-office pages, where there is nothing to skip. */
+  const home = stripComments(readRepo('Quins JRT.dc.html'));
+  check('the homepage has a skip link', /href="#content"[^>]*class="skip-link"/.test(home));
+  check('…pointing at a target that exists', /id="content"/.test(home));
+
+  /* ⚠️ THE FAILURE MODE IS A SKIP LINK NOBODY CAN SEE WHEN THEY FOCUS IT.
+     display:none or visibility:hidden take it out of the tab order entirely,
+     which is the usual way this ships broken — present in the markup, useless
+     in practice. Off-screen positioning is the technique that works. */
+  const skipCss = (home.match(/\.skip-link\{[^}]*\}/) || [''])[0];
+  check('the skip link is styled', skipCss.length > 0);
+  check('⚠️ …off-screen, NOT display:none or visibility:hidden',
+    /left:-9999px/.test(skipCss) && !/display:none/.test(skipCss) && !/visibility:hidden/.test(skipCss),
+    skipCss);
+  check('⚠️ …and comes back on :focus', /\.skip-link:focus\{[^}]*left:0/.test(home));
+}
+
+{
+  /* One main landmark per page — the thing a screen reader jumps to. */
+  ['Quins JRT.dc.html', 'Scores & Standings.dc.html', 'Manager.dc.html',
+    'Organizer.dc.html', 'app.html', 'legal.html', 'rules.html', '404.html'].forEach((page) => {
+    const src = stripComments(readRepo(page));
+    eq(`${page}: exactly one main landmark`, (src.match(/<main[\s>]/g) || []).length, 1);
+    eq(`${page}: …and it is closed`, (src.match(/<\/main>/g) || []).length, 1);
+  });
+
+  /* ⚠️ A LANDMARK THAT SWALLOWS THE FOOTER IS NOT A LANDMARK. Only the
+     homepage has a footer inside the same wrapper, which is why it is wrapped
+     rather than renamed. */
+  const home = stripComments(readRepo('Quins JRT.dc.html'));
+  const mainClose = home.indexOf('</main>'), footer = home.indexOf('<footer');
+  check('the homepage footer sits OUTSIDE main', mainClose !== -1 && footer !== -1 && footer > mainClose,
+    `main closes at ${mainClose}, footer at ${footer}`);
+}
+
+/* ====================================================================== */
+section('⚠️ The stat counter honours a reduced-motion preference');
+
+{
+  const home = stripComments(readRepo('Quins JRT.dc.html'));
+  check('the CSS already had a reduced-motion block', /prefers-reduced-motion/.test(home));
+  /* ⚠️ ASKING IS NOT ACTING, and the first version of this check only proved
+     the asking. Deleting the guard left `const noMotion = matchMedia(...)`
+     sitting there unused, the regex still matched, and the fault reported as
+     "failed, but not on any of" — caught by the prover, not by me. Both halves
+     are required now: the query AND a branch that does something with it. */
+  check('⚠️ …and now the counter checks it too',
+    /matchMedia\('\(prefers-reduced-motion: reduce\)'\)/.test(home)
+      && /if \(noMotion\)/.test(home),
+    'the stylesheet honoured the preference and the JS ignored it');
+
+  /* ⚠️ IT MUST JUMP TO THE VALUES, NOT SKIP THEM. statsP drives what the stat
+     row DISPLAYS, so an early return that does not set it leaves the page
+     reading "0+ CLUBS, 0+ PLAYERS, 0 AGE GROUPS" permanently — far worse than
+     the animation it was avoiding. */
+  const guard = (home.match(/if \(noMotion\)[\s\S]{0,120}/) || [''])[0];
+  check('the guard was located', guard.length > 0);
+  check('⚠️ …and it sets statsP to 1 before returning', /setState\(\{ statsP: 1 \}\)/.test(guard), guard);
+  check('…so it never returns without setting the final values',
+    !/if \(noMotion\) \{ return/.test(home));
+}
+
 summary('test-accessibility.js');

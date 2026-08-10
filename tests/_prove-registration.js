@@ -60,6 +60,9 @@ const NEEDED = [
      scores-data.js in the browser. test-scoring-model.js requires the first
      and parses the second, so BOTH have to ride along or its faults report
      as a dead suite rather than as drift. */
+  'legal.html',
+  'rules.html',
+  '404.html',
   'netlify/functions/_scoring.js',
   /* test-google-auth-behaviour.js DRIVES both of these rather than reading
      them as text, so they have to be in the temp copy. */
@@ -8235,6 +8238,74 @@ const FAULTS = [
       '      if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
       '      if (false) {'),
     expect: ['an organiser signup is refused while the env var is absent'],
+  },
+
+  /* ==================================================================== */
+  /* KEYBOARD ACCESS (Aug 2026) - the tail of the accessibility work.
+
+     ⚠️ MY OWN AUDIT OF THIS WAS WRONG FIRST. I reported "23 hover rules
+     against 2 focus rules" from a raw grep for ':focus-visible'. One of those
+     two lines was a GLOBAL rule covering a, button, input, select and textarea
+     - so coverage was fine and my number implied it was not. Measured properly,
+     only legal.html and rules.html had no focus rule at all. Count what a rule
+     COVERS, not how many times a string appears. */
+  {
+    name: 'the skip link is removed, so the header must be tabbed through every time',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '  <a href="#content" class="skip-link">Skip to content</a>', ''),
+    expect: ['the homepage has a skip link'],
+  },
+  {
+    /* The usual way this ships broken: present in the markup, out of the tab
+       order, so it can never be reached by the person it is for. */
+    name: 'the skip link is hidden with display:none, taking it out of the tab order',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '.skip-link{position:absolute;left:-9999px;',
+      '.skip-link{display:none;position:absolute;left:-9999px;'),
+    expect: ['off-screen, NOT display:none'],
+  },
+  {
+    name: 'the skip link never comes back on focus, so it stays off-screen',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '  .skip-link:focus{left:0}', ''),
+    expect: ['and comes back on :focus'],
+  },
+  {
+    name: 'the main landmark is removed',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '<main id="content">', ''),
+    expect: ['exactly one main landmark'],
+  },
+  {
+    /* A landmark that swallows the footer is not a landmark. */
+    name: 'the main landmark is closed after the footer instead of before it',
+    suite: 'test-accessibility.js',
+    /* ⚠️ Single-line anchor. A multi-line string literal here is a syntax
+       error, and writing one from a generator script is how it happened. */
+    apply: () => patch(HOME, '  </main>', ''),
+    expect: ['footer sits OUTSIDE main', 'and it is closed'],
+  },
+  {
+    name: 'the stat counter stops honouring prefers-reduced-motion',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '    if (noMotion) { this.setState({ statsP: 1 }); return; }', ''),
+    expect: ['and now the counter checks it too'],
+  },
+  {
+    /* The trap in the fix itself: statsP drives what the row DISPLAYS, so
+       returning without setting it leaves "0+ CLUBS" on screen for ever. */
+    name: 'the reduced-motion guard returns without setting the final values',
+    suite: 'test-accessibility.js',
+    apply: () => patch(HOME, '    if (noMotion) { this.setState({ statsP: 1 }); return; }',
+      '    if (noMotion) { return; }'),
+    expect: ['it sets statsP to 1 before returning'],
+  },
+  {
+    name: 'a static page loses its only focus rule',
+    suite: 'test-accessibility.js',
+    apply: () => patch('legal.html',
+      '  a:focus-visible,button:focus-visible{outline:2px solid #E11B22;outline-offset:2px}', ''),
+    expect: ['legal.html: keyboard focus is visible somewhere'],
   },
 ];
 

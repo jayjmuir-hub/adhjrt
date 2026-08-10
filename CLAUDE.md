@@ -605,9 +605,20 @@ clutter to be cleaned up; it is the workflow. Build on `Compare`, look at it at
 `compare--adhquins-jrt.netlify.app` for **nothing**, then merge to `main` for
 one 15-credit deploy when it is right.
 
-It stays in the Netlify branch-deploy allow-list (`dev, Compare`) and is
-password-gated with every other non-production deploy, so it is not the
-exposure that `club-manager-page` was.
+It stays in the Netlify branch-deploy allow-list (`dev, Compare`).
+
+⚠️ **THIS PARAGRAPH USED TO SAY `Compare` IS "password-gated with every other
+non-production deploy". DO NOT TRUST THAT, AND DO NOT WRITE IT BACK.** It was
+the FIFTH recording of the site-password state in these files and, like three of
+the four before it, it was wrong — measured 9 Aug 2026 via the Netlify MCP:
+`requiresPassword: false`, `whichProjectsRequirePassword: null`. **Off
+everywhere, production included.**
+
+The rule from `claude/state-of-play.md` applies here too: **this file refuses to
+answer what the password state is.** Ask the Netlify MCP (`get-project` →
+`projectAccessControls`) at the moment you need to know. A branch deploy is a
+public URL unless something you have just checked says otherwise — which is what
+made `club-manager-page` an exposure.
 
 ⚠️ **ONE RULE MAKES IT SAFE, AND IGNORING IT IS HOW `club-manager-page`
 HAPPENED: `Compare` MUST NEVER BE LEFT BEHIND `main`.** A long-lived branch
@@ -632,9 +643,17 @@ everything behind it — which happened on 6 Aug and left `main` merged but
 undeployed. `[skip ci]` is only for a docs commit pushed straight to `main` on
 its own.
 
-**State now: `main`, `dev` and `Compare` are ALL `5f55217` — 0 ahead, 0
-behind.** The three commits went to production together on 6 Aug, and `Compare`
-was fast-forwarded in the same breath, which is the rule that keeps it safe.
+⚠️ **NO "STATE NOW" LINE LIVES HERE ANY MORE.** This paragraph used to name a
+commit sha and assert all three branches were level with it. That is a
+`currently`, and rule 1 of this file's own precedence section says a date, a
+count or a "currently" belongs in `claude/state-of-play.md`. It rotted, as it
+was always going to: it still said `5f55217` while `main` had moved twelve
+commits past it and `Compare` sat fifteen behind.
+
+**Run the check instead — it is two lines and it cannot go stale:**
+
+    git fetch origin && git rev-list --count origin/Compare..origin/main
+    git fetch origin && git rev-list --count origin/dev..origin/main
 ⚠️ **Batching worked exactly as intended: three commits, two of them touching
 served files, ONE 15-credit deploy instead of three.**
 

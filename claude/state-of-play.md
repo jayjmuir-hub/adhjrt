@@ -885,6 +885,36 @@ the prover's "failed, but not on any of" report is what surfaced it.
 assertions read `r.session._role` on a response that had become `needsSignup`.
 An explicit "a session came back at all" now precedes every session read.
 
+## 10 Aug 2026 — repo tidy-up, and a rule I broke twice
+
+**`dev` and `Compare` were fifteen commits behind `main`, and that is a rule
+violation, not untidiness.** `CLAUDE.md` says *"`Compare` MUST NEVER BE LEFT
+BEHIND `main` … after every land, fast-forward it in the same breath"*, and
+explains why: a long-lived branch that lags is one somebody eventually treats as
+current — how `club-manager-page` shipped a bypassable rate limit, 68 commits
+behind. **I merged to `main` twice and fast-forwarded neither time.** Both are
+now level; the rule's own check reads 0 for both.
+
+**Two stale claims in `CLAUDE.md` corrected while reading that rule:**
+
+1. **It asserted `Compare` is "password-gated with every other non-production
+   deploy". It is not.** Measured 9 Aug via the Netlify MCP:
+   `requiresPassword: false`, off everywhere including production. That was the
+   **fifth** recording of this fact in these files and the fourth wrong one, in
+   the very paragraph explaining why a public branch deploy was an exposure.
+   The paragraph now **refuses to answer** and sends you to the MCP, exactly as
+   this file's own ruling required.
+2. **It carried a "State now: … ALL `5f55217`" line** — a `currently` in the
+   file whose own precedence rule sends dates, counts and "currently" here
+   instead. It said `5f55217` while `main` was twelve commits past it. Replaced
+   with the two-line check that cannot go stale.
+
+**Merged branches deleted:** `fix/review-aug-2026`,
+`fix/homepage-dates-and-google-tests` — both fully in `main`, purpose served.
+⚠️ **`dev` and `Compare` are NOT clutter and were not touched beyond the
+fast-forward** — `Compare` is the standing preview branch, kept on purpose, and
+deleting the pair has already caused trouble once (8 Aug).
+
 ## Where things stand
 
 | | |

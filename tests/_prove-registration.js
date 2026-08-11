@@ -1054,8 +1054,8 @@ const FAULTS = [
        page calls an api.* that does not exist, which is exactly the silent
        failure test-accounts.js was written for. */
     apply: () => patch('organizer-data.js',
-      "export { myAccount, changeMyPassword, linkGoogle } from './scores-data.js';",
-      "export { myAccount, linkGoogle } from './scores-data.js';"),
+      'export { myAccount, changeMyPassword,',
+      'export { myAccount,'),
     expect: ['provides api.changeMyPassword()', 'changeMyPassword exists'],
   },
   {
@@ -8634,6 +8634,67 @@ const FAULTS = [
       '<sc-for list="{{ revokedAccounts }}" as="a" hint-placeholder-count="1">',
       '<sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="1">'),
     expect: ['the Revoked section is rendered'],
+  },
+
+  /* ---- the session is checked once at boot (11 Aug 2026) -----------------
+     THE HALF THAT WAS MISSING FROM THE FIX ABOVE, AND IT SHIPPED WITHOUT IT.
+     noteSessionEnded signs somebody out when a request is refused, and
+     /manager makes no request that can be refused while it boots: scoring-
+     rules is public, venue-layout and the draw are optional-session, and an
+     optional-session endpoint answers a dead token as the PUBLIC rather than
+     refusing it. So a revoked login rendered the whole dashboard until the
+     person happened to open My account.
+
+     Found by Jay reloading the page and still being in. A mechanism verified
+     in isolation is not a mechanism that runs. */
+  {
+    name: 'the dashboard boots without ever asking whether the session is still good',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Manager.dc.html', '    api.verifySession();\n', ''),
+    expect: ['Manager.dc.html: verifies the session at boot'],
+  },
+  {
+    name: 'the organiser dashboard stops asking at boot',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Organizer.dc.html', '    api.verifySession();\n', ''),
+    expect: ['Organizer.dc.html: verifies the session at boot'],
+  },
+  {
+    name: '/app stops asking at boot',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('app.html', '  api.verifySession();\n', ''),
+    expect: ['app.html: verifies the session at boot'],
+  },
+  {
+    /* An authenticated request on every public page load, asking a question
+       nobody has. "It calls myAccount" passes against this perfectly. */
+    name: 'the boot check fires for signed-out visitors too',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      '  if (!session || !session.token) return;\n  try { await myAccount(); }',
+      '  try { await myAccount(); }'),
+    expect: ['a signed-OUT visitor asks nothing'],
+  },
+  {
+    /* It runs while the dashboard is starting. A throw takes the page with it,
+       and the check exists to be a NICETY when the session is fine. */
+    name: 'a failure during the boot check escapes and breaks the page',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      '  try { await myAccount(); } catch (e) { /* boot must survive anything */ }',
+      '  await myAccount();'),
+    expect: ['a failure during the check cannot break boot'],
+  },
+  {
+    /* The helper becomes a no-op: present, exported, called from all three
+       surfaces, and asking nothing. Every "is it called at boot" check still
+       passes; only driving it catches this. */
+    name: 'the boot check stops actually asking the server anything',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      '  try { await myAccount(); } catch (e) { /* boot must survive anything */ }',
+      '  try { /* nothing */ } catch (e) {}'),
+    expect: ['a signed-in page asks the server whether it is still signed in'],
   },
 
 ];

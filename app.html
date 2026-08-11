@@ -1595,6 +1595,13 @@ function openMatch(id){
      than dropping to the public view and telling them. They can sign back in
      from More without ever leaving the app. */
   api.onSessionEnded(() => dropToPublic('You have been signed out'));
+
+  /* ⚠️ And ask once whether the session is still good, because nothing else
+     here can find out. Every fetch this app makes on load is optional-session,
+     which answers a dead token as the PUBLIC rather than refusing it — so a
+     revoked manager kept the manager UI, and the score buttons with it, until
+     they tried to submit. Not awaited: the app must paint regardless. */
+  api.verifySession();
   // Live scoring rules decide which inputs the score form offers.
   if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
   /* U6 and U7 are festival groups (hasStandings:false). They still have

@@ -1074,6 +1074,49 @@ present. **Fetch the URL the page is SERVED at, not the file it is built from**,
 and treat a zero from a path you have not status-checked as unmeasured rather
 than as absent.
 
+## ⚠️ 11 Aug 2026 — the sign-out fix SHIPPED WITHOUT THE HALF THAT MAKES IT FIRE
+
+**It was deployed, verified, reported done — and Jay reloaded the page and was
+still in.** He was right and the verification was not wrong, which is the
+uncomfortable part: everything it measured was true.
+
+**The cause.** `noteSessionEnded()` signs somebody out when a request is
+REFUSED. **`/manager` makes no request that can be refused while it boots.**
+Measured: `scoring-rules` GET has **no auth at all**, and `venue-layout` GET
+and the draw are **optional-session**, which by design answers a dead token as
+the PUBLIC rather than refusing it. So both calls succeeded exactly as they
+would for an anonymous visitor, and the dead token was never questioned. A
+revoked login rendered the whole dashboard until the person happened to open
+**My account** — which is a strict call, and is precisely why that was the one
+thing telling Jay the truth all along.
+
+⚠️ **A MECHANISM VERIFIED IN ISOLATION IS NOT A MECHANISM THAT RUNS.** Every
+check written for the fix was about whether the rule behaves correctly *when
+handed a refusal*. Not one asked whether the page ever GETS one. The live
+verification had the same shape — a bogus token against the endpoint proves the
+server marks the refusal, and says nothing about whether the dashboard ever
+asks. **Both instruments agreed with the intention. Neither touched the gap.**
+
+⚠️ **AND THE FIRST GREP FOR IT READ 2 AND MEANT NOTHING.** Checking whether
+`/manager` called `myAccount` at boot, a plain count over the page returned 2 —
+a comment and the My account card's own handler. It nearly went into a report
+as evidence the boot check existed. **Count where a call happens, not whether
+its name appears.**
+
+**The fix:** `verifySession()` in `scores-data.js`, re-exported by
+`organizer-data.js`, called once at boot by `/manager`, `/organizer` and
+`/app`. It asks **only when a token exists** (otherwise it is an authenticated
+request on every public page load), swallows everything (it runs during boot; a
+throw takes the page with it), and **cannot lock anybody out** — signing out
+still happens only on the `sessionEnded` marker, so a 503 or a dead network
+leaves the session exactly where it was.
+
+⚠️ **An eighth pre-existing anchor rotted** — `test-my-account.js` pinned
+organizer-data's export list character for character. Repointed to require the
+property (re-exported AND not locally defined) rather than the literal list,
+which is the second time today that repointing made a check stronger than the
+version that broke.
+
 ## Where things stand
 
 | | |

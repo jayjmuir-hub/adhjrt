@@ -2090,6 +2090,16 @@ class Component extends DCLogic {
        /signin the same way. Sign-in itself lives there now — one page, both
        roles, see claude/specs/spec-unified-login.md. */
     const session = api.currentSession();
+
+    /* ⚠️ Same blind spot /manager had, and the same one-line answer: nothing
+       else this page calls while booting can refuse a dead token — they are
+       public or optional-session, and an optional-session endpoint answers as
+       the PUBLIC rather than refusing. Without this a revoked organiser's
+       dashboard renders indefinitely. Not awaited; failures are swallowed;
+       signing out happens only on the sessionEnded marker, so a store outage
+       cannot lock anybody out. */
+    api.verifySession();
+
     this.setState({ api, session });
     if (session) this.loadData(api);
     else this.redirect('/signin?next=/organizer');

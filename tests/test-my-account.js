@@ -556,8 +556,24 @@ section('The two copies of the card cannot drift on WHAT they call');
     check(`/organizer calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(o));
     check(`/manager calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(m));
   }
-  check('organizer-data.js re-exports them rather than reimplementing',
-    /export \{ myAccount, changeMyPassword, linkGoogle \} from '\.\/scores-data\.js';/.test(readRepo('organizer-data.js')));
+  /* ⚠️ REPOINTED 11 Aug 2026, loosened in one direction and TIGHTENED in the
+     other — same treatment as the migrateSession check in
+     test-session-migration.js, and for the same reason. It pinned the export
+     list character for character, so adding a fourth shared function
+     (verifySession, the boot check) broke a check about these three. It now
+     requires each of the three to be named in an export FROM scores-data.js,
+     and — which the old version never did — that organizer-data does not
+     DEFINE one of its own. "Re-exports them" was always the claim; only half
+     of it was ever asserted, and a local copy shadowing the import would have
+     passed. */
+  {
+    const od = readRepo('organizer-data.js');
+    const reexported = (name) =>
+      new RegExp("export \\{[^}]*\\b" + name + "\\b[^}]*\\} from '\\./scores-data\\.js';").test(od)
+      && !new RegExp('function ' + name + '\\b').test(od);
+    check('organizer-data.js re-exports them rather than reimplementing',
+      ['myAccount', 'changeMyPassword', 'linkGoogle'].every(reexported));
+  }
   check('…and the Google client id the link button needs, which it did not before',
     /export \{ googleClientId \} from '\.\/scores-data\.js';/.test(readRepo('organizer-data.js')));
 

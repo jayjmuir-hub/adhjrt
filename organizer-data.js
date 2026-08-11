@@ -232,7 +232,11 @@ export async function resetAccountPassword(username, password) {
    second copy here would be a second copy of the rules. changeMyPassword used
    to POST accounts-admin's 'changeMine'; that action moved to my-account.js on
    3 Aug 2026 so a manager could reach it too. */
-export { myAccount, changeMyPassword, linkGoogle } from './scores-data.js';
+/* verifySession rides with these for the same reason they are here: one copy of
+   the rule, re-exported rather than rewritten. /organizer has exactly the same
+   blind spot /manager had — its boot calls are public or optional-session, so
+   without this a revoked organiser's dashboard renders indefinitely. */
+export { myAccount, changeMyPassword, linkGoogle, verifySession } from './scores-data.js';
 
 /* The Google CLIENT ID, for the Link Google button on the account card.
    ⚠️ This is NOT a sign-in path. /organizer has no way to sign in with Google

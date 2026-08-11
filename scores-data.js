@@ -2039,6 +2039,43 @@ export async function myAccount() {
   return { ok: false, error: 'Your account details need the deployed site (not available in local preview).' };
 }
 
+/* ===== CHECKING THE SESSION IS STILL GOOD, ONCE, AT BOOT =================
+   Spec: claude/specs/spec-session-refusal-aug-2026.md
+
+   ⚠️ WHY THIS EXISTS, AND IT IS THE HALF THAT WAS MISSING. noteSessionEnded()
+   signs somebody out when a request is REFUSED — but /manager makes no request
+   that can be refused. Measured: on load it calls scoring-rules (GET, no auth
+   at all) and venue-layout (GET, optionalSession, which deliberately answers as
+   the public and never marks a session ended). So the dashboard booted, both
+   calls succeeded exactly as they would for an anonymous visitor, and the dead
+   token in localStorage was never questioned. A revoked person's page only told
+   the truth when they happened to touch something strict.
+
+   That was shipped, and found by Jay reloading the page and still being in. The
+   mechanism was verified without checking whether it ever FIRES on the page it
+   was written for.
+
+   ⚠️ IT ASKS ONLY WHEN THERE IS SOMETHING TO ASK ABOUT. A signed-out visitor
+   has no token, so there is nothing to verify and an authenticated call would
+   be pure waste on every public page load.
+
+   ⚠️ IT SWALLOWS EVERYTHING, AND THAT IS DELIBERATE. This runs during boot. A
+   throw here would take the whole dashboard down over a check that is only a
+   nicety when the session is FINE — and the refusal it exists to catch is
+   handled inside tryFetchJson, not by anything returned here. Nothing reads
+   the result on purpose: a caller tempted to branch on it would be re-deciding,
+   badly, something noteSessionEnded has already decided correctly.
+
+   ⚠️ IT CANNOT LOCK ANYONE OUT. Signing out happens only on the sessionEnded
+   marker, so a store outage (503) or a dead network leaves the session exactly
+   where it was — which matters on a tournament morning far more than this check
+   does. */
+export async function verifySession() {
+  const session = currentSession();
+  if (!session || !session.token) return;
+  try { await myAccount(); } catch (e) { /* boot must survive anything */ }
+}
+
 /* Change your OWN password. The current one is required and checked against the
    stored hash server-side — a stolen session must not be enough to lock the
    real owner out. */

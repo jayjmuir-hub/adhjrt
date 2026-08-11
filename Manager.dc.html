@@ -1007,6 +1007,18 @@ class Component extends DCLogic {
 
   async componentDidMount() {
     const api = await import(new URL('scores-data.js', document.baseURI).href);
+
+    /* ⚠️ ASK ONCE WHETHER THIS SESSION IS STILL GOOD, BECAUSE NOTHING ELSE ON
+       THIS PAGE DOES. Every other call made while the dashboard boots is
+       public (scoring-rules) or optional-session (venue-layout, the draw), and
+       an optional-session endpoint answers a dead token as the PUBLIC rather
+       than refusing it — so a revoked or deleted login rendered the whole
+       dashboard indefinitely and only found out if the person happened to open
+       My account. Deliberately NOT awaited: this must never delay the page, and
+       it must never break it. Signing out is handled inside the data layer, on
+       the sessionEnded marker alone, so an outage cannot lock anybody out. */
+    api.verifySession();
+
     await api.loadVenue();
     /* Live scoring rules decide which inputs the score form offers. Without
        this a manager sees the hardcoded defaults from scores-data.js instead

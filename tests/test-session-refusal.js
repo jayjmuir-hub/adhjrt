@@ -349,5 +349,89 @@ section('The server marks a finished session, and only a finished session');
       /onPurge: \(\) => this\.doPurgeAccount\(a\.username, a\.name\)/.test(ORGP));
   }
 
+  /* ====================================================================== */
+  section('⚠️ The session is checked ONCE at boot, because nothing else can');
+
+  {
+    /* WHY THIS SECTION EXISTS. The sign-out rule was shipped, verified, and did
+       not fire on the page it was written for. /manager makes no request that
+       can be refused while it boots: scoring-rules is public and venue-layout
+       is optional-session, which answers a dead token as the PUBLIC rather than
+       refusing it. So a revoked login rendered the whole dashboard until the
+       person happened to open My account. Found by Jay reloading and still
+       being in. A mechanism verified in isolation is not a mechanism that
+       runs. */
+    const SD = readRepo('scores-data.js');
+    const at = SD.indexOf('export async function verifySession(');
+    const open = at < 0 ? -1 : SD.indexOf('{', at);
+    let body = '';
+    if (open > -1) {
+      let depth = 0;
+      for (let i = open; i < SD.length; i++) {
+        if (SD[i] === '{') depth++;
+        else if (SD[i] === '}') { depth--; if (depth === 0) { body = SD.slice(open + 1, i); break; } }
+      }
+    }
+    check('verifySession was found and cut out', body.trim().length > 0);
+
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    async function drive({ session, myAccountThrows = false }) {
+      const calls = { myAccount: 0 };
+      const fn = new AsyncFunction('currentSession', 'myAccount', body || '');
+      let threw = false;
+      try {
+        await fn(
+          () => session,
+          async () => { calls.myAccount++; if (myAccountThrows) throw new Error('boom'); }
+        );
+      } catch (e) { threw = true; }
+      return { ...calls, threw };
+    }
+
+    {
+      const r = await drive({ session: { token: 'a-token' } });
+      eq('a signed-in page asks the server whether it is still signed in', r.myAccount, 1);
+    }
+    {
+      /* ⚠️ THE DISCRIMINATING ONE. "It calls myAccount" passes just as well
+         against a version that calls it for everybody — an authenticated
+         request on every public page load, for a question nobody asked. */
+      const r = await drive({ session: null });
+      eq('⚠️ a signed-OUT visitor asks nothing', r.myAccount, 0);
+    }
+    {
+      const r = await drive({ session: { token: 'a-token' } , myAccountThrows: true });
+      check('⚠️ a failure during the check cannot break boot', r.threw === false,
+        'this runs while the dashboard is starting; a throw takes the page with it');
+    }
+  }
+
+  {
+    /* ⚠️ CALLED AT BOOT, not merely present in the file. The string appears in
+       the My account card too, and a check that only greps for it passes on a
+       page that never runs it — which is exactly the bug being fixed. Both
+       positions are required to EXIST before they are compared: -1 is less
+       than everything, a trap already sprung twice in this repo. */
+    const BOOTS = [
+      ['Manager.dc.html', 'async componentDidMount'],
+      ['Organizer.dc.html', 'async componentDidMount'],
+      ['app.html', 'async function init('],
+    ];
+    BOOTS.forEach(([file, anchor]) => {
+      const src = readRepo(file);
+      const bootAt = src.indexOf(anchor);
+      const callAt = src.indexOf('api.verifySession();');
+      check(`${file}: the boot was found`, bootAt > -1);
+      check(`⚠️ ${file}: verifies the session at boot`,
+        bootAt > -1 && callAt > bootAt && (callAt - bootAt) < 3000,
+        `boot at ${bootAt}, call at ${callAt}`);
+    });
+
+    const OD = readRepo('organizer-data.js');
+    check('organizer-data re-exports the ONE helper rather than rewriting it',
+      /export \{[^}]*\bverifySession\b[^}]*\} from '\.\/scores-data\.js';/.test(OD)
+      && !/function verifySession\b/.test(OD));
+  }
+
   summary('test-session-refusal.js');
 })();

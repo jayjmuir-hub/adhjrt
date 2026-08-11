@@ -829,6 +829,48 @@
       .partner-card:hover .partner-holo{animation:none;opacity:0}
     }
   }
+  /* ============ THE SUPPORTER TILES GET THE SAME GESTURE, IN CLUB GREEN ====
+     Jay, 11 Aug 2026: "lets do the same glow and pop for the other sponsors but
+     in quins green". Deliberately a SMALLER version of the partner card's, for
+     three reasons worth keeping:
+
+     ⚠️ 1. THE GESTURE IS SCALED TO THE OBJECT, which is the same rule the
+     partner card's own comment states — an 8deg tilt on something tall reads as
+     a rendering fault, so it uses 2deg. A supporter tile is 104px, a fraction of
+     the card, so translateY(-8px) would throw it a third of its own height and
+     rotateX on something this small reads as a glitch rather than a tilt.
+     -4px and a slightly larger scale is the same gesture at this size.
+
+     ⚠️ 2. THE PRINCIPAL PARTNER MUST STAY SUPERIOR. HSBC keeps the wider bloom
+     AND the holo shimmer, which no supporter tile has. Giving eighteen tiles the
+     identical treatment is how the only confirmed partner quietly becomes one of
+     nineteen equals - the same demotion the grid's own tests already guard
+     against by keeping HSBC out of it.
+
+     ⚠️ 3. THE GLOW IS FULL-STRENGTH #17A34A, NOT A FADED rgba(). The partner
+     card's first version used a half-opacity glow and Jay's verdict was "I don't
+     see any red glow" - he was right, and the note above records the lesson:
+     toning a borrowed effect down for taste is how it ends up invisible. The
+     wide bloom underneath is the faded one; the tight ring is not.
+
+     ⚠️ border-color TAKES !important BECAUSE THE BORDER IS SET INLINE on the
+     tile (`border:1px solid {{ s.edge }}`), and an inline style beats a
+     stylesheet rule at any specificity. Same trap as `style-hover` losing to an
+     inline `box-shadow`, already recorded for the buttons.
+
+     Same pointer gate as .partner-card and .reg-btn: on a touch device a :hover
+     sticks after the tap and leaves the tile lit with no way to dismiss it. The
+     reduced-motion override is NESTED inside the gate, not written beside it -
+     a separate block trips the scanners in test-design-polish and
+     test-about-board, which match the literal `@media (hover:hover){`. */
+  .spon-tile{transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}
+  @media (hover:hover){
+    .spon-tile:hover{transform:translateY(-4px) scale(1.03);border-color:#17A34A!important;box-shadow:0 0 22px 3px #17A34A,0 0 54px 10px rgba(23,163,74,.34),0 16px 30px -10px rgba(0,0,0,.7)}
+    @media (prefers-reduced-motion:reduce){
+      .spon-tile:hover{transform:none}
+    }
+  }
+
   .fmt-numbg{position:absolute;right:-4px;top:-24px;font-family:'Anton';color:rgba(255,255,255,.05);pointer-events:none;display:flex;align-items:baseline;gap:10px;line-height:1}
   .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
   .fmt-numbg .n{font-size:150px}

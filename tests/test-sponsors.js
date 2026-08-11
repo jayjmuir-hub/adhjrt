@@ -296,6 +296,63 @@ check('the hero lockup keeps its ratio (height:auto + max-height cap)',
 check('the sponsors lockup keeps its ratio (height:auto + max-height cap)',
   /a\[href\*="hsbc\.ae"\]img\{height:auto!important;max-height:150px!important\}/.test(FLAT));
 
+/* =========================================================================
+   THE SUPPORTER TILES' HOVER — the partner card's gesture in club green
+   (Jay, 11 Aug 2026), deliberately a smaller version of it.
+   ========================================================================= */
+{
+  /* Whitespace collapsed rather than removed: FLAT turns "0 0 22px 3px" into
+     "0022px3px", which no one can read or maintain. */
+  const CSS = PAGE.replace(/\s+/g, ' ');
+
+  check('the supporter tiles have a transition to animate',
+    /\.spon-tile\{transition:transform [^}]*box-shadow/.test(CSS));
+
+  /* ⚠️ INSIDE THE POINTER GATE. Without it a :hover sticks after a tap on a
+     touch device and leaves the tile lit with no way to dismiss it — the bug
+     that was already fixed once on the age-group cards and Register buttons. */
+  const gated = /@media \(hover:hover\)\{ \.spon-tile:hover\{/.test(CSS);
+  check('⚠️ the supporter hover sits inside the (hover:hover) gate', gated,
+    'an ungated hover sticks after a tap and cannot be dismissed');
+
+  const rule = (CSS.match(/\.spon-tile:hover\{[^}]*\}/) || [''])[0];
+  check('the hover rule was found', rule.length > 20);
+
+  /* ⚠️ FULL-STRENGTH COLOUR ON THE TIGHT RING. The partner card's first version
+     used a half-opacity glow and Jay's verdict was "I don't see any red glow".
+     Toning a borrowed effect down for taste is how it ends up invisible, so the
+     inner ring is a solid hex; only the wide bloom underneath is faded. */
+  check('⚠️ the glow is club green at full strength, not a faded rgba',
+    /box-shadow:0 0 22px 3px #17A34A/.test(rule), rule.slice(0, 160));
+  check('…with a wider soft bloom under it', /rgba\(23,163,74,\.34\)/.test(rule));
+
+  /* ⚠️ !important, BECAUSE THE BORDER IS INLINE on the tile
+     (border:1px solid {{ s.edge }}) and an inline style beats a stylesheet rule
+     at any specificity. Same trap as style-hover losing to an inline shadow. */
+  check('⚠️ the border colour carries !important, or the inline border wins',
+    /border-color:#17A34A!important/.test(rule));
+
+  check('reduced motion drops the movement, nested inside the gate',
+    /@media \(prefers-reduced-motion:reduce\)\{ \.spon-tile:hover\{transform:none\}/.test(CSS));
+
+  /* ⚠️ THE PRINCIPAL PARTNER STAYS SUPERIOR, AND THIS IS THE CHECK THAT SAYS SO.
+     "The tiles glow" would pass just as well against eighteen tiles given the
+     partner card's exact treatment — which is the demotion the rest of this
+     file already guards against by keeping HSBC out of the grid entirely.
+     The partner keeps the bigger lift, the wider bloom and the holo shimmer. */
+  const lift = (s) => Number((s.match(/translateY\(-(\d+)px\)/) || [])[1]);
+  const partner = (CSS.match(/\.partner-card:hover\{[^}]*\}/) || [''])[0];
+  check('CONTROL: the partner card rule was found too', partner.length > 20);
+  check('⚠️ the supporter lift is SMALLER than the principal partner\'s',
+    lift(rule) > 0 && lift(partner) > 0 && lift(rule) < lift(partner),
+    `${lift(rule)}px vs ${lift(partner)}px`);
+  check('⚠️ …and only the partner keeps the holo shimmer',
+    /\.partner-card:hover \.partner-holo/.test(CSS) && !/spon-tile:hover \.[a-z-]*holo/.test(CSS));
+  /* The partner's glow is HSBC red, not the club colour — it belongs to them. */
+  check('⚠️ …and the partner glow is still HSBC red, not club green',
+    /rgba\(219,0,17/.test(partner) && !/#17A34A/.test(partner));
+}
+
 /* ⚠️ THE TWO HERO LOCKUPS MUST BE MUTUALLY EXCLUSIVE. Showing both would put
    the partner mark on screen twice, which is worse than the bug this fixed. */
 check('the in-row hero lockup is hidden at the mobile breakpoint',

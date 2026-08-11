@@ -8750,6 +8750,80 @@ const FAULTS = [
     expect: ['a signed-in page asks the server whether it is still signed in'],
   },
 
+  /* ---- the supporter tiles' hover (11 Aug 2026) --------------------------
+     The partner card's gesture in club green, at Jay's request. Most of these
+     faults are the effect done PLAUSIBLY WRONG rather than removed - a glow
+     that is present but invisible, a hover that works on a desktop and sticks
+     on a phone, a treatment that quietly promotes eighteen supporters to the
+     principal partner's level. */
+  {
+    /* Jay's own verdict on the first partner-card glow was "I don't see any red
+       glow", and it was there - at half opacity. Toning a borrowed effect down
+       for taste is how it ends up invisible on a #0C0C0E background. */
+    name: 'the supporter glow is toned down to a faded rgba and stops registering',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'box-shadow:0 0 22px 3px #17A34A',
+      'box-shadow:0 0 22px 3px rgba(23,163,74,.45)'),
+    expect: ['the glow is club green at full strength'],
+  },
+  {
+    /* The border is set INLINE on the tile, so a stylesheet rule loses at any
+       specificity. The glow would appear and the border would not follow it. */
+    name: 'the hover border loses its !important, so the inline border wins',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'border-color:#17A34A!important', 'border-color:#17A34A'),
+    expect: ['the border colour carries !important'],
+  },
+  {
+    /* Works perfectly on a desktop; on a touch device the :hover sticks after
+       the tap and the tile stays lit with no way to dismiss it. Already fixed
+       once on the age-group cards and the Register buttons. */
+    name: 'the supporter hover escapes the pointer gate',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME,
+      '  @media (hover:hover){\n    .spon-tile:hover{transform:translateY(-4px)',
+      '  @media (all:all){\n    .spon-tile:hover{transform:translateY(-4px)'),
+    expect: ['sits inside the (hover:hover) gate'],
+  },
+  {
+    name: 'reduced motion stops being honoured for the tiles',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME,
+      '    @media (prefers-reduced-motion:reduce){\n      .spon-tile:hover{transform:none}\n    }\n',
+      ''),
+    expect: ['reduced motion drops the movement'],
+  },
+  {
+    /* ⚠️ THE DEMOTION. Eighteen supporters given the principal partner's exact
+       gesture, which is the same failure as folding HSBC into the grid - the
+       only confirmed partner quietly becomes one of nineteen equals, and
+       nothing on the page looks broken. */
+    name: 'the supporters are given the principal partner\'s full-size gesture',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '.spon-tile:hover{transform:translateY(-4px) scale(1.03)',
+      '.spon-tile:hover{transform:translateY(-8px) scale(1.03)'),
+    expect: ['supporter lift is SMALLER than the principal partner'],
+  },
+  {
+    /* The other half of the same demotion: the partner's glow repainted in the
+       club colour, so the two treatments become indistinguishable. */
+    name: 'the partner card glow is repainted club green, losing what is theirs',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'box-shadow:0 0 30px 4px var(--glow),0 0 76px 14px rgba(219,0,17,.38)',
+      'box-shadow:0 0 30px 4px #17A34A,0 0 76px 14px rgba(23,163,74,.38)'),
+    expect: ['partner glow is still HSBC red'],
+  },
+  {
+    /* Present, gated, coloured correctly - and nothing moves, because the
+       property it animates was never declared. */
+    name: 'the tiles lose the transition, so the glow snaps on instead of easing',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME,
+      '  .spon-tile{transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}\n',
+      ''),
+    expect: ['have a transition to animate'],
+  },
+
 ];
 
 /* ------------------------------------------------------------------------ */

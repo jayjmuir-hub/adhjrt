@@ -65,6 +65,16 @@ MAP = {
     "3 Sedbergh Dark Mode.png":              "sponsor-sedbergh.webp",
     "3 Sportsmans Arms Dark Mode.png":       "sponsor-sportsmans-arms.webp",
     "3 V&P Dark Mode.png":                   "sponsor-value-performance.webp",
+    # ⚠️ THE SOURCE FILENAME IS MISSPELLED AND THE SITE IS RIGHT. The pack calls
+    # them "Andersen"; they are Anderson Executive Development Centre. Checked
+    # 11 Aug 2026 rather than assumed, because both domains answer 200 and a
+    # status code alone cannot tell them apart: anderson.ae carries
+    # og:site_name "Anderson Executive Development Centre" and is the training
+    # company that sponsors us, while andersen.ae is a parked "Website coming
+    # soon!" page belonging to somebody else. Do NOT "correct" the name or the
+    # url to match this filename - that misspells a sponsor on the live site
+    # and, if carried through to the link, points their own logo at a domain
+    # that is not theirs.
     "4 Andersen Dark Mode.png":              "sponsor-anderson-education.webp",
     "4 Bili Boys Biltong Dark Mode.png":     "sponsor-bili-boys.webp",
     "4 Westminster Dark Mode.png":           "sponsor-westminster-construction.webp",

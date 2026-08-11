@@ -287,8 +287,14 @@ check('the mobile hero lockup is capped by width, not height',
 const FLAT = PAGE.replace(/\s+/g, '');
 check('the hero lockup keeps its ratio (height:auto + max-height cap)',
   /\.hero-partnerimg\{height:auto!important;max-height:128px!important\}/.test(FLAT));
+/* ⚠️ 150px since 11 Aug 2026 (96px before, 64px before that), each raise at
+   Jay's request. The NUMBER is pinned as well as the shape, because a partner
+   placement quietly shrinking is the same class of failure as one quietly
+   vanishing — nothing looks broken, the only confirmed partner is just smaller.
+   150 is the ceiling the 560px card allows at this 3.71:1 ratio, not a
+   preference: above it max-width:100% clamps the mark straight back. */
 check('the sponsors lockup keeps its ratio (height:auto + max-height cap)',
-  /a\[href\*="hsbc\.ae"\]img\{height:auto!important;max-height:96px!important\}/.test(FLAT));
+  /a\[href\*="hsbc\.ae"\]img\{height:auto!important;max-height:150px!important\}/.test(FLAT));
 
 /* ⚠️ THE TWO HERO LOCKUPS MUST BE MUTUALLY EXCLUSIVE. Showing both would put
    the partner mark on screen twice, which is worse than the bug this fixed. */

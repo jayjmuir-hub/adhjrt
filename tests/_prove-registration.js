@@ -2263,8 +2263,11 @@ const FAULTS = [
        injected — a rule that guards only one of them is half a fix. */
     name: 'the sponsors HSBC lockup loses its ratio guard',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'a[href*="hsbc.ae"] img{height:auto!important;max-height:96px!important}',
-      'a[href*="hsbc.ae"] img{max-height:96px!important}'),
+    /* Repointed 11 Aug 2026: the sponsors lockup went 96px -> 150px at Jay's
+       request. The fault is unchanged in spirit — drop `height:auto` and the
+       pinned px height comes back, which is what squashes the mark. */
+    apply: () => patch(HOME, 'a[href*="hsbc.ae"] img{height:auto!important;max-height:150px!important}',
+      'a[href*="hsbc.ae"] img{max-height:150px!important}'),
     expect: ['sponsors lockup keeps its ratio'],
   },
   {

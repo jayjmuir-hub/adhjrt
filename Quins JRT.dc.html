@@ -946,7 +946,18 @@
      height:auto + max-height reproduces the old size wherever there is room and
      scales proportionally where there is not. */
   .hero-partner img{height:auto!important;max-height:128px!important}
-  a[href*="hsbc.ae"] img{height:auto!important;max-height:96px!important}
+  /* ⚠️ 150px, RAISED FROM 96px ON 11 AUG AT JAY'S REQUEST, AND 150 IS A
+     CEILING RATHER THAN A PREFERENCE. The card's inner column caps at 560px
+     and the reverse lockup is 3.71:1, so 150px tall wants 557px of width —
+     anything larger is clamped straight back by max-width:100% and renders
+     identically, which would look like the change had not worked.
+     ⚠️ The INLINE TAG still says height:96px and that is deliberate: it is the
+     no-CSS fallback, and _prove-registration.js pins that literal, so editing
+     it orphans a fault silently. The rendered size is decided here.
+     ⚠️ Nothing changes on a phone. At 96px the mark was already 356px wide
+     against roughly 358px of content width, so the WIDTH cap already governed
+     there; this only affects tablet and desktop. */
+  a[href*="hsbc.ae"] img{height:auto!important;max-height:150px!important}
 
   @media(max-width:800px){
     .hero-partner{border-left:0!important;padding-left:0!important;margin-left:0!important}

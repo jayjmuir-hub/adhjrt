@@ -71,6 +71,23 @@ const NEEDED = [
   'netlify/functions/_signins.js',
   'netlify/functions/_signins.js',
   'netlify/functions/accounts-admin.js',
+  /* The signed-out rule (11 Aug 2026). ⚠️ SEVENTH TIME A NEW MODULE HAS HAD TO
+     BE ADDED HERE. test-session-refusal.js drives my-account.js and
+     accounts-admin.js, and sweeps every endpoint that refuses a session to
+     prove each one goes through the single shared builder — a sweep that is
+     worthless if the files it sweeps are not in the temp copy, because a
+     missing one reads exactly like a clean pass. The symptom of forgetting is
+     always the same and always misleading: the test file dies on ENOENT, the
+     suite fails UNDAMAGED, the clean baseline does not rise, and every fault
+     aimed at it reports "caught" while proving nothing. */
+  'netlify/functions/my-account.js',
+  'netlify/functions/get-registrations.js',
+  'netlify/functions/get-my-registrations.js',
+  'netlify/functions/registration-window.js',
+  'netlify/functions/save-schedule-override.js',
+  'netlify/functions/scoring-rules.js',
+  'netlify/functions/submit-result.js',
+  'netlify/functions/venue-layout.js',
   /* Per-match result storage (Aug 2026) — test-results-storage.js REQUIRES
      _results.js rather than reading it as text. */
   'netlify/functions/_results.js',
@@ -760,8 +777,8 @@ const FAULTS = [
        false` leaves the sentence exactly where it was, which is what defeats a
        position-only check. */
     apply: () => patch('netlify/functions/documents.js',
-      '    if (!auth.ok) return fail(auth.status, auth.error);',
-      '    if (!auth.ok && false) return fail(auth.status, auth.error);'),
+      '    if (!auth.ok) return sessionRefusal(auth);',
+      '    if (!auth.ok && false) return sessionRefusal(auth);'),
     expect: ['refused, by a real early return'],
   },
   {
@@ -2892,7 +2909,7 @@ const FAULTS = [
        and the handler throws a ReferenceError, which becomes a 500, which
        looks exactly like "there is no data". */
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      "const { resolveSession } = require('./_auth');\n", ''),
+      "const { resolveSession, sessionRefusal } = require('./_auth');\n", ''),
     expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
   },
   {
@@ -4013,7 +4030,7 @@ const FAULTS = [
     suite: 'test-my-account.js',
     /* Re-anchored Aug 2026 for resolveSession. */
     apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
-      '  const auth = await resolveSession(event);\n  if (!auth.ok) return fail(auth.status, auth.error);',
+      '  const auth = await resolveSession(event);\n  if (!auth.ok) return sessionRefusal(auth);',
       "  const auth = await resolveSession(event);\n  if (!auth.ok || auth.session.role !== 'organizer') return fail(401, 'Not signed in.');"),
     expect: ['a MANAGER can read their own account'],
   },
@@ -7528,8 +7545,8 @@ const FAULTS = [
     name: 'signing out of /app stops clearing the fetched fixtures, leaving a draft on screen',
     suite: 'test-draft-visibility.js',
     apply: () => patch('app.html',
-      '    S.fixtures = null; S.standings = null; S.followFx = null;\n    render();',
-      '    render();'),
+      '  S.fixtures = null; S.standings = null; S.followFx = null;\n  render();',
+      '  render();'),
     expect: ['signout clears the fixtures cache', 'clears the standings cache'],
   },
   {
@@ -7549,8 +7566,8 @@ const FAULTS = [
     name: 'the signout caches are cleared after the render instead of before it',
     suite: 'test-draft-visibility.js',
     apply: () => patch('app.html',
-      '    S.fixtures = null; S.standings = null; S.followFx = null;\n    render();',
-      '    render();\n    S.fixtures = null; S.standings = null; S.followFx = null;'),
+      '  S.fixtures = null; S.standings = null; S.followFx = null;\n  render();',
+      '  render();\n  S.fixtures = null; S.standings = null; S.followFx = null;'),
     expect: ['cleared BEFORE the render'],
   },
   {
@@ -7558,7 +7575,7 @@ const FAULTS = [
        public view — the caches are honest but the page never recovers. */
     name: 'signout clears the caches but never refetches as the public',
     suite: 'test-draft-visibility.js',
-    apply: () => patch('app.html', '    load(S.browseId || S.ageId);\n', ''),
+    apply: () => patch('app.html', '  load(S.browseId || S.ageId);\n', ''),
     expect: ['signout refetches as the public'],
   },
   {
@@ -8369,6 +8386,256 @@ const FAULTS = [
       '  a:focus-visible,button:focus-visible{outline:2px solid #E11B22;outline-offset:2px}', ''),
     expect: ['legal.html: keyboard focus is visible somewhere'],
   },
+  /* ---- /app polled the API from a backgrounded phone (11 Aug 2026) --------
+     The last of the nine findings from the August code review. Two timers and
+     no visibilitychange gate anywhere in the file, so an installed PWA went on
+     requesting fixtures and standings every minute from a pocket. Browsers
+     throttle background timers; they do not stop them.
+
+     ⚠️ FOUR OF THESE SIX FAULTS ARE NOT THE BUG — THEY ARE THE FIX DONE
+     BADLY. Gating the timers is the easy half. A gate with no catch-up leaves
+     a manager unlocking their phone at a pitch reading a minute-old score,
+     which is worse than the polling it saved. So the catch-up carries as many
+     faults as the gate does.
+
+     ⚠️ Anchors are joined with \n, never written as literal line breaks:
+     seed() normalises the temp copy to LF and this repo's checkout is CRLF, so
+     an anchor carrying \r\n silently never matches. Learned on 9 Aug. */
+  {
+    name: 'the 60-second poll loses its hidden gate',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      ['    if (document.hidden) return;',
+        "    if (phase() === 'during' && !sheetOpen()) refresh();",
+        '  }, 60000);'].join('\n'),
+      ["    if (phase() === 'during' && !sheetOpen()) refresh();",
+        '  }, 60000);'].join('\n')),
+    expect: ['no request goes out'],
+  },
+  {
+    name: 'the 1-second clock loses its hidden gate',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      '  setInterval(() => { if (!document.hidden) tick(); }, 1000);',
+      '  setInterval(() => { tick(); }, 1000);'),
+    expect: ['the clock does nothing'],
+  },
+  {
+    /* The gate WITHOUT the catch-up — i.e. the obvious fix, shipped on its
+       own. Everything still looks right: no requests from a pocket, the poll
+       running whenever the tab is open. The cost only appears at a pitch. */
+    name: 'the catch-up on returning is never registered',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      "  document.addEventListener('visibilitychange', () => {",
+      "  document.addEventListener('pagehide', () => {"),
+    expect: ['the visibilitychange handler was found'],
+  },
+  {
+    name: 'coming back renders but never refetches',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      ['    tick();',
+        "    if (phase() === 'during' && !sheetOpen()) refresh();",
+        '  });'].join('\n'),
+      ['    tick();',
+        '  });'].join('\n')),
+    expect: ['becoming visible mid-tournament refreshes at once'],
+  },
+  {
+    /* Fires on BOTH transitions. Without the early return the handler runs a
+       fetch at the exact moment the page is being backgrounded - the opposite
+       of the point, and invisible, because it succeeds. */
+    name: 'the visibility handler runs on the hide half too',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      ["  document.addEventListener('visibilitychange', () => {",
+        '    if (document.hidden) return;',
+        '    tick();'].join('\n'),
+      ["  document.addEventListener('visibilitychange', () => {",
+        '    tick();'].join('\n')),
+    expect: ['the HIDE half of the event does nothing'],
+  },
+  {
+    /* A sheet can be open across a hide: open score entry, take a call, come
+       back. The 60-second poll already refuses to refresh under one; the
+       catch-up refusing it is the same rule, and is easy to leave out. */
+    name: 'the catch-up refreshes under a half-typed score',
+    suite: 'test-app-polling.js',
+    apply: () => patch('app.html',
+      ['    tick();',
+        "    if (phase() === 'during' && !sheetOpen()) refresh();"].join('\n'),
+      ['    tick();',
+        "    if (phase() === 'during') refresh();"].join('\n')),
+    expect: ['does not refresh under an open sheet'],
+  },
+  /* ---- being signed out by the server (11 Aug 2026) ----------------------
+     Found by Jay revoking an account on production and still getting the
+     dashboard fifteen refreshes later. The LOCK was never broken; nothing
+     turned a refusal into a signed-out state.
+
+     ⚠️ HALF OF THESE FAULTS MAKE THE CODE SIGN PEOPLE OUT *MORE*, NOT LESS.
+     That is the point. "It signs out on a refusal" is satisfied by code that
+     signs out on everything — which throws a manager out for pressing an
+     organiser-only button, and throws fifteen of them out at a pitch when the
+     account store blips. The checks that discriminate are the ones requiring
+     the session to SURVIVE. */
+  {
+    name: 'a revoked account is refused without the signed-out marker',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "if (!account.approved) return { ok: false, status: 403, sessionEnded: true, error:",
+      "if (!account.approved) return { ok: false, status: 403, error:"),
+    expect: ['and IS marked as a finished session'],
+  },
+  {
+    /* THE FAIL-OPEN INVERSION. A store blip on tournament morning would sign
+       out every manager holding a phone. */
+    name: 'a store outage starts ending sessions',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "return { ok: false, status: 503, error: 'Could not check your sign-in just now.",
+      "return { ok: false, status: 503, sessionEnded: true, error: 'Could not check your sign-in just now."),
+    expect: ['a store outage does NOT end the session'],
+  },
+  {
+    /* The role refusal is NOT a finished session. Marking it signs a manager
+       out for touching an organiser-only feature. */
+    name: 'the wrong-role refusal is marked as a finished session',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "return { ok: false, status: 403, error: 'Only tournament organisers can manage accounts.' };",
+      "return { ok: false, status: 403, sessionEnded: true, error: 'Only tournament organisers can manage accounts.' };"),
+    expect: ['but is NOT signed out'],
+  },
+  {
+    /* One endpoint of ten going back to a hand-rolled body. The marker then
+       exists on nine and is missing on one, silently. */
+    name: 'one endpoint rebuilds its own refusal instead of using the builder',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', 'documents.js'),
+      '    if (!auth.ok) return sessionRefusal(auth);',
+      '    if (!auth.ok) return fail(auth.status, auth.error);'),
+    expect: ['every one refuses through the shared builder'],
+  },
+  {
+    /* The client stops reading the marker and treats any refusal as the end of
+       the session — the "simpler" version, which is the bug. */
+    name: 'the browser signs out on every refusal, not just a finished session',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      '  if (!parsed || parsed.sessionEnded !== true) return;',
+      '  if (!parsed || parsed.ok !== false) return;'),
+    expect: ['an unmarked refusal does NOT clear the session'],
+  },
+  {
+    name: 'the redirect loses its pathname guard and points /signin at itself',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      "if (typeof location !== 'undefined' && location.pathname.indexOf('/signin') !== 0) {",
+      "if (typeof location !== 'undefined') {"),
+    expect: ['but it does NOT redirect to itself'],
+  },
+  {
+    /* /app would be navigated away from mid-tournament instead of dropping to
+       the public view in place. */
+    name: 'a registered handler is ignored and everything redirects',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('scores-data.js',
+      '  if (sessionEndedHandler) { try { sessionEndedHandler(); } catch (e) {} return; }',
+      '  if (false) { return; }'),
+    expect: ['a registered handler is used instead'],
+  },
+  {
+    /* The organiser dashboard alone stops signing anybody out — the exact
+       silent drift that importing the one copy is meant to prevent. */
+    name: 'the organiser data layer stops applying the rule',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('organizer-data.js', '    noteSessionEnded(parsed);', ''),
+    expect: ['organizer-data applies it too'],
+  },
+  {
+    name: 'the sign-in page stops saying why you are there',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Signin.dc.html',
+      "this.setState({ loginError: 'You have been signed out. Please sign in again.' });",
+      "this.setState({ loginError: '' });"),
+    expect: ['and says so rather than showing a bare form'],
+  },
+  {
+    /* /app never learns it has been signed out, so a revoked phone keeps an
+       unpublished draft on screen — the 8 Aug bug, arrived at another way. */
+    name: '/app stops listening for the server ending its session',
+    suite: 'test-draft-visibility.js',
+    apply: () => patch('app.html',
+      "  api.onSessionEnded(() => dropToPublic('You have been signed out'));",
+      ''),
+    expect: ['and so does the server ending the session'],
+  },
+
+  /* ---- revoked is its own state (11 Aug 2026) ----------------------------
+     The second defect Jay found, and the more serious one. `revoke` set
+     `approved = false`, which is also what "waiting for access" means — so a
+     revoked person appeared in the queue of new signups, under an Approve
+     button that silently reinstates them and a Reject button that DELETES
+     their record. He pressed the delete without knowing what it was, tidying
+     the row his own revocation had just created. */
+  {
+    name: 'revoking stops recording that it was a revocation',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      '        accounts[idx].revokedAt = new Date().toISOString();',
+      ''),
+    expect: ['so revoked can be told from never-approved'],
+  },
+  {
+    name: 'restoring leaves the revoked mark on, so they never leave the Revoked list',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      '        delete accounts[idx].revokedAt;',
+      ''),
+    expect: ['and takes the revoked mark off'],
+  },
+  {
+    /* Restoring somebody must not hand back the sessions the revocation
+       killed. They were signed out for a reason, and the tokens live 182 days. */
+    name: 'restoring resurrects the sessions the revocation ended',
+    suite: 'test-session-refusal.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      '        delete accounts[idx].revokedAt;',
+      '        delete accounts[idx].revokedAt;\n        accounts[idx].sessionsValidFrom = 0;'),
+    expect: ['does NOT resurrect their old sessions'],
+  },
+  {
+    /* THE ORIGINAL BUG, PUT BACK. */
+    name: 'the pending queue goes back to holding revoked people',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Organizer.dc.html',
+      'pendingAccounts: s.accounts.filter((a) => !a.approved && !a.revokedAt)',
+      'pendingAccounts: s.accounts.filter((a) => !a.approved)'),
+    expect: ['the pending queue excludes revoked accounts'],
+  },
+  {
+    /* The destructive click loses its dialog again — which is precisely how it
+       was pressed by accident the first time. */
+    name: 'deleting a revoked account stops asking first',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Organizer.dc.html',
+      'onPurge: () => this.doPurgeAccount(a.username, a.name),',
+      'onPurge: () => this.doReject(a.username),'),
+    expect: ['routes through it, not straight to doReject'],
+  },
+  {
+    /* The list exists in renderVals but nothing renders it, so revoked people
+       are simply invisible — which reads as "revoking deleted them". */
+    name: 'the Revoked section stops being rendered',
+    suite: 'test-session-refusal.js',
+    apply: () => patch('Organizer.dc.html',
+      '<sc-for list="{{ revokedAccounts }}" as="a" hint-placeholder-count="1">',
+      '<sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="1">'),
+    expect: ['the Revoked section is rendered'],
+  },
+
 ];
 
 /* ------------------------------------------------------------------------ */

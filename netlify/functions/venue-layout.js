@@ -27,7 +27,7 @@
 //   pitches it owns affect every other age group, so this is a tournament-wide
 //   decision — same reasoning as scoring-rules.js.
 
-const { resolveSession, optionalSession, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, optionalSession, blobStore } = require('./_auth');
 const {
   DEFAULT_VENUE, DEFAULT_POSITIONS,
   loadVenue, validateVenue, venueWarnings, setCachedVenue, countPitchUsage,
@@ -67,7 +67,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
       const auth = await resolveSession(event);
-      if (!auth.ok) return json(auth.status, { ok: false, error: auth.error });
+      if (!auth.ok) return sessionRefusal(auth);
       const session = auth.session;
       if (session.role !== 'organizer') {
         return json(403, {

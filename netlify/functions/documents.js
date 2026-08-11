@@ -25,7 +25,7 @@
 // for signed-in managers and organisers, never the public — `/rules` is the
 // public surface. A signed-out request gets a 401, not a file.
 
-const { resolveSession, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
 const { AGE_GROUPS } = require('./_agegroups');
 const D = require('./_documents');
 
@@ -98,7 +98,7 @@ exports.handler = async (event) => {
 
     /* ---- the door: a verified session, every time -------------------- */
     const auth = await resolveSession(event);
-    if (!auth.ok) return fail(auth.status, auth.error);
+    if (!auth.ok) return sessionRefusal(auth);
     const session = auth.session;
     const isOrganizer = !!session.isOrganizer || session.role === 'organizer';
     /* ⚠️ THE AGE GROUP COMES FROM THE TOKEN AND NOWHERE ELSE. There is

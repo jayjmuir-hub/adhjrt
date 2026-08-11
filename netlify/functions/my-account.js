@@ -28,7 +28,7 @@
 // a session for it, and the Google identity, by producing a valid token.
 // google-auth.js still never attaches itself to anyone silently.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, passwordProblem, signInMethodOf } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, sessionRefusal, passwordProblem, signInMethodOf } = require('./_auth');
 const { verifyGoogleIdToken } = require('./_googleAuth');
 const { readSignIn } = require('./_signins');
 
@@ -58,7 +58,7 @@ function publicView(a) {
 
 exports.handler = async (event) => {
   const auth = await resolveSession(event);
-  if (!auth.ok) return fail(auth.status, auth.error);
+  if (!auth.ok) return sessionRefusal(auth);
   const session = auth.session;
 
   try {

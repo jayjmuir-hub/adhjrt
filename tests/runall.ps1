@@ -81,7 +81,15 @@ $tests = @(
   'test-homepage-dates.js',
   'test-about-board.js',
   'test-doc-claims.js',
-  'test-age-group-picker.js'
+  'test-age-group-picker.js',
+  # /app stopped polling the API from a backgrounded phone (11 Aug 2026).
+  # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
+  # registration - same note as test-draft-visibility.js above.
+  'test-app-polling.js',
+  # Being signed out by the server (11 Aug 2026) - spec
+  # claude/specs/spec-session-refusal-aug-2026.md. Same note as above: this
+  # line is the registration.
+  'test-session-refusal.js'
 )
 
 Write-Host ''

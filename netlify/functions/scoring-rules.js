@@ -15,7 +15,7 @@
 // group's laws mid-tournament would silently change how every score in that
 // group totals.
 
-const { resolveSession, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
 const { loadRules, cleanRules, BY_AGE, POINTS, VALID } = require('./_scoring');
 
 const json = (statusCode, body) => ({
@@ -33,7 +33,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
       const auth = await resolveSession(event);
-      if (!auth.ok) return json(auth.status, { ok: false, error: auth.error });
+      if (!auth.ok) return sessionRefusal(auth);
       const session = auth.session;
       if (session.role !== 'organizer') {
         return json(403, { ok: false, error: 'Only tournament organisers can change the scoring rules.' });

@@ -37,7 +37,7 @@
 // data-layer function in the same commit; test-accounts.js now checks every
 // api.* the page calls actually exists.
 
-const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, passwordProblem, signInMethodOf } = require('./_auth');
+const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, sessionRefusal, passwordProblem, signInMethodOf } = require('./_auth');
 const { readSignIns } = require('./_signins');
 
 // Age-group ids a created manager may be bound to. Mirrors AGE_GROUPS in
@@ -62,7 +62,7 @@ async function requireOrganizer(event) {
 
 exports.handler = async (event) => {
   const auth = await requireOrganizer(event);
-  if (!auth.ok) return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+  if (!auth.ok) return sessionRefusal(auth);
   const session = auth.session;
 
   try {
@@ -180,6 +180,10 @@ exports.handler = async (event) => {
 
       if (action === 'approve') {
         accounts[idx].approved = true;
+        /* Approving a REVOKED account is a restore, so the mark comes off and
+           it goes back to the ordinary list. Their old tokens stay dead:
+           sessionsValidFrom is deliberately NOT cleared here. */
+        delete accounts[idx].revokedAt;
       } else if (action === 'reject') {
         /* Deleting the record is enough on its own now: resolveSession 401s a
            token whose account it cannot find. It did NOT used to be. */
@@ -190,6 +194,21 @@ exports.handler = async (event) => {
            stamping the clock too means a later re-approval does not silently
            resurrect the tokens this revocation was meant to kill. */
         accounts[idx].sessionsValidFrom = Date.now();
+        /* ⚠️ REVOKED AND NEVER-APPROVED ARE TWO DIFFERENT THINGS, AND UNTIL
+           11 Aug 2026 THEY WERE ONE BOOLEAN. The pending queue is
+           `filter(a => !a.approved)`, so revoking somebody filed them under
+           "Waiting for access" beside genuine new signups — offering Approve,
+           which silently reinstates the person just revoked, and Reject, which
+           DELETES the record outright. Jay pressed Reject by accident doing
+           exactly this, describing it as dismissing a stray row, which is
+           precisely how it reads on a queue of requests. A destructive,
+           unrecoverable action sat one natural click after a routine one.
+
+           ⚠️ IT IS ITS OWN FIELD RATHER THAN BEING DERIVED FROM
+           sessionsValidFrom, WHICH LOOKS TEMPTING AND IS WRONG: a password
+           reset stamps that same field, so an account that had been reset and
+           was later unapproved would read as revoked. Two facts, two fields. */
+        accounts[idx].revokedAt = new Date().toISOString();
       } else {
         return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown action.' }) };
       }

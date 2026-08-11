@@ -1183,6 +1183,41 @@
             </div>
           </sc-if>
 
+          <!-- ⚠️ REVOKED IS ITS OWN SECTION, AND THAT IS THE WHOLE FIX.
+               Until 11 Aug 2026 a revoked account was `!approved`, which is
+               also what "waiting for access" means — so it appeared in the
+               queue above, offering Approve (silently reinstating the person
+               just revoked) and Reject (deleting their record outright). Jay
+               pressed the delete by accident while tidying the row his own
+               revocation had created, and described it as dismissing a stray
+               request, which is exactly how it reads there.
+               Both actions here are named for what they do, and neither is
+               reachable by clearing a queue. -->
+          <sc-if value="{{ hasRevoked }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#A62626">Revoked</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+              <sc-for list="{{ revokedAccounts }}" as="a" hint-placeholder-count="1">
+                <div style="background:#FFFFFF;border:1px solid rgba(166,38,38,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                  <div onClick="{{ a.onOpen }}" style="cursor:pointer;flex:1;min-width:200px">
+                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#5A626E;font-weight:500">— {{ a.username }}</span></div>
+                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ a.roleLabel }} · revoked {{ a.revokedAtDisplay }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button onClick="{{ a.onRestore }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Restore access</button>
+                    <!-- ⚠️ "Delete for good", not "Delete permanently", and the
+                         wording is enforced. test-documents.js requires every
+                         user-facing Delete on this page to be the irreversible
+                         one, matched on "for good" — a rule written for the
+                         documents shelf that correctly caught this new button
+                         the first time it ran. One phrase, one meaning, across
+                         the whole back office. -->
+                    <button onClick="{{ a.onPurge }}" style="background:transparent;border:1px solid #B00020;color:#B00020;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Delete for good</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">All accounts</div>
           <div style="overflow-x:auto;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
             <table style="width:100%;min-width:700px">
@@ -4166,6 +4201,24 @@ class Component extends DCLogic {
 
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
+
+  /* ⚠️ DELETING A REVOKED ACCOUNT ASKS FIRST, AND doReject DOES NOT.
+     They call the same endpoint, so this is purely about which click it is.
+     Rejecting a PENDING signup discards a request nobody has ever used;
+     deleting a REVOKED account destroys a real person's record — their age
+     group, their sign-in history, the lot — and it cannot be undone.
+
+     Those two were the same button until 11 Aug 2026, because revoking filed
+     the account in the pending queue. Jay pressed it without knowing what it
+     was, which is the whole reason this dialog exists: the name in the message
+     is what turns "clear this stray row" back into a decision about a person. */
+  doPurgeAccount(username, name) {
+    this.confirmModal(
+      `Delete ${name || username} permanently?\n\nTheir account record goes for good — age group, sign-in history and all. Revoking has already ended their access; this cannot be undone.`,
+      () => this.doReject(username),
+      { okLabel: 'Delete for good', wide: true }
+    );
+  }
   async doRevoke(username) { await this.state.api.revokeAccount(username); this.refreshAccounts(); }
 
   /* Creates a manager OR an organiser. The age group is what scopes a manager
@@ -4632,12 +4685,34 @@ class Component extends DCLogic {
       ...this.venueVals(s),
       ...this.regVals(s),
 
-      pendingAccounts: s.accounts.filter((a) => !a.approved).map((a) => ({
+      /* ⚠️ THREE LISTS, NOT TWO (11 Aug 2026). `!a.approved` used to mean
+         "waiting for access", and revoking somebody set exactly that — so a
+         revoked person appeared in the queue of new signups, under an Approve
+         button that silently reinstates them and a Reject button that DELETES
+         their record. Jay hit the delete by accident while tidying the row
+         his own revocation had just created.
+
+         The two states are now told apart by `revokedAt`, which only revoke
+         writes. An account that has never been approved does not carry it, so
+         nothing that predates this change is misfiled. */
+      pendingAccounts: s.accounts.filter((a) => !a.approved && !a.revokedAt).map((a) => ({
         ...a,
         roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
         createdAtDisplay: this.fmtDate(a.createdAt),
         onApprove: () => this.doApprove(a.username),
         onReject: () => this.doReject(a.username),
+        onOpen: () => this.openOtherAccount(a.username),
+      })),
+      revokedAccounts: s.accounts.filter((a) => !a.approved && a.revokedAt).map((a) => ({
+        ...a,
+        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
+        revokedAtDisplay: this.fmtDate(a.revokedAt),
+        /* Restore is the same 'approve' action — it is what un-revoking IS —
+           but it is labelled and placed so it can never be mistaken for
+           clearing a new request. Their old tokens stay dead regardless. */
+        onRestore: () => this.doApprove(a.username),
+        /* Asks first, and names the person — see doPurgeAccount. */
+        onPurge: () => this.doPurgeAccount(a.username, a.name),
         onOpen: () => this.openOtherAccount(a.username),
       })),
       approvedAccounts: s.accounts.filter((a) => a.approved).map((a) => ({
@@ -4647,8 +4722,10 @@ class Component extends DCLogic {
         onResetPassword: () => this.doResetPassword(a.username),
         onOpen: () => this.openOtherAccount(a.username),
       })),
-      hasPending: s.accounts.some((a) => !a.approved),
-      pendingCount: s.accounts.filter((a) => !a.approved).length,
+      hasPending: s.accounts.some((a) => !a.approved && !a.revokedAt),
+      pendingCount: s.accounts.filter((a) => !a.approved && !a.revokedAt).length,
+      hasRevoked: s.accounts.some((a) => !a.approved && a.revokedAt),
+      revokedCount: s.accounts.filter((a) => !a.approved && a.revokedAt).length,
       accountsEmpty: s.accounts.filter((a) => a.approved).length === 0,
 
       cmIsManager: s.cmRole !== 'organizer',

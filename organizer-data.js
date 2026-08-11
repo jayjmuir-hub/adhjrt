@@ -28,7 +28,7 @@
    there is exactly one copy of that rule. */
 const SESSION_KEY = 'adhjrt_session_v2';
 
-import { migrateSession } from './scores-data.js';
+import { migrateSession, noteSessionEnded } from './scores-data.js';
 
 let localBackendPromise = null;
 function local() {
@@ -66,6 +66,12 @@ async function tryFetchJson(url, opts) {
     if (!parsed || typeof parsed !== 'object') {
       return { real: true, json: { ok: false, error: 'Unexpected response from the server.' } };
     }
+    /* ⚠️ IMPORTED, NOT REIMPLEMENTED. This file already carries a second copy
+       of tryFetchJson; a second copy of the SIGN-OUT RULE would be one more
+       thing to drift, and the failure mode of a drifted copy is silent — the
+       organiser dashboard alone would go on rendering after a revocation.
+       Same argument as migrateSession, which is imported from there too. */
+    noteSessionEnded(parsed);
     return { real: true, json: parsed };
   } catch (e) {
     if (res.status === 404) return { real: false }; // no backend deployed here

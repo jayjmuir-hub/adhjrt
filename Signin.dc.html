@@ -255,7 +255,22 @@ class Component extends DCLogic {
   }
 
   async componentDidMount() {
-    try { this._next = new URLSearchParams(window.location.search).get('next') || ''; } catch (e) { this._next = ''; }
+    /* ⚠️ All-lowercase local, deliberately. support.js runs encodeCase() over
+       the whole component before it is parsed, and whitespace + camelCase + `=`
+       anywhere — code included — is rewritten to a kebab-cased sc-camel-… name
+       and the script stops parsing. See the gotcha in RESTORE.md. */
+    let params = null;
+    try { params = new URLSearchParams(window.location.search); } catch (e) { params = null; }
+    this._next = (params && params.get('next')) || '';
+
+    /* Sent here by noteSessionEnded() in scores-data.js — the session was
+       refused by the server, so say so rather than presenting a bare form to
+       somebody who believed they were already signed in. Reuses the existing
+       loginError slot on purpose: a second message binding is a second thing
+       to forget to return from renderVals(), where the symptom is silence. */
+    if (params && params.get('signedout') === '1') {
+      this.setState({ loginError: 'You have been signed out. Please sign in again.' });
+    }
     const api = await import(new URL('scores-data.js', document.baseURI).href);
     this.setState({ api });
 

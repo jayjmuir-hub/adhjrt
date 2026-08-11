@@ -801,6 +801,48 @@ function local() {
 // deployed backend is having a real problem, and is now surfaced as an
 // error instead of silently falling back to fake local-preview data — see
 // the matching comment in organizer-data.js.
+/* ===== BEING SIGNED OUT BY THE SERVER ==================================
+   Spec: claude/specs/spec-session-refusal-aug-2026.md
+
+   Until 11 Aug 2026 NOTHING here turned a refusal into a signed-out state.
+   logout() was called by the Sign out button and by nothing else, and
+   currentSession() hands back a session whenever a token STRING is in
+   localStorage — it never asks whether that token is still any good. So a
+   dashboard went on rendering from browser storage while every request behind
+   it was turned away. Found on production by revoking an account and then
+   deleting it outright: the page still drew, fifteen refreshes running.
+
+   ⚠️ IT ACTS ON `sessionEnded` AND ON NOTHING ELSE — NEVER ON A STATUS CODE.
+   Proven against the real handlers: a manager touching an organiser-only
+   endpoint and a revoked manager touching the SAME endpoint both come back
+   403. One must stay signed in and one must not. A status code cannot tell
+   them apart; the flag can. A store outage answers 503 and carries no flag,
+   because signing fifteen managers out at a pitch over a blob blip is far
+   worse than the thing this fixes.
+
+   ⚠️ Reading the SENTENCE instead would be worse than reading the status:
+   the wording is meant to be improvable, and test-unified-login.js had to be
+   rewritten once for pinning an exact refusal string. */
+let sessionEndedHandler = null;
+
+/* /app is a PWA with its own sign-in sheet and no business navigating away
+   from itself mid-tournament, so it registers its own behaviour. Everything
+   else takes the default below. */
+export function onSessionEnded(fn) { sessionEndedHandler = fn; }
+
+export function noteSessionEnded(parsed) {
+  if (!parsed || parsed.sessionEnded !== true) return;
+  logout();
+  if (sessionEndedHandler) { try { sessionEndedHandler(); } catch (e) {} return; }
+  try {
+    /* ⚠️ THE PATHNAME GUARD IS NOT OPTIONAL. Without it a refusal answered on
+       /signin itself redirects to /signin, which asks again, for ever. */
+    if (typeof location !== 'undefined' && location.pathname.indexOf('/signin') !== 0) {
+      location.replace('/signin?signedout=1');
+    }
+  } catch (e) { /* no location (a test, a worker): clearing the session is enough */ }
+}
+
 async function tryFetchJson(url, opts) {
   let res;
   try {
@@ -815,6 +857,10 @@ async function tryFetchJson(url, opts) {
     if (!parsed || typeof parsed !== 'object') {
       return { real: true, json: { ok: false, error: 'Unexpected response from the server.' } };
     }
+    /* Every authenticated call in this file goes through here, which is the
+       whole reason the rule lives at this one point rather than in each
+       caller — a caller that forgot would simply never sign anybody out. */
+    noteSessionEnded(parsed);
     return { real: true, json: parsed };
   } catch (e) {
     if (res.status === 404) return { real: false }; // no backend deployed here

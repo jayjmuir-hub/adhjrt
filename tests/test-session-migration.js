@@ -109,8 +109,18 @@ section('The two data layers agree on the one key, and login posts to the one en
   const od = readRepo('organizer-data.js');
   check('scores-data.js uses adhjrt_session_v2', /const SESSION_KEY = 'adhjrt_session_v2';/.test(sd));
   check('organizer-data.js uses the SAME key', /const SESSION_KEY = 'adhjrt_session_v2';/.test(od));
+  /* ⚠️ REPOINTED 11 Aug 2026, and deliberately loosened in one direction and
+     TIGHTENED in another. It used to pin the whole import list character for
+     character, so adding a second shared import (noteSessionEnded, the
+     signed-out rule) broke a check about migrateSession. It now requires
+     migrateSession to be named in an import FROM scores-data.js — and, which
+     the old version never did, that organizer-data.js does not DEFINE one of
+     its own. The check's name always claimed both halves; only one was ever
+     asserted, and "imports it" passes perfectly well alongside a local copy
+     that shadows nothing and is called by mistake. */
   check('organizer-data.js imports the ONE migration rather than growing a copy',
-    /import \{ migrateSession \} from '\.\/scores-data\.js';/.test(od));
+    /import \{[^}]*\bmigrateSession\b[^}]*\} from '\.\/scores-data\.js';/.test(od)
+    && !/function migrateSession\b/.test(od));
   check('scores-data.js login() posts to the unified endpoint',
     /tryFetchJson\('\/\.netlify\/functions\/login',/.test(sd));
   check('…and its old organizer-login fallback chain is gone',

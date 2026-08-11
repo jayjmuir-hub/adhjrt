@@ -17,7 +17,7 @@
 // deliberate — before it existed, one drag in the fixture editor changed the
 // live site instantly.
 
-const { resolveSession, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { draftKey } = require('./_publish');
 
 exports.handler = async (event) => {
@@ -25,7 +25,7 @@ exports.handler = async (event) => {
   try {
     const auth = await resolveSession(event);
     if (!auth.ok) {
-      return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+      return sessionRefusal(auth);
     }
     const session = auth.session;
     if (session.role !== 'manager' && session.role !== 'organizer') {

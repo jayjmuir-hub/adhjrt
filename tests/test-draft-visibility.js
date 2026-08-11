@@ -403,11 +403,27 @@ const draftSchedule = () => ({
        this file — `S.fixtures = null` is in load(), `load(` is everywhere — so
        searching the whole file would pass against a signout branch that does
        none of it. Anchored between its own guard and the next branch. */
-    const a = app.indexOf("if (a === 'signout')");
-    const b = app.indexOf("if (a === 'tools')", a);
-    check('the signout branch was found', a > -1 && b > a);
+    /* ⚠️ REPOINTED 11 Aug 2026, AND IT NOW COVERS MORE THAN IT DID. The
+       clearing used to be written inline in the signout branch, so this slice
+       ran from that branch to the next one. There are now TWO ways back to the
+       public view — pressing Sign out, and the SERVER ending the session — and
+       both go through dropToPublic(), so the slice follows the work rather
+       than the caller. Every assertion below is unchanged and now guards both
+       routes at once; a second inline copy that forgot one line is exactly
+       what moving it prevents. */
+    const a = app.indexOf('function dropToPublic(');
+    const b = app.indexOf('function act(', a);
+    check('the drop-to-public helper was found', a > -1 && b > a);
     const branch = app.slice(a, b);
     check('CONTROL: the branch really is the signout one', branch.includes('api.logout()'));
+
+    /* Both entry points must actually reach it, or the helper is dead code and
+       every check below is asserting things about a function nobody calls. */
+    check('the Sign out button goes through it',
+      /if \(a === 'signout'\) \{ dropToPublic\(/.test(app));
+    check('⚠️ and so does the server ending the session',
+      /api\.onSessionEnded\(\(\) => dropToPublic\(/.test(app),
+      'without this, a revoked phone keeps its draft on screen');
 
     /* The defect this guards: before the draft-visibility change these caches
        could only hold PUBLISHED fixtures, so clearing the session and

@@ -144,7 +144,7 @@ function getBearerToken(event) {
    "allowed" on an error; see _ratelimit.js for what fail-open costs. */
 async function resolveSession(event) {
   const payload = verify(getBearerToken(event));
-  if (!payload) return { ok: false, status: 401, error: 'Not signed in.' };
+  if (!payload) return { ok: false, status: 401, sessionEnded: true, error: 'Not signed in.' };
 
   let accounts;
   try {
@@ -155,8 +155,8 @@ async function resolveSession(event) {
   }
 
   const account = accounts.find((a) => a.username === payload.username);
-  if (!account) return { ok: false, status: 401, error: 'This login no longer exists. Ask a tournament organizer.' };
-  if (!account.approved) return { ok: false, status: 403, error: 'This login has been revoked. Ask a tournament organizer.' };
+  if (!account) return { ok: false, status: 401, sessionEnded: true, error: 'This login no longer exists. Ask a tournament organizer.' };
+  if (!account.approved) return { ok: false, status: 403, sessionEnded: true, error: 'This login has been revoked. Ask a tournament organizer.' };
 
   /* Stamped by accounts-admin.js when an account is revoked or has its password
      reset. Absent on every account created before Aug 2026, so a missing stamp
@@ -169,7 +169,7 @@ async function resolveSession(event) {
      sign everyone out on every request, and reads almost identically. */
   const validFrom = Number(account.sessionsValidFrom) || 0;
   if (payload.iat < validFrom) {
-    return { ok: false, status: 401, error: 'You have been signed out. Please sign in again.' };
+    return { ok: false, status: 401, sessionEnded: true, error: 'You have been signed out. Please sign in again.' };
   }
 
   return {
@@ -180,6 +180,46 @@ async function resolveSession(event) {
       role: account.role,
       ageGroupId: account.role === 'manager' ? (account.ageGroupId || '') : '',
     },
+  };
+}
+
+/* THE ONE PLACE A SESSION REFUSAL IS TURNED INTO AN HTTP RESPONSE.
+   -------------------------------------------------------------------------
+   Every endpoint that calls resolveSession used to hand-roll this, in nine
+   different idioms — fail(), json(), a bare {statusCode, body}. Adding a field
+   to nine copies by hand is nine chances to miss one, and a missed one fails
+   SILENTLY: that endpoint alone would never sign anybody out, and nothing
+   about it would look wrong. Same argument as _intake.js's column list,
+   _venue.js's pitch model and _registration.js's shared block — all three were
+   duplicated, all three drifted.
+
+   ⚠️ `sessionEnded` IS THE WHOLE POINT, AND IT IS SET BY resolveSession ONLY.
+   The browser signs the person out when it sees this flag and NEVER by reading
+   a status code, because the codes are ambiguous by design:
+
+     401/403 from here             the session is finished       -> sign out
+     403 from an endpoint's own    a manager touched an
+       role check                  organiser-only feature; they
+                                   are legitimately signed in    -> DO NOT
+     503 from here                 the account store blipped     -> NEVER
+     network failure               we know nothing at all        -> NEVER
+
+   Signing somebody out for pressing the wrong button would be a new bug.
+   Signing fifteen managers out at a pitch because a blob read hiccupped would
+   be a far worse one — which is exactly why the 503 above carries no flag.
+   This is the "a refusal and a network failure must stay different" rule from
+   the registration gateway, one layer up.
+
+   Reading the SENTENCE instead would be worse still: the wording is meant to
+   be improvable, and test-unified-login.js already had to be rewritten once
+   because it pinned an exact refusal string. */
+function sessionRefusal(auth) {
+  const body = { ok: false, error: auth.error };
+  if (auth.sessionEnded) body.sessionEnded = true;
+  return {
+    statusCode: auth.status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    body: JSON.stringify(body),
   };
 }
 
@@ -222,5 +262,5 @@ function signInMethodOf(account) {
 }
 
 module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore,
-  resolveSession, optionalSession,
+  resolveSession, optionalSession, sessionRefusal,
   MIN_PASSWORD_LENGTH, MAX_PASSWORD_BYTES, PASSWORD_TOO_SHORT, PASSWORD_TOO_LONG, passwordProblem, signInMethodOf };

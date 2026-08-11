@@ -29,7 +29,7 @@
 // this comment was first written; it's since been built — noted 30 Jul so
 // the next reader doesn't re-open a decision that's already done.
 
-const { resolveSession, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
 const {
   DEFAULT_REGISTRATION,
   loadRegistration, validateSettings, registrationWarnings, registrationState,
@@ -64,7 +64,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'POST') {
       const auth = await resolveSession(event);
-      if (!auth.ok) return json(auth.status, { ok: false, error: auth.error });
+      if (!auth.ok) return sessionRefusal(auth);
       const session = auth.session;
       if (session.role !== 'organizer') {
         return json(403, {

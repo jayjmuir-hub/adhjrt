@@ -260,8 +260,13 @@ section('documents.js — the door, and the split');
      The guard is now matched as a whole statement. Same lesson as the
      body-size test, where `MAX_BODY_BYTES` appearing before `JSON.parse` was
      satisfied by the const declaration at the top of the file. */
+  /* ⚠️ REPOINTED 11 Aug 2026: the refusal now goes through sessionRefusal(),
+     the one shared builder in _auth.js, so that the sessionEnded marker cannot
+     be present on eight endpoints and missing on the ninth. Still matched as a
+     WHOLE STATEMENT, for the reason in the comment above — a check for the
+     sentence alone is satisfied by `if (!auth.ok && false) return …`. */
   check('a signed-out request is refused, by a real early return',
-    /if \(!auth\.ok\) return fail\(auth\.status, auth\.error\);/.test(fn));
+    /if \(!auth\.ok\) return sessionRefusal\(auth\);/.test(fn));
   /* ⚠️ -1 IS LESS THAN EVERYTHING. This pair used to read
         fn.search(/…/) < fn.indexOf("blobStore('docfiles')")
      and search() answers -1 when the pattern is ABSENT — so the moment the
@@ -271,7 +276,7 @@ section('documents.js — the door, and the split');
      compared, which is the only thing that makes an ordering check mean
      anything. Same family as the two lessons in the comment above. */
   {
-    const guardAt = fn.search(/if \(!auth\.ok\) return fail\(auth\.status/);
+    const guardAt = fn.search(/if \(!auth\.ok\) return sessionRefusal\(auth\);/);
     const storeAt = fn.indexOf("blobStore('docfiles')");
     check('…before the stores are opened',
       guardAt !== -1 && storeAt !== -1 && guardAt < storeAt,

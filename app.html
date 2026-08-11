@@ -1325,41 +1325,49 @@ function wire(){
   document.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { S.onlyMine = b.dataset.seg==='mine'; render(); });
 }
 
+/* ⚠️ GOING BACK TO BEING THE PUBLIC MUST DROP THE FETCHED DATA, NOT JUST THE
+   SESSION, AND IT WAS A HARMLESS NO-OP UNTIL THE DRAFT-VISIBILITY CHANGE MADE
+   IT LOAD-BEARING. Before that, S.fixtures/S.standings/S.followFx could only
+   ever hold PUBLISHED fixtures, so clearing the session and re-rendering was
+   enough. Now they may hold an unpublished DRAFT — and a re-render with no
+   refetch left that draft on screen, still wearing the marker that reads "You
+   can see this because you are signed in", to whoever was handed the phone
+   next. Tab switches do not refetch; only an age-pill change or the 60-second
+   match-day poll would have cleared it.
+
+   Nothing new leaks from the server — the data was legitimately fetched — but
+   showing unpublished fixtures to whoever holds the device is the one thing
+   the publish step exists to prevent.
+
+   ⚠️ Clear FIRST, then render, then refetch as the public. Clearing before the
+   render means not even one frame shows the draft. load() is async and
+   deliberately not awaited, exactly like the age-pill handler; it re-fetches
+   with S.session now null, so it gets the public answer, and if the network is
+   down S.loadError shows the retry card rather than the stale draft.
+   ⚠️ followFx is a SEPARATE cache from fixtures (that is why Today survives
+   browsing another age group) so it has to be cleared by name — and reloaded
+   by name too, when the followed group is not the one on screen.
+
+   ⚠️ IT IS ONE FUNCTION BECAUSE THERE ARE NOW TWO WAYS IN (11 Aug 2026):
+   pressing Sign out, and the SERVER refusing the session. The second must do
+   every one of the things above — a revoked manager's phone showing an
+   unpublished draft is the same picture as the bug this careful clearing was
+   written for, minus the person choosing it. A second copy that forgot one
+   line would fail silently. */
+function dropToPublic(message){
+  api.logout(); try{orgApi.logout();}catch(e){}
+  S.session = null;
+  S.fixtures = null; S.standings = null; S.followFx = null;
+  render();
+  toast(message);
+  load(S.browseId || S.ageId);
+  if (S.ageId && S.ageId !== S.browseId) loadFollowData();
+}
+
 function act(a){
   if (a === 'follow')  return openFollow();
   if (a === 'signin')  return signIn();
-  /* ⚠️ SIGNING OUT MUST DROP THE FETCHED DATA, NOT JUST THE SESSION, AND THIS
-     LINE WAS A HARMLESS NO-OP UNTIL THE DRAFT-VISIBILITY CHANGE MADE IT
-     LOAD-BEARING. Before that, S.fixtures/S.standings/S.followFx could only ever
-     hold PUBLISHED fixtures, so clearing the session and re-rendering was
-     enough. Now they may hold an unpublished DRAFT — and a re-render with no
-     refetch left that draft on screen, still wearing the marker that reads "You
-     can see this because you are signed in", to whoever was handed the phone
-     next. Tab switches do not refetch; only an age-pill change or the 60-second
-     match-day poll would have cleared it.
-
-     Nothing new leaks from the server — the data was legitimately fetched — but
-     showing unpublished fixtures to whoever holds the device is the one thing
-     the publish step exists to prevent.
-
-     ⚠️ Clear FIRST, then render, then refetch as the public. Clearing before
-     the render means not even one frame shows the draft. load() is async and
-     deliberately not awaited, exactly like the age-pill handler above it; it
-     re-fetches with S.session now null, so it gets the public answer, and if the
-     network is down S.loadError shows the retry card rather than the stale
-     draft. ⚠️ followFx is a SEPARATE cache from fixtures (that is why Today
-     survives browsing another age group) so it has to be cleared by name — and
-     reloaded by name too, when the followed group is not the one on screen. */
-  if (a === 'signout') {
-    api.logout(); try{orgApi.logout();}catch(e){}
-    S.session = null;
-    S.fixtures = null; S.standings = null; S.followFx = null;
-    render();
-    toast('Signed out');
-    load(S.browseId || S.ageId);
-    if (S.ageId && S.ageId !== S.browseId) loadFollowData();
-    return;
-  }
+  if (a === 'signout') { dropToPublic('Signed out'); return; }
   if (a === 'tools')   { location.href = '/manager'; return; }
   if (a === 'venuemap') return openSheet('Venue map',
     `<picture>
@@ -1579,6 +1587,14 @@ function openMatch(id){
 /* ---------------- boot ---------------- */
 (async function init(){
   S.session = resolveSession();
+
+  /* ⚠️ /app DELIBERATELY DOES NOT GO TO /signin WHEN THE SERVER ENDS A
+     SESSION, WHICH IS WHAT EVERY OTHER SURFACE DOES. This is the match-day
+     PWA and it carries its own sign-in sheet; throwing a manager out of the
+     app at a pitch, mid-tournament, to land on a web form is a worse answer
+     than dropping to the public view and telling them. They can sign back in
+     from More without ever leaving the app. */
+  api.onSessionEnded(() => dropToPublic('You have been signed out'));
   // Live scoring rules decide which inputs the score form offers.
   if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
   /* U6 and U7 are festival groups (hasStandings:false). They still have
@@ -1604,15 +1620,51 @@ function openMatch(id){
      Now only the digits are written, and a full render happens once, when the
      phase actually changes (before -> during -> after). */
   let lastPhase = phase();
-  setInterval(() => {
+
+  /* One tick of the clock: redraw once when the phase turns over, otherwise
+     just write the countdown digits. Returns true if it rendered, so the
+     visibility handler below can tell a phase change from an ordinary tick. */
+  function tick(){
     const p = phase();
-    if (p !== lastPhase) { lastPhase = p; render(); return; }
+    if (p !== lastPhase) { lastPhase = p; render(); return true; }
     if (p === 'before' && S.view === 'today') tickCountdown();
-  }, 1000);
+    return false;
+  }
+
+  /* ⚠️ BOTH TIMERS SKIP THEIR WORK WHILE THE PAGE IS HIDDEN.
+
+     A backgrounded PWA went on polling the API every 60 seconds — on a phone
+     in a pocket, all weekend. Browsers throttle background timers; they do not
+     stop them, so this was real requests, not just a theoretical loop.
+
+     ⚠️ THE GATE IS INSIDE EACH CALLBACK, NOT clearInterval/setInterval ON
+     VISIBILITY. Starting and stopping means holding handles, and a single
+     missed clear leaves a SECOND interval running — two refresh() loops, twice
+     the requests, and nothing on screen that looks wrong. A `document.hidden`
+     test cannot leak, however many times visibility flips. */
+  setInterval(() => { if (!document.hidden) tick(); }, 1000);
 
   /* Match-day polling, skipped while a sheet is open so a score being typed is
      never disturbed. */
-  setInterval(() => { if (phase() === 'during' && !sheetOpen()) refresh(); }, 60000);
+  setInterval(() => {
+    if (document.hidden) return;
+    if (phase() === 'during' && !sheetOpen()) refresh();
+  }, 60000);
+
+  /* ⚠️ THE CATCH-UP IS NOT OPTIONAL — WITHOUT IT THE GATE MAKES MATCH DAY
+     WORSE THAN NO GATE AT ALL. A manager who unlocks their phone at a pitch
+     would otherwise read scores up to a minute stale, where the ungated poll
+     had been keeping them fresh. Skipping work while nobody is looking is only
+     safe if looking again refreshes immediately.
+
+     ⚠️ sheetOpen() is still honoured here. A sheet CAN be open across a hide —
+     open score entry, take a call, come back — and refreshing under a half
+     typed score is exactly what the 60s poll already refuses to do. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    tick();
+    if (phase() === 'during' && !sheetOpen()) refresh();
+  });
 })();
 </script>
 </body>

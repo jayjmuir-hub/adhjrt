@@ -13,7 +13,7 @@
 // why it is split that way. Requires the same SESSION_SECRET as the other
 // auth functions.
 
-const { resolveSession, hasAgeGroupAccess, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
 const { readMatch, writeMatch, clearMatch } = require('./_results');
 const { MAX_FIELD_CHARS } = require('./_intake');
@@ -83,7 +83,7 @@ exports.handler = async (event) => {
   try {
     const auth = await resolveSession(event);
     if (!auth.ok) {
-      return { statusCode: auth.status, body: JSON.stringify({ ok: false, error: auth.error }) };
+      return sessionRefusal(auth);
     }
     const session = auth.session;
     if (session.role !== 'manager' && session.role !== 'organizer') {

@@ -2122,6 +2122,24 @@ const FAULTS = [
     apply: () => patch(HOME, ' loading="lazy" style="max-height:', ' style="max-height:'),
     expect: ['lazy loading'],
   },
+  /* ⚠️ THE TIDY-UP THAT LOOKS LIKE AN IMPROVEMENT. Every other bar on the
+     homepage runs the tournament's red->green rule, so "making the partner card
+     match" reads as consistency rather than as a regression — which is exactly
+     why it needs a fault rather than a comment. HSBC's red on their own block is
+     the point of that block. */
+  {
+    name: 'the partner bar is "tidied" back to the tournament red->green rule',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, 'height:4px;background:#DB0011',
+      'height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)'),
+    expect: ['not the tournament red->green rule'],
+  },
+  {
+    name: 'the partner card keeps its red bar but loses the hover glow colour',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, '--glow:#DB0011;position:relative', '--glow:#E11B22;position:relative'),
+    expect: ['hover glow is driven from the same red'],
+  },
 
   /* ---- per-logo sizing in the grid (test-sponsors.js, 5 Aug 2026) ------- */
 

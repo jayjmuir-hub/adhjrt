@@ -545,6 +545,27 @@ const sponsorsInner = sponsorsAt >= 0 ? stripComments(innerOf(PAGE, sponsorsAt))
 
 check('HSBC appears in the sponsors section', sponsorsInner.includes(WHITE));
 check('HSBC is named as the principal partner', /Principal partner/i.test(sponsorsInner));
+
+/* ⚠️ THE PARTNER CARD WEARS HSBC'S RED, NOT THE TOURNAMENT'S RED->GREEN RULE
+   (Jay, 11 Aug 2026). Every other bar on this page runs #E11B22 -> #17A34A;
+   this one block belongs to the principal partner, so it carries theirs.
+
+   #DB0011 was MEASURED off assets/sponsor-hsbc.webp — 561 of the lockup's red
+   pixels are exactly that value — rather than recalled. There was no HSBC red
+   anywhere in this repo before that change.
+
+   Asserted because it is precisely the thing a later tidy-up "corrects" back to
+   the site gradient for consistency, which is the one place consistency is
+   wrong. ⚠️ Read from sponsorsInner, which has COMMENTS STRIPPED — the prose in
+   the page names #DB0011 too, and a check matching the comment would pass with
+   the CSS deleted. That exact mistake is already on this repo's list. */
+check('the principal partner bar is HSBC red', /background:#DB0011/.test(sponsorsInner));
+check('…and is not the tournament red->green rule',
+  !/linear-gradient\(90deg,#E11B22,#E11B22 45%,#17A34A\)/.test(sponsorsInner),
+  'the partner bar was put back to the tournament gradient');
+check('…and the hover glow is driven from the same red',
+  /--glow:#DB0011/.test(sponsorsInner));
+
 /* The placeholder said the line-up was "Coming soon". There is now a confirmed
    partner on the page, so that badge would be contradicting the logo above it. */
 check('the "coming soon" placeholder badge is gone', !/Coming soon/i.test(sponsorsInner));

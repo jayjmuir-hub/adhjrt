@@ -763,6 +763,61 @@
   }
   .reg-btn-label{position:relative;z-index:1;color:#fff}
   .reg-btn:hover .reg-btn-label{color:#fff}
+
+  /* THE PRINCIPAL PARTNER CARD (Jay, 11 Aug 2026): "use the HSBC red for the
+     highlight on top of the principal partner box and use the same red to glow
+     when hovering over it, similar to the register team buttons, maybe even
+     make it pop up a little or 3d".
+
+     Same mechanism as .reg-btn above - --glow drives the border and shadow, a
+     .holo layer sweeps on hover - deliberately reusing that pattern rather than
+     inventing a second one. What differs is the AMOUNT, and it has to:
+
+     ⚠️ .reg-btn LIFTS 8px AND SCALES 1.08. THAT IS RIGHT FOR A BUTTON AND WRONG
+     HERE. This card is ~1100px wide; an 8% scale throws it 44px past its own
+     container on each side, and an 8deg rotateX on something this tall reads as
+     a rendering fault rather than a tilt. 1.5% and 2deg is the same gesture at
+     the size of the object making it.
+
+     ⚠️ THE GLOW IS HSBC RED (#DB0011 via --glow), NOT the club red. Every other
+     glow on this page is #E11B22 or #17A34A. This block belongs to the partner. */
+  .partner-card{transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s;transform-style:preserve-3d}
+  .partner-holo{position:absolute;inset:0;background:linear-gradient(115deg,transparent 25%,rgba(219,0,17,.38) 38%,rgba(255,255,255,.5) 48%,rgba(219,0,17,.28) 60%,transparent 74%);background-size:250% 250%;mix-blend-mode:screen;opacity:0;transition:opacity .3s ease;pointer-events:none;z-index:1}
+
+  /* Same pointer gate as .reg-btn, same reason: on a touch device a :hover
+     sticks after the tap and leaves the card lit and tilted with no way to
+     dismiss it. */
+  /* ⚠️ THE REDUCED-MOTION OVERRIDE IS NESTED INSIDE THIS BLOCK, NOT WRITTEN
+     BESIDE IT, and the reason is worth keeping because it is not obvious.
+
+     The page-wide prefers-reduced-motion rule flattens TRANSITIONS, not
+     ANIMATIONS. So without an override a reduced-motion visitor still gets an
+     infinite shimmer looping under their cursor: the transition to opacity:.55
+     is made instant, and holoShift then runs for ever. The glow and the border
+     stay, because a colour change is not movement.
+
+     ⚠️ IT WAS FIRST WRITTEN AS A SEPARATE `@media (prefers-reduced-motion)`
+     BLOCK AND TWO TESTS FAILED IT — test-about-board and test-design-polish
+     both scan for hover rules that move or animate outside the pointer gate,
+     and these rules NAME `transform` and `animation` even though they only
+     switch them off. Rewriting it as `@media (hover:hover) and
+     (prefers-reduced-motion:reduce)` did not help either: the scanner matches
+     the LITERAL string `@media (hover:hover){`, so a combined query reads as
+     outside the gate too. Nesting satisfies both the checker and the meaning —
+     a rule that only applies on hover belongs inside the hover block.
+
+     ⚠️ .reg-btn HAS THIS SAME REDUCED-MOTION GAP AND IS NOT FIXED HERE. It is
+     four live buttons across three pages; changing them is its own testable
+     change, not something to slip into a sponsor-card commit. Recorded so it
+     is a known gap rather than an unnoticed one. */
+  @media (hover:hover){
+    .partner-card:hover{transform:perspective(1200px) translateY(-6px) scale(1.015) rotateX(2deg);border-color:var(--glow);box-shadow:0 0 34px 2px rgba(219,0,17,.45),0 22px 40px -12px rgba(0,0,0,.7)}
+    .partner-card:hover .partner-holo{opacity:.55;animation:holoShift 2.6s ease-in-out infinite}
+    @media (prefers-reduced-motion:reduce){
+      .partner-card:hover{transform:none}
+      .partner-card:hover .partner-holo{animation:none;opacity:0}
+    }
+  }
   .fmt-numbg{position:absolute;right:-4px;top:-24px;font-family:'Anton';color:rgba(255,255,255,.05);pointer-events:none;display:flex;align-items:baseline;gap:10px;line-height:1}
   .fmt-numbg .w{font-size:46px;letter-spacing:.06em}
   .fmt-numbg .n{font-size:150px}
@@ -2723,8 +2778,18 @@
       <div style="font-weight:800;letter-spacing:2px;color:#3bd070;font-size:14px;text-transform:uppercase;margin-bottom:14px" data-reveal>Sponsors &amp; partners</div>
       <h2 style="font-family:'Anton';font-size:clamp(34px,5.5vw,66px);line-height:0.95;text-transform:uppercase;margin-bottom:36px" data-reveal>With thanks to our sponsors</h2>
 
-      <div data-reveal style="position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:52px 40px;overflow:hidden">
-        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E11B22,#E11B22 45%,#17A34A)"></div>
+      <!-- ⚠️ THE TOP BAR IS HSBC RED, NOT THE CLUB'S RED->GREEN RULE, and that is
+           the point of it (Jay, 11 Aug 2026). Every other bar on this page runs
+           #E11B22 -> #17A34A, the tournament's own colours. This one block
+           belongs to the principal partner, so it wears theirs.
+           #DB0011 was MEASURED off assets/sponsor-hsbc.webp rather than
+           remembered: 561 of the lockup's red pixels are exactly that value.
+           There was no HSBC red anywhere in this repo before today - searched
+           for DB0011 across the whole tree and found nothing, with a control
+           search for E11B22 returning 181 hits to prove the search worked. -->
+      <div data-reveal class="partner-card" style="--glow:#DB0011;position:relative;background:#151517;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:52px 40px;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:#DB0011;z-index:2"></div>
+        <span class="partner-holo" aria-hidden="true"></span>
         <div style="font-size:11px;letter-spacing:2.4px;color:#3bd070;font-weight:800;text-transform:uppercase;margin-bottom:24px">Principal partner</div>
         <!-- ⚠️ THIS one links; the header and hero marks deliberately do NOT.
              That rule is about the STICKY header — a tap target that leaves the

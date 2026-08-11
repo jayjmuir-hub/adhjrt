@@ -26,11 +26,34 @@
 // Times are Gulf Standard Time (UTC+4, no daylight saving), so the window is
 // simply the two tournament dates in local terms.
 
+const { DEFAULT_VENUE } = require('./_venue');
+
+/* ⚠️ DERIVED FROM THE VENUE, NOT WRITTEN OUT AGAIN. This was two hand-computed
+   UTC timestamps with the arithmetic explained in a comment:
+
+     start: Date.UTC(2026, 10, 6, 20, 0, 0),   // 7 Nov 00:00 +04:00
+     end:   Date.UTC(2026, 10, 8, 20, 0, 0),   // end of the 8th
+
+   which is a SECOND copy of when the tournament is, in a different unit, three
+   directories away from the first. Moving the tournament from 7–8 to 14–15
+   November (11 Aug 2026) meant every visible date could be updated correctly
+   and this window left behind — and nothing a parent or an organiser looks at
+   would show it. The failure surfaces on the morning of day one, when a manager
+   at a pitch is told they may only publish on the tournament days, on the
+   tournament day. There is no back office switch for it either.
+
+   So it is computed from the same DEFAULT_VENUE the rest of the site reads.
+   Gulf Standard Time is UTC+4 with no daylight saving, so a calendar date maps
+   to a fixed instant and the window is simply [start of day one, end of day
+   two). The end is day two's midnight plus 24h rather than day two's date + 1,
+   so a tournament whose two days are not adjacent still closes on day two. */
+const GST = '+04:00';
+const startOfDayUTC = (isoDate) => Date.parse(`${isoDate}T00:00:00${GST}`);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const TOURNAMENT_DAYS_UTC = {
-  // 7 Nov 2026 00:00 +04:00  ->  6 Nov 2026 20:00 UTC
-  start: Date.UTC(2026, 10, 6, 20, 0, 0),
-  // 9 Nov 2026 00:00 +04:00  ->  8 Nov 2026 20:00 UTC (end of the 8th)
-  end: Date.UTC(2026, 10, 8, 20, 0, 0),
+  start: startOfDayUTC(DEFAULT_VENUE.day1.date),
+  end: startOfDayUTC(DEFAULT_VENUE.day2.date) + DAY_MS,
 };
 
 const draftKey = (ageGroupId) => ageGroupId;
@@ -61,7 +84,9 @@ function publishDenialReason(session, ageGroupId, now = Date.now()) {
     const ownGroup = session.ageGroupId === '*' || session.ageGroupId === ageGroupId;
     if (!ownGroup) return 'You can only publish fixtures for your own age group.';
     if (!isTournamentWindow(now)) {
-      return 'Managers can publish fixtures on the tournament days only (7–8 November 2026). Ask a tournament organiser to publish before then.';
+      /* Names the days rather than spelling them out a third time — the wording
+         follows the layout, so it cannot tell a manager the wrong date. */
+      return `Managers can publish fixtures on the tournament days only (${DEFAULT_VENUE.day1.label} and ${DEFAULT_VENUE.day2.label} 2026). Ask a tournament organiser to publish before then.`;
     }
     return null;
   }

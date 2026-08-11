@@ -41,7 +41,7 @@ const CLIENT_ID = process.env.MS_CLIENT_ID;
 const CLIENT_SECRET = process.env.MS_CLIENT_SECRET;
 const MAIL_FROM = process.env.MAIL_FROM;
 
-const EVENT = 'Saturday 7 & Sunday 8 November 2026';
+const EVENT = 'Saturday 14 & Sunday 15 November 2026';
 const VENUE = 'Zayed Sports City, Abu Dhabi';
 const SITE = 'https://adhjrt.com';
 

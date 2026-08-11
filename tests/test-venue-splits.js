@@ -460,6 +460,58 @@ section('The two DEFAULT_VENUE copies still agree');
   eq('the two MAIN_PITCHES lists are identical', listInSd, V.MAIN_PITCHES);
 }
 
+/* ====================================================================== */
+section('WHEN the tournament is comes from the code, not the blob');
+
+/* WHY THIS EXISTS. mergeVenue() used to read `src.date` and fall back to the
+   default only when the blob had none — and validateVenue() persisted the date
+   on every save. There is no back-office control for it: the panel edits splits
+   and groups, and saveVenue() posts back the whole working copy, so the field
+   was only ever round-tripped. One save was therefore enough to freeze the
+   tournament date in a blob, permanently outranking this repo.
+
+   It was found moving the tournament from 7-8 to 14-15 November (11 Aug 2026).
+   Nothing would have failed: the deploy is clean, the tests are green, and the
+   JSON-LD in the head moves while everything the venue feeds - the countdown,
+   the day headings, the fixtures pages - keeps saying the old date. The site
+   disagrees with itself about when the tournament is, and the only signal is a
+   parent turning up on the wrong Saturday.
+
+   So the three date fields are read from DEFAULT_VENUE unconditionally on both
+   paths. The blob still owns splits and groups, which ARE panel decisions. */
+{
+  /* A blob shaped exactly like a real saved one, but carrying last month's
+     dates - which is what production actually held. */
+  const stale = clone(V.DEFAULT_VENUE);
+  stale.day1.date = '2026-11-07';
+  stale.day1.label = 'Saturday 7 November';
+  stale.day1.short = 'SAT-OLD';
+  stale.day2.date = '2026-11-08';
+  stale.day2.label = 'Sunday 8 November';
+
+  const merged = V.mergeVenue(stale);
+  eq('a stale date in the blob does not win on read', merged.day1.date, V.DEFAULT_VENUE.day1.date);
+  eq('…nor a stale label', merged.day1.label, V.DEFAULT_VENUE.day1.label);
+  eq('…nor a stale short name', merged.day1.short, V.DEFAULT_VENUE.day1.short);
+  eq('…and the same for day two', merged.day2.date, V.DEFAULT_VENUE.day2.date);
+
+  /* The half that stops it coming back: a save must not write the date out
+     again, or the next read has a fresh stale copy to ignore forever. */
+  const saved = V.validateVenue(stale);
+  check('a payload carrying a stale date still validates', saved.ok === true, (saved.errors || []).join(' '));
+  eq('…and is corrected on the way in', ((saved.venue || {}).day1 || {}).date, V.DEFAULT_VENUE.day1.date);
+  eq('…label too', ((saved.venue || {}).day1 || {}).label, V.DEFAULT_VENUE.day1.label);
+
+  /* The blob must still own what it legitimately owns - this is not "ignore the
+     blob", it is "ignore the two fields nothing can set". */
+  const custom = clone(V.DEFAULT_VENUE);
+  custom.day1.splits = { D1: 2 };
+  custom.day1.groups = { u6: ['D1a'], u7: ['D1b'], u8: [], u9: [], u10: [], u11: [], u12: [], u18b: [], u18g: [] };
+  const kept = V.mergeVenue(custom);
+  eq('an organiser split still comes from the blob', kept.day1.splits, { D1: 2 });
+  eq('…and the surfaces derived from it', kept.day1.pitches, ['D1a', 'D1b']);
+}
+
 /* ======================================================================
    FAULTS THIS FILE WAS PROVEN AGAINST.
 

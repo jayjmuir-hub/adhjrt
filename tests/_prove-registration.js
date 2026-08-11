@@ -1256,6 +1256,32 @@ const FAULTS = [
     expect: ['the server and front-end layouts are deep-equal', 'including Saturday splits'],
   },
 
+  /* ---- when the tournament is, is code (11 Aug 2026) ------------------
+     Both halves of the same bug. The READ path letting a saved date win is
+     what silently pins the site to a stale date; the WRITE path storing the
+     date is what puts one in the blob to begin with. Either alone is enough
+     to lose a date change, so each gets its own fault. */
+  {
+    name: 'mergeVenue lets a date saved in the blob outrank the code again',
+    suite: 'test-venue-splits.js',
+    apply: () => patch(VENUE_F,
+      '      date:  DEFAULT_VENUE[d].date,\n      label: DEFAULT_VENUE[d].label,\n      short: DEFAULT_VENUE[d].short,',
+      '      date:  typeof src.date === \'string\' ? src.date : DEFAULT_VENUE[d].date,\n'
+      + '      label: typeof src.label === \'string\' ? src.label : DEFAULT_VENUE[d].label,\n'
+      + '      short: typeof src.short === \'string\' ? src.short : DEFAULT_VENUE[d].short,'),
+    expect: ['a stale date in the blob does not win on read'],
+  },
+  {
+    name: 'validateVenue writes the payload\'s date back into the blob again',
+    suite: 'test-venue-splits.js',
+    apply: () => patch(VENUE_F,
+      '      date:  def.date,\n      label: def.label,\n      short: def.short,',
+      '      date:  typeof src.date === \'string\' && src.date.trim() ? src.date.trim() : def.date,\n'
+      + '      label: typeof src.label === \'string\' && src.label.trim() ? src.label.trim() : def.label,\n'
+      + '      short: typeof src.short === \'string\' && src.short.trim() ? src.short.trim() : def.short,'),
+    expect: ['and is corrected on the way in'],
+  },
+
   /* ---- the map chips being readable -----------------------------------
      Two generations of this. Before 27 Jul 2026: white text on a
      see-through tinted chip (shipped). 27 Jul - 2 Aug: computed ink ON the
@@ -3400,7 +3426,7 @@ const FAULTS = [
     expect: ['a near-miss is refused, not run'],
   },
   {
-    name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 7-8 November',
+    name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 14-15 November',
     suite: 'test-simulate-tournament.js',
     apply: () => patch('Organizer.dc.html',
       "  onSimulateTournament() {\n    if (this.isTournamentDayNow()) return;\n    this.promptModal(",
@@ -8198,7 +8224,7 @@ const FAULTS = [
        pinned to the default layout instead. */
     name: 'the JSON-LD tournament dates drift from the layout',
     suite: 'test-homepage-dates.js',
-    apply: () => patch(HOME, '"startDate":"2026-11-07"', '"startDate":"2026-11-14"'),
+    apply: () => patch(HOME, '"startDate":"2026-11-14"', '"startDate":"2026-11-07"'),
     expect: ['startDate matches day one of the default layout'],
   },
   {

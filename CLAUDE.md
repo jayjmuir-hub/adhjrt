@@ -2,7 +2,22 @@
 
 Abu Dhabi Harlequins Junior Rugby Tournament. A public marketing site plus a
 live scores app plus an organiser back office, for a two-day youth rugby
-festival on **7–8 November 2026** at Zayed Sports City, Abu Dhabi.
+festival on **14–15 November 2026** at Zayed Sports City, Abu Dhabi.
+
+> **Moving the tournament dates is a code change, in one place.** They live in
+> `DEFAULT_VENUE` in `netlify/functions/_venue.js` (mirrored in
+> `scores-data.js`, which `test-venue-splits.js` compares). Everything else
+> derives from it — the countdown, the day headings, the manager publish window
+> in `_publish.js`. Three things do NOT derive and must be edited by hand: the
+> JSON-LD `startDate`/`endDate` in the homepage head (crawlers do not run JS),
+> the day tags in the homepage format section, and the prose in the page
+> descriptions. `test-homepage-dates.js` pins the first of those to
+> `DEFAULT_VENUE` and will fail if you forget it.
+>
+> There is deliberately **no back-office control for the dates**, and a saved
+> venue blob cannot override them. It used to be able to, which meant a date
+> change could deploy cleanly and change nothing the public saw — see the note
+> in `mergeVenue()`.
 
 Run by volunteers. The maintainer (Jay) is not a developer — explain changes in
 plain language and say which system each step applies to (GitHub / Netlify /

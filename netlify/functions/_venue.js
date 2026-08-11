@@ -34,8 +34,8 @@
    different start times, which the clash check reads correctly. */
 const DEFAULT_VENUE = {
   day1: {
-    date: '2026-11-07',
-    label: 'Saturday 7 November',
+    date: '2026-11-14',
+    label: 'Saturday 14 November',
     short: 'Sat',
     /* Whole / halves / quarters, per pitch, for this day. THE SOURCE OF TRUTH —
        `pitches` below is derived from it and is only written out so the two
@@ -58,8 +58,8 @@ const DEFAULT_VENUE = {
     },
   },
   day2: {
-    date: '2026-11-08',
-    label: 'Sunday 8 November',
+    date: '2026-11-15',
+    label: 'Sunday 15 November',
     short: 'Sun',
     splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
     pitches: ['D3', 'D2', 'D1', 'C4a', 'C4b', 'C5', 'B1a', 'B1b', 'A1a', 'A1b'],
@@ -330,9 +330,31 @@ function mergeVenue(saved) {
        than build one with no surfaces on it. */
     if (!splits) { out[d] = DEFAULT_VENUE[d]; continue; }
     out[d] = {
-      date:  typeof src.date === 'string' ? src.date : DEFAULT_VENUE[d].date,
-      label: typeof src.label === 'string' ? src.label : DEFAULT_VENUE[d].label,
-      short: typeof src.short === 'string' ? src.short : DEFAULT_VENUE[d].short,
+      /* ⚠️ WHEN THE TOURNAMENT IS, IS CODE — NEVER THE BLOB. These three used
+         to read `typeof src.date === 'string' ? src.date : default`, so a saved
+         blob won.
+
+         THAT WAS A TRAP, AND IT SPRUNG (11 Aug 2026, moving the tournament from
+         7–8 to 14–15 November). There is NO back-office control for the date:
+         the panel edits splits and groups, and saveVenue() posts back the whole
+         working copy it was given, so validateVenue() persisted whatever date
+         had been read a moment earlier. The field could therefore only ever be
+         round-tripped, never set — and once one save had happened, the stored
+         '2026-11-07' silently outranked this file for the rest of time.
+         Changing DEFAULT_VENUE would have deployed clean and changed nothing a
+         parent could see, while the static JSON-LD in the head moved. The two
+         halves of the site would disagree about when the tournament is.
+
+         Editing the blob by hand or clearing it are both worse: clearing takes
+         the organiser's real splits and groups down with it.
+
+         So the date is now decided in one place, this file, and a deploy is the
+         whole of the change. `splits` and `groups` below still come from the
+         blob, because those ARE back-office decisions with a panel behind them.
+         validateVenue() drops the fields on the way in for the same reason. */
+      date:  DEFAULT_VENUE[d].date,
+      label: DEFAULT_VENUE[d].label,
+      short: DEFAULT_VENUE[d].short,
       splits,
       /* ALWAYS derived, never taken from the blob. If the two ever disagreed
          the site would be reading one and the panel editing the other. */
@@ -491,9 +513,15 @@ function validateVenue(input) {
     });
 
     out[d] = {
-      date:  typeof src.date === 'string' && src.date.trim() ? src.date.trim() : def.date,
-      label: typeof src.label === 'string' && src.label.trim() ? src.label.trim() : def.label,
-      short: typeof src.short === 'string' && src.short.trim() ? src.short.trim() : def.short,
+      /* Taken from this file, never from the payload — see the matching note in
+         mergeVenue(). The panel posts back the date it was given, so honouring
+         it here is what let a stale '2026-11-07' outlive the deploy that was
+         supposed to move it. Dropping it on the way in means an old blob is
+         corrected the moment it is next saved, and a new one never carries the
+         field at all. */
+      date:  def.date,
+      label: def.label,
+      short: def.short,
       splits,
       pitches,
       groups,

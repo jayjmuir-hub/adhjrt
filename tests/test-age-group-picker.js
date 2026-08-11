@@ -99,7 +99,7 @@ function appPicker(groups, selected, agopen) {
     S: { ageGroups: groups, browseId: selected, agopen: agopen === undefined ? null : agopen },
     api: {
       isDayOne: (id) => DAY2.indexOf(id) < 0,
-      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 7 November' : 'Sunday 8 November'),
+      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 14 November' : 'Sunday 15 November'),
     },
     esc: (v) => String(v),
   };
@@ -133,7 +133,7 @@ function scoresComponent() {
     ...c.state,
     api: {
       isDayOne: (id) => DAY2.indexOf(id) < 0,
-      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 7 November' : 'Sunday 8 November'),
+      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 14 November' : 'Sunday 15 November'),
       getStandings: async () => null, teamShort: (v) => v, teamLogoSrc: () => '', teamKey: () => [],
     },
     ageGroups: [
@@ -167,7 +167,7 @@ function homeComponent(selected) {
     ...c.state,
     fxApi: {
       isDayOne: (id) => DAY2.indexOf(id) < 0,
-      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 7 November' : 'Sunday 8 November'),
+      dayLabelOfAgeGroup: (id) => (DAY2.indexOf(id) < 0 ? 'Saturday 14 November' : 'Sunday 15 November'),
       teamKey: () => [],
     },
     fxAgeGroups: [
@@ -256,8 +256,8 @@ section('⚠️ The day split is DERIVED from the venue layout, never typed');
      block — that is the whole promise of deriving it. */
   const groups = [{ id: 'u9', name: 'U9 Mixed Contact' }, { id: 'u12g', name: 'U12G QR' }];
   const html = appPicker(groups, 'u9');
-  const satAt = html.indexOf('Saturday 7 November');
-  const sunAt = html.indexOf('Sunday 8 November');
+  const satAt = html.indexOf('Saturday 14 November');
+  const sunAt = html.indexOf('Sunday 15 November');
   check('/app draws a Saturday block and a Sunday block', satAt >= 0 && sunAt > satAt,
     `sat@${satAt} sun@${sunAt}`);
   check('…with U9 above the Sunday heading and U12G below it',
@@ -265,8 +265,8 @@ section('⚠️ The day split is DERIVED from the venue layout, never typed');
 
   const blocks = scoresComponent().renderVals().ageDayBlocks || [];
   eq('/scores draws exactly two blocks', blocks.length, 2);
-  eq('…day one first', blocks[0].label, 'Saturday 7 November');
-  eq('…then day two', blocks[1].label, 'Sunday 8 November');
+  eq('…day one first', blocks[0].label, 'Saturday 14 November');
+  eq('…then day two', blocks[1].label, 'Sunday 15 November');
   eq('…U9 in the first', (blocks[0].tabs || []).map((t) => t.id), ['u9']);
   eq('…U12G and U16B in the second', (blocks[1].tabs || []).map((t) => t.id), ['u12g', 'u16b']);
 }
@@ -382,7 +382,7 @@ section('The day is stated ONCE — dayTag() went with the regroup');
 {
   /* ⚠️ WHY THIS IS A CHECK AND NOT JUST A DELETION. dayTag() printed a solid
      day marker and the date directly under the picker, for whichever group was
-     being browsed — "DAY 02 · Sunday 8 November". Once the picker grouped BY
+     being browsed — "DAY 02 · Sunday 15 November". Once the picker grouped BY
      day, the selected chip already sat inside a block headed with that exact
      string about 30px higher, so the tag was a second copy of the sentence
      immediately above it. Two identical sentences a thumb apart read as a
@@ -406,10 +406,10 @@ section('The day is stated ONCE — dayTag() went with the regroup');
   const html = appPicker(
     [{ id: 'u9', name: 'U9 Mixed Contact' }, { id: 'u12g', name: 'U12G QR' }], 'u12g');
   check('the day is still on screen, in the block heading',
-    html.indexOf('Sunday 8 November') >= 0, html);
+    html.indexOf('Sunday 15 November') >= 0, html);
   eq('…and said exactly once per day, not twice',
-    (html.match(/Sunday 8 November/g) || []).length, 1);
-  eq('…same for the other day', (html.match(/Saturday 7 November/g) || []).length, 1);
+    (html.match(/Sunday 15 November/g) || []).length, 1);
+  eq('…same for the other day', (html.match(/Saturday 14 November/g) || []).length, 1);
 }
 
 /* ====================================================================== */
@@ -431,8 +431,8 @@ section('⚠️ THERE ARE THREE PICKERS — the homepage Fixtures one is the thi
 
   const blocks = homeComponent().renderVals().fixtureAgeDayBlocks || [];
   eq('the homepage picker draws two day blocks', blocks.length, 2);
-  eq('…day one first', blocks[0].label, 'Saturday 7 November');
-  eq('…then day two', blocks[1].label, 'Sunday 8 November');
+  eq('…day one first', blocks[0].label, 'Saturday 14 November');
+  eq('…then day two', blocks[1].label, 'Sunday 15 November');
 
   /* ⚠️ ALL FIFTEEN STAY ON THE HOMEPAGE — it is the FIXTURES picker, and U6/U7
      have fixtures even though they have no standings. /scores filters them out

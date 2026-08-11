@@ -209,8 +209,8 @@ export function scoreTotal(ageGroupId, parts) {
    ============================================================ */
 export const DEFAULT_VENUE = {
   day1: {
-    date: '2026-11-07',
-    label: 'Saturday 7 November',
+    date: '2026-11-14',
+    label: 'Saturday 14 November',
     short: 'Sat',
     /* Whole / halves / quarters per main pitch. THE SOURCE OF TRUTH; `pitches`
        is derived from it (see derivePitches in netlify/functions/_venue.js) and
@@ -232,8 +232,8 @@ export const DEFAULT_VENUE = {
     },
   },
   day2: {
-    date: '2026-11-08',
-    label: 'Sunday 8 November',
+    date: '2026-11-15',
+    label: 'Sunday 15 November',
     short: 'Sun',
     splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
     pitches: ['D3', 'D2', 'D1', 'C4a', 'C4b', 'C5', 'B1a', 'B1b', 'A1a', 'A1b'],
@@ -335,7 +335,7 @@ export function dayOfAgeGroup(agId) {
 
 export function isDayOne(agId) { return dayIdOfAgeGroup(agId) === 'day1'; }
 
-/* 'Saturday 7 November', or 'Sat' with short=true. Headings, and the day pill on
+/* 'Saturday 14 November', or 'Sat' with short=true. Headings, and the day pill on
    the app's age-group picker. */
 export function dayLabelOfAgeGroup(agId, short) {
   const v = venue();
@@ -1760,7 +1760,7 @@ export async function saveDraw(agId, draw, session) {
    front of parents, and take them back down again.
 
    Permission is re-checked server-side in publish-schedule.js: organisers any
-   time, managers only on the tournament days (7-8 Nov 2026) and only for
+   time, managers only on the tournament days (14-15 Nov 2026) and only for
    their own age group. The UI uses canPublishNow() to decide whether to show
    the button as enabled, but the server is the authority. */
 export async function publishDraw(agId, session) {

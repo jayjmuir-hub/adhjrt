@@ -109,8 +109,8 @@ the scoring laws, and it should be copied rather than reinvented:
 
 ```js
 const DEFAULT_VENUE = {
-  day1: {                     // Saturday 7 November 2026
-    label: 'Saturday 7 November',
+  day1: {                     // Saturday 14 November 2026
+    label: 'Saturday 14 November',
     pitches: ['D5A','D5B','D4A','D4B','D3A','D3B','D2','D1',
               'C4','C5','B1A','B1B','B1C','B1D','A1A','A1B','A1C','A1D'],
     groups: {
@@ -125,8 +125,8 @@ const DEFAULT_VENUE = {
       u18g: ['D1'],
     },
   },
-  day2: {                     // Sunday 8 November 2026
-    label: 'Sunday 8 November',
+  day2: {                     // Sunday 15 November 2026
+    label: 'Sunday 15 November',
     pitches: ['D3','D2','D1','C4A','C4B','C5','B1A','B1B','A1A','A1B'],
     groups: {
       u13:  ['C4A','C4B'],

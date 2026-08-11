@@ -74,7 +74,7 @@ One tab holds everything to do with building and releasing the schedule:
    knockout slots.
 4. **Publish / Unpublish** — makes the age group's draw visible to the
    public. Carries over the existing restriction: **managers can only
-   publish/unpublish on the tournament days themselves (7–8 Nov 2026)**;
+   publish/unpublish on the tournament days themselves (14–15 Nov 2026)**;
    outside that window the button is replaced with text telling them to ask
    an organiser (`canPublishNow`). Organisers are unaffected by this
    restriction wherever they sign in.

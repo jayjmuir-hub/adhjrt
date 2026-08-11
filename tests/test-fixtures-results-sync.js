@@ -90,7 +90,7 @@ function fakeScoresApi(overrides) {
     canPublishNow: () => false,
     supportsSpiritAward: () => false,
     pitchesForAgeGroup: () => [],
-    dayLabelOfAgeGroup: () => 'Saturday 7 November',
+    dayLabelOfAgeGroup: () => 'Saturday 14 November',
     isDayOne: () => true,
     dayStartMins: () => 480,
     slotLengthMins: () => 20,
@@ -157,7 +157,7 @@ section('Homepage: onScoresAgeChange (Results/Manager -> Fixtures)');
       // this original object apart from whatever loadSchedule's stub returns.
       fxSchedule: { awaitingPublication: false, pools: [], knockout: [], _sentinel: true },
       fxApi: { getSchedule: async (id) => { scheduleCalls.push(id); return { id, pools: [], knockout: [], awaitingPublication: false }; },
-        isDayOne: () => true, dayLabelOfAgeGroup: () => 'Saturday 7 November' },
+        isDayOne: () => true, dayLabelOfAgeGroup: () => 'Saturday 14 November' },
     };
     return c;
   }

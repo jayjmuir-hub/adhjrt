@@ -637,7 +637,7 @@ unverified — the exact failure this whole branch was about. What is actually
 left:
 
 1. **The homepage still hardcodes tournament dates the back office can change.**
-   `Quins JRT.dc.html`: the countdown target `2026-11-07T04:00:00Z`, the
+   `Quins JRT.dc.html`: the countdown target `2026-11-14T04:00:00Z`, the
    per-group `day: 'Saturday'|'Sunday'` in `AGE_GROUP_CARDS`, and `startDate` /
    `endDate` in the JSON-LD. `_venue.js` shows both are organiser-editable, and
    `/app` reads them live — so moving a group between days updates `/app`,
@@ -919,7 +919,7 @@ deleting the pair has already caused trouble once (8 Aug).
 
 | | |
 |---|---|
-| Tournament | **7–8 November 2026**, Zayed Sports City |
+| Tournament | **14–15 November 2026**, Zayed Sports City |
 | Registration | not open; the link goes out ~mid-October. No real club has registered. |
 | Site password | ⚠️ **NOT RECORDED HERE, DELIBERATELY.** Read `projectAccessControls` from the Netlify MCP. This row has been wrong six times. Jay holds the password; it has never been in a message or a tool call. |
 | Branch deploys | allow-list is **`dev, Compare`**. ⚠️ **Free — 0 credits.** ⚠️ A branch deploy outlives its branch and reads production's env vars and stores. **Whether they are password-gated: read the Netlify MCP, not this page.** |

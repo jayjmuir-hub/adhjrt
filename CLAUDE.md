@@ -150,7 +150,15 @@ rule pointed at itself for months while the comment above it claimed otherwise.
   in a plain-text config file. `Bad credentials` is correct. Ignore those tools.
 - Do not raise the `club-manager-page` branch — parked at Jay's request.
 - Do not raise the registration-window decision.
-- Do not raise the DOCUMENTS feature — specced 5 Aug 2026, parked the same day.
+- ⚠️ **The DOCUMENTS feature is BUILT AND LIVE.** This line read *"specced
+  5 Aug 2026, parked the same day"* until 11 Aug, and stopped being true on
+  7 Aug, when it shipped in five commits (`c3fc11c` … `26dd9d2`):
+  `netlify/functions/documents.js`, `_documents.js`, `tests/test-documents.js`,
+  and a tab on both dashboards. **A stale "do not raise" is worse than no
+  note** — it makes a session refuse to touch a shipped feature and say Jay
+  parked it. It also contradicted this file's own tests section, four hundred
+  lines below, which lists the documents shelf as covered by the suite.
+  Behaviour: `RESTORE.md` § Documents shared with managers.
 
 ---
 

@@ -915,6 +915,129 @@ now level; the rule's own check reads 0 for both.
 fast-forward** — `Compare` is the standing preview branch, kept on purpose, and
 deleting the pair has already caused trouble once (8 Aug).
 
+## 11 Aug 2026 — the tournament moved to 14–15 November, and it is LIVE and verified
+
+`4d63b37` (the move) and `54b3b02` (the spellings the first pass missed).
+`main`, `dev` and `Compare` are all level at `54b3b02`; nothing is unpushed.
+Reasoning is in the commit messages and is not repeated here — the two copies
+that mattered were `mergeVenue()` reading the date out of the saved venue blob,
+where production's real blob outranked the repo, and `_publish.js`
+hand-computing the manager publish window as two UTC timestamps.
+
+**Verified on adhjrt.com, with a control, not inferred from the repo:** the
+homepage serves `SAT 14 &amp; SUN 15 NOVEMBER 2026` and the old
+`SAT 7 &amp; SUN 8` string is **absent from the same page** — the pair is what
+makes it a reading rather than a hopeful grep. `/app` carries the new hero, the
+JSON-LD reads `2026-11-14`/`2026-11-15`, and the Netlify deploy
+`6a7ae855…` is `ready` and current.
+
+⚠️ **This clone (cafnet, `C:\Users\Jay\GitHub\adhjrt`) was 47 commits behind**
+when the session opened, and its `main` 50 behind. Both fast-forwarded. The
+rule in `CLAUDE.md` — check every clone on every machine, every session — paid
+for itself again; a clone that is behind looks exactly like a clone that is
+fine.
+
+## 11 Aug 2026 — /app stopped polling from a pocket (on `dev`, NOT deployed)
+
+The last of the nine August review findings, and the minor one. `/app` ran a
+1-second clock and a 60-second API poll with **no `visibilitychange` gate
+anywhere in the file**, so an installed PWA went on requesting fixtures and
+standings every minute from a phone in a pocket, all weekend.
+
+⚠️ **THE OBVIOUS FIX WOULD HAVE BEEN A REGRESSION, AND THAT IS THE WHOLE
+DESIGN.** Gating the timers is the easy half. A gate with no catch-up leaves a
+manager who unlocks their phone at a pitch reading a score up to a minute
+stale — worse than the requests it saved. So the handler refreshes immediately
+on return, and **four of the six injected faults are not the original bug at
+all: they are the fix done badly**, which is the version somebody would
+plausibly ship.
+
+Two smaller calls, both with a fault behind them: the gate is **inside** each
+callback rather than a start/stop on visibility (one missed `clearInterval`
+leaves a second poll loop running, and nothing on screen looks wrong), and the
+catch-up still honours `sheetOpen()` — a sheet can be open across a hide, and
+refreshing under a half-typed score is exactly what the 60-second poll already
+refuses to do.
+
+**`tests/test-app-polling.js` DRIVES the shipped callbacks.** The three bodies
+are cut out of `app.html` and executed against stubs, so the assertions are
+about what gets **called**, not which words appear in the source — the lesson
+from `test-google-auth.js`. ⚠️ **The extractor must strip comments first, and
+that is load-bearing:** `app.html`'s own comment above the timers contains the
+words `setInterval` and `clearInterval`, explaining why it does not use them.
+**Tenth time in this repo that prose mentioning a string was indistinguishable
+from the string.**
+
+**Suite: 884/884 faults, 45 clean, 50 files.** Six new faults. ⚠️ The clean
+baseline went **44 → 45**, which is the proof this is a new FILE that ran
+undamaged rather than checks added to an existing one.
+
+⚠️ **NOT DEPLOYED.** It sits on `dev` with the docs corrections. `/app` on
+adhjrt.com still polls from the background until this is merged.
+
+## 11 Aug 2026 — revoking somebody now visibly works (on `dev`, NOT deployed)
+
+**Jay ran the revoke test on production — the check this page had called the
+single most valuable remaining one — and it found two defects.** Spec, with the
+arguments against each choice: `claude/specs/spec-session-refusal-aug-2026.md`.
+Do not re-derive it.
+
+⚠️ **THE LOCK WAS NEVER BROKEN, AND THE FIRST DIAGNOSIS FROM THE SYMPTOM WOULD
+HAVE BEEN WRONG.** "I revoked the account and still got in" reads as a broken
+revocation. Driving the real `my-account.js` against the real `_auth.js` with a
+passing CONTROL showed every state refusing: revoked 403, cut-off 401, deleted
+401, approved 200. What was broken was that **nothing turned a refusal into a
+signed-out state** — `logout()` was called by the Sign out button and nothing
+else, and `currentSession()` returns a session whenever a token STRING is in
+localStorage. The dashboard drew from browser storage while every request
+behind it was turned away. Jay's account had been **deleted outright** by the
+end and the page still rendered, fifteen refreshes running.
+
+⚠️ **THE MARKER EXISTS BECAUSE STATUS CODES CANNOT ANSWER THIS.** Measured, on
+the same endpoint: a manager touching an organiser-only feature gets **403 and
+must stay signed in**; a revoked manager gets **403 and must not**. A store
+outage gets 503 and must never sign anyone out — fifteen managers at a pitch
+over a blob blip is worse than the bug. So `resolveSession` sets
+`sessionEnded`, the browser reads that and nothing else, and **half the
+injected faults make the code sign people out MORE**, because "it signs out on
+a refusal" passes against code that signs out on everything.
+
+**One shared `sessionRefusal()` builder**, because the ten endpoints hand-rolled
+the response in nine idioms and a missed copy fails silently — that endpoint
+alone never signs anybody out. ⚠️ `/app` deliberately does NOT navigate to
+`/signin`: it is the match-day PWA with its own sheet, and its sign-out cleanup
+is now one `dropToPublic()` shared by both routes rather than a second copy
+that could forget a line.
+
+**Defect 2, and the worse one.** `revoke` set `approved = false`, which is also
+what the pending queue means — so a revoked person appeared among new signups
+under **Approve** (silently reinstates them) and **Reject** (deletes the record
+outright, with no confirmation of any kind). **Jay pressed the delete by
+accident**, describing it as dismissing a stray row, which is exactly how it
+reads there. Now `revokedAt` is its own field, revoked accounts have their own
+section with *Restore access* and *Delete for good*, and the delete asks first
+and names the person. ⚠️ Restoring does NOT clear `sessionsValidFrom` — the old
+tokens stay dead.
+
+**Suite: 900/900 faults, 46 clean, 51 files.** Sixteen new faults. ⚠️ The clean
+baseline went **44 → 46**, one for each new FILE, which is the proof both ran
+undamaged.
+
+⚠️ **SIX PRE-EXISTING FAULTS REPORTED `COULD NOT INJECT`** — three quoting the
+refusal lines that moved into the shared builder, three quoting the `/app`
+sign-out branch, which survived intact but changed INDENTATION when it moved
+into a function. All six repointed, none deleted. **A fault that cannot be
+injected is a failed run, not a pass**, and this is the third branch running
+where that mechanism has earned its keep.
+
+⚠️ **An existing check caught a new button.** `test-documents.js` requires every
+user-facing "Delete" on `/organizer` to be the irreversible one; the new control
+was labelled "Delete permanently". The rule is right, so the button was renamed
+to match the house phrase rather than the rule widened to admit it.
+
+⚠️ **NOT DEPLOYED.** All of it sits on `dev` with the `/app` polling gate.
+Production still renders a dashboard for a revoked login.
+
 ## Where things stand
 
 | | |
@@ -1008,9 +1131,15 @@ placement approval at once.
 
 **Standing instructions:** do not raise the registration-window decision; do not
 raise the `club-manager-page` branch (parked 2 Aug — thirteen commits, finished,
-green, never merged); **do not raise the DOCUMENTS feature** (specced 5 Aug,
-parked by Jay the same day — `claude/specs/spec-documents.md`, backlog item 7,
-no code written); the Junior Manager's account (name redacted) is dropped.
+green, never merged); the Junior Manager's account (name redacted) is dropped.
+
+⚠️ **THE "DO NOT RAISE THE DOCUMENTS FEATURE" INSTRUCTION IS GONE — IT WAS
+WRONG (corrected 11 Aug 2026).** It said *"parked by Jay the same day … no code
+written"*, which was true on 5 Aug and false from 7 Aug, when Documents shipped
+in five commits (`c3fc11c` … `26dd9d2`). The same wrong sentence sat in
+`CLAUDE.md`. **A standing instruction not to discuss something is exactly the
+kind of note that never gets re-read when the thing changes** — it works by
+stopping the conversation that would have corrected it.
 
 ⚠️ **THE DEAD GitHub MCP TOKEN IS THE INTENDED STATE — DO NOT "FIX" IT.** That
 server was deliberately removed on 25 Jul 2026 because it parked a live

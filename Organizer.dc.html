@@ -1262,6 +1262,46 @@
       <sc-if value="{{ isClubs }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
+          <!-- ⚠️ THE CLUB INVITE LINK. Spec: claude/specs/spec-club-invite-link.md
+               It carries CLUB_FORM_KEY, which is the ONLY thing protecting the
+               club form — the page being unlisted is not protection, because
+               this repo is public and the path is readable in the source. The
+               endpoint behind this is organiser-only on GET as well as POST,
+               unlike registration-window, whose GET is deliberately public.
+               The status line exists because the key now lives in two places
+               and can drift: rotate it in Netlify and this link keeps LOOKING
+               fine while being dead. -->
+          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Club invite link</div>
+            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">The link you email to club contacts. It is deliberately not published anywhere on the site, and the key on the end of it is the only thing keeping the form private &mdash; <b style="color:#454D58">send it to clubs directly, never post it publicly</b>.</p>
+
+            <sc-if value="{{ clubLinkEditing }}" hint-placeholder-val="{{ false }}">
+              <!-- ⚠️ aria-label APPENDED, not inserted mid-tag. Inserting into
+                   the middle of existing tags rotted five fault anchors on
+                   9 Aug; appending would have broken none of them. Also 16px,
+                   which is the iOS no-zoom-on-focus floor the phone pass set
+                   across the back office. -->
+              <input type="text" value="{{ clubLinkDraft }}" onInput="{{ onClubLinkInput }}" placeholder="https://adhjrt.com/register-club?k=…" style="width:100%;font-size:16px;padding:11px 12px;border:1px solid rgba(0,0,0,0.25);border-radius:9px;font-family:monospace" aria-label="Club invite link">
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                <button onClick="{{ onSaveClubLink }}" disabled="{{ clubLinkBusy }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ clubLinkSaveLabel }}</button>
+                <button onClick="{{ onCancelClubLink }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Cancel</button>
+                <sc-if value="{{ clubLinkHasSaved }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ onClearClubLink }}" style="background:transparent;border:1px solid #B00020;color:#B00020;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Clear</button>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ clubLinkReading }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                <div style="flex:1;min-width:240px;font-family:monospace;font-size:13px;color:#1A1C1F;word-break:break-all;background:#F3F2EF;border-radius:9px;padding:11px 12px">{{ clubLinkShown }}</div>
+                <button onClick="{{ onEditClubLink }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Edit</button>
+              </div>
+            </sc-if>
+
+            <div style="margin-top:12px;font-size:13px;font-weight:600;color:{{ clubLinkStatusColour }}">{{ clubLinkStatusText }}</div>
+            <sc-if value="{{ clubLinkError }}" hint-placeholder-val=""><div style="margin-top:8px;color:#A62626;font-size:13px;font-weight:600">{{ clubLinkError }}</div></sc-if>
+          </div>
+
           <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:20px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Clubs &mdash; declared vs registered</div>
             <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:0;line-height:1.5">Clubs declare how many teams they expect to bring, months before teams register one by one. This compares the two. <b style="color:#454D58">Anything marked Short or Over is a club worth a phone call</b> &mdash; a plan that has changed still changes pools, pitches and the draw. Declarations are estimates, not commitments.</p>
@@ -2009,6 +2049,12 @@ class Component extends DCLogic {
        is the chase-list filter, off by default so the tab opens showing
        everything and narrows on request rather than hiding rows by surprise. */
     clubs: [], clubsUnavailable: false, expandedClub: '', clubsOnlyFlagged: false,
+    /* The Club invite link box. `clubLinkStatus` is the SERVER's verdict —
+       empty / off / working / stale — never computed here, because only the
+       server knows the real CLUB_FORM_KEY and sending it to the browser to
+       compare is the thing this design avoids. */
+    clubLink: '', clubLinkStatus: 'empty', clubLinkEditing: false,
+    clubLinkDraft: '', clubLinkBusy: false, clubLinkError: '',
     /* The Tournament tab's bulk publish — moved from the old /scores Manager
        area. bulkMsg is the outcome sentence ("Published 15 age groups.") and
        is set LAST, after any refresh, so nothing can blank it on the way in
@@ -2635,6 +2681,33 @@ class Component extends DCLogic {
       flaggedClubCount: rec.totals.flagged,
       hasFlaggedClubs: rec.totals.flagged > 0,
 
+      /* ⚠️ EVERY ONE OF THESE MUST BE RETURNED HERE. A `{{ X }}` the template
+         uses and renderVals does not return resolves SILENTLY to empty — the
+         binding trap already recorded for the Fixtures→Results link. */
+      clubLinkEditing: !!s.clubLinkEditing,
+      clubLinkReading: !s.clubLinkEditing,
+      clubLinkDraft: s.clubLinkDraft,
+      clubLinkBusy: !!s.clubLinkBusy,
+      clubLinkError: s.clubLinkError,
+      clubLinkHasSaved: !!s.clubLink,
+      clubLinkShown: s.clubLink || 'No link saved yet.',
+      clubLinkSaveLabel: s.clubLinkBusy ? 'Saving…' : 'Save',
+      /* The wording is the SERVER's four states. "off" is not a broken link —
+         it means the form is switched off at the Netlify end, which is the
+         deliberate off switch, and calling that "no longer works" would send
+         somebody looking for the wrong problem. */
+      clubLinkStatusText: {
+        empty:   'Nothing saved yet. Paste the link from Netlify (CLUB_FORM_KEY) to keep it here.',
+        off:     'The club form is switched OFF — CLUB_FORM_KEY is not set in Netlify, so every submission is refused.',
+        working: 'Working — this link matches the key the site is running with.',
+        stale:   'This link no longer works. The key has been rotated in Netlify since it was saved.',
+      }[s.clubLinkStatus] || '',
+      clubLinkStatusColour: { working: '#0E6B33', stale: '#A62626', off: '#8F6400' }[s.clubLinkStatus] || '#5A626E',
+      onEditClubLink: () => this.onEditClubLink(),
+      onCancelClubLink: () => this.onCancelClubLink(),
+      onClubLinkInput: (e) => this.onClubLinkInput(e),
+      onSaveClubLink: () => this.onSaveClubLink(),
+      onClearClubLink: () => this.onClearClubLink(),
       clubsUnavailable: !!s.clubsUnavailable,
       /* ⚠️ THREE STATES, NOT TWO. "Still loading", "the sheet is unreadable"
          and "nobody has declared yet" are different sentences, and showing the
@@ -4210,6 +4283,69 @@ class Component extends DCLogic {
   }
 
   async doApprove(username) { await this.state.api.approveAccount(username); this.refreshAccounts(); }
+  /* ===== THE CLUB INVITE LINK ==========================================
+     Spec: claude/specs/spec-club-invite-link.md
+
+     ⚠️ ALL-LOWERCASE LOCALS BELOW, DELIBERATELY. support.js runs encodeCase()
+     over this whole component before it is parsed, and whitespace + camelCase
+     + `=` anywhere — code included — is rewritten to a kebab-cased sc-camel-…
+     name, at which point the script stops parsing. Property access and object
+     keys are safe; a local named `clubLinkRes =` is not. */
+  async loadClubLink() {
+    const api = this.state.api;
+    if (!api || !api.clubLink) return;
+    const r = await api.clubLink();
+    if (!r || !r.ok) {
+      /* Fails SOFT: a card that cannot load must not take the Clubs tab with
+         it. The tab's real job is the declared-vs-registered table. */
+      this.setState({ clubLinkError: (r && r.error) || 'Could not load the club invite link.' });
+      return;
+    }
+    this.setState({ clubLink: r.link || '', clubLinkStatus: r.status || 'empty', clubLinkError: '' });
+  }
+
+  onEditClubLink() {
+    this.setState({ clubLinkEditing: true, clubLinkDraft: this.state.clubLink, clubLinkError: '' });
+  }
+  onCancelClubLink() {
+    /* Discards the draft, never the stored value. */
+    this.setState({ clubLinkEditing: false, clubLinkDraft: '', clubLinkError: '' });
+  }
+  onClubLinkInput(e) {
+    this.setState({ clubLinkDraft: (e && e.target ? e.target.value : '') });
+  }
+
+  async onSaveClubLink() {
+    const draft = (this.state.clubLinkDraft || '').trim();
+    /* ⚠️ An empty box is NOT a way to clear it. Emptying the field by accident
+       and pressing Save must not wipe the stored link silently — Clear is its
+       own button, and the server refuses an empty save as well. */
+    if (!draft) {
+      this.setState({ clubLinkError: 'Paste the link, or use Clear to remove it.' });
+      return;
+    }
+    this.setState({ clubLinkBusy: true, clubLinkError: '' });
+    const r = await this.state.api.saveClubLink(draft);
+    this.setState({ clubLinkBusy: false });
+    if (!r || !r.ok) {
+      this.setState({ clubLinkError: (r && r.error) || 'Could not save the link.' });
+      return;
+    }
+    this.setState({ clubLink: r.link || '', clubLinkStatus: r.status || 'empty', clubLinkEditing: false, clubLinkDraft: '' });
+  }
+
+  onClearClubLink() {
+    this.confirmModal(
+      'Remove the saved club invite link?\n\nThis only forgets it here. It does NOT switch the club form off — that is CLUB_FORM_KEY in Netlify, and it needs a deploy to take effect.',
+      async () => {
+        const r = await this.state.api.clearClubLink();
+        if (!r || !r.ok) { this.setState({ clubLinkError: (r && r.error) || 'Could not clear the link.' }); return; }
+        this.setState({ clubLink: '', clubLinkStatus: 'empty', clubLinkEditing: false, clubLinkDraft: '' });
+      },
+      { okLabel: 'Remove it' }
+    );
+  }
+
   async doReject(username) { await this.state.api.rejectAccount(username); this.refreshAccounts(); }
 
   /* ⚠️ DELETING A REVOKED ACCOUNT ASKS FIRST, AND doReject DOES NOT.
@@ -4664,7 +4800,11 @@ class Component extends DCLogic {
       showPlayers: () => this.setState({ tab: 'players' }),
       showAccounts: () => this.setState({ tab: 'accounts' }),
       showVenue: () => { this.setState({ tab: 'venue' }); this.loadVenue(); },
-      showClubs: () => this.setState({ tab: 'clubs' }),
+      /* ⚠️ Loaded when the tab is OPENED, not at boot. It is an authenticated
+         read of a secret; fetching it on every /organizer load would put the
+         club key on the wire for organisers who never go near this tab.
+         Not awaited — the tab must switch instantly, and the card fails soft. */
+      showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); },
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       showTournament: () => this.openTournament(),
       showFixturesView: () => this.openFixturesView(),

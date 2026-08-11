@@ -89,7 +89,11 @@ $tests = @(
   # Being signed out by the server (11 Aug 2026) - spec
   # claude/specs/spec-session-refusal-aug-2026.md. Same note as above: this
   # line is the registration.
-  'test-session-refusal.js'
+  'test-session-refusal.js',
+  # The Club invite link box (11 Aug 2026) - spec
+  # claude/specs/spec-club-invite-link.md. A NEW TEST FILE DOES NOT JOIN THE
+  # SUITE BY ITSELF; this line is the whole registration.
+  'test-club-link.js'
 )
 
 Write-Host ''

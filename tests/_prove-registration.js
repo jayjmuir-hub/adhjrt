@@ -80,7 +80,12 @@ const NEEDED = [
      always the same and always misleading: the test file dies on ENOENT, the
      suite fails UNDAMAGED, the clean baseline does not rise, and every fault
      aimed at it reports "caught" while proving nothing. */
-  'netlify/functions/my-account.js',
+  'netlify/functions/my-account.js',
+  /* The Club invite link (11 Aug 2026). EIGHTH time a new module has had to be
+     added here - the symptom of forgetting is always ENOENT, a suite that
+     fails UNDAMAGED, and every fault aimed at it reporting "caught" while
+     proving nothing. */
+  'netlify/functions/club-link.js',
   'netlify/functions/get-registrations.js',
   'netlify/functions/get-my-registrations.js',
   'netlify/functions/registration-window.js',
@@ -8822,6 +8827,93 @@ const FAULTS = [
       '  .spon-tile{transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}\n',
       ''),
     expect: ['have a transition to animate'],
+  },
+
+  /* ---- the Club invite link box (11 Aug 2026) ---------------------------
+     Spec: claude/specs/spec-club-invite-link.md. The card holds
+     CLUB_FORM_KEY, which is the only thing protecting the club form, so most
+     of these faults are LEAKS rather than breakages - and the first one is the
+     mistake the file was most likely to make, because the endpoint it is
+     modelled on deliberately has a public GET. */
+  {
+    name: 'the club link endpoint gets a public GET, like the one it was copied from',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "  const gate = await requireOrganizer(event);\n  if (gate.refusal) return gate.refusal;",
+      "  const gate = event.httpMethod === 'GET' ? {} : await requireOrganizer(event);\n  if (gate.refusal) return gate.refusal;"),
+    expect: ['signed out cannot READ the link', 'a MANAGER cannot read the link'],
+  },
+  {
+    /* An organiser-only page, so a manager is not the public - but a manager is
+       not an organiser either, and the club key is not theirs to have. */
+    name: 'the organiser check softens to any signed-in session',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "  if (auth.session.role !== 'organizer') {", '  if (false) {'),
+    expect: ['a MANAGER cannot read the link'],
+  },
+  {
+    /* ⚠️ THE DRIFT THE CARD EXISTS FOR. Report every saved link as fine and it
+       goes on LOOKING right after the key is rotated in Netlify - which is
+       exactly how twenty clubs get emailed a dead link. */
+    name: 'every saved link is reported as working, so a rotated key goes unnoticed',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "  return keyOf(link) === expected ? 'working' : 'stale';", "  return 'working';"),
+    expect: ['reported as stale, not silently fine'],
+  },
+  {
+    /* "off" and "stale" are different answers: one means the form is switched
+       off at the Netlify end on purpose, the other means the link is dead.
+       Collapsing them sends somebody looking for the wrong problem. */
+    name: 'a switched-off club form is reported as a stale link instead',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "  if (!expected) return 'off';", ''),
+    expect: ['an unset CLUB_FORM_KEY reads as OFF'],
+  },
+  {
+    /* Emptying the box by accident and pressing Save would wipe the stored
+       link with no confirmation and no way back. */
+    name: 'an empty save silently clears the stored link',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "      if (!link) return json(400, { ok: false, error: 'Paste the link, or use Clear to remove it.' });",
+      "      if (!link) { await blobStore(STORE).delete(KEY); return json(200, { ok: true, link: '', status: 'empty' }); }"),
+    expect: ['an empty save is refused rather than treated as a clear'],
+  },
+  {
+    /* A card that cannot load must not take the Clubs tab down with it - the
+       tab's real job is the declared-vs-registered table. */
+    name: 'a store outage on the card errors instead of failing soft',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      "    console.error('club-link: could not read the stored link —', err && err.message);\n    return null;",
+      "    throw err;"),
+    expect: ['a store outage still answers 200'],
+  },
+  {
+    /* ⚠️ THE LEAK. Handing the expected key back beside the status is the
+       obvious "helpful" addition - it would let the page explain the mismatch -
+       and it publishes the club key to every organiser's browser and into any
+       log or error reporter in between. */
+    name: 'the expected key is returned beside the status, to be helpful',
+    suite: 'test-club-link.js',
+    apply: () => patch(path.join('netlify', 'functions', 'club-link.js'),
+      '        ok: true, link, status: statusOf(link),',
+      '        ok: true, link, status: statusOf(link), expectedKey: process.env.CLUB_FORM_KEY || "",'),
+    expect: ['no response echoes CLUB_FORM_KEY'],
+  },
+  {
+    /* The card is loaded at boot rather than on opening the tab, so the club
+       key goes over the wire for every organiser on every page load, including
+       the ones who never look at Clubs. */
+    name: 'the club link is fetched on every page load rather than on the tab',
+    suite: 'test-club-link.js',
+    apply: () => patch('Organizer.dc.html',
+      "showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); },",
+      "showClubs: () => this.setState({ tab: 'clubs' }),"),
+    expect: ['it loads when the tab is opened'],
   },
 
 ];

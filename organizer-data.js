@@ -376,6 +376,41 @@ export async function getRegistrationWindow() {
   return { ok: false, error: 'Could not load the registration window.' };
 }
 
+/* ===== THE CLUB INVITE LINK =============================================
+   Spec: claude/specs/spec-club-invite-link.md
+
+   ⚠️ THE GET IS AUTHENTICATED, UNLIKE clubRegistrationWindow() DIRECTLY ABOVE.
+   That one is a public fact; this one carries CLUB_FORM_KEY, the only thing
+   protecting the club form. authHeaders() on the read is not an oversight to
+   be tidied away — dropping it would 403 (the server gates both methods), but
+   the reason it is here is that the endpoint must never be callable without a
+   session in the first place. */
+export async function clubLink() {
+  const r = await tryFetchJson('/.netlify/functions/club-link', { headers: authHeaders() });
+  if (r.real && r.json) return r.json;
+  return { ok: false, error: 'Could not load the club invite link.' };
+}
+
+export async function saveClubLink(link) {
+  const r = await tryFetchJson('/.netlify/functions/club-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ link }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Saving the club link needs the deployed site (not available in local preview).' };
+}
+
+export async function clearClubLink() {
+  const r = await tryFetchJson('/.netlify/functions/club-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ clear: true }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Clearing the club link needs the deployed site (not available in local preview).' };
+}
+
 export async function saveRegistrationWindow(settings) {
   const r = await tryFetchJson('/.netlify/functions/registration-window', {
     method: 'POST',

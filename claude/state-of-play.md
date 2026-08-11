@@ -972,8 +972,8 @@ from the string.**
 baseline went **44 → 45**, which is the proof this is a new FILE that ran
 undamaged rather than checks added to an existing one.
 
-⚠️ **NOT DEPLOYED.** It sits on `dev` with the docs corrections. `/app` on
-adhjrt.com still polls from the background until this is merged.
+✅ **LIVE** — merged in `807e0e1` and verified on production; see the deploy
+record below.
 
 ## 11 Aug 2026 — revoking somebody now visibly works (on `dev`, NOT deployed)
 
@@ -1035,8 +1035,44 @@ user-facing "Delete" on `/organizer` to be the irreversible one; the new control
 was labelled "Delete permanently". The rule is right, so the button was renamed
 to match the house phrase rather than the rule widened to admit it.
 
-⚠️ **NOT DEPLOYED.** All of it sits on `dev` with the `/app` polling gate.
-Production still renders a dashboard for a revoked login.
+✅ **LIVE** — merged in `807e0e1`; see the deploy record directly below.
+
+## ✅ 11 Aug 2026 — deployed and MEASURED on adhjrt.com (`807e0e1`)
+
+**Two commits, ONE 15-credit production deploy.** `main`, `dev` and `Compare`
+are all level; `Compare` was fast-forwarded in the same breath as the merge,
+which is the rule that stops it becoming the next `club-manager-page`.
+Gate before merging: `runall.ps1` **All green**, 900/900 faults, 46 clean,
+52 headers, exit 0. Deploy `6a7ae855…` → **`6a7b08fe…`**, `ready`.
+
+⚠️ **THE VERIFICATION THAT ACTUALLY PROVES SOMETHING IS THE BEHAVIOURAL ONE,
+AND IT NEEDS NO CREDENTIALS.** A made-up bearer token against the live
+`my-account` endpoint returns:
+
+    401  {"ok":false,"error":"Not signed in.","sessionEnded":true}
+
+That is the new marker doing its job on production, not a string found in a
+file. **Anyone can re-run it**, and it costs nothing:
+
+    curl -H "Authorization: Bearer nonsense" https://adhjrt.com/.netlify/functions/my-account
+
+**Waited on something that becomes PRESENT, not on a 404.** `noteSessionEnded`
+was measured **absent (0)** in `adhjrt.com/scores-data.js` before the merge with
+`migrateSession` **present (2)** in the same file as the control, then appeared
+within ~20s. The 9 Aug lesson — a missing file and a hidden file are
+indistinguishable — applied deliberately.
+
+Also live: the `visibilitychange` gate and `dropToPublic()` in `/app`, the
+signed-out line on `/signin`, and the Revoked section with *Restore access* and
+*Delete for good* on `/organizer`. Nine pages answer 200, a nonexistent path
+404s, and both public functions still answer 200.
+
+⚠️ **ONE MEASUREMENT OF MINE READ ZERO AND WAS WRONG.** Grepping
+`adhjrt.com/Signin.dc.html` reported the new code missing — the raw filename
+**301s** to the pretty URL, so the grep read a redirect body. At `/signin` it is
+present. **Fetch the URL the page is SERVED at, not the file it is built from**,
+and treat a zero from a path you have not status-checked as unmeasured rather
+than as absent.
 
 ## Where things stand
 

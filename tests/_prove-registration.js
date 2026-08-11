@@ -2054,7 +2054,7 @@ const FAULTS = [
   {
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true, url: 'https://alignhealth.ae/' },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, url: 'https://alignhealth.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters'],
   },
   {
@@ -2166,7 +2166,11 @@ const FAULTS = [
        coming straight back. */
     name: 'the widest mark is levelled up to match the others',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-brighton-college.webp',       h: 35,", "sponsor-brighton-college.webp',       h: 55,"),
+    /* ⚠️ REPOINTED 11 Aug 2026: the widest mark is Broadway Malyan on the new
+       dark-mode pack, so levelling THAT one up is what the rule now catches.
+       The rule is unchanged - a very wide mark must end up smaller than a
+       mid-pack one - only the mark that happens to be widest has moved. */
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 27,", "sponsor-broadway-malyan.webp',        h: 68,"),
     expect: ['widest mark'],
   },
   {
@@ -2283,19 +2287,19 @@ const FAULTS = [
     name: 'Crompton is moved out of the first slot',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME,
-      "  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true, url: 'https://cromptonpartners.com/' },\n  { name: 'Oak View Group',",
+      "  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 52, url: 'https://cromptonpartners.com/' },\n  { name: 'Oak View Group',",
       "  { name: 'Oak View Group',"),
     expect: ['Crompton leads the list'],
   },
   {
     /* ⚠️ The alternation broken by a reorder that looks like tidying — grouping
        the white boxes together, which is exactly what somebody would do. */
-    name: 'the list is regrouped so the tiles stop alternating',
+    name: 'the light/dark flag creeps back into the data',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME,
-      "  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },\n  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },",
-      "  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },\n  { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },"),
-    expect: ['the tiles alternate'],
+      "sponsor-brighton-college.webp',       h: 55,",
+      "sponsor-brighton-college.webp',       h: 55, light: true,"),
+    expect: ['the light/dark flag is gone', 'every tile is dark'],
   },
   {
     /* ⚠️ Back to a grid, which leaves the last row hanging on the left. There
@@ -2313,8 +2317,14 @@ const FAULTS = [
        it by: 11.5:1 needed 26, the wordmark is 5.4:1 at 36. */
     name: 'Broadway Malyan goes back to the tagline lockup',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 36,", "sponsor-broadway-malyan.webp',        h: 26,"),
-    expect: ['sized for the wordmark'],
+    /* ⚠️ THIS FAULT'S INSTRUMENT CHANGED, NOT ITS SUBJECT. The check used to
+       separate the wordmark (5.4:1, h 36) from the TAGLINE lockup (11.5:1,
+       h 26) BY HEIGHT. The new dark-mode wordmark is 9.5:1, h 27 - so height
+       can no longer tell them apart, and the check reads the stored file's own
+       aspect instead. Repointed at the squarest-marks rule, which still holds
+       and which levelling this one up still breaks. */
+    apply: () => patch(HOME, "sponsor-broadway-malyan.webp',        h: 27,", "sponsor-broadway-malyan.webp',        h: 69,"),
+    expect: ['widest mark'],
   },
   {
     /* ⚠️ Bili Boys "corrected" to the height the formula gives for its ratio.
@@ -2322,8 +2332,13 @@ const FAULTS = [
        the artwork there is, so 64 is a blurrier logo, not a bigger one. */
     name: 'the small-source Bili Boys logo is scaled up to the formula height',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-bili-boys.webp',              h: 52,", "sponsor-bili-boys.webp',              h: 64,"),
-    expect: ['90px source is not stretched'],
+    /* ⚠️ REPOINTED, AND THE THING IT GUARDED IS GONE RATHER THAN MOVED. Bili
+       Boys used to be the one NATIVE-SIZE exception - a 154x90 cream badge, so
+       h was pinned by hand BELOW the formula to avoid baking in a stretch. The
+       sponsor's own dark-mode file is 295x160, so it is an ordinary row now and
+       h is simply the formula's answer. The fault keeps watch on that height. */
+    apply: () => patch(HOME, "sponsor-bili-boys.webp',              h: 61,", "sponsor-bili-boys.webp',              h: 40,"),
+    expect: ['sized by the formula'],
   },
   {
     /* The exception tidied into looking like every other row - which is how an
@@ -2331,17 +2346,24 @@ const FAULTS = [
     /* ⚠️ REPOINTED 5 Aug, when the grid stopped recolouring anything: Bili Boys
        is no longer "the exception to the white treatment", it is the one logo
        that is already a box. The reason moved with it. */
-    name: 'the reason Bili Boys stays on the dark tile is tidied away',
+    name: 'the note explaining the Bili Boys retired exception is tidied away',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'badge with its own opaque cream ground', 'logo'),
-    expect: ['stays on the dark tile is written down'],
+    /* ⚠️ REPOINTED 11 Aug 2026, AND THE ANCHOR MOVED FOR A SECOND REASON.
+       Bili Boys' cream-badge exception is retired with the new dark-mode
+       artwork, so what must stay on the page is the TOMBSTONE saying it went.
+       The obvious anchor - 'badge with its own opaque cream ground' - is now a
+       DECOY: the tombstone QUOTES the old wording, so patching that string
+       edits the tombstone and proves nothing. Anchored on text only the live
+       tombstone has. Same trap as the 8 Aug one, hit from the other side. */
+    apply: () => patch(HOME, 'BILI BOYS WAS THE ONE HAND-PINNED EXCEPTION', 'Bili Boys'),
+    expect: ['retired exception is tombstoned'],
   },
   {
     /* Bili Boys quietly dropped again, which is the state the page was in for
        a day and the thing Jay noticed. */
     name: 'Bili Boys is dropped from the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52, url: 'https://www.biliboys.ae/' },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 61, url: 'https://www.biliboys.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
@@ -2352,13 +2374,17 @@ const FAULTS = [
        somebody's eye. */
     name: 'the white-box rule is deleted, leaving the flags unexplained',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, 'The flag is assigned by MEASUREMENT, not taste', 'The flag is set per logo'),
-    expect: ['white-box rule is recorded'],
+    /* ⚠️ REPOINTED ONTO THE TOMBSTONE. The measured white-box rule is retired
+       with the checkerboard, so what must now stay written down is WHY it was
+       retired - otherwise a later session helpfully restores a design Jay
+       chose to replace. */
+    apply: () => patch(HOME, 'every other is dark, every other is white', 'the tiles used to vary'),
+    expect: ['checkerboard is tombstoned'],
   },
   {
     name: 'Anderson is dropped from the supporters list',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true, url: 'https://anderson.ae/' },\n", ''),
+    apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 56, url: 'https://anderson.ae/' },\n", ''),
     expect: ['eighteen confirmed supporters', 'Anderson is on the page'],
   },
   {
@@ -2369,15 +2395,21 @@ const FAULTS = [
     name: 'a white box spreads to a logo that only exists as a white file',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "sponsor-yas-cycles.webp',             h: 65,", "sponsor-yas-cycles.webp',             h: 65, light: true,"),
-    expect: ['nine sponsors get a white box', 'yas-cycles stays on the dark tile'],
+    expect: ['every tile is dark', 'the light/dark flag is gone', 'no sponsor gets a white box'],
   },
   {
     /* A white box removed: Crompton's navy keyhole goes back to being invisible
        on #151517, reporting no error anywhere. */
-    name: 'a white box is dropped, hiding a dark-ink logo',
+    name: 'the tile colour is hardcoded away from the one derived value',
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "h: 54, light: true, url:", "h: 54, url:"),
-    expect: ['nine sponsors get a white box'],
+    /* ⚠️ THIS FAULT'S PREMISE IS GONE, NOT RELOCATED, and that is worth saying
+       plainly. It removed a white box so a dark-ink logo went invisible; there
+       are no white boxes now, so it cannot be injected as written. Repointed at
+       the failure the single dark ground actually leaves open - the tile losing
+       its one derived colour and hardcoding another, which is how the two greys
+       drifted apart in the first place. */
+    apply: () => patch(HOME, "        bg:   '#151517',", "        bg:   '#1a1a1c',"),
+    expect: ['derived in one place'],
   },
   {
     /* The tile goes back to one hardcoded colour — which looks like a tidy-up

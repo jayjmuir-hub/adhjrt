@@ -167,6 +167,27 @@ section('The two HSBC assets');
    unconditionally would throw and take every check below it with it, which is
    the failure this suite already learned about once. */
 const hasAssets = fs.existsSync(path.join(repoRoot(), 'assets'));
+
+/* ⚠️ A MINIMAL WEBP DIMENSION READER, because the aspect of a stored file is
+   the only thing that can still tell one sponsor's lockup from another (see
+   Broadway Malyan below) and nothing in this repo could read it. Handles the
+   three WebP chunk types: lossy (VP8 ), lossless (VP8L) and extended (VP8X).
+   Returns null rather than throwing on anything it does not recognise — a
+   check that dies takes every later check with it. */
+function imageSize(file) {
+  let b;
+  try { b = fs.readFileSync(file); } catch (e) { return null; }
+  if (b.length < 30 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') return null;
+  const kind = b.toString('ascii', 12, 16);
+  if (kind === 'VP8X') return { width: (b.readUIntLE(24, 3) & 0xffffff) + 1, height: (b.readUIntLE(27, 3) & 0xffffff) + 1 };
+  if (kind === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+  if (kind === 'VP8L') {
+    const n = b.readUInt32LE(21);
+    return { width: (n & 0x3fff) + 1, height: ((n >> 14) & 0x3fff) + 1 };
+  }
+  return null;
+}
+
 if (hasAssets) {
   check('the white (reverse) lockup exists on disk', fs.existsSync(path.join(repoRoot(), WHITE)));
   check('the black-wordmark master is kept', fs.existsSync(path.join(repoRoot(), BLACK)));
@@ -576,11 +597,24 @@ section('The supporters grid');
      the anchor moved to the mark that is actually widest now. The RULE — a very
      wide mark must end up smaller than a mid-pack one — is unchanged, and it is
      the rule the fixed-height bug broke. */
-  check('the widest mark (Brighton College, 5.6:1) is sized down',
-    hOf('brighton-college') < hOf('oak-view-group'), `${hOf('brighton-college')} vs ${hOf('oak-view-group')}`);
+  /* ⚠️ REPOINTED AGAIN 11 Aug 2026, third time, and for the same reason each
+     time: the ANCHOR is whichever mark happens to be widest, and that changes
+     when a sponsor supplies different artwork. The RULE has never changed — a
+     very wide mark must end up SMALLER than a mid-pack one, which is exactly
+     what the fixed-height bug broke. Broadway Malyan is the widest again with
+     the new dark-mode pack (9.5:1). */
+  check('the widest mark (Broadway Malyan) is sized down',
+    hOf('broadway-malyan') < hOf('oak-view-group'), `${hOf('broadway-malyan')} vs ${hOf('oak-view-group')}`);
+  /* ⚠️ COMPARED AGAINST A MID-PACK MARK, NOT THE WIDEST ONE, AND THAT IS THE
+     WHOLE STRENGTH OF IT. Re-anchoring this on Broadway Malyan (h 27) while
+     repointing the check above WEAKENED it silently: shrinking a square mark
+     from 68 to 35 still cleared 27, so the fault that exists to catch exactly
+     that stopped being caught. The prover reported it NOT CAUGHT, which is the
+     only reason it was noticed. The claim is widest < mid-pack < squarest, so
+     the middle term has to be a middle mark. */
   check('the squarest marks are sized UP, not left as postage stamps',
-    hOf('sportsmans-arms') > hOf('brighton-college') && hOf('ashurst') > hOf('brighton-college'),
-    `${hOf('sportsmans-arms')}/${hOf('ashurst')} vs ${hOf('brighton-college')}`);
+    hOf('sportsmans-arms') > hOf('oak-view-group') && hOf('ashurst') > hOf('oak-view-group'),
+    `${hOf('sportsmans-arms')}/${hOf('ashurst')} vs ${hOf('oak-view-group')}`);
 
   /* ⚠️ BROADWAY MALYAN'S FILE IS THE WORDMARK, NOT THE TAGLINE. The first one
      they supplied was "Creating places. Together." — theirs, but it does not
@@ -589,8 +623,21 @@ section('The supporters grid');
      the only thing a source-reading test can see: the tagline lockup was
      11.5:1 and needed h:26; the wordmark is 5.4:1 at h:36. A slide back to the
      tagline file would take the ratio and the height with it. */
-  check('Broadway Malyan is sized for the wordmark, not the tagline lockup',
-    hOf('broadway-malyan') >= 34, String(hOf('broadway-malyan')));
+  /* ⚠️ THIS CHECK LOST ITS DISCRIMINATION AND HAD TO CHANGE INSTRUMENT
+     (11 Aug 2026). It read `h >= 34`, which separated the wordmark (5.4:1,
+     h 36) from the TAGLINE lockup they first supplied (11.5:1, h 26) — the one
+     that is theirs but never says who they are, leaving their name nowhere on
+     the page. The new dark-mode wordmark is 9.5:1, h 27, so height can no
+     longer tell the two apart: 27 and 26 are the same answer.
+     It now measures the STORED FILE's own aspect instead, which still can.
+     ⚠️ Behind hasAssets, because the prover's temp copy carries no assets/ —
+     a check that silently no-ops there is worse than none. */
+  if (hasAssets) {
+    const bm = imageSize(path.join(repoRoot(), 'assets', 'sponsor-broadway-malyan.webp'));
+    check('Broadway Malyan is the wordmark, not the tagline lockup',
+      !!bm && bm.width / bm.height > 8 && bm.width / bm.height < 10.6,
+      bm ? `${bm.width}x${bm.height} = ${(bm.width / bm.height).toFixed(1)}:1 (tagline was 11.5:1)` : 'unreadable');
+  }
   check('the heights are not all the same number',
     new Set(rows.map((r) => r[3])).size >= 6);
 
@@ -714,8 +761,17 @@ section('The supporters grid');
      to the other changes how that sponsor is presented, and must not happen
      unnoticed. Re-measure when a file is replaced; never copy the flag from a
      neighbour. */
+  /* ⚠️ REWRITTEN 11 Aug 2026 — EVERY TILE IS DARK NOW. See the tombstone in
+     Quins JRT.dc.html: the checkerboard was Jay's call on 5 Aug and it was
+     superseded when he supplied dark-mode artwork for all eighteen and chose
+     all-dark. These checks were repointed, not deleted, because the property
+     they guard still exists — it is simply "one ground" instead of "two,
+     alternating, measured". */
   const lit = rows.filter((r) => r[4]);
-  eq('nine sponsors get a white box', lit.length, 9);
+  eq('⚠️ no sponsor gets a white box any more', lit.length, 0);
+  /* CONTROL. "none are light" is also true of an empty list, which is what a
+     broken row regex produces — and that would pass every check below. */
+  eq('CONTROL: the rows really were parsed', rows.length, 18);
 
   /* ⚠️ THE TILES ALTERNATE, AND THE ORDER OF THE LIST IS WHAT DOES IT — not an
      :nth-child rule. A positional CSS rule would paint every other tile white
@@ -724,10 +780,19 @@ section('The supporters grid');
      Asserting the ALTERNATION and the MEASURED flag together is what makes the
      checkerboard safe: the colour still follows the artwork.
      Crompton leads at Jay's request (5 Aug), so the run starts white. */
-  check('Crompton leads the list', rows.length > 0 && rows[0][2].includes('crompton-partners'));
-  const alternates = rows.every((r, i) => !!r[4] === (i % 2 === 0));
-  check('the tiles alternate white, dark, white, dark…', alternates,
-    rows.map((r) => (r[4] ? 'W' : 'D')).join(''));
+  /* ⚠️ The wording matters: the prover's fault for this looks for the phrase
+     "Crompton leads the list" in the failing check's name. Renaming it to
+     "Crompton STILL leads…" broke that match, and the fault reported "caught,
+     WRONG CHECK" — it failed on something else entirely. A check's name is
+     part of its contract here. */
+  check('Crompton leads the list, at Jay\'s request (5 Aug)',
+    rows.length > 0 && rows[0][2].includes('crompton-partners'));
+  /* ⚠️ THE ORDER IS NO LONGER LOAD-BEARING, AND THAT IS THE POINT OF THE
+     CHANGE. It used to be: the checkerboard came from ORDERING the list so the
+     measured flag alternated, so a nineteenth sponsor broke it outright.
+     Adding one is now a row and a file, anywhere. */
+  check('⚠️ every tile is dark, whatever the order',
+    rows.every((r) => !r[4]), rows.map((r) => (r[4] ? 'W' : 'D')).join(''));
 
   /* ⚠️ FLEX, NOT GRID. A CSS grid leaves an incomplete final row hanging on the
      left and there is no grid property that centres it; flex-wrap plus
@@ -737,21 +802,22 @@ section('The supporters grid');
   check('the last row is centred rather than left-hanging',
     /display:flex;flex-wrap:wrap;justify-content:center/.test(sponsorsInner)
       && !/grid-template-columns/.test(sponsorsInner));
-  const LIGHT = ['brighton-college', 'beond', 'westminster-construction', 'broadway-malyan',
-    'bottle-store', 'align-health', 'anderson-education', 'crompton-partners', 'recover'];
-  check('…and they are exactly the nine that fail on the dark tile',
-    lit.length === LIGHT.length && lit.every((r) => LIGHT.some((n) => r[2].includes(n))),
-    lit.map((r) => r[2]).join(', '));
-  /* ⚠️ AND THE OTHER NINE ARE ASSERTED TOO, or the check above would pass on a
-     grid where every tile had gone white. Three of them CANNOT take a white box
-     at any point — Oak View Group, V&P and Yas Mena Cycles exist only as
-     white-on-transparent files, so a white tile would erase them outright. */
+  /* ⚠️ These three used to be the hard constraint on the whole design — Oak
+     View Group, V&P and Yas Mena Cycles existed ONLY as white-on-transparent
+     files, so a white tile would have erased them outright and no error would
+     have been reported anywhere. That hazard is gone with the single dark
+     ground, but they are still asserted PRESENT: the risk it leaves behind is
+     the opposite one, a logo quietly dropping out of the grid. */
   ['oak-view-group', 'value-performance', 'yas-cycles'].forEach((slug) => {
-    const r = rows.find((row) => row[2].includes(slug));
-    check(`${slug} stays on the dark tile — no other version of it exists`, !!r && !r[4]);
+    check(`${slug} is still in the grid`, rows.some((row) => row[2].includes(slug)));
   });
-  check('the tile colour is DERIVED from that flag, not written into the data',
-    /bg:\s*s\.light \? '#ffffff' : '#151517'/.test(PAGE));
+  /* Still DERIVED in one place rather than written into each row — the two
+     values live together so a redesign changes them once. */
+  check('the tile colour is derived in one place, not per row',
+    /bg:\s*'#151517',/.test(PAGE) && /edge:\s*'rgba\(255,255,255,0\.08\)',/.test(PAGE));
+  check('⚠️ and the light/dark flag is gone from the data entirely',
+    !/light: true/.test(PAGE.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'a surviving flag means half the grid is still deciding its own ground');
   /* ⚠️ SCOPED TO THE LOOP, not to the whole section. The HSBC card above it is
      LEGITIMATELY background:#151517 — a negative check across the section would
      fail on the principal-partner card, which is not what this is about. Prove
@@ -784,26 +850,35 @@ section('The supporters grid');
      — it is already a box, and a cream rectangle inside a white one is worse
      than leaving it alone. It is the one logo the contrast measurement gets
      wrong (it reads the ground as ink), so it is pinned by hand. */
-  check('…on the dark tile, because the badge carries its own ground', !!bili && !bili[4]);
-  eq('…rendered small enough that its 90px source is not stretched far', Number(bili && bili[3]), 52);
-  check('…and the reason it stays on the dark tile is written down',
-    /badge with its own opaque cream ground/i.test(PAGE) && /154x90/.test(PAGE));
+  /* ⚠️ REPOINTED 11 Aug 2026. The 154x90 cream badge was replaced by the
+     sponsor's own dark-mode file, which is 295x160 — so the native-size
+     exception it used to be the example of no longer applies to it, and the
+     hand-pinned h:52 went with it. The height is now the formula's own answer
+     for its ratio, like every other row. */
+  eq('Bili Boys is sized by the formula, like the rest', Number(bili && bili[3]), 61);
 
   const anderson = rows.find((r) => r[2].includes('anderson-education'));
   check('Anderson is on the page', !!anderson);
-  /* Red wordmark over a BLACK subline — the subline is invisible on the dark
-     tile and recolouring it is exactly what this pass undid, so it takes a box. */
-  check('…on a white box, since its subline is black', !!anderson && !!anderson[4]);
+  /* Their old file was a red wordmark over a BLACK subline, invisible on a
+     dark tile, which is why it used to take a white box. The dark-mode file
+     they supplied solves it at source. */
+  check('…on the dark tile now, on their own dark-mode artwork', !!anderson && !anderson[4]);
 
-  /* ⚠️ THE RULE ITSELF HAS TO BE WRITTEN DOWN, not just applied. "Why is this
-     one white and that one not?" is what a later session will ask, and the
-     answer — measured contrast, not taste — is the only thing that stops the
-     flag being copied around by eye. */
-  check('the white-box rule is recorded next to the data',
-    /assigned by MEASUREMENT/i.test(PAGE) && /4\.5:1/.test(PAGE));
+  /* ⚠️ THE SUPERSEDED DESIGN HAS TO STAY WRITTEN DOWN, not just removed.
+     "Why is this all one colour when he asked for a checkerboard?" is exactly
+     what a later session will ask, and a tombstone is the only thing that
+     stops it being helpfully put back. */
+  check('the retired checkerboard is tombstoned next to the data',
+    /every other is dark, every other is white/i.test(PAGE)
+    && /TOMBSTONE/.test(PAGE));
 
-  check('…and the reason it breaks both artwork rules is written down',
-    /badge[\s\S]{0,400}opaque cream/i.test(PAGE) && /154x90/.test(PAGE));
+  check('…and the exception that no longer applies is recorded',
+    /Arabian Swim Academy/i.test(PAGE) && /byte-identical/i.test(PAGE));
+  /* ⚠️ The retired hand-pinned exception stays written down too. It was the
+     answer to "why is this one different?" for three weeks; deleting it
+     invites the next person to re-derive it wrongly. */
+  check('…and the Bili Boys retired exception is tombstoned',
+    /BILI BOYS WAS THE ONE HAND-PINNED EXCEPTION/.test(PAGE) && /154x90/.test(PAGE));
 }
 /* THE INVITATION STAYS. It is the only route by which another sponsor reaches
    Jay, and the section is the page a prospective one lands on. */

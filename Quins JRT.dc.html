@@ -3392,25 +3392,37 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
    below which a wordmark stops being legible on a phone. Recompute h when you
    replace a file - a new crop changes the ratio. */
 const SPONSORS = [
-  /* ⚠️ THE ORDER OF THIS LIST IS LOAD-BEARING. The tiles alternate dark, white,
-     dark, white — Jay's call, 5 Aug — and that is achieved by ORDERING the list
-     so `light` alternates, NOT by an :nth-child rule on the markup.
+  /* ⚠️ EVERY TILE IS DARK, AND THE ORDER OF THIS LIST NO LONGER MATTERS
+     (11 Aug 2026). Adding a sponsor is one row and one file, anywhere in the
+     list.
 
-     The difference matters. A positional CSS rule paints every other tile white
-     regardless of what is in it, so adding one sponsor flips nine logos onto
-     the wrong ground and three of them (Oak View Group, V&P, Yas Mena Cycles —
-     white-on-transparent files with no other version) VANISH, reporting no
-     error anywhere. Here the colour still follows the ARTWORK; the checkerboard
-     is a property of the order, and the tests assert both.
+     TOMBSTONE — THIS REPLACED A DESIGN JAY ASKED FOR, so do not "restore" it
+     without reading why it went. Until today the tiles alternated dark/white
+     (his call, 5 Aug: "can we do them every other is dark, every other is
+     white"). Nine rows carried `light: true`, meaning "dark ink on white,
+     cannot be recoloured", and the checkerboard came from ORDERING the list so
+     that flag alternated — never from an :nth-child rule, because a positional
+     rule paints a tile white regardless of its contents and three logos
+     existed ONLY as white-on-transparent files, so they would have vanished
+     with no error anywhere. Crompton led the list so the run started white.
 
-     ⚠️ IT ONLY WORKS BECAUSE IT IS EXACTLY NINE AND NINE.
-     The flag is assigned by MEASUREMENT, not taste: median WCAG contrast of the
-     ink against #151517, white box below 4.5:1. It happened to come out even. **Adding a nineteenth sponsor breaks the
-     alternation**, and the fix is NOT to flip its tile: measure it, put it in
-     its half, and accept one repeat where the halves no longer interleave.
+     THREE THINGS THAT DESIGN COST, all now gone:
+       1. the flag had to be MEASURED (median WCAG contrast against #151517,
+          white box below 4.5:1) rather than chosen, which is why the nine were
+          not the nine anybody would guess;
+       2. it only worked because the measurement happened to come out NINE AND
+          NINE — a nineteenth sponsor broke the alternation outright;
+       3. three logos could never take a white tile at all.
 
-     Crompton Partners leads it at Jay's request, 5 Aug, which is why the run
-     starts WHITE and ends dark rather than the other way round.
+     What changed is the ARTWORK, not the taste. Jay supplied dark-mode
+     versions of all eighteen (`tools/make-sponsor-logos.py` processes them),
+     so every logo now has a file made for this ground, and he chose all-dark
+     over keeping the checkerboard with the new files.
+
+     ⚠️ ONE EXCEPTION WORTH KNOWING: Arabian Swim Academy's supplied "dark" and
+     "light" files are byte-identical and both sit on a WHITE ground, so its
+     asset is the ORIGINAL one, which already reads on dark. Their pack does
+     not actually contain a dark version. See the tool for the rest.
 
      ⚠️ EVERY ROW CARRIES A `url`, AND EVERY ONE WAS CHECKED FOR A 200 BEFORE IT
      WENT IN. A sponsor's own logo pointing at a dead domain — or worse, at a
@@ -3420,29 +3432,35 @@ const SPONSORS = [
      (McCafferty's has a group site AND a Yas Island site; the sponsor is Yas).
      Sedbergh is the UK school, confirmed by Jay — not an Abu Dhabi entity.
      ⚠️ Do NOT guess a URL. An unlinked logo is fine; a wrong one is not. */
-  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 54, light: true, url: 'https://cromptonpartners.com/' },
+  { name: 'Crompton Partners Estate Agents',        file: 'assets/sponsor-crompton-partners.webp',      h: 52, url: 'https://cromptonpartners.com/' },
   { name: 'Oak View Group',                         file: 'assets/sponsor-oak-view-group.webp',         h: 51, url: 'https://www.oakviewgroup.com/' },
-  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 35, light: true, url: 'https://www.brightoncollege.ae/' },
+  { name: 'Brighton College Abu Dhabi',             file: 'assets/sponsor-brighton-college.webp',       h: 55, url: 'https://www.brightoncollege.ae/' },
   { name: 'V&P \u2014 Value & Performance',           file: 'assets/sponsor-value-performance.webp',      h: 44, url: 'https://www.valueandperformance.com/' },
-  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 44, light: true, url: 'https://flybeond.com/' },
+  { name: 'BEOND',                                  file: 'assets/sponsor-beond.webp',                  h: 40, url: 'https://flybeond.com/' },
   { name: 'Ashurst Perkins Coie',                   file: 'assets/sponsor-ashurst-perkins-coie.webp',   h: 68, url: 'https://www.ashurstperkinscoie.com/' },
-  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, light: true, url: 'https://www.westminsterci.com/' },
-  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 37, url: 'https://www.sedberghschool.org/' },
-  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 36, light: true, url: 'https://www.broadwaymalyan.com/' },
+  { name: 'Westminster Construction International', file: 'assets/sponsor-westminster-construction.webp', h: 43, url: 'https://www.westminsterci.com/' },
+  { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 68, url: 'https://www.sedberghschool.org/' },
+  { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 27, url: 'https://www.broadwaymalyan.com/' },
   { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40, url: 'https://mccaffertysyas.com/' },
-  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 43, light: true, url: 'https://www.thebottlestore.ae/' },
+  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 68, url: 'https://www.thebottlestore.ae/' },
   { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68, url: 'https://sportsmanszsc.com/' },
-  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, light: true, url: 'https://alignhealth.ae/' },
+  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, url: 'https://alignhealth.ae/' },
   { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65, url: 'https://yascycles.com/' },
-  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 41, light: true, url: 'https://anderson.ae/' },
+  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 56, url: 'https://anderson.ae/' },
   { name: 'Arabian Swim Academy',                   file: 'assets/sponsor-arabian-swim-academy.webp',   h: 36, url: 'https://www.arabianswimacademy.com/' },
-  { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 39, light: true, url: 'https://recover.ae/' },
-  /* Bili Boys is a badge with its own opaque cream ground, so it is already a
-     box and belongs in the DARK half — it is also the one logo the contrast
-     measurement gets wrong, reading the ground as ink, so it is pinned by hand.
-     154x90 is all the artwork there is, so it is stored at native size and h
-     sits below the formula on purpose. */
-  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 52, url: 'https://www.biliboys.ae/' },
+  { name: 'Recover',                                file: 'assets/sponsor-recover.webp',                h: 68, url: 'https://recover.ae/' },
+  /* ⚠️ BILI BOYS WAS THE ONE HAND-PINNED EXCEPTION AND IS NOW AN ORDINARY ROW
+     (11 Aug 2026). It used to read: "a badge with its own opaque cream ground,
+     so it is already a box and belongs in the DARK half — also the one logo
+     the contrast measurement gets wrong, reading the ground as ink, so it is
+     pinned by hand. 154x90 is all the artwork there is, so it is stored at
+     native size and h sits below the formula on purpose."
+     None of that survives their dark-mode file, which is 295x160: there is no
+     contrast measurement any more, no half to belong to, and no native-size
+     compromise. h is simply the formula's answer, like every other row.
+     Kept as a tombstone because "why is this one different?" was a reasonable
+     question for three weeks and the answer should not just vanish. */
+  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 61, url: 'https://www.biliboys.ae/' },
 ];
 
 const AGE_GROUP_INFO = [
@@ -4724,14 +4742,35 @@ class Component extends DCLogic {
          This is its deliberate return with a CONFIRMED list and real files -
          and the check that guarded it was rewritten in the same commit rather
          than quietly dropped. */
-      /* The tile colours are DERIVED here rather than written into SPONSORS —
-         a sponsor's entry says what its artwork is (`light: true` = dark ink on
-         white, cannot be recoloured), not what colour to paint a box. So the
-         two greys live in one place and a redesign changes them once. */
+      /* ⚠️ EVERY TILE IS DARK NOW (11 Aug 2026). There is one ground, so the
+         colours are still derived here — one place to change — but they no
+         longer depend on the artwork.
+
+         TOMBSTONE, because this REPLACED something Jay asked for. Until today
+         the tiles alternated dark/white, his call on 5 Aug: "can we do them
+         every other is dark, every other is white". A `light: true` flag on
+         nine of the eighteen said "dark ink on white, cannot be recoloured",
+         and the checkerboard was produced by ORDERING the list so the flag
+         alternated — never by an :nth-child rule, because a positional rule
+         paints a tile white regardless of what is in it and three logos
+         existed ONLY as white-on-transparent, so they would have vanished.
+
+         What changed is the artwork, not the taste: Jay supplied dark-mode
+         versions of all eighteen, so every logo now has a file made for this
+         ground. He chose all-dark over keeping the checkerboard with the new
+         files. That removes three fragilities the old design carried and the
+         tests policed at length — a nineteenth sponsor breaking the
+         alternation, the flag having to be MEASURED rather than chosen, and
+         three logos that could never take a white tile. Adding a sponsor is
+         now one line and one file.
+
+         ⚠️ Do not reintroduce `light` as a flag on SPONSORS without reading
+         the above: the checkerboard is not a style someone forgot, it is a
+         decision that was taken and then superseded. */
       sponsors: SPONSORS.map((s) => ({
         ...s,
-        bg:   s.light ? '#ffffff' : '#151517',
-        edge: s.light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.08)',
+        bg:   '#151517',
+        edge: 'rgba(255,255,255,0.08)',
       })),
       statClubs: Math.round(20 * sp) + '+',
       statPlayers: Math.round(3000 * sp) + '+',

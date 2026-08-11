@@ -1117,6 +1117,70 @@ property (re-exported AND not locally defined) rather than the literal list,
 which is the second time today that repointing made a check stronger than the
 version that broke.
 
+## 11 Aug 2026 — the share card said the wrong dates, and the supporters grid went all-dark
+
+**Two things a text sweep could not see.**
+
+### The og:image card was a PICTURE of the old dates
+
+`assets/share-card.png` still read **SAT 7 & SUN 8 NOV** after the tournament
+moved. The cross-page day-number sweep added the same morning found every other
+spelling and could not read this one, because it reads text and the card is
+pixels. **Every link shared on WhatsApp, Facebook, LinkedIn or Slack previewed
+the wrong dates**, on a site that spreads mainly by parents forwarding links —
+and this page had literally predicted it: *"If the tournament dates ever change,
+`assets/share-card.png` carries them and must be re-rendered."* **A note telling
+a human to remember something is not a mechanism.**
+
+`tools/make-share-card.py` renders it, and **reads the dates out of
+`_venue.js`** rather than having them typed — weekday and month computed too, so
+a move to a different weekend cannot leave "SAT"/"SUN" lying. It refuses if it
+cannot parse them. The wordmark nit went with it: the card said "AD HARLEQUINS"
+where the brand rule says "ABU DHABI HARLEQUINS".
+
+### Eighteen supporters, one dark ground (Jay's call)
+
+Jay supplied dark-mode AND light-mode artwork for all eighteen, and chose
+all-dark over keeping the checkerboard with the new files. **That removes three
+fragilities the old design carried**: a nineteenth sponsor broke the
+alternation; the light/dark flag had to be MEASURED rather than chosen; and
+three logos could never take a white tile at all. Adding a sponsor is now one
+row and one file. `tools/make-sponsor-logos.py` does the processing.
+
+⚠️ **TOMBSTONED IN THE CODE AND THE TESTS, because the checkerboard was Jay's
+own request on 5 Aug.** Without a note saying why it went, someone restores it.
+
+⚠️ **A CONTACT SHEET STOPPED THIS SHIPPING BROKEN, AND EVERY NUMBER LOOKED
+FINE.** "Dark Mode" in the pack means DESIGNED FOR DARK, not transparent: six
+files carry an opaque black rectangle and would have rendered as visible
+off-black boxes on the tiles. BEOND's ground is mid-GREY, so the first keying
+left it semi-transparent and it still showed a box. And **Arabian Swim
+Academy's two files are byte-identical and both sit on white** — it is excluded
+entirely and keeps its original asset. **Ratios and file sizes were plausible
+for all of it. Only looking caught it.**
+
+⚠️ **THE PROVER REJECTED THIS CHANGE THREE TIMES, EACH FOR A DIFFERENT REAL
+REASON**, while all 51 test files were green:
+
+1. **I silently weakened a check.** Repointing "the widest mark is sized down"
+   also re-anchored the SQUAREST-marks check on the widest mark — so shrinking
+   a square logo from 68 to 35 still cleared 27 and passed. The claim is
+   `widest < mid-pack < squarest`; the middle term has to be a middle mark.
+2. **A tombstone became a decoy.** My Bili Boys tombstone QUOTES the retired
+   wording, so the fault anchored on that string patched the tombstone and
+   proved nothing. Same trap as 8 Aug, from the other side.
+3. **A check's NAME is part of its contract.** Renaming "Crompton leads the
+   list" to "Crompton STILL leads…" broke the prover's phrase match: the fault
+   failed on a different check and reported `caught, WRONG CHECK`.
+
+⚠️ **AND `git checkout -- assets/` SILENTLY REVERTED THE SHARE CARD.** Restoring
+the sponsor logos after the first bad render took the card with it, because it
+lives in the same folder. Caught only by reading `git status` before committing
+and noticing the file that started all this was absent. **A restore is as wide
+as the path you give it.**
+
+**Suite: 906/906 faults, 46 clean, 52 headers, `All green`.**
+
 ## Where things stand
 
 | | |

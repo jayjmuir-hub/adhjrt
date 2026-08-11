@@ -161,7 +161,7 @@ function checkSignupRate(store, event, now) {
    2. THE BUCKET WAS THE WHOLE VENUE. It was keyed on the connection address
       alone, and every manager at Zayed Sports City shares one
       x-nf-client-connection-ip. Fifteen managers, ten sign-ins: managers 11-15
-      could not get in on the morning of 7 November, and any mistyped password
+      could not get in on the morning of 14 November, and any mistyped password
       brought that forward.
 
    Splitting read from write fixes both: peek before checking the password,

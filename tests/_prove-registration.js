@@ -82,6 +82,12 @@ const NEEDED = [
   'Manager.dc.html',
   /* test-signin-page.js reads the unified sign-in page. */
   'Signin.dc.html',
+  /* 11 Aug 2026 — the phone-app manifest carries the tournament dates in its
+     description, so test-homepage-dates.js's cross-page date scan reads it.
+     Missing here, that scan cannot open it, the file fails on an UNDAMAGED
+     copy, and the harness reports the whole suite as not clean. Same ENOENT
+     trap as the four above. */
+  'manifest.webmanifest',
   /* Aug 2026 — the unlisted club declaration page. test-intake.js reads it for
      the form name, the age-group list and the silent-link assertions, so
      without it here that whole file dies on ENOENT and its faults report
@@ -5197,7 +5203,7 @@ const FAULTS = [
   {
     name: 'a fourth ad-hoc green sneaks back in',
     suite: 'test-design-polish.js',
-    apply: () => patch(HOME, 'color:#3bd070">SAT 7', 'color:#22c55e">SAT 7'),
+    apply: () => patch(HOME, 'color:#3bd070">SAT 14', 'color:#22c55e">SAT 14'),
     expect: ['one light green tint'],
   },
   /* ---- the wordmark (test-design-polish.js, 3 Aug 2026) ----------------- */
@@ -8226,6 +8232,36 @@ const FAULTS = [
     suite: 'test-homepage-dates.js',
     apply: () => patch(HOME, '"startDate":"2026-11-14"', '"startDate":"2026-11-07"'),
     expect: ['startDate matches day one of the default layout'],
+  },
+
+  /* ---- a page states a day the layout disagrees with (11 Aug 2026) -----
+     These are the REAL misses from moving the tournament to 14-15 November,
+     reproduced. Each was live on the site while the whole suite was green,
+     because every check searched for a spelling somebody had thought of and
+     none of these used one. The guard finds day numbers, not spellings. */
+  {
+    name: 'the homepage hero pill keeps the old dates in an abbreviated spelling',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch(HOME, 'SAT 14 &amp; SUN 15 NOVEMBER 2026', 'SAT 7 &amp; SUN 8 NOVEMBER 2026'),
+    expect: ['no page states a day number the layout disagrees with'],
+  },
+  {
+    name: 'the /app hero keeps the old dates in an abbreviated spelling',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch('app.html', 'Sat 14 &amp; Sun 15 November 2026', 'Sat 7 &amp; Sun 8 November 2026'),
+    expect: ['no page states a day number the layout disagrees with'],
+  },
+  {
+    name: 'the age-at-tournament label drifts from the layout',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch(HOME, 'Age at tournament (14 Nov 2026)', 'Age at tournament (7 Nov 2026)'),
+    expect: ['no page states a day number the layout disagrees with'],
+  },
+  {
+    name: 'the club page banner keeps the old dates',
+    suite: 'test-homepage-dates.js',
+    apply: () => patch('Club.dc.html', '14&ndash;15 NOVEMBER 2026', '7&ndash;8 NOVEMBER 2026'),
+    expect: ['no page states a day number the layout disagrees with'],
   },
   {
     name: 'the Google token audience is no longer pinned to our client id',

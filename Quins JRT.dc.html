@@ -811,7 +811,18 @@
      change, not something to slip into a sponsor-card commit. Recorded so it
      is a known gap rather than an unnoticed one. */
   @media (hover:hover){
-    .partner-card:hover{transform:perspective(1200px) translateY(-6px) scale(1.015) rotateX(2deg);border-color:var(--glow);box-shadow:0 0 34px 2px rgba(219,0,17,.45),0 22px 40px -12px rgba(0,0,0,.7)}
+    /* ⚠️ THE GLOW IS FULL-STRENGTH var(--glow), NOT A FADED rgba(), AND THAT
+       WAS A CORRECTION. The first version used rgba(219,0,17,.45) with a 2px
+       spread - roughly half of .reg-btn's opacity AND half its spread - on a
+       #0C0C0E background. Jay looked at it on the dev build and said "I don't
+       see any red glow", and he was right: clipping was ruled out by
+       measurement (the nearest clipping ancestor is a full-width wrapper with
+       the card 184px inside it), so the only thing left was that it was too
+       faint to register. Toning a borrowed effect down "for taste" on a big
+       element is how it ends up invisible.
+       Two shadows now: a tight full-colour ring, the same shape .reg-btn uses,
+       plus a wide soft bloom that reads at this size. */
+    .partner-card:hover{transform:perspective(1200px) translateY(-8px) scale(1.02) rotateX(2deg);border-color:var(--glow);box-shadow:0 0 30px 4px var(--glow),0 0 76px 14px rgba(219,0,17,.38),0 24px 44px -12px rgba(0,0,0,.7)}
     .partner-card:hover .partner-holo{opacity:.55;animation:holoShift 2.6s ease-in-out infinite}
     @media (prefers-reduced-motion:reduce){
       .partner-card:hover{transform:none}

@@ -252,9 +252,9 @@ section('Tab bar');
     ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations', 'Documents']));
   check('Fixtures & scoring is the tab you land on', vals.isFixtures === true && c.state.tab === 'fixtures');
   check('the selected tab uses Organizer\'s red pill style',
-    vals.tabs[0].style.includes('background:#E11B22;color:#fff;'));
+    vals.tabs[0].style.includes('background:var(--brand);color:#fff;'));
   check('an unselected tab uses Organizer\'s transparent style',
-    vals.tabs[1].style.includes('background:transparent;color:#454D58;'));
+    vals.tabs[1].style.includes('background:transparent;color:var(--ink-muted);'));
 
   vals.tabs[2].onPick();
   const vals2 = c.renderVals();
@@ -380,7 +380,7 @@ section('Fixtures & scoring tab');
      differ only in having a result, so a statusLine that ignored the result
      would print the same thing on both. */
   check('an unscored match says "Click to score"', vals.poolGroups[0].rows[0].statusLine === 'Click to score');
-  check('…in the green invitation style, not the score style', vals.poolGroups[0].rows[0].statusStyle.includes('#0E6B33')
+  check('…in the green invitation style, not the score style', vals.poolGroups[0].rows[0].statusStyle.includes('var(--accent-ink)')
     && !vals.poolGroups[0].rows[0].statusStyle.includes('Anton'));
   check('a scored match shows the score home-then-away instead', vals.poolGroups[0].rows[1].statusLine === '15–10');
   check('…in the Anton score style', vals.poolGroups[0].rows[1].statusStyle.includes('Anton'));
@@ -505,7 +505,7 @@ section('Tables tab');
   // PF again here would look plausible on a 15-10 row but not on this check.
   check('the difference is PF minus PA, signed', row.diff === '+5');
   check('it carries the league points', row.pts === 4);
-  check('a qualifying row is marked', row.rowStyle.includes('#17A34A'));
+  check('a qualifying row is marked', row.rowStyle.includes('var(--accent-mid)'));
 }
 {
   const c = buildManager({ getStandings: async () => ({ awaitingPublication: false,
@@ -521,7 +521,7 @@ section('Tables tab');
   check('a negative difference is signed too', rows[1].diff === '-25');
   // FAULT-PROOF: _advance is 1, so exactly the top row qualifies. Marking
   // every row (or none) would still render a table that "looks right".
-  check('only the qualifying places are marked', rows[0].rowStyle.includes('#17A34A') && !rows[1].rowStyle.includes('#17A34A'));
+  check('only the qualifying places are marked', rows[0].rowStyle.includes('var(--accent-mid)') && !rows[1].rowStyle.includes('var(--accent-mid)'));
 }
 {
   // pools/tables are non-empty here on purpose: a guard that forgot to check
@@ -734,9 +734,9 @@ section('Organizer design system is what this page uses');
   const html = readRepo('Manager.dc.html');
   /* Aug 2026: the back office went LIGHT (Jay's call) — the parity these
      checks hold is Manager matching ORGANIZER, whatever the mode. */
-  check('page background is Organizer\'s light #F3F2EF, not app.html\'s paper', /background:#F3F2EF/.test(html));
+  check('page background is the shared light surface token, not app.html\'s paper', /background:var\(--surface\)/.test(html) && /--surface:#F3F3F3/.test(html));
   check('cards use Organizer\'s white fill', /background:#FFFFFF/.test(html));
-  check('cards use Organizer\'s 1px hairline border', /border:1px solid rgba\(0,0,0,0\.1\)/.test(html));
+  check('cards use Organizer\'s 1px hairline border', /border:1px solid var\(--line\)/.test(html));
   check('cards use Organizer\'s 14px radius', /border-radius:14px/.test(html));
   check('headings use Anton', /font-family:'Anton'/.test(html));
   check('body type is Barlow', /font-family:'Barlow',system-ui,sans-serif/.test(html));

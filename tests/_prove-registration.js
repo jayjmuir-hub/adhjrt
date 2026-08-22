@@ -80,11 +80,11 @@ const NEEDED = [
      always the same and always misleading: the test file dies on ENOENT, the
      suite fails UNDAMAGED, the clean baseline does not rise, and every fault
      aimed at it reports "caught" while proving nothing. */
-  'netlify/functions/my-account.js',
-  /* The Club invite link (11 Aug 2026). EIGHTH time a new module has had to be
-     added here - the symptom of forgetting is always ENOENT, a suite that
-     fails UNDAMAGED, and every fault aimed at it reporting "caught" while
-     proving nothing. */
+  'netlify/functions/my-account.js',
+  /* The Club invite link (11 Aug 2026). EIGHTH time a new module has had to be
+     added here - the symptom of forgetting is always ENOENT, a suite that
+     fails UNDAMAGED, and every fault aimed at it reporting "caught" while
+     proving nothing. */
   'netlify/functions/club-link.js',
   'netlify/functions/get-registrations.js',
   'netlify/functions/get-my-registrations.js',
@@ -605,8 +605,8 @@ const FAULTS = [
     name: 'the sharing editor grows a file picker and can silently replace the file',
     suite: 'test-documents.js',
     apply: () => patch('Organizer.dc.html',
-      '<label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"',
-      '<input type="file" onChange="{{ onPickDocFile }}" />\n                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"'),
+      '<label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"',
+      '<input type="file" onChange="{{ onPickDocFile }}" />\n                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Who is it for</label>\n                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">\n                      <sc-for list="{{ docEditTagChips }}"'),
     expect: ['the editor cannot replace the file'],
   },
   {
@@ -1329,14 +1329,14 @@ const FAULTS = [
     name: 'the chip ink goes back to being keyed off the tint',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "          chipFg = '#1A1C1F';", '          chipFg = blockTints[0];'),
+      "          chipFg = 'var(--ink)';", '          chipFg = blockTints[0];'),
     expect: ['the ink is the constant page ink'],
   },
   {
     name: 'the swatch loses its exact tint, collapsing every group to one grey',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)",
+      "background:${AGE_TINT[ag] || '#636974'};border:1px solid rgba(0,0,0,0.35)",
       "background:#5A626E;border:1px solid rgba(0,0,0,0.35)"),
     expect: ['the swatch carries the EXACT tint'],
   },
@@ -1344,16 +1344,16 @@ const FAULTS = [
     name: 'the swatch outline is removed, so the pale tints vanish on the white card',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)",
-      "background:${AGE_TINT[ag] || '#5A626E'}"),
+      "background:${AGE_TINT[ag] || '#636974'};border:1px solid rgba(0,0,0,0.35)",
+      "background:${AGE_TINT[ag] || '#636974'}"),
     expect: ['outlined so pale tints register'],
   },
   {
     name: 'the age-group code is drawn in the tint again',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:#1A1C1F',",
-      "            codeStyle: `font-size:14px;font-weight:800;letter-spacing:.3px;color:${AGE_TINT[ag] || '#5A626E'}`,"),
+      "            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:var(--ink)',",
+      "            codeStyle: `font-size:14px;font-weight:800;letter-spacing:.3px;color:${AGE_TINT[ag] || '#636974'}`,"),
     expect: ['the code is constant dark ink, never the tint'],
   },
   {
@@ -1368,7 +1368,7 @@ const FAULTS = [
     name: 'the schematic label goes back to tint-on-tint ink',
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "              who = users[0].toUpperCase(); whoColor = '#1A1C1F';",
+      "              who = users[0].toUpperCase(); whoColor = 'var(--ink)';",
       '              who = users[0].toUpperCase(); whoColor = tints[0];'),
     expect: ['the label ink is the dark page ink, never the tint'],
   },
@@ -1376,7 +1376,7 @@ const FAULTS = [
     name: "the schematic time-share label goes back to the dark-mode era's light grey",
     suite: 'test-venue-map.js',
     apply: () => patch('Organizer.dc.html',
-      "              whoColor = '#1A1C1F';  /* was #e7eaef",
+      "              whoColor = 'var(--ink)';  /* was #e7eaef",
       "              whoColor = '#e7eaef';  /* was #e7eaef"),
     expect: ['the shared label is dark ink too'],
   },
@@ -3247,16 +3247,16 @@ const FAULTS = [
     name: 'the teams table template stops showing the count next to the club name in its header row',
     suite: 'test-organizer-grouping.js',
     apply: () => patch('Organizer.dc.html',
-      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
-      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }}</td>'),
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }}</td>'),
     expect: ['the teams table template actually renders a club header row per group'],
   },
   {
     name: 'the players table template stops showing the count next to the club name in its header row',
     suite: 'test-organizer-grouping.js',
     apply: () => patch('Organizer.dc.html',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }}</td>'),
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }}</td>'),
     expect: ['the players table template actually renders a club header row per group'],
   },
   {
@@ -3534,8 +3534,8 @@ const FAULTS = [
     name: 'the organizer page body reverts to the dark surface',
     suite: 'test-light-mode.js',
     apply: () => patch('Organizer.dc.html',
-      'body{font-family:\'Barlow\',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;',
-      'body{font-family:\'Barlow\',system-ui,sans-serif;background:#0C0C0E;color:#1A1C1F;'),
+      'body{font-family:\'Barlow\',system-ui,sans-serif;background:var(--surface);color:var(--ink);',
+      'body{font-family:\'Barlow\',system-ui,sans-serif;background:#0C0C0E;color:var(--ink);'),
     expect: ['no dark page surface remains'],
   },
   {
@@ -3633,8 +3633,8 @@ const FAULTS = [
     name: 'the Organiser option creeps back onto the signup role picker',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      '      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
-      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
+      '      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
+      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
     expect: ['no role picker survives on either signup view', 'the page never offers "Organiser" as something to sign up as'],
   },
   {
@@ -5166,16 +5166,16 @@ const FAULTS = [
     name: 'a light-page date input goes back to color-scheme:dark (invisible picker icon)',
     suite: 'test-design-polish.js',
     apply: () => patch('Organizer.dc.html',
-      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light"',
-      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:dark"'),
+      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px;color-scheme:light"',
+      'value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px;color-scheme:dark"'),
     expect: ['Organizer.dc.html: no date/time input still carries color-scheme:dark'],
   },
   {
     name: 'the Organizer confirm button goes back to near-black ink on brand red',
     suite: 'test-design-polish.js',
     apply: () => patch('Organizer.dc.html',
-      'onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;',
-      'onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#1A1C1F;'),
+      'onClick="{{ onModalConfirm }}" style="background:var(--brand);border:none;color:#fff;',
+      'onClick="{{ onModalConfirm }}" style="background:var(--brand);border:none;color:#1A1C1F;'),
     expect: ['white-on-red like every other red button'],
   },
   {
@@ -5245,7 +5245,7 @@ const FAULTS = [
     name: 'a page loses its :focus-visible ring',
     suite: 'test-design-polish.js',
     apply: () => patch('Signin.dc.html',
-      '  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}\n',
+      '  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}\n',
       ''),
     expect: ['Signin.dc.html: keyboard focus is visible'],
   },
@@ -5452,7 +5452,7 @@ const FAULTS = [
     name: 'the View organizer area link is dropped from the header',
     suite: 'test-manager-dc.js',
     apply: () => patch('Manager.dc.html',
-      '            <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>\n', ''),
+      '            <a href="/organizer" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View organizer area</a>\n', ''),
     expect: ['links back to the organizer area'],
   },
   {
@@ -5462,8 +5462,8 @@ const FAULTS = [
     suite: 'test-manager-dc.js',
     apply: () => {
       patch('Manager.dc.html',
-        '            <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>\n          </sc-if>',
-        '          </sc-if>\n          <a href="/organizer" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View organizer area</a>');
+        '            <a href="/organizer" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View organizer area</a>\n          </sc-if>',
+        '          </sc-if>\n          <a href="/organizer" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View organizer area</a>');
     },
     expect: ['leaks outside the organiser gate'],
   },
@@ -5488,8 +5488,8 @@ const FAULTS = [
     name: 'statusStyle stops distinguishing a score from the invitation',
     suite: 'test-manager-dc.js',
     apply: () => patch('Manager.dc.html',
-      "      statusStyle: m.result\n        ? \"font-family:'Anton';font-size:19px;color:#1A1C1F;white-space:nowrap\"\n        : 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#0E6B33;white-space:nowrap',",
-      "      statusStyle: 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#0E6B33;white-space:nowrap',"),
+      "      statusStyle: m.result\n        ? \"font-family:'Anton';font-size:19px;color:var(--ink);white-space:nowrap\"\n        : 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-ink);white-space:nowrap',",
+      "      statusStyle: 'font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-ink);white-space:nowrap',"),
     expect: ['in the Anton score style'],
   },
   {
@@ -5532,8 +5532,8 @@ const FAULTS = [
     name: 'the old bottom-of-sheet spirit block returns',
     suite: 'test-manager-dc-score-sheet.js',
     apply: () => patch('Manager.dc.html',
-      '<p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>',
-      '<p style="max-width:70ch;color:#5A626E;font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p><label>SPIRIT OF RUGBY — ONE NOMINATION PER SIDE</label>'),
+      '<p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p>',
+      '<p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin-top:8px">A walk-over is recorded as 20–0 with 4 tries.</p><label>SPIRIT OF RUGBY — ONE NOMINATION PER SIDE</label>'),
     expect: ['old bottom block'],
   },
   {
@@ -8149,7 +8149,7 @@ const FAULTS = [
     name: 'the sign-in page loses the hint beside the username box',
     suite: 'test-login-ratelimit.js',
     apply: () => patch('Signin.dc.html',
-      '<div id="username-hint" style="font-size:12px;color:#7A828E;margin:0 0 16px">Your username, not your email address.</div>', ''),
+      '<div id="username-hint" style="font-size:12px;color:var(--ink-dim);margin:0 0 16px">Your username, not your email address.</div>', ''),
     expect: ['Signin.dc.html: the username field has a visible hint'],
   },
   {
@@ -8914,6 +8914,64 @@ const FAULTS = [
       "showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); },",
       "showClubs: () => this.setState({ tab: 'clubs' }),"),
     expect: ['it loads when the tab is opened'],
+  },
+
+  /* ---- the back-office retheme (22 Aug 2026) ------------------------------
+     claude/specs/spec-backoffice-retheme.md. The palette lives in one :root
+     block per file, asserted identical across the three; values that JS
+     alpha-suffixes must stay literal hexes. */
+  {
+    name: 'one token block drifts from the other two',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Signin.dc.html', '--brand:#C8102E', '--brand:#D8102E'),
+    expect: ['the three token blocks are byte-identical'],
+  },
+  {
+    name: 'the abandoned red comes back on a live button',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Signin.dc.html',
+      'style="width:100%;background:var(--brand);color:#fff;font-weight:800',
+      'style="width:100%;background:#E11B22;color:#fff;font-weight:800'),
+    expect: ['Signin.dc.html: no abandoned brand value outside comments'],
+  },
+  {
+    name: 'the dark chrome band is reverted to the light header',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Organizer.dc.html',
+      'background:var(--chrome);border-radius:14px;padding:16px 20px',
+      'border-bottom:1px solid var(--line);padding-bottom:20px'),
+    expect: ['Organizer.dc.html: the header row is the dark chrome band'],
+  },
+  {
+    name: 'a dashboard theme-color forgets the chrome',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Manager.dc.html',
+      '<meta name="theme-color" content="#0A0A0A">',
+      '<meta name="theme-color" content="#F3F3F3">'),
+    expect: ['Manager.dc.html: browser chrome matches the band'],
+  },
+  {
+    /* The tidy-looking edit: point the tint at the token like everything
+       else. It flows into `${t}30` and produces var(--accent-mid)30 —
+       invalid CSS, a transparent chip, and no error anywhere. */
+    name: 'an alpha-suffixed tint is tokenised',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Organizer.dc.html', "u10: '#1F9D4D'", "u10: 'var(--accent-mid)'"),
+    expect: ['AGE_TINT u10 is a literal hex'],
+  },
+  {
+    name: 'a mangled var()+alpha lands in a style',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Manager.dc.html', 'background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px', 'background:var(--surface-sunk)30;border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px'),
+    expect: ['no var() token wears an alpha suffix'],
+  },
+  {
+    name: 'the bright on-dark red lands on the light sign-in card',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Signin.dc.html',
+      'style="width:100%;background:var(--brand);color:#fff;font-weight:800',
+      'style="width:100%;background:var(--brand-ondark);color:#fff;font-weight:800'),
+    expect: ['var(--brand-ondark) used exactly 0x outside the token block'],
   },
 
 ];

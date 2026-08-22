@@ -42,10 +42,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="/assets/crest.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<meta name="theme-color" content="#F3F2EF">
+<meta name="theme-color" content="#F3F3F3">
 <style>
+  :root{
+    --surface:#F3F3F3; --surface-mute:#F7F7F7; --surface-sunk:#EBEBEB;
+    --ink:#101116; --ink-muted:#565C67; --ink-faint:#636974; --ink-dim:#8B9099;
+    --line:#E5E5E5; --line-strong:#D4D4D4;
+    --brand:#C8102E; --brand-deep:#A30D25; --brand-ondark:#FF2D4A;
+    --accent-mid:#1F9D4D; --accent-ink:#157F3C; --accent-bg:#E6F7EC; --accent-ondark:#4AC27D;
+    --info:#2F5FA8;
+    --danger:#C2352C; --danger-ink:#A30D25; --danger-bg:#FDECEB;
+    --chrome:#0A0A0A; --chrome-line:rgba(255,255,255,0.16); --chrome-muted:#8B9099;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased}
+  body{font-family:'Barlow',system-ui,sans-serif;background:var(--surface);color:var(--ink);-webkit-font-smoothing:antialiased}
   input,select,button{font-family:inherit}
   /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
      no inline background or colour is ever overridden. */
@@ -53,7 +63,7 @@
   button:hover:not(:disabled){filter:brightness(0.94)}
   button:active:not(:disabled){transform:scale(.98)}
   button:disabled{opacity:.45;cursor:not-allowed}
-  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
   /* ============ PHONE: STOP iOS ZOOMING ON FOCUS (8 Aug 2026) ============
      ⚠️ THIS FILE CONTAINED NO @media RULE OF ANY KIND before this block.
@@ -92,20 +102,20 @@
      this replaces): password or Google, manager (per-age-group invite code)
      or organizer (admin invite code). -->
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-  <div style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:18px;padding:36px">
-    <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;color:#1A1C1F">
+  <div style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid var(--line);border-radius:18px;padding:36px">
+    <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;color:var(--ink)">
       <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;position:relative;flex:none">
-        <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--brand) 0 50%,var(--accent-mid) 50% 100%)"></div>
       </div>
       <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT</div>
     </a>
 
     <sc-if value="{{ isLoginMode }}" hint-placeholder-val="{{ true }}">
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Sign in</div>
-      <p style="color:#454D58;font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
+      <p style="color:var(--ink-muted);font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
 
-      <label for="f-username" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
-      <input id="f-username" name="username" autocomplete="username" aria-describedby="username-hint" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 4px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
+      <label for="f-username" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
+      <input id="f-username" name="username" autocomplete="username" aria-describedby="username-hint" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 4px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 14px;color:var(--ink);font-size:15px">
       <!-- ⚠️ NOT DECORATION. Jay, who built this site, could not sign in to a
            deploy preview because he typed his email address - the browser
            autofills one into anything that looks like a login, and the label
@@ -114,15 +124,15 @@
            certainly will.
            aria-describedby ties it to the field, so a screen reader reads the
            hint as part of the box rather than as loose text after it. -->
-      <div id="username-hint" style="font-size:12px;color:#7A828E;margin:0 0 16px">Your username, not your email address.</div>
-      <label for="f-password" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
+      <div id="username-hint" style="font-size:12px;color:var(--ink-dim);margin:0 0 16px">Your username, not your email address.</div>
+      <label for="f-password" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input id="f-password" name="password" autocomplete="current-password" type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
+        <input id="f-password" name="password" autocomplete="current-password" type="{{ loginPassType }}" value="{{ loginPass }}" onInput="{{ onPass }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleLoginPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ loginPassToggleLabel }}</button>
       </div>
-      <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
-      <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:#E11B22;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:#5A626E">New here? <a onClick="{{ onShowSignup }}" style="color:#1A1C1F;font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+      <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
+      <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:var(--brand);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)">New here? <a onClick="{{ onShowSignup }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
 
       <!-- Google sign-in. Only appears once GOOGLE_CLIENT_ID is set in
            Netlify; password sign-in above works the same either way. The
@@ -131,25 +141,25 @@
       <sc-if value="{{ hasGoogleSignIn }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;align-items:center;gap:10px;margin:20px 0 4px">
           <div style="flex:1;height:1px;background:rgba(0,0,0,0.12)"></div>
-          <div style="font-size:11px;color:#5A626E;font-weight:700;letter-spacing:.5px">OR</div>
+          <div style="font-size:11px;color:var(--ink-faint);font-weight:700;letter-spacing:.5px">OR</div>
           <div style="flex:1;height:1px;background:rgba(0,0,0,0.12)"></div>
         </div>
         <div id="google-signin-btn" style="display:flex;justify-content:center;margin-top:10px"></div>
-        <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ googleError }}</div></sc-if>
+        <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ googleError }}</div></sc-if>
       </sc-if>
     </sc-if>
 
     <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
-      <div style="margin-top:16px;background:rgba(23,163,74,0.1);border:1px solid rgba(23,163,74,0.35);border-radius:10px;padding:14px 16px;color:#0E6B33;font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:#5A626E"><a onClick="{{ onShowLogin }}" style="color:#1A1C1F;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+      <div style="margin-top:16px;background:rgba(31,157,77,0.1);border:1px solid rgba(31,157,77,0.35);border-radius:10px;padding:14px 16px;color:var(--accent-ink);font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)"><a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
     </sc-if>
 
     <!-- Creating an account starts with the one question the server cannot
          answer for a brand-new signup: which KIND of invite code you hold. -->
     <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create an account</div>
-      <p style="color:#454D58;font-size:14px;margin-top:6px">For age-group managers. Requires your age group's invite code, and new accounts need approval before signing in. Organisers are set up in the back office — ask one of them.</p>
+      <p style="color:var(--ink-muted);font-size:14px;margin-top:6px">For age-group managers. Requires your age group's invite code, and new accounts need approval before signing in. Organisers are set up in the back office — ask one of them.</p>
 
       <!-- ⚠️ THE ROLE PICKER IS GONE, Aug 2026, and this is the whole reason:
            ORGANIZER_INVITE_CODE was deleted in Netlify, so organizer-signup.js
@@ -162,25 +172,25 @@
            picker, its blurb and the organiser/admin label switching all went
            with it. Organiser accounts are made in the back office:
            /organizer -> Accounts -> Create a login. -->
-      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
-      <input id="f--label-style-font-si" value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 14px;color:#1A1C1F;font-size:15px">
+      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
+      <input id="f--label-style-font-si" value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 14px;color:var(--ink);font-size:15px">
       <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Your login username will be</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Your login username will be</div>
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ signupUserPreview }}</div>
       </div>
-      <label for="f-new-password" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">PASSWORD</label>
+      <label for="f-new-password" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">PASSWORD</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
+        <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
       </div>
-      <label for="f-invite-code" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <label for="f-invite-code" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input id="f-invite-code" name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
+        <input id="f-invite-code" name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
       </div>
-      <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
-      <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:#5A626E">Already have an account? <a onClick="{{ onShowLogin }}" style="color:#1A1C1F;font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
+      <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
+      <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:var(--accent-mid);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)">Already have an account? <a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
     </sc-if>
 
     <!-- First-time Google sign-in: the identity is already verified, this is
@@ -188,25 +198,25 @@
          name pre-filled from the Google account. -->
     <sc-if value="{{ isGoogleCodeView }}" hint-placeholder-val="{{ false }}">
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">One more step</div>
-      <p style="color:#454D58;font-size:14px;margin-top:6px">Signed in with Google as <strong style="color:#1A1C1F">{{ googlePendingName }}</strong>. Enter your age group's invite code. New accounts also need approval before signing in.</p>
+      <p style="color:var(--ink-muted);font-size:14px;margin-top:6px">Signed in with Google as <strong style="color:var(--ink)">{{ googlePendingName }}</strong>. Enter your age group's invite code. New accounts also need approval before signing in.</p>
 
       <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:0 0 16px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Your login username will be</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Your login username will be</div>
         <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ googleUserPreview }}</div>
       </div>
 
-      <label for="f-invite-code-2" style="font-size:12px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
+      <label for="f-invite-code-2" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
       <div style="position:relative;margin:6px 0 16px">
-        <input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:12px 52px 12px 14px;color:#1A1C1F;font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
+        <input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}" value="{{ googleCode }}" onInput="{{ onGoogleCode }}" onKeyDown="{{ onGoogleCodeKey }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
+        <button type="button" onClick="{{ onToggleGoogleCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ googleCodeToggleLabel }}</button>
       </div>
-      <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>
-      <button onClick="{{ onGoogleSignupSubmit }}" disabled="{{ googleBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ googleSignupLabel }}</button>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:#5A626E">Not you? <a onClick="{{ onShowLogin }}" style="color:#1A1C1F;font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
+      <sc-if value="{{ googleError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:14px;font-weight:600;margin-bottom:14px">{{ googleError }}</div></sc-if>
+      <button onClick="{{ onGoogleSignupSubmit }}" disabled="{{ googleBusy }}" style="width:100%;background:var(--accent-mid);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ googleSignupLabel }}</button>
+      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)">Not you? <a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
     </sc-if>
 
-    <div style="margin-top:22px;padding-top:16px;border-top:1px solid rgba(0,0,0,0.08);text-align:center">
-      <a href="/" style="color:#5A626E;font-size:12.5px;font-weight:700;text-decoration:none">&larr; Back to the main site</a>
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
+      <a href="/" style="color:var(--ink-faint);font-size:12.5px;font-weight:700;text-decoration:none">&larr; Back to the main site</a>
     </div>
   </div>
 </div>

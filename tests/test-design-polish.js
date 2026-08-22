@@ -45,7 +45,7 @@ section('The light back office really is light — including the native pickers'
   }
   const org = readRepo('Organizer.dc.html');
   check('the Organizer confirm modal is white-on-red like every other red button',
-    /onClick="\{\{ onModalConfirm \}\}" style="background:#E11B22;border:none;color:#fff;/.test(org));
+    /onClick="\{\{ onModalConfirm \}\}" style="background:var\(--brand\);border:none;color:#fff;/.test(org));
 }
 
 section('/scores works on a phone');

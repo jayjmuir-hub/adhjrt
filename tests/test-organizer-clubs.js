@@ -150,8 +150,8 @@ section('Declared vs registered, per age group');
   const u16 = r.groups.find((g) => g.name === 'U16B Contact');
   eq('U16B declared', u16.declared, 1);
   eq('U16B registered', u16.registered, 1);
-  check('the matching group is not flagged', !/rgba\(166,38,38/.test(u16.rowStyle));
-  check('the mismatching group is flagged', /rgba\(166,38,38/.test(u12.rowStyle));
+  check('the matching group is not flagged', !/rgba\(163,13,37/.test(u16.rowStyle));
+  check('the mismatching group is flagged', /rgba\(163,13,37/.test(u12.rowStyle));
 
   /* Fifteen rows of "0 / 0" per club is noise, and the expandable row is only
      useful if what it opens is short enough to read. */
@@ -178,9 +178,9 @@ section('Short, Over and On track');
      the draw has to absorb. */
   eq('a club that sent MORE than it said reads Over', by['Over Club'].statusLabel, 'Over');
   eq('a club that matches reads On track', by['Exact Club'].statusLabel, 'On track');
-  check('On track is green, not red', /0E6B33/.test(by['Exact Club'].statusStyle));
-  check('Short is red', /A62626/.test(by['Short Club'].statusStyle));
-  check('Over is red too', /A62626/.test(by['Over Club'].statusStyle));
+  check('On track is green, not red', by['Exact Club'].statusStyle.includes('var(--accent-ink)'));
+  check('Short is red', by['Short Club'].statusStyle.includes('var(--danger-ink)'));
+  check('Over is red too', by['Over Club'].statusStyle.includes('var(--danger-ink)'));
 
   eq('the tab button counts only the clubs worth chasing', v.flaggedClubCount, 2);
   check('…and only shows the count when there is something to chase', v.hasFlaggedClubs === true);

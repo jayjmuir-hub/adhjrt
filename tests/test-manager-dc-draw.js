@@ -404,11 +404,11 @@ section('renderVals(): pool cards are tap-wired');
   check('one card per pool', vals.poolCards.length === 2 && vals.poolCards[0].name === 'Pool A');
   const chip = vals.poolCards[0].teamChips.find((ch) => ch.name === 'ADH1');
   check('a chip exposes onPick, not a drag handler', typeof chip.onPick === 'function' && chip.onDragStart === undefined);
-  check('an unpicked chip uses the neutral fill', !chip.chipStyle.includes('#17A34A'));
+  check('an unpicked chip uses the neutral fill', !chip.chipStyle.includes('var(--accent-mid)'));
   chip.onPick();
   check('tapping the chip arms it', c.state.picked && c.state.picked.team === 'ADH1');
   const picked = c.renderVals().poolCards[0].teamChips.find((ch) => ch.name === 'ADH1');
-  check('…and it re-renders green', picked.chipStyle.includes('#17A34A'));
+  check('…and it re-renders green', picked.chipStyle.includes('var(--accent-mid)'));
 
   c.renderVals().poolCards[1].onZoneClick({ currentTarget: 'zone', target: 'zone' });
   check('tapping the destination pool\'s empty area places it there', pool(c, 'B').teams.includes('ADH1'));
@@ -548,7 +548,7 @@ section('Match-slot boxes are tap-wired');
   rowA1.onHomeClick();
   check('tapping a filled box with nothing picked arms it',
     c.state.picked && c.state.picked.team === 'ADH1' && c.state.picked.from.kind === 'slot');
-  check('…and it re-renders green', c.renderVals().poolCards[0].slotRows.find((r) => r.id === 'sA1').homeStyle.includes('#17A34A'));
+  check('…and it re-renders green', c.renderVals().poolCards[0].slotRows.find((r) => r.id === 'sA1').homeStyle.includes('var(--accent-mid)'));
 
   c.renderVals().poolCards[1].slotRows.find((r) => r.id === 'sB1').onAwayClick();
   check('tapping another box while armed places there', slot(c, 'sB1').away === 'ADH1');

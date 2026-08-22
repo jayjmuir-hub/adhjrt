@@ -167,7 +167,7 @@ section('Walkover handling');
     vals.sheetHomeFields.every((f) => f.disabled === true) && vals.sheetAwayFields.every((f) => f.disabled === true));
   check('…and dimmed, the same visual cue the old sheet used',
     vals.sheetHomeFields.every((f) => f.opacity === '0.45'));
-  check('the chosen walkover button is the highlighted one', vals.woHomeStyle.includes('#E11B22') && !vals.woAwayStyle.includes('#E11B22'));
+  check('the chosen walkover button is the highlighted one', vals.woHomeStyle.includes('var(--brand)') && !vals.woAwayStyle.includes('var(--brand)'));
 
   c.setSheetWalkover('away');
   check('switching to an away walkover flips the totals', c.sheetTotal('home') === 0 && c.sheetTotal('away') === 20);

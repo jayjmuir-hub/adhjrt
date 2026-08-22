@@ -36,12 +36,12 @@
 </head>
 <body>
 <x-dc>
-<template id="__bundler_thumbnail" data-bg-color="#F3F2EF">
+<template id="__bundler_thumbnail" data-bg-color="var(--surface-sunk)">
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <rect width="200" height="200" fill="#F3F2EF"/>
-    <rect x="50" y="60" width="100" height="14" fill="#E11B22"/>
+    <rect width="200" height="200" fill="var(--surface-sunk)"/>
+    <rect x="50" y="60" width="100" height="14" fill="var(--brand)"/>
     <rect x="50" y="86" width="100" height="14" fill="#fff"/>
-    <rect x="50" y="112" width="100" height="14" fill="#17A34A"/>
+    <rect x="50" y="112" width="100" height="14" fill="var(--accent-mid)"/>
   </svg>
 </template>
 <helmet>
@@ -49,7 +49,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F3F2EF">
+<meta name="theme-color" content="#0A0A0A">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -69,8 +69,18 @@
 
 
 <style>
+  :root{
+    --surface:#F3F3F3; --surface-mute:#F7F7F7; --surface-sunk:#EBEBEB;
+    --ink:#101116; --ink-muted:#565C67; --ink-faint:#636974; --ink-dim:#8B9099;
+    --line:#E5E5E5; --line-strong:#D4D4D4;
+    --brand:#C8102E; --brand-deep:#A30D25; --brand-ondark:#FF2D4A;
+    --accent-mid:#1F9D4D; --accent-ink:#157F3C; --accent-bg:#E6F7EC; --accent-ondark:#4AC27D;
+    --info:#2F5FA8;
+    --danger:#C2352C; --danger-ink:#A30D25; --danger-bg:#FDECEB;
+    --chrome:#0A0A0A; --chrome-line:rgba(255,255,255,0.16); --chrome-muted:#8B9099;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Barlow',system-ui,sans-serif;background:#F3F2EF;color:#1A1C1F;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  body{font-family:'Barlow',system-ui,sans-serif;background:var(--surface);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
   input,select,button{font-family:inherit}
   table{border-collapse:collapse}
   /* Interaction feedback (design audit, Aug 2026). Filter/transform only, so
@@ -79,7 +89,7 @@
   button:hover:not(:disabled){filter:brightness(0.94)}
   button:active:not(:disabled){transform:scale(.98)}
   button:disabled{opacity:.45;cursor:not-allowed}
-  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #E11B22;outline-offset:2px}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   tbody tr:hover td{background:rgba(0,0,0,0.025)}
 
   /* ============ PHONE LAYOUT — THE FIRST ONE THIS FILE HAS EVER HAD ============
@@ -194,10 +204,10 @@
        scripted navigation is blocked. -->
   <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
-      <div style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:18px;padding:36px;text-align:center">
+      <div style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid var(--line);border-radius:18px;padding:36px;text-align:center">
         <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px;margin-bottom:10px">ADH JRT</div>
-        <p style="color:#454D58;font-size:14px;line-height:1.6">Taking you to the sign-in page&hellip;</p>
-        <p style="margin-top:14px"><a href="/signin?next=/organizer" style="color:#1A1C1F;font-weight:700;text-decoration:underline;font-size:14px">Sign in</a></p>
+        <p style="color:var(--ink-muted);font-size:14px;line-height:1.6">Taking you to the sign-in page&hellip;</p>
+        <p style="margin-top:14px"><a href="/signin?next=/organizer" style="color:var(--ink);font-weight:700;text-decoration:underline;font-size:14px">Sign in</a></p>
       </div>
     </div>
   </sc-if>
@@ -210,24 +220,24 @@
          reader who has seen one recognises the other. Removing this class
          silently removes the whole phone layout; a test asserts it is here. -->
     <div class="bo" style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;border-bottom:1px solid rgba(0,0,0,0.1);padding-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;background:var(--chrome);border-radius:14px;padding:16px 20px">
         <div style="display:flex;align-items:center;gap:14px">
-          <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#1A1C1F">
+          <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#FFFFFF">
             <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
-              <div style="position:absolute;inset:0;background:linear-gradient(135deg,#E11B22 0 50%,#17A34A 50% 100%)"></div>
+              <div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--brand-ondark) 0 50%,var(--accent-mid) 50% 100%)"></div>
             </div>
             <div style="line-height:1">
               <div style="font-family:'Anton';font-size:22px;letter-spacing:.5px">ADH JRT · ORGANISER</div>
-              <div style="font-size:11px;letter-spacing:2px;color:#0E6B33;font-weight:700;margin-top:3px">BACK OFFICE</div>
+              <div style="font-size:11px;letter-spacing:2px;color:var(--accent-ondark);font-weight:700;margin-top:3px">BACK OFFICE</div>
             </div>
           </a>
-          <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">← Main site</a>
-          <a href="/manager" style="font-size:13px;font-weight:700;color:#454D58;border-left:1px solid rgba(0,0,0,0.15);padding-left:14px;transition:color .18s ease" style-hover="color:#1A1C1F">View manager area</a>
+          <a href="Quins JRT.dc.html" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">← Main site</a>
+          <a href="/manager" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View manager area</a>
         </div>
         <div style="display:flex;align-items:center;gap:14px;position:relative">
           <div style="text-align:right;line-height:1.3">
-            <div style="font-weight:700;font-size:14px">{{ sessionName }}</div>
-            <div style="font-size:12px;color:#5A626E">{{ sessionRole }}</div>
+            <div style="font-weight:700;font-size:14px;color:#FFFFFF">{{ sessionName }}</div>
+            <div style="font-size:12px;color:var(--chrome-muted)">{{ sessionRole }}</div>
           </div>
           <!-- My account. This replaced a header dropdown that did nothing but
                change your own password: the card shows the same person their
@@ -235,8 +245,8 @@
                Link Google as well. The SAME card, in other-person mode, opens
                from any row in the Accounts tab.
                Design: claude/specs/spec-my-account.md -->
-          <button onClick="{{ onOpenMyAccount }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#454D58;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">My account</button>
-          <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
+          <button onClick="{{ onOpenMyAccount }}" style="background:transparent;border:1px solid var(--chrome-line);color:#FFFFFF;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">My account</button>
+          <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid var(--chrome-line);color:#FFFFFF;font-weight:700;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap">Sign out</button>
 
         </div>
       </div>
@@ -270,10 +280,10 @@
            Registration tab is the window SETTINGS. Kept as-is at Jay's order.
            If it ever confuses someone, the fix is renaming the tab to
            "Registration window", not moving it between groups. -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%;align-items:flex-end">
+      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%;align-items:flex-end">
 
         <div style="display:flex;flex-direction:column;gap:5px">
-          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Registrations</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;white-space:nowrap">Registrations</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button onClick="{{ showClubs }}" style="{{ tabClubsStyle }}">Clubs<sc-if value="{{ hasFlaggedClubs }}" hint-placeholder-val="{{ false }}"> ({{ flaggedClubCount }} to chase)</sc-if></button>
             <button onClick="{{ showTeams }}" style="{{ tabTeamsStyle }}">Teams ({{ teamCount }})</button>
@@ -284,7 +294,7 @@
         <div style="width:1px;background:rgba(0,0,0,0.13);align-self:stretch;margin:0 6px"></div>
 
         <div style="display:flex;flex-direction:column;gap:5px">
-          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Tournament configuration</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;white-space:nowrap">Tournament configuration</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button onClick="{{ showTournament }}" style="{{ tabTournamentStyle }}">Tournament</button>
             <button onClick="{{ showFixturesView }}" style="{{ tabFixturesStyle }}">Fixtures &amp; tables</button>
@@ -297,7 +307,7 @@
         <div style="width:1px;background:rgba(0,0,0,0.13);align-self:stretch;margin:0 6px"></div>
 
         <div style="display:flex;flex-direction:column;gap:5px">
-          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC;padding:0 6px;white-space:nowrap">Site admin</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;white-space:nowrap">Site admin</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button onClick="{{ showAccounts }}" style="{{ tabAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
           </div>
@@ -310,9 +320,9 @@
            registered yet." This banner only shows when loadData() actually
            failed, and offers the one thing that usually fixes it (retry). -->
       <sc-if value="{{ dataError }}" hint-placeholder-val="">
-        <div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#A62626;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="margin-top:14px;background:rgba(200,16,46,0.12);border:1px solid rgba(200,16,46,0.4);border-radius:9px;padding:12px 14px;color:var(--danger-ink);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px">
           <span>{{ dataError }}</span>
-          <button onClick="{{ onRetryLoad }}" style="background:#E11B22;color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Retry</button>
+          <button onClick="{{ onRetryLoad }}" style="background:var(--brand);color:#fff;font-weight:800;font-size:13px;padding:8px 14px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Retry</button>
         </div>
       </sc-if>
 
@@ -320,33 +330,33 @@
            is in flight the tables would otherwise read "No team registrations
            match your filters" with "(0)" counts — which looks like an answer. -->
       <sc-if value="{{ dataLoading }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:14px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:9px;padding:12px 14px;color:#5A626E;font-size:14px;font-weight:600">Loading registrations and accounts&hellip;</div>
+        <div style="margin-top:14px;background:#FFFFFF;border:1px solid var(--line);border-radius:9px;padding:12px 14px;color:var(--ink-faint);font-size:14px;font-weight:600">Loading registrations and accounts&hellip;</div>
       </sc-if>
 
       <!-- registration window tab -->
       <sc-if value="{{ isRegistration }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Registration window</div>
-                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:#454D58">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:#454D58">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
+                <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0;line-height:1.5">When clubs and parents can use the entry forms on the public site. <b style="color:var(--ink-muted)">All times are Abu Dhabi time.</b> Registration opens at the start of the opening day and closes at the end of the closing day. Changing these does <b style="color:var(--ink-muted)">not</b> need a deploy &mdash; save here and the public page follows. Nothing changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
+                <button onClick="{{ onRegReset }}" disabled="{{ rBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:12px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Clear the window</button>
                 <button onClick="{{ onRegSave }}" disabled="{{ rSaveDisabled }}" style="{{ rSaveStyle }}">{{ rSaveLabel }}</button>
               </div>
             </div>
 
-            <sc-if value="{{ rError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:11px 13px;color:#A62626;font-size:13px;font-weight:600">{{ rError }}</div></sc-if>
-            <sc-if value="{{ rSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#0E6B33;font-size:13px;font-weight:600">{{ rSuccess }}</div></sc-if>
+            <sc-if value="{{ rError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(200,16,46,0.12);border:1px solid rgba(200,16,46,0.4);border-radius:9px;padding:11px 13px;color:var(--danger-ink);font-size:13px;font-weight:600">{{ rError }}</div></sc-if>
+            <sc-if value="{{ rSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:var(--accent-ink);font-size:13px;font-weight:600">{{ rSuccess }}</div></sc-if>
 
             <sc-if value="{{ rHasProblems }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:11px 13px">
-                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#A62626;text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
+              <div style="margin-top:14px;background:rgba(200,16,46,0.10);border:1px solid rgba(200,16,46,0.35);border-radius:9px;padding:11px 13px">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--danger-ink);text-transform:uppercase;margin-bottom:6px">Fix these before saving</div>
                 <sc-for list="{{ rProblems }}" as="rp" hint-placeholder-count="1">
-                  <div style="color:#A62626;font-size:13px;line-height:1.6">&bull; {{ rp }}</div>
+                  <div style="color:var(--danger-ink);font-size:13px;line-height:1.6">&bull; {{ rp }}</div>
                 </sc-for>
               </div>
             </sc-if>
@@ -362,28 +372,28 @@
           </div>
 
           <!-- the two dates -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">The dates</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:#454D58">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin:0 0 16px;line-height:1.5">Leave a date empty to leave it undecided. <b style="color:var(--ink-muted)">With no opening date, registration stays closed</b> &mdash; which is what you want until the date is agreed. The date under each box is what the public page will print, spelled out, so a mis-typed month is visible straight away.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px">
               <div>
-                <label for="f--label-style-font-si" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
-                <input id="f--label-style-font-si" type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                <label for="f--label-style-font-si" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">OPENS &mdash; START OF THIS DAY</label>
+                <input id="f--label-style-font-si" type="date" value="{{ rOpensDate }}" onInput="{{ onRegOpensDate }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rOpensEchoColor }}">{{ rOpensEcho }}</div>
               </div>
               <div>
-                <label for="f--label-style-font-si-2" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
-                <input id="f--label-style-font-si-2" type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                <label for="f--label-style-font-si-2" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">CLOSES &mdash; END OF THIS DAY</label>
+                <input id="f--label-style-font-si-2" type="date" value="{{ rClosesDate }}" onInput="{{ onRegClosesDate }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px;color-scheme:light">
                 <div style="margin-top:6px;font-size:12px;font-weight:600;color:{{ rClosesEchoColor }}">{{ rClosesEcho }}</div>
               </div>
             </div>
           </div>
 
           <!-- auto / force open / force closed -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Which one is in charge</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:#454D58">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin:0 0 16px;line-height:1.5">One switch, not a date <i>and</i> an on/off toggle &mdash; two of those end up disagreeing and nobody can tell which one won. <b style="color:var(--ink-muted)">Force open is how you test the real forms</b> before the opening date; the public page shows a TEST MODE strip the whole time it is on, so a test can never be mistaken for the real thing.</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
               <sc-for list="{{ rModes }}" as="rm" hint-placeholder-count="3">
@@ -396,18 +406,18 @@
           </div>
 
           <!-- what a visitor sees, computed from the UNSAVED working copy -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:40px">
             <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
               <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">What the public page says</div>
               <sc-if value="{{ rPreviewUnsaved }}" hint-placeholder-val="{{ false }}"><div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#8F6400;text-transform:uppercase">Preview of your unsaved changes</div></sc-if>
             </div>
-            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin:0 0 16px;line-height:1.5">Right now, on this clock. The public page works this out every second, so it changes over at the moment the date does &mdash; nobody has to reload it.</p>
 
-            <div style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;text-align:center">
-              <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:#1A1C1F">
+            <div style="background:var(--surface-sunk);border:1px solid var(--line);border-radius:12px;padding:20px;text-align:center">
+              <div style="display:inline-flex;align-items:center;gap:8px;background:{{ rPreviewPillBg }};padding:8px 18px;border-radius:100px;margin-bottom:14px;font-weight:800;letter-spacing:1px;font-size:12px;color:var(--ink)">
                 <span style="width:8px;height:8px;border-radius:50%;background:#fff"></span>{{ rPreviewPill }}
               </div>
-              <div style="color:#454D58;font-size:14px;line-height:1.6;max-width:520px;margin:0 auto">{{ rPreviewBlurb }}</div>
+              <div style="color:var(--ink-muted);font-size:14px;line-height:1.6;max-width:520px;margin:0 auto">{{ rPreviewBlurb }}</div>
               <div style="margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:{{ rPreviewTint }}">{{ rPreviewButtons }}</div>
               <sc-if value="{{ rPreviewTestMode }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-top:14px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.4);border-radius:8px;padding:9px 13px;color:#8F6400;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">Test mode strip is showing on the public page</div>
@@ -436,24 +446,24 @@
       <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px;max-width:900px">
 
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Share a document</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">Managers see these on their own dashboard. <b style="color:#454D58">Choose who each one is for</b> &mdash; a manager only sees documents tagged for everyone or for their own age group. PDF, PNG, JPG, XLSX or DOCX, up to 4&nbsp;MB. Nothing here is ever public.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin:0 0 16px;line-height:1.5">Managers see these on their own dashboard. <b style="color:var(--ink-muted)">Choose who each one is for</b> &mdash; a manager only sees documents tagged for everyone or for their own age group. PDF, PNG, JPG, XLSX or DOCX, up to 4&nbsp;MB. Nothing here is ever public.</p>
 
-            <label for="f--label-style-display" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
-            <input id="f--label-style-display" value="{{ docTitle }}" onInput="{{ onDocTitle }}" placeholder="Saturday draw" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+            <label for="f--label-style-display" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Title</label>
+            <input id="f--label-style-display" value="{{ docTitle }}" onInput="{{ onDocTitle }}" placeholder="Saturday draw" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;margin-bottom:12px" />
 
-            <label for="f--label-style-display-2" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-            <input id="f--label-style-display-2" value="{{ docDesc }}" onInput="{{ onDocDesc }}" placeholder="Pools and kick-off times, updated 6 November" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:12px" />
+            <label for="f--label-style-display-2" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input id="f--label-style-display-2" value="{{ docDesc }}" onInput="{{ onDocDesc }}" placeholder="Pools and kick-off times, updated 6 November" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;margin-bottom:12px" />
 
-            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Who is it for</label>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
               <sc-for list="{{ docTagChips }}" as="chip" hint-placeholder-count="4">
                 <button onClick="{{ chip.toggle }}" style="{{ chip.style }}">{{ chip.name }}</button>
               </sc-for>
             </div>
 
-            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">File</label>
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">File</label>
             <!-- ⚠️ THE DROP ZONE AND THE BUTTON FEED ONE HANDLER
                  (acceptDocFile). Two copies of the size check is how one of
                  them ends up without it, and above the cap the platform
@@ -462,21 +472,21 @@
                  the tab to the dropped file, throwing away a half-filled
                  form; that looks like a crash, not a missing feature. -->
             <div onDragOver="{{ onDocDragOver }}" onDragLeave="{{ onDocDragLeave }}" onDrop="{{ onDocDrop }}" style="{{ docDropStyle }}">
-              <div style="font-size:13px;color:#5A626E">{{ docDropLabel }}</div>
-              <div style="font-size:11px;color:#98A0AC;margin-top:3px">PDF, PNG, JPG, XLSX or DOCX · up to 4 MB</div>
+              <div style="font-size:13px;color:var(--ink-faint)">{{ docDropLabel }}</div>
+              <div style="font-size:11px;color:var(--ink-dim);margin-top:3px">PDF, PNG, JPG, XLSX or DOCX · up to 4 MB</div>
             </div>
             <input type="file" onChange="{{ onPickDocFile }}" aria-label="Choose a document to upload" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx" style="font-size:13px;margin-bottom:6px" />
-            <div style="font-size:12px;color:#5A626E;margin-bottom:14px">{{ docFileLabel }}</div>
+            <div style="font-size:12px;color:var(--ink-faint);margin-bottom:14px">{{ docFileLabel }}</div>
 
-            <button onClick="{{ onUploadDoc }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer">Upload</button>
+            <button onClick="{{ onUploadDoc }}" style="background:var(--brand);color:#FFFFFF;border:0;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer">Upload</button>
             <sc-if value="{{ docsMsg }}" hint-placeholder-val="{{ '' }}">
-              <div style="margin-top:10px;font-size:12px;color:#454D58">{{ docsMsg }}</div>
+              <div style="margin-top:10px;font-size:12px;color:var(--ink-muted)">{{ docsMsg }}</div>
             </sc-if>
           </div>
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Shared documents</div>
-            <button onClick="{{ onToggleDeleted }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer">{{ docsDeletedLabel }}</button>
+            <button onClick="{{ onToggleDeleted }}" style="background:none;border:1px solid var(--line-strong);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer">{{ docsDeletedLabel }}</button>
           </div>
 
           <!-- ⚠️ THREE STATES, THREE SENTENCES. "No documents yet" and "could
@@ -486,7 +496,7 @@
             <div style="padding:14px;border:1px solid #F0C36D;background:#FDF6E3;border-radius:10px;font-size:13px;color:#7A5C00">Documents could not load. This is not the same as there being none &mdash; try again in a moment.</div>
           </sc-if>
           <sc-if value="{{ docsEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="padding:14px;border:1px dashed rgba(0,0,0,0.18);border-radius:10px;font-size:13px;color:#5A626E">No documents yet. Upload one above and every manager it is tagged for will see it.</div>
+            <div style="padding:14px;border:1px dashed var(--line-strong);border-radius:10px;font-size:13px;color:var(--ink-faint)">No documents yet. Upload one above and every manager it is tagged for will see it.</div>
           </sc-if>
 
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -494,10 +504,10 @@
               <div style="{{ row.rowStyle }}">
                 <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
                   <div style="min-width:0">
-                    <div style="font-weight:700;font-size:14px">{{ row.title }}<sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}"><span style="margin-left:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#B00020;border:1px solid #B00020;border-radius:6px;padding:2px 6px">Not shared</span></sc-if></div>
-                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ row.description }}</div>
-                    <div style="font-size:11px;color:#98A0AC;margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
-                    <div style="font-size:11px;color:#454D58;margin-top:4px"><b>For:</b> {{ row.who }}</div>
+                    <div style="font-weight:700;font-size:14px">{{ row.title }}<sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}"><span style="margin-left:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--danger);border:1px solid var(--danger);border-radius:6px;padding:2px 6px">Not shared</span></sc-if></div>
+                    <div style="font-size:12px;color:var(--ink-faint);margin-top:2px">{{ row.description }}</div>
+                    <div style="font-size:11px;color:var(--ink-dim);margin-top:4px">{{ row.meta }} · {{ row.when }}</div>
+                    <div style="font-size:11px;color:var(--ink-muted);margin-top:4px"><b>For:</b> {{ row.who }}</div>
                   </div>
                   <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
                     <!-- ⚠️ ONLY WHEN THE SERVER SAYS IT CAN BE SHOWN. XLSX and
@@ -507,9 +517,9 @@
                          empty box. A control that does nothing reads as
                          broken; an absent one reads as unavailable. -->
                     <sc-if value="{{ row.previewable }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ row.onViewRow }}" style="background:#0B7285;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">View</button>
+                      <button onClick="{{ row.onViewRow }}" style="background:var(--info);color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">View</button>
                     </sc-if>
-                    <button onClick="{{ row.onDownload }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
+                    <button onClick="{{ row.onDownload }}" style="background:var(--brand);color:#FFFFFF;border:0;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Download</button>
                     <sc-if value="{{ row.notHidden }}" hint-placeholder-val="{{ false }}">
                       <!-- ⚠️ THIS BUTTON WAS MISSING UNTIL 7 AUG 2026 and the
                            whole path behind it already existed — documents.js
@@ -517,12 +527,12 @@
                            with NOTHING calling either. Dead published code,
                            and the only way to re-share a document was delete
                            and re-upload, which loses the upload date. -->
-                      <button onClick="{{ row.onEditRow }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Change sharing</button>
-                      <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Stop sharing</button>
+                      <button onClick="{{ row.onEditRow }}" style="background:none;border:1px solid var(--line-strong);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Change sharing</button>
+                      <button onClick="{{ row.onDelete }}" style="background:none;border:1px solid var(--line-strong);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Stop sharing</button>
                     </sc-if>
                     <sc-if value="{{ row.hidden }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ row.onRestore }}" style="background:none;border:1px solid #17A34A;color:#17A34A;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Share again</button>
-                      <button onClick="{{ row.onPurge }}" style="background:none;border:1px solid #B00020;color:#B00020;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete for good</button>
+                      <button onClick="{{ row.onRestore }}" style="background:none;border:1px solid var(--accent-mid);color:var(--accent-mid);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">Share again</button>
+                      <button onClick="{{ row.onPurge }}" style="background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Delete for good</button>
                     </sc-if>
                   </div>
                 </div>
@@ -535,14 +545,14 @@
                      the upload date and the uploader are the record of what
                      was shared and when. Replacing a file is delete + upload. -->
                 <sc-if value="{{ row.isEditing }}" hint-placeholder-val="{{ false }}">
-                  <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.10)">
-                    <label for="f--label-style-display-3" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Title</label>
-                    <input id="f--label-style-display-3" value="{{ docEditTitle }}" onInput="{{ onDocEditTitle }}" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+                  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+                    <label for="f--label-style-display-3" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Title</label>
+                    <input id="f--label-style-display-3" value="{{ docEditTitle }}" onInput="{{ onDocEditTitle }}" style="width:100%;max-width:420px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;margin-bottom:10px" />
 
-                    <label for="f--label-style-display-4" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Description</label>
-                    <input id="f--label-style-display-4" value="{{ docEditDesc }}" onInput="{{ onDocEditDesc }}" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+                    <label for="f--label-style-display-4" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Description</label>
+                    <input id="f--label-style-display-4" value="{{ docEditDesc }}" onInput="{{ onDocEditDesc }}" style="width:100%;max-width:560px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;margin-bottom:10px" />
 
-                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#98A0AC;margin-bottom:5px">Who is it for</label>
+                    <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:5px">Who is it for</label>
                     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
                       <sc-for list="{{ docEditTagChips }}" as="echip" hint-placeholder-count="4">
                         <button onClick="{{ echip.toggle }}" style="{{ echip.style }}">{{ echip.name }}</button>
@@ -550,8 +560,8 @@
                     </div>
 
                     <div style="display:flex;gap:8px">
-                      <button onClick="{{ onSaveEditDoc }}" style="background:#E11B22;color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save sharing</button>
-                      <button onClick="{{ onCancelEditDoc }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
+                      <button onClick="{{ onSaveEditDoc }}" style="background:var(--brand);color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Save sharing</button>
+                      <button onClick="{{ onCancelEditDoc }}" style="background:none;border:1px solid var(--line-strong);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
                     </div>
                   </div>
                 </sc-if>
@@ -568,14 +578,14 @@
                ⚠️ The blob URL is revoked on close (closeDocView), or every
                preview holds its bytes until the tab is shut. -->
           <sc-if value="{{ isViewing }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:16px;border:1px solid rgba(0,0,0,0.12);border-radius:12px;background:#FFFFFF;overflow:hidden">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,0.10);background:#FAFAFA">
+            <div style="margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#FFFFFF;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-mute)">
                 <div style="font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ docViewTitle }}</div>
-                <button onClick="{{ onCloseDocView }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;flex:none">Close</button>
+                <button onClick="{{ onCloseDocView }}" style="background:none;border:1px solid var(--line-strong);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;flex:none">Close</button>
               </div>
 
               <sc-if value="{{ docViewBusy }}" hint-placeholder-val="{{ false }}">
-                <div style="padding:28px;text-align:center;font-size:13px;color:#5A626E">Opening&hellip;</div>
+                <div style="padding:28px;text-align:center;font-size:13px;color:var(--ink-faint)">Opening&hellip;</div>
               </sc-if>
 
               <sc-if value="{{ docViewError }}" hint-placeholder-val="{{ '' }}">
@@ -584,7 +594,7 @@
 
               <sc-if value="{{ docViewReady }}" hint-placeholder-val="{{ false }}">
                 <sc-if value="{{ docViewIsImage }}" hint-placeholder-val="{{ false }}">
-                  <div style="padding:14px;text-align:center;background:#F3F2EF">
+                  <div style="padding:14px;text-align:center;background:var(--surface-sunk)">
                     <img src="{{ docViewUrl }}" alt="{{ docViewTitle }}" style="max-width:100%;max-height:70vh;border-radius:8px" />
                   </div>
                 </sc-if>
@@ -605,15 +615,15 @@
                is the document's OWN TITLE, not a fixed word like DELETE,
                which becomes muscle memory after the second time. -->
           <sc-if value="{{ isPurging }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:14px;padding:16px;border:1px solid #B00020;border-radius:12px;background:#FFF5F6">
-              <div style="font-weight:700;font-size:14px;color:#B00020;margin-bottom:6px">Delete “{{ purgeTitle }}” for good?</div>
-              <p style="font-size:12px;color:#5A626E;margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Stop sharing, which only takes it off the managers&rsquo; list. Type the document&rsquo;s title to confirm.</p>
-              <input value="{{ docPurgeText }}" aria-label="Type the document title to confirm deletion" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;font-size:13px;margin-bottom:10px" />
+            <div style="margin-top:14px;padding:16px;border:1px solid var(--danger);border-radius:12px;background:var(--danger-bg)">
+              <div style="font-weight:700;font-size:14px;color:var(--danger);margin-bottom:6px">Delete “{{ purgeTitle }}” for good?</div>
+              <p style="font-size:12px;color:var(--ink-faint);margin:0 0 10px;line-height:1.5">This removes the file itself. There is no undo &mdash; unlike Stop sharing, which only takes it off the managers&rsquo; list. Type the document&rsquo;s title to confirm.</p>
+              <input value="{{ docPurgeText }}" aria-label="Type the document title to confirm deletion" onInput="{{ onDocPurgeText }}" placeholder="{{ purgeTitle }}" style="width:100%;max-width:360px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;font-size:13px;margin-bottom:10px" />
               <div style="display:flex;gap:8px">
                 <sc-if value="{{ purgeArmed }}" hint-placeholder-val="{{ false }}">
-                  <button onClick="{{ onConfirmPurge }}" style="background:#B00020;color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Delete for good</button>
+                  <button onClick="{{ onConfirmPurge }}" style="background:var(--danger);color:#FFFFFF;border:0;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer">Delete for good</button>
                 </sc-if>
-                <button onClick="{{ onCancelPurge }}" style="background:none;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
+                <button onClick="{{ onCancelPurge }}" style="background:none;border:1px solid var(--line-strong);border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer">Cancel</button>
               </div>
             </div>
           </sc-if>
@@ -629,11 +639,11 @@
         <div style="margin-top:24px">
 
           <!-- ===== SCORING RULES (per age group) ===== -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.12);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Scoring for {{ tournAgeName }}</div>
-            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
+            <div style="font-size:13px;line-height:1.6;color:var(--ink-muted);margin-bottom:14px">Tick what can be scored at this age group. Managers only see the boxes you leave ticked, and totals are worked out from them &mdash; the server uses the same setting, so the two cannot drift apart.</div>
 
-            <select value="{{ tournAgeId }}" aria-label="Age group" onChange="{{ onTournAge }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px;margin-bottom:16px">
+            <select value="{{ tournAgeId }}" aria-label="Age group" onChange="{{ onTournAge }}" style="background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px;margin-bottom:16px">
               <sc-for list="{{ tournAgeOptions }}" as="ta" hint-placeholder-count="15">
                 <option value="{{ ta.id }}">{{ ta.name }}</option>
               </sc-for>
@@ -642,34 +652,34 @@
             <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:16px">
               <sc-for list="{{ scoreTypeToggles }}" as="t" hint-placeholder-count="4">
                 <label for="f--label-style-display-5" style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer">
-                  <input id="f--label-style-display-5" type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:#17A34A">
-                  {{ t.label }} <span style="color:#5A626E;font-weight:500;font-size:12.5px">{{ t.pts }}</span>
+                  <input id="f--label-style-display-5" type="checkbox" checked="{{ t.on }}" onChange="{{ t.toggle }}" style="width:17px;height:17px;accent-color:var(--accent-mid)">
+                  {{ t.label }} <span style="color:var(--ink-faint);font-weight:500;font-size:12.5px">{{ t.pts }}</span>
                 </label>
               </sc-for>
             </div>
 
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <button onClick="{{ onSaveScoring }}" disabled="{{ scoringBusy }}" style="background:#17A34A;color:#fff;font-weight:800;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;font-size:13px">Save scoring</button>
-              <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:#0E6B33;font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
+              <button onClick="{{ onSaveScoring }}" disabled="{{ scoringBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;font-size:13px">Save scoring</button>
+              <sc-if value="{{ scoringMsg }}" hint-placeholder-val=""><span style="color:var(--accent-ink);font-weight:700;font-size:13px">{{ scoringMsg }}</span></sc-if>
             </div>
           </div>
 
           <!-- ===== ALL AGE GROUPS — bulk publish ===== -->
-          <div style="background:#FFFFFF;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(200,16,46,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">All age groups</div>
-            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
+            <div style="font-size:13px;line-height:1.6;color:var(--ink-muted);margin-bottom:14px">Publish or withdraw every age group in one go. &ldquo;Publish all&rdquo; publishes each group that has a saved draw; any group with nothing saved yet is skipped and reported.</div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <button onClick="{{ onPublishAll }}" disabled="{{ bulkBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Publish all age groups</button>
-              <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#A62626;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
-              <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:#0E6B33;font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
+              <button onClick="{{ onPublishAll }}" disabled="{{ bulkBusy }}" style="background:var(--brand);color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Publish all age groups</button>
+              <button onClick="{{ onUnpublishAll }}" disabled="{{ bulkBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Unpublish all</button>
+              <sc-if value="{{ bulkMsg }}" hint-placeholder-val=""><span style="color:var(--accent-ink);font-weight:700;font-size:13px">{{ bulkMsg }}</span></sc-if>
             </div>
           </div>
 
           <!-- ===== SIMULATE A TOURNAMENT (testing) ===== -->
-          <div style="background:#FFFFFF;border:1px solid rgba(225,27,34,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid rgba(200,16,46,0.3);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="font-family:'Anton';font-size:17px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Simulate a tournament</div>
-            <div style="font-size:13px;line-height:1.6;color:#525B67;margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
-            <div style="font-size:12px;line-height:1.6;color:#69727E;margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:#525B67">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
+            <div style="font-size:13px;line-height:1.6;color:var(--ink-muted);margin-bottom:6px">For testing only. Publishes every age group, records a walkover (the first team listed wins) for every pool match, generates the knockout stage from the resulting standings and walks that over too &mdash; finals included &mdash; then publishes again so the finished bracket is visible everywhere.</div>
+            <div style="font-size:12px;line-height:1.6;color:var(--ink-faint);margin-bottom:14px">This overwrites any score already recorded for a match, real or otherwise. <strong style="color:var(--ink-muted)">Reset the simulation</strong> undoes it &mdash; unpublishes every group, removes every result and clears the generated bracket &mdash; but leaves saved pools and team assignments untouched.</div>
 
             <sc-if value="{{ simIsMatchDay }}" hint-placeholder-val="{{ false }}">
               <div style="padding:11px 13px;background:rgba(245,197,24,0.09);border:1px solid rgba(245,197,24,0.32);border-radius:9px;font-size:13px;color:#8F6400;font-weight:600;line-height:1.6">It is a tournament day, so this is switched off. Nothing here can be pressed on 14 or 15 November.</div>
@@ -677,14 +687,14 @@
 
             <sc-if value="{{ simNotMatchDay }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                <button onClick="{{ onSimulateTournament }}" disabled="{{ simBusy }}" style="background:#E11B22;color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Simulate whole tournament</button>
-                <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#A62626;font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
+                <button onClick="{{ onSimulateTournament }}" disabled="{{ simBusy }}" style="background:var(--brand);color:#fff;font-weight:800;padding:12px 26px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px">Simulate whole tournament</button>
+                <button onClick="{{ onResetSimulation }}" disabled="{{ simBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;padding:11px 20px;border-radius:9px;cursor:pointer">Reset the simulation</button>
               </div>
               <sc-if value="{{ simProgress }}" hint-placeholder-val="">
-                <div style="margin-top:12px;font-size:13px;color:#454D58;font-weight:600">{{ simProgress }}</div>
+                <div style="margin-top:12px;font-size:13px;color:var(--ink-muted);font-weight:600">{{ simProgress }}</div>
               </sc-if>
               <sc-if value="{{ simMsg }}" hint-placeholder-val="">
-                <div style="margin-top:12px;font-size:13px;color:#0E6B33;font-weight:700;line-height:1.5">{{ simMsg }}</div>
+                <div style="margin-top:12px;font-size:13px;color:var(--accent-ink);font-weight:700;line-height:1.5">{{ simMsg }}</div>
               </sc-if>
             </sc-if>
           </div>
@@ -695,20 +705,20 @@
       <!-- filters -->
       <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center">
-          <input value="{{ search }}" aria-label="Search registrations" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
-          <select value="{{ clubFilter }}" aria-label="Filter by club" onChange="{{ onClubFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <input value="{{ search }}" aria-label="Search registrations" onInput="{{ onSearch }}" placeholder="Search name, club, coach, parent…" style="flex:1;min-width:220px;background:#FFFFFF;border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
+          <select value="{{ clubFilter }}" aria-label="Filter by club" onChange="{{ onClubFilter }}" style="background:#FFFFFF;border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
             <option value="">All clubs</option>
             <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
               <option value="{{ c }}">{{ c }}</option>
             </sc-for>
           </select>
-          <select value="{{ ageFilter }}" aria-label="Filter by age group" onChange="{{ onAgeFilter }}" style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+          <select value="{{ ageFilter }}" aria-label="Filter by age group" onChange="{{ onAgeFilter }}" style="background:#FFFFFF;border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
             <option value="">All age groups</option>
             <sc-for list="{{ ageOptions }}" as="a" hint-placeholder-count="8">
               <option value="{{ a }}">{{ a }}</option>
             </sc-for>
           </select>
-          <button onClick="{{ onExport }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
+          <button onClick="{{ onExport }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;padding:11px 18px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase;white-space:nowrap">Export CSV</button>
         </div>
       </sc-if>
 
@@ -718,15 +728,15 @@
            get. See openFixturesView() and the spec it names. -->
       <sc-if value="{{ isFixturesView }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:18px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:6px">Fixtures &amp; tables</div>
-                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">A read-only look at any age group's draw, results and standings — <b style="color:#454D58">including before it is published</b>. To change a draw or enter a score, use <b style="color:#454D58">/manager</b> and its age-group switcher.</p>
+                <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0;line-height:1.6">A read-only look at any age group's draw, results and standings — <b style="color:var(--ink-muted)">including before it is published</b>. To change a draw or enter a score, use <b style="color:var(--ink-muted)">/manager</b> and its age-group switcher.</p>
               </div>
               <div style="display:flex;flex-direction:column;gap:5px">
-                <label for="f--label-style-font-si-3" style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:#98A0AC">Age group</label>
-                <select id="f--label-style-font-si-3" value="{{ fxvAgeId }}" onChange="{{ onFxvAge }}" style="font-size:16px;padding:10px 12px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;background:#FFFFFF;color:#1A1C1F;min-height:44px">
+                <label for="f--label-style-font-si-3" style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--ink-dim)">Age group</label>
+                <select id="f--label-style-font-si-3" value="{{ fxvAgeId }}" onChange="{{ onFxvAge }}" style="font-size:16px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:9px;background:#FFFFFF;color:var(--ink);min-height:44px">
                   <sc-for list="{{ fxvAgeOptions }}" as="g" hint-placeholder-count="4">
                     <option value="{{ g.id }}">{{ g.name }}</option>
                   </sc-for>
@@ -736,14 +746,14 @@
           </div>
 
           <sc-if value="{{ fxvLoading }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center;color:#5A626E;font-size:14px">Loading…</div>
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center;color:var(--ink-faint);font-size:14px">Loading…</div>
           </sc-if>
           <!-- "could not load" is NOT the same as "nothing drawn yet" — see the
                fxvUnavailable comment in state. -->
           <sc-if value="{{ fxvUnavailable }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Could not load</div>
-              <div style="color:#5A626E;font-size:14px">The draw for {{ fxvAgeName }} could not be fetched. Pick the age group again to retry.</div>
+              <div style="color:var(--ink-faint);font-size:14px">The draw for {{ fxvAgeName }} could not be fetched. Pick the age group again to retry.</div>
             </div>
           </sc-if>
           <sc-if value="{{ fxvNoteShow }}" hint-placeholder-val="{{ false }}">
@@ -753,24 +763,24 @@
             </div>
           </sc-if>
           <sc-if value="{{ fxvAwaiting }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">Nothing drawn yet</div>
-              <div style="color:#5A626E;font-size:14px">There is no saved draw for {{ fxvAgeName }} and nothing published.</div>
+              <div style="color:var(--ink-faint);font-size:14px">There is no saved draw for {{ fxvAgeName }} and nothing published.</div>
             </div>
           </sc-if>
           <sc-if value="{{ fxvEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:34px 22px;text-align:center">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center">
               <div style="font-family:'Anton';font-size:22px;text-transform:uppercase;margin-bottom:8px">No matches</div>
-              <div style="color:#5A626E;font-size:14px">Nothing is scheduled for {{ fxvAgeName }} yet.</div>
+              <div style="color:var(--ink-faint);font-size:14px">Nothing is scheduled for {{ fxvAgeName }} yet.</div>
             </div>
           </sc-if>
 
           <sc-for list="{{ fxvPoolGroups }}" as="g" hint-placeholder-count="2">
             <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 9px">{{ g.name }}</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;overflow:hidden">
               <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid rgba(0,0,0,0.08)">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)">
+                  <div><div style="font-weight:800;color:var(--brand);font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:var(--ink-faint);font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
                   <div style="font-weight:600;font-size:14px;line-height:1.4">{{ r.teams }}</div>
                   <div style="font-family:'Anton';font-size:18px;white-space:nowrap">{{ r.score }}</div>
                 </div>
@@ -780,11 +790,11 @@
 
           <sc-if value="{{ fxvHasKnockout }}" hint-placeholder-val="{{ false }}">
             <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:20px 0 9px">Knockout</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;overflow:hidden">
               <sc-for list="{{ fxvKnockoutRows }}" as="r" hint-placeholder-count="2">
-                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid rgba(0,0,0,0.08)">
-                  <div><div style="font-weight:800;color:#E11B22;font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:#5A626E;font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
-                  <div style="font-weight:600;font-size:14px;line-height:1.4"><span style="display:block;font-size:11px;color:#5A626E;margin-bottom:2px">{{ r.meta }}</span>{{ r.teams }}</div>
+                <div style="display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)">
+                  <div><div style="font-weight:800;color:var(--brand);font-size:13px">{{ r.time }}</div><div style="font-size:11px;color:var(--ink-faint);font-weight:600;margin-top:2px">{{ r.pitch }}</div></div>
+                  <div style="font-weight:600;font-size:14px;line-height:1.4"><span style="display:block;font-size:11px;color:var(--ink-faint);margin-bottom:2px">{{ r.meta }}</span>{{ r.teams }}</div>
                   <div style="font-family:'Anton';font-size:18px;white-space:nowrap">{{ r.score }}</div>
                 </div>
               </sc-for>
@@ -792,48 +802,48 @@
           </sc-if>
 
           <sc-if value="{{ fxvFestival }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:24px 22px;text-align:center;margin-top:20px">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:24px 22px;text-align:center;margin-top:20px">
               <div style="font-family:'Anton';font-size:20px;text-transform:uppercase;margin-bottom:8px">Festival age group</div>
-              <div style="color:#5A626E;font-size:14px">{{ fxvFestivalBlurb }}</div>
+              <div style="color:var(--ink-faint);font-size:14px">{{ fxvFestivalBlurb }}</div>
             </div>
           </sc-if>
 
           <sc-for list="{{ fxvTableCards }}" as="tc" hint-placeholder-count="2">
             <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;letter-spacing:.6px;margin:20px 0 9px">{{ tc.name }} — table</div>
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;overflow:hidden">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;overflow:hidden">
               <div style="overflow-x:auto">
                 <table style="width:100%;font-size:13px;min-width:460px">
                   <thead><tr>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">#</th>
-                    <th style="text-align:left;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 8px;background:#FAF9F7">Team</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">P</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">W</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">D</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">L</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">PF</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">PA</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">+/&minus;</th>
-                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#5A626E;font-weight:800;padding:10px 6px;background:#FAF9F7">Pts</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">#</th>
+                    <th style="text-align:left;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 8px;background:var(--surface-mute)">Team</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">P</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">W</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">D</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">L</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">PF</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">PA</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">+/&minus;</th>
+                    <th style="text-align:center;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-faint);font-weight:800;padding:10px 6px;background:var(--surface-mute)">Pts</th>
                   </tr></thead>
                   <tbody>
                     <sc-for list="{{ tc.rows }}" as="t" hint-placeholder-count="4">
                       <tr style="{{ t.rowStyle }}">
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07);color:#5A626E">{{ t.pos }}</td>
-                        <td style="text-align:left;padding:9px 8px;border-top:1px solid rgba(0,0,0,0.07);font-weight:700">{{ t.team }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.P }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.W }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.D }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.L }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.PF }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.PA }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07)">{{ t.diff }}</td>
-                        <td style="text-align:center;padding:9px 6px;border-top:1px solid rgba(0,0,0,0.07);font-family:'Anton';font-size:15px">{{ t.pts }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line);color:var(--ink-faint)">{{ t.pos }}</td>
+                        <td style="text-align:left;padding:9px 8px;border-top:1px solid var(--line);font-weight:700">{{ t.team }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.P }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.W }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.D }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.L }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.PF }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.PA }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line)">{{ t.diff }}</td>
+                        <td style="text-align:center;padding:9px 6px;border-top:1px solid var(--line);font-family:'Anton';font-size:15px">{{ t.pts }}</td>
                       </tr>
                     </sc-for>
                   </tbody>
                 </table>
               </div>
-              <div style="font-size:11.5px;color:#5A626E;padding:11px 16px;border-top:1px solid rgba(0,0,0,0.07);line-height:1.6">Green edge = qualifies for the knockout stage.</div>
+              <div style="font-size:11.5px;color:var(--ink-faint);padding:11px 16px;border-top:1px solid var(--line);line-height:1.6">Green edge = qualifies for the knockout stage.</div>
             </div>
           </sc-for>
         </div>
@@ -843,26 +853,26 @@
       <sc-if value="{{ isVenue }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:22px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
               <div style="flex:1;min-width:260px">
                 <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:6px">Venue &amp; days</div>
-                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0;line-height:1.6">The pitches running on each day, and which day each age group plays. <b style="color:#454D58">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
+                <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0;line-height:1.6">The pitches running on each day, and which day each age group plays. <b style="color:var(--ink-muted)">An age group's day comes from where it has pitches</b> — move it to the other day and it moves on the fixtures, the app and the public site. Nothing here changes until you press Save.</p>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:11px 15px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset</button>
+                <button onClick="{{ onVenueReset }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:11px 15px;border-radius:10px;cursor:pointer;white-space:nowrap">Reset</button>
                 <button onClick="{{ onVenueSave }}" disabled="{{ vSaveDisabled }}" style="{{ vSaveStyle }}">{{ vSaveLabel }}</button>
               </div>
             </div>
 
-            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(225,27,34,0.12);border:1px solid rgba(225,27,34,0.4);border-radius:9px;padding:12px 14px;color:#A62626;font-size:14px;font-weight:600">{{ vError }}</div></sc-if>
-            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:#0E6B33;font-size:14px;font-weight:600">{{ vSuccess }}</div></sc-if>
+            <sc-if value="{{ vError }}" hint-placeholder-val=""><div style="margin-top:14px;background:rgba(200,16,46,0.12);border:1px solid rgba(200,16,46,0.4);border-radius:9px;padding:12px 14px;color:var(--danger-ink);font-size:14px;font-weight:600">{{ vError }}</div></sc-if>
+            <sc-if value="{{ vSuccess }}" hint-placeholder-val=""><div style="margin-top:14px;color:var(--accent-ink);font-size:14px;font-weight:600">{{ vSuccess }}</div></sc-if>
 
             <sc-if value="{{ vHasProblems }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:14px;background:rgba(225,27,34,0.10);border:1px solid rgba(225,27,34,0.35);border-radius:9px;padding:12px 14px">
-                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#A62626;text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
+              <div style="margin-top:14px;background:rgba(200,16,46,0.10);border:1px solid rgba(200,16,46,0.35);border-radius:9px;padding:12px 14px">
+                <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:var(--danger-ink);text-transform:uppercase;margin-bottom:7px">Fix these before saving</div>
                 <sc-for list="{{ vProblems }}" as="pr" hint-placeholder-count="2">
-                  <div style="color:#A62626;font-size:13px;line-height:1.6">&bull; {{ pr }}</div>
+                  <div style="color:var(--danger-ink);font-size:13px;line-height:1.6">&bull; {{ pr }}</div>
                 </sc-for>
               </div>
             </sc-if>
@@ -884,7 +894,7 @@
                shared across both days (see the map-view copy below), so
                nothing about the map itself needed a day split — only the
                THREE cards further down that are genuinely per-day. -->
-          <div style="display:flex;gap:8px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:6px;margin-bottom:16px;max-width:460px">
+          <div style="display:flex;gap:8px;background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:6px;margin-bottom:16px;max-width:460px">
             <button onClick="{{ onDayTab1 }}" style="{{ dayTab1Style }}">{{ dayTab1Label }}</button>
             <button onClick="{{ onDayTab2 }}" style="{{ dayTab2Style }}">{{ dayTab2Label }}</button>
           </div>
@@ -899,26 +909,26 @@
                draws one outline per block and never divides it — so the map
                chip names the block and the groups on it, and the schematic is
                where the individual pitches are read. -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">
               <div style="flex:1;min-width:220px">
                 <div style="font-family:'Anton';font-size:17px;text-transform:uppercase">Where each group plays &mdash; {{ vDayViewLabel }}</div>
               </div>
-              <div style="display:flex;gap:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.1);border-radius:10px;padding:4px">
+              <div style="display:flex;gap:6px;background:var(--surface-sunk);border:1px solid var(--line);border-radius:10px;padding:4px">
                 <button onClick="{{ onViewSchematic }}" style="{{ vViewSchematicStyle }}">Schematic</button>
                 <button onClick="{{ onViewMap }}" style="{{ vViewMapStyle }}">Map</button>
               </div>
             </div>
 
             <sc-if value="{{ vIsSchematic }}" hint-placeholder-val="{{ true }}">
-              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 16px;line-height:1.6">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:#454D58">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:#454D58">time-share</b>, not a clash.</p>
+              <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0 0 16px;line-height:1.6">Every pitch as its own cell &mdash; the view with room for the names, and the one that reads on a phone. <b style="color:var(--ink-muted)">It redraws as you edit below</b>, before you save. A pitch used by two groups is a <b style="color:var(--ink-muted)">time-share</b>, not a clash.</p>
             </sc-if>
 
             <sc-if value="{{ vIsMapView }}" hint-placeholder-val="{{ false }}">
-              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 14px;line-height:1.6">The real Zayed Sports City map. <b style="color:#454D58">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:#454D58">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
+              <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0 0 14px;line-height:1.6">The real Zayed Sports City map. <b style="color:var(--ink-muted)">Unlock, then drag each block to where it actually is</b> &mdash; the starting positions are the code's guess and you know better than it does. Positions are <b style="color:var(--ink-muted)">shared across both days</b>, because a block is the same field on Saturday as on Sunday — that is why they still show regardless of which day tab is selected above. Save with the button at the top of the tab.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
                 <button onClick="{{ onToggleMapLock }}" style="{{ vLockStyle }}">{{ vLockLabel }}</button>
-                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#5A626E;font-weight:700;font-size:13px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
+                <button onClick="{{ onResetPositions }}" disabled="{{ vBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-faint);font-weight:700;font-size:13px;padding:10px 14px;border-radius:9px;cursor:pointer;white-space:nowrap">Reset positions</button>
                 <sc-if value="{{ vUnlocked }}" hint-placeholder-val="{{ false }}">
                   <span style="font-size:14px;color:#8F6400;font-weight:600">Blocks move when you drag them &mdash; lock again when you're done.</span>
                 </sc-if>
@@ -929,11 +939,11 @@
               <sc-if value="{{ vm.isCurrentDay }}">
                 <div style="margin-bottom:22px">
                   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-                    <div style="font-size:14px;color:#5A626E;font-weight:600">{{ vm.summary }}</div>
+                    <div style="font-size:14px;color:var(--ink-faint);font-weight:600">{{ vm.summary }}</div>
                   </div>
 
                   <sc-if value="{{ vm.isEmpty }}" hint-placeholder-val="{{ false }}">
-                    <div style="font-size:14px;color:#5A626E;padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
+                    <div style="font-size:14px;color:var(--ink-faint);padding:14px 0">No pitches on this day yet, so there is nothing to draw.</div>
                   </sc-if>
 
                   <!-- MAP VIEW. The image is pointer-events:none so it can
@@ -986,7 +996,7 @@
                         <div style="font-size:12px;font-weight:800;letter-spacing:.6px;color:#8F6400;text-transform:uppercase;margin-bottom:8px">Not on the map yet</div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                           <sc-for list="{{ vm.strays }}" as="st" hint-placeholder-count="1">
-                            <button onClick="{{ st.onPlace }}" style="background:#F3F2EF;border:1px dashed rgba(245,197,24,0.6);color:#8F6400;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
+                            <button onClick="{{ st.onPlace }}" style="background:var(--surface-sunk);border:1px dashed rgba(245,197,24,0.6);color:#8F6400;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer">{{ st.name }} &mdash; drop it on the map</button>
                           </sc-for>
                         </div>
                       </div>
@@ -997,7 +1007,7 @@
                     <div style="{{ vm.gridStyle }}">
                       <sc-for list="{{ vm.blocks }}" as="blk" hint-placeholder-count="9">
                         <div style="{{ blk.style }}">
-                          <div style="font-size:13px;font-weight:800;letter-spacing:.6px;color:#5A626E;margin-bottom:8px">{{ blk.name }}</div>
+                          <div style="font-size:13px;font-weight:800;letter-spacing:.6px;color:var(--ink-faint);margin-bottom:8px">{{ blk.name }}</div>
                           <div style="display:flex;flex-wrap:wrap;gap:7px">
                             <sc-for list="{{ blk.pitches }}" as="pp" hint-placeholder-count="4">
                               <div style="{{ pp.style }}" title="{{ pp.title }}">
@@ -1030,12 +1040,12 @@
                note lives on its own line instead. -->
           <sc-for list="{{ vDays }}" as="d" hint-placeholder-count="2">
             <sc-if value="{{ d.isCurrentDay }}">
-              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+              <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
                 <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
                   <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;color:{{ d.tint }}">Pitches &mdash; {{ d.label }}</div>
-                  <div style="font-size:14px;color:#5A626E;font-weight:600">{{ d.summary }}</div>
+                  <div style="font-size:14px;color:var(--ink-faint);font-weight:600">{{ d.summary }}</div>
                 </div>
-                <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 12px;line-height:1.6">{{ d.hint }}</p>
+                <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0 0 12px;line-height:1.6">{{ d.hint }}</p>
 
                 <!-- Every main pitch, whether or not it is used today. A pitch
                      you are not using is a decision, and one you cannot see is
@@ -1043,7 +1053,7 @@
                      there is nothing to type and nothing to mistype. -->
                 <sc-for list="{{ d.mains }}" as="mp" hint-placeholder-count="15">
                   <div style="{{ mp.rowStyle }}">
-                    <div style="font-weight:800;font-size:17px;color:#1A1C1F">{{ mp.name }}</div>
+                    <div style="font-weight:800;font-size:17px;color:var(--ink)">{{ mp.name }}</div>
                     <div>
                       <div style="font-size:14px;font-weight:600;color:{{ mp.surfaceColor }}">{{ mp.surfaceLabel }}</div>
                       <sc-if value="{{ mp.usageLabel }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:700;color:#8F6400;margin-top:3px">{{ mp.usageLabel }}</div></sc-if>
@@ -1064,19 +1074,19 @@
                name, day and how many pitches it has picked — click to expand
                and edit its pitches. Only groups on the selected day (or with
                no day set at all, which needs fixing either way) show here. -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:40px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:40px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:4px">Age groups &mdash; {{ vDayViewLabel }}</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin:0 0 16px;line-height:1.6">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:#454D58">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin:0 0 16px;line-height:1.6">Click a group to open it and tick its pitches. Changing a group's day clears its pitches, because the other day has different ones. <b style="color:var(--ink-muted)">Two groups can share a pitch</b> — D4 and D5 run U6 in the morning and U7 in the afternoon, which is a time-share, not a clash.</p>
 
             <sc-for list="{{ vGroups }}" as="g" hint-placeholder-count="15">
               <sc-if value="{{ g.isCurrentDay }}">
-                <div style="border-top:1px solid rgba(0,0,0,0.07)">
+                <div style="border-top:1px solid var(--line)">
                   <div style="display:flex;align-items:center;gap:16px;padding:17px 4px;flex-wrap:wrap">
                     <div onClick="{{ g.onToggleExpand }}" style="display:flex;align-items:center;gap:14px;flex:1;min-width:220px;cursor:pointer">
-                      <div style="width:18px;color:#5A626E;font-size:14px;text-align:center">{{ g.expandArrow }}</div>
-                      <div style="font-size:18px;font-weight:700;color:#1A1C1F">{{ g.name }}</div>
+                      <div style="width:18px;color:var(--ink-faint);font-size:14px;text-align:center">{{ g.expandArrow }}</div>
+                      <div style="font-size:18px;font-weight:700;color:var(--ink)">{{ g.name }}</div>
                     </div>
-                    <select value="{{ g.dayValue }}" aria-label="Tournament day for this age group" onChange="{{ g.onDayChange }}" style="background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:10px 12px;color:#1A1C1F;font-size:14px;color-scheme:light">
+                    <select value="{{ g.dayValue }}" aria-label="Tournament day for this age group" onChange="{{ g.onDayChange }}" style="background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:10px 12px;color:var(--ink);font-size:14px;color-scheme:light">
                       <sc-for list="{{ g.dayOptions }}" as="dop" hint-placeholder-count="2">
                         <option value="{{ dop.value }}">{{ dop.label }}</option>
                       </sc-for>
@@ -1092,11 +1102,11 @@
                            the whole pitch in one click. -->
                       <div style="display:flex;gap:14px;flex-wrap:wrap">
                         <sc-for list="{{ g.pitchGroups }}" as="pg" hint-placeholder-count="4">
-                          <div style="display:inline-flex;align-items:center;gap:9px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.12);border-radius:11px;padding:7px 13px">
+                          <div style="display:inline-flex;align-items:center;gap:9px;background:var(--surface-sunk);border:1px solid var(--line);border-radius:11px;padding:7px 13px">
                             <button onClick="{{ pg.onToggleAll }}" title="Take or drop all of {{ pg.main }}" style="background:transparent;border:none;cursor:pointer;padding:0;{{ pg.headStyle }}">{{ pg.main }}</button>
                             <sc-for list="{{ pg.surfaces }}" as="pt" hint-placeholder-count="4">
                               <label for="f--label-style-display-6" style="display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;color:{{ pt.color }};cursor:pointer">
-                                <input id="f--label-style-display-6" type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:19px;height:19px;accent-color:#17A34A">
+                                <input id="f--label-style-display-6" type="checkbox" checked="{{ pt.on }}" onChange="{{ pt.onToggle }}" style="width:19px;height:19px;accent-color:var(--accent-mid)">
                                 {{ pt.short }}
                               </label>
                             </sc-for>
@@ -1118,33 +1128,33 @@
       <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
 
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:28px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:28px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Create a login</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:#454D58">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin-bottom:14px;line-height:1.5">Makes an account that can sign in <b style="color:var(--ink-muted)">straight away</b> — no invite code, no approval step. You type the password and tell them yourself; nothing is emailed.</p>
 
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
               <button onClick="{{ onCmRoleManager }}" style="{{ cmRoleManagerStyle }}">Manager</button>
               <button onClick="{{ onCmRoleOrganizer }}" style="{{ cmRoleOrganizerStyle }}">Organiser</button>
             </div>
-            <p style="max-width:70ch;color:#5A626E;font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:12px;margin:0 0 16px;line-height:1.5">{{ cmRoleNote }}</p>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <div>
-                <label for="f--label-style-font-si-4" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">NAME</label>
-                <input id="f--label-style-font-si-4" value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-4" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">NAME</label>
+                <input id="f--label-style-font-si-4" value="{{ cmName }}" onInput="{{ onCmName }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
               </div>
               <div>
-                <label for="f--label-style-font-si-5" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">USERNAME</label>
-                <input id="f--label-style-font-si-5" value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-5" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">USERNAME</label>
+                <input id="f--label-style-font-si-5" value="{{ cmUser }}" onInput="{{ onCmUser }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
               </div>
               <div>
-                <label for="f--label-style-font-si-6" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">PASSWORD</label>
-                <input id="f--label-style-font-si-6" value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                <label for="f--label-style-font-si-6" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">PASSWORD</label>
+                <input id="f--label-style-font-si-6" value="{{ cmPass }}" onInput="{{ onCmPass }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
               </div>
               <sc-if value="{{ cmIsManager }}" hint-placeholder-val="{{ true }}">
                 <div>
-                  <label for="f--label-style-font-si-7" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">AGE GROUP</label>
-                  <select id="f--label-style-font-si-7" value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                  <label for="f--label-style-font-si-7" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">AGE GROUP</label>
+                  <select id="f--label-style-font-si-7" value="{{ cmAge }}" onChange="{{ onCmAge }}" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
                     <option value="">Select&hellip;</option>
                     <sc-for list="{{ cmAgeOptions }}" as="ag" hint-placeholder-count="8">
                       <option value="{{ ag.id }}">{{ ag.name }}</option>
@@ -1154,15 +1164,15 @@
               </sc-if>
               <sc-if value="{{ cmIsOrganizer }}" hint-placeholder-val="{{ false }}">
                 <div>
-                  <label for="f--label-style-font-si-8" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px">TITLE (OPTIONAL)</label>
-                  <input id="f--label-style-font-si-8" value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:9px;padding:11px 14px;color:#1A1C1F;font-size:14px">
+                  <label for="f--label-style-font-si-8" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px">TITLE (OPTIONAL)</label>
+                  <input id="f--label-style-font-si-8" value="{{ cmTitle }}" onInput="{{ onCmTitle }}" placeholder="Registrar, Medical Lead&hellip;" style="width:100%;margin-top:6px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 14px;color:var(--ink);font-size:14px">
                 </div>
               </sc-if>
             </div>
-            <div style="font-size:12px;color:#69727E;margin-top:10px">Passwords are at least {{ cmMinPassword }} characters.</div>
-            <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
-            <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
-            <button onClick="{{ onCreateManager }}" disabled="{{ cmBusy }}" style="margin-top:16px;background:#17A34A;color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ cmLabel }}</button>
+            <div style="font-size:12px;color:var(--ink-faint);margin-top:10px">Passwords are at least {{ cmMinPassword }} characters.</div>
+            <sc-if value="{{ cmError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:12px">{{ cmError }}</div></sc-if>
+            <sc-if value="{{ cmSuccess }}" hint-placeholder-val=""><div style="color:var(--accent-ink);font-size:13px;font-weight:600;margin-top:12px">{{ cmSuccess }}</div></sc-if>
+            <button onClick="{{ onCreateManager }}" disabled="{{ cmBusy }}" style="margin-top:16px;background:var(--accent-mid);color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;padding:11px 22px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ cmLabel }}</button>
           </div>
 
           <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
@@ -1171,12 +1181,12 @@
               <sc-for list="{{ pendingAccounts }}" as="a" hint-placeholder-count="2">
                 <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
                   <div onClick="{{ a.onOpen }}" style="cursor:pointer;flex:1;min-width:200px">
-                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#5A626E;font-weight:500">— {{ a.username }}</span></div>
-                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
+                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:var(--ink-faint);font-weight:500">— {{ a.username }}</span></div>
+                    <div style="font-size:12px;color:var(--ink-faint);margin-top:2px">{{ a.roleLabel }} · requested {{ a.createdAtDisplay }}</div>
                   </div>
                   <div style="display:flex;gap:8px">
-                    <button onClick="{{ a.onApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
-                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
+                    <button onClick="{{ a.onApprove }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
+                    <button onClick="{{ a.onReject }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
                   </div>
                 </div>
               </sc-for>
@@ -1194,16 +1204,16 @@
                Both actions here are named for what they do, and neither is
                reachable by clearing a queue. -->
           <sc-if value="{{ hasRevoked }}" hint-placeholder-val="{{ false }}">
-            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:#A62626">Revoked</div>
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px;color:var(--danger-ink)">Revoked</div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
               <sc-for list="{{ revokedAccounts }}" as="a" hint-placeholder-count="1">
-                <div style="background:#FFFFFF;border:1px solid rgba(166,38,38,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                <div style="background:#FFFFFF;border:1px solid rgba(163,13,37,0.35);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
                   <div onClick="{{ a.onOpen }}" style="cursor:pointer;flex:1;min-width:200px">
-                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:#5A626E;font-weight:500">— {{ a.username }}</span></div>
-                    <div style="font-size:12px;color:#5A626E;margin-top:2px">{{ a.roleLabel }} · revoked {{ a.revokedAtDisplay }}</div>
+                    <div style="font-weight:700;font-size:15px">{{ a.name }} <span style="color:var(--ink-faint);font-weight:500">— {{ a.username }}</span></div>
+                    <div style="font-size:12px;color:var(--ink-faint);margin-top:2px">{{ a.roleLabel }} · revoked {{ a.revokedAtDisplay }}</div>
                   </div>
                   <div style="display:flex;gap:8px">
-                    <button onClick="{{ a.onRestore }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Restore access</button>
+                    <button onClick="{{ a.onRestore }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Restore access</button>
                     <!-- ⚠️ "Delete for good", not "Delete permanently", and the
                          wording is enforced. test-documents.js requires every
                          user-facing Delete on this page to be the irreversible
@@ -1211,7 +1221,7 @@
                          documents shelf that correctly caught this new button
                          the first time it ran. One phrase, one meaning, across
                          the whole back office. -->
-                    <button onClick="{{ a.onPurge }}" style="background:transparent;border:1px solid #B00020;color:#B00020;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Delete for good</button>
+                    <button onClick="{{ a.onPurge }}" style="background:transparent;border:1px solid var(--danger);color:var(--danger);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Delete for good</button>
                   </div>
                 </div>
               </sc-for>
@@ -1219,15 +1229,15 @@
           </sc-if>
 
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">All accounts</div>
-          <div style="overflow-x:auto;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
+          <div style="overflow-x:auto;border:1px solid var(--line);border-radius:14px">
             <table style="width:100%;min-width:700px">
               <thead>
                 <tr style="background:#FFFFFF">
-                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</th>
-                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Username</th>
-                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</th>
-                  <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
-                  <th style="background:#F3F2EF;text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase"></th>
+                  <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Name</th>
+                  <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Username</th>
+                  <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Role</th>
+                  <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Status</th>
+                  <th style="background:var(--surface-sunk);text-align:right;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1236,17 +1246,17 @@
                        buttons in the last cell keep working as they always did
                        and are NOT inside the clickable region, so a click on
                        Revoke cannot also open the card behind the dialog. -->
-                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
+                  <tr style="border-top:1px solid var(--line)">
                     <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:14px;font-weight:700;cursor:pointer">{{ a.name }}</td>
-                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#454D58;cursor:pointer">{{ a.username }}</td>
-                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#343A42;cursor:pointer">{{ a.roleLabel }}</td>
-                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:#0E6B33;font-weight:700;cursor:pointer">Active</td>
-                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--ink-muted);cursor:pointer">{{ a.username }}</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--ink-muted);cursor:pointer">{{ a.roleLabel }}</td>
+                    <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--accent-ink);font-weight:700;cursor:pointer">Active</td>
+                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
                   </tr>
                 </sc-for>
               </tbody>
             </table>
-            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No approved accounts yet.</div></sc-if>
+            <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:var(--ink-faint)">No approved accounts yet.</div></sc-if>
           </div>
         </div>
       </sc-if>
@@ -1271,9 +1281,9 @@
                The status line exists because the key now lives in two places
                and can drift: rotate it in Netlify and this link keeps LOOKING
                fine while being dead. -->
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:20px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Club invite link</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:14px;line-height:1.5">The link you email to club contacts. It is deliberately not published anywhere on the site, and the key on the end of it is the only thing keeping the form private &mdash; <b style="color:#454D58">send it to clubs directly, never post it publicly</b>.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin-bottom:14px;line-height:1.5">The link you email to club contacts. It is deliberately not published anywhere on the site, and the key on the end of it is the only thing keeping the form private &mdash; <b style="color:var(--ink-muted)">send it to clubs directly, never post it publicly</b>.</p>
 
             <sc-if value="{{ clubLinkEditing }}" hint-placeholder-val="{{ false }}">
               <!-- ⚠️ aria-label APPENDED, not inserted mid-tag. Inserting into
@@ -1281,88 +1291,88 @@
                    9 Aug; appending would have broken none of them. Also 16px,
                    which is the iOS no-zoom-on-focus floor the phone pass set
                    across the back office. -->
-              <input type="text" value="{{ clubLinkDraft }}" onInput="{{ onClubLinkInput }}" placeholder="https://adhjrt.com/register-club?k=…" style="width:100%;font-size:16px;padding:11px 12px;border:1px solid rgba(0,0,0,0.25);border-radius:9px;font-family:monospace" aria-label="Club invite link">
+              <input type="text" value="{{ clubLinkDraft }}" onInput="{{ onClubLinkInput }}" placeholder="https://adhjrt.com/register-club?k=…" style="width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line-strong);border-radius:9px;font-family:monospace" aria-label="Club invite link">
               <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-                <button onClick="{{ onSaveClubLink }}" disabled="{{ clubLinkBusy }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ clubLinkSaveLabel }}</button>
-                <button onClick="{{ onCancelClubLink }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Cancel</button>
+                <button onClick="{{ onSaveClubLink }}" disabled="{{ clubLinkBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ clubLinkSaveLabel }}</button>
+                <button onClick="{{ onCancelClubLink }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Cancel</button>
                 <sc-if value="{{ clubLinkHasSaved }}" hint-placeholder-val="{{ false }}">
-                  <button onClick="{{ onClearClubLink }}" style="background:transparent;border:1px solid #B00020;color:#B00020;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Clear</button>
+                  <button onClick="{{ onClearClubLink }}" style="background:transparent;border:1px solid var(--danger);color:var(--danger);font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Clear</button>
                 </sc-if>
               </div>
             </sc-if>
 
             <sc-if value="{{ clubLinkReading }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-                <div style="flex:1;min-width:240px;font-family:monospace;font-size:13px;color:#1A1C1F;word-break:break-all;background:#F3F2EF;border-radius:9px;padding:11px 12px">{{ clubLinkShown }}</div>
-                <button onClick="{{ onEditClubLink }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Edit</button>
+                <div style="flex:1;min-width:240px;font-family:monospace;font-size:13px;color:var(--ink);word-break:break-all;background:var(--surface-sunk);border-radius:9px;padding:11px 12px">{{ clubLinkShown }}</div>
+                <button onClick="{{ onEditClubLink }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px;cursor:pointer">Edit</button>
               </div>
             </sc-if>
 
             <div style="margin-top:12px;font-size:13px;font-weight:600;color:{{ clubLinkStatusColour }}">{{ clubLinkStatusText }}</div>
-            <sc-if value="{{ clubLinkError }}" hint-placeholder-val=""><div style="margin-top:8px;color:#A62626;font-size:13px;font-weight:600">{{ clubLinkError }}</div></sc-if>
+            <sc-if value="{{ clubLinkError }}" hint-placeholder-val=""><div style="margin-top:8px;color:var(--danger-ink);font-size:13px;font-weight:600">{{ clubLinkError }}</div></sc-if>
           </div>
 
-          <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+          <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:20px">
             <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:4px">Clubs &mdash; declared vs registered</div>
-            <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:0;line-height:1.5">Clubs declare how many teams they expect to bring, months before teams register one by one. This compares the two. <b style="color:#454D58">Anything marked Short or Over is a club worth a phone call</b> &mdash; a plan that has changed still changes pools, pitches and the draw. Declarations are estimates, not commitments.</p>
+            <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin-bottom:0;line-height:1.5">Clubs declare how many teams they expect to bring, months before teams register one by one. This compares the two. <b style="color:var(--ink-muted)">Anything marked Short or Over is a club worth a phone call</b> &mdash; a plan that has changed still changes pools, pitches and the draw. Declarations are estimates, not commitments.</p>
           </div>
 
           <sc-if value="{{ clubsUnavailable }}" hint-placeholder-val="{{ false }}">
-            <div style="background:rgba(166,38,38,0.08);border:1px solid rgba(166,38,38,0.35);border-radius:12px;padding:16px 18px;color:#A62626;font-size:14px;font-weight:700;line-height:1.5">
+            <div style="background:rgba(163,13,37,0.08);border:1px solid rgba(163,13,37,0.35);border-radius:12px;padding:16px 18px;color:var(--danger-ink);font-size:14px;font-weight:700;line-height:1.5">
               The club declarations sheet could not be read, so this tab is showing nothing rather than guessing. Teams and Players are unaffected. Check <b>GOOGLE_SHEET_ID_CLUBS</b> in Netlify and that the sheet is still shared with the service account.
             </div>
           </sc-if>
 
           <sc-if value="{{ clubsEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:28px 20px;text-align:center;color:#5A626E;font-size:14px">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:28px 20px;text-align:center;color:var(--ink-faint);font-size:14px">
               No club has sent a declaration yet. They arrive through the link you email clubs &mdash; nothing on the site links to that form.
             </div>
           </sc-if>
 
           <sc-if value="{{ clubsHaveRows }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px">
-              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredCount }}</b> clubs declared</div>
-              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredTeams }}</b> teams declared</div>
-              <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:10px 16px;font-size:13px;color:#454D58"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsRegisteredTeams }}</b> teams registered</div>
+              <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--ink-muted)"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredCount }}</b> clubs declared</div>
+              <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--ink-muted)"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsDeclaredTeams }}</b> teams declared</div>
+              <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--ink-muted)"><b style="font-family:'Anton';font-size:20px;display:block;line-height:1.1">{{ clubsRegisteredTeams }}</b> teams registered</div>
               <button onClick="{{ onToggleClubsFlagged }}" style="{{ clubsFilterStyle }}">{{ clubsFilterLabel }}</button>
             </div>
 
-            <div style="overflow:auto;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
+            <div style="overflow:auto;border:1px solid var(--line);border-radius:14px">
               <table style="width:100%;min-width:760px">
                 <thead>
                   <tr>
-                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Club</th>
-                    <th style="background:#F3F2EF;text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap">Declared</th>
-                    <th style="background:#F3F2EF;text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap">Registered</th>
-                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Status</th>
-                    <th style="background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Contact</th>
-                    <th style="background:#F3F2EF;padding:12px 14px"></th>
+                    <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Club</th>
+                    <th style="background:var(--surface-sunk);text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap">Declared</th>
+                    <th style="background:var(--surface-sunk);text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap">Registered</th>
+                    <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Status</th>
+                    <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Contact</th>
+                    <th style="background:var(--surface-sunk);padding:12px 14px"></th>
                   </tr>
                 </thead>
                 <tbody>
                   <sc-for list="{{ clubRows }}" as="c" hint-placeholder-count="3">
-                    <tr style="border-top:1px solid rgba(0,0,0,0.08)">
+                    <tr style="border-top:1px solid var(--line)">
                       <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ c.club }}</td>
                       <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.declaredTotal }}</td>
                       <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.registeredTotal }}</td>
                       <td style="padding:12px 14px"><span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span></td>
-                      <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ c.contactName }}<br>{{ c.contactEmail }}<br>{{ c.contactPhone }}</td>
+                      <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ c.contactName }}<br>{{ c.contactEmail }}<br>{{ c.contactPhone }}</td>
                       <td style="padding:12px 14px;text-align:right">
-                        <button onClick="{{ c.onToggle }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:700;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">{{ c.toggleLabel }}</button>
+                        <button onClick="{{ c.onToggle }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">{{ c.toggleLabel }}</button>
                       </td>
                     </tr>
                     <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
                       <tr>
-                        <td colspan="6" style="padding:0 14px 16px;background:#FBFAF8">
+                        <td colspan="6" style="padding:0 14px 16px;background:var(--surface-mute)">
                           <sc-if value="{{ c.hasNotes }}" hint-placeholder-val="{{ false }}">
-                            <p style="margin:12px 0 0;font-size:13px;color:#5A626E;line-height:1.5"><b style="color:#454D58">They said:</b> {{ c.notes }}</p>
+                            <p style="margin:12px 0 0;font-size:13px;color:var(--ink-faint);line-height:1.5"><b style="color:var(--ink-muted)">They said:</b> {{ c.notes }}</p>
                           </sc-if>
                           <table style="width:100%;margin-top:12px">
                             <thead>
                               <tr>
-                                <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Age group</th>
-                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Declared</th>
-                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Registered</th>
+                                <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Age group</th>
+                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Declared</th>
+                                <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Registered</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1385,7 +1395,7 @@
           </sc-if>
 
           <sc-if value="{{ clubsNoneFlagged }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:28px 20px;text-align:center;color:#0E6B33;font-size:14px;font-weight:700">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:28px 20px;text-align:center;color:var(--accent-ink);font-size:14px;font-weight:700">
               Every club that declared has registered exactly what it said. Nothing to chase.
             </div>
           </sc-if>
@@ -1395,11 +1405,11 @@
                declaration lands, so a bad match reads as an odd row rather
                than as a club that silently under-registered. -->
           <sc-if value="{{ hasClubsUnmatched }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.1);border-radius:14px;padding:18px 20px;margin-top:20px">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:20px">
               <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;margin-bottom:4px">Registered, but never declared</div>
-              <p style="max-width:70ch;color:#5A626E;font-size:13px;margin-bottom:12px;line-height:1.5">These clubs have teams in the tournament and no declaration on file. Either they skipped the declaration, or they typed their club name differently on the two forms &mdash; worth a look before you chase them.</p>
+              <p style="max-width:70ch;color:var(--ink-faint);font-size:13px;margin-bottom:12px;line-height:1.5">These clubs have teams in the tournament and no declaration on file. Either they skipped the declaration, or they typed their club name differently on the two forms &mdash; worth a look before you chase them.</p>
               <sc-for list="{{ clubsUnmatched }}" as="u" hint-placeholder-count="2">
-                <div style="border-top:1px solid rgba(0,0,0,0.06);padding:10px 0;font-size:14px"><b>{{ u.club }}</b> &mdash; {{ u.registeredTotal }} registered</div>
+                <div style="border-top:1px solid var(--line);padding:10px 0;font-size:14px"><b>{{ u.club }}</b> &mdash; {{ u.registeredTotal }} registered</div>
               </sc-for>
             </div>
           </sc-if>
@@ -1408,47 +1418,47 @@
       </sc-if>
 
       <sc-if value="{{ isTeams }}" hint-placeholder-val="{{ true }}">
-        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:14px">
           <table style="width:100%;min-width:1100px">
             <thead>
               <tr style="background:#FFFFFF">
                 <sc-for list="{{ teamHeaders }}" as="h" hint-placeholder-count="10">
-                  <th style="position:sticky;top:0;background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
             <tbody>
               <sc-for list="{{ teamGroups }}" as="g" hint-placeholder-count="2">
                 <tr>
-                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
                 <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
-                    <td style="padding:12px 14px;font-size:13px;color:#454D58;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                  <tr style="border-top:1px solid var(--line)">
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                     <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.club }}</td>
                     <td style="padding:12px 14px;font-size:14px">{{ r.teamName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ r.ageGroup }}</td>
-                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:#0E6B33;font-weight:700">{{ r.preferredPool }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px;text-align:center;color:var(--accent-ink);font-weight:700">{{ r.preferredPool }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.headCoachName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ r.headCoachEmail }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.headCoachMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ r.headCoachEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.headCoachMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.managerName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.managerMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.managerMobile }}</td>
                     <td style="padding:12px 14px;font-size:14px;text-align:center;font-weight:700">
                       <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ true }}">
-                        <button onClick="{{ r.onToggleRoster }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#1A1C1F;font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap">{{ r.numPlayers }} {{ r.toggleLabel }}</button>
+                        <button onClick="{{ r.onToggleRoster }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap">{{ r.numPlayers }} {{ r.toggleLabel }}</button>
                       </sc-if>
                       <sc-if value="{{ r.hasRoster }}" hint-placeholder-val="{{ false }}">{{ r.numPlayers }}</sc-if>
                     </td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67;max-width:220px">{{ r.notes }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);max-width:220px">{{ r.notes }}</td>
                   </tr>
                   <sc-if value="{{ r.isExpanded }}" hint-placeholder-val="{{ false }}">
-                    <tr style="border-top:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.03)">
+                    <tr style="border-top:1px solid var(--line);background:rgba(0,0,0,0.03)">
                       <td colspan="12" style="padding:10px 14px 14px 40px">
-                        <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;margin-bottom:8px">Squad ({{ r.rosterCount }})</div>
+                        <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:8px">Squad ({{ r.rosterCount }})</div>
                         <div style="display:flex;flex-wrap:wrap;gap:8px 24px">
                           <sc-for list="{{ r.roster }}" as="p" hint-placeholder-count="2">
-                            <div style="font-size:13px;color:#343A42;white-space:nowrap"><span style="font-weight:600;color:#1A1C1F">{{ p.name }}</span> <span style="color:#5A626E">({{ p.dob }})</span></div>
+                            <div style="font-size:13px;color:var(--ink-muted);white-space:nowrap"><span style="font-weight:600;color:var(--ink)">{{ p.name }}</span> <span style="color:var(--ink-faint)">({{ p.dob }})</span></div>
                           </sc-for>
                         </div>
                       </td>
@@ -1458,7 +1468,7 @@
               </sc-for>
             </tbody>
           </table>
-          <sc-if value="{{ teamsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No team registrations match your filters.</div></sc-if>
+          <sc-if value="{{ teamsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:var(--ink-faint)">No team registrations match your filters.</div></sc-if>
         </div>
       </sc-if>
 
@@ -1467,32 +1477,32 @@
            overflow-x scrollbar was unreachable at the bottom of the whole
            list. Bounded height + both-axis scroll + sticky header. -->
       <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
-        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid rgba(0,0,0,0.1);border-radius:14px">
+        <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:14px">
           <table style="width:100%;min-width:1200px">
             <thead>
               <tr style="background:#FFFFFF">
                 <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
-                  <th style="position:sticky;top:0;background:#F3F2EF;text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
+                  <th style="position:sticky;top:0;background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
             </thead>
             <tbody>
               <sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">
                 <tr>
-                  <td colspan="12" style="padding:10px 14px;background:rgba(225,27,34,0.08);border-top:1px solid rgba(0,0,0,0.1);font-size:12px;font-weight:800;letter-spacing:.5px;color:#A62626;text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
+                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
                 <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
-                  <tr style="border-top:1px solid rgba(0,0,0,0.06)">
-                    <td style="padding:12px 14px;font-size:13px;color:#454D58;white-space:nowrap">{{ r.submittedAtDisplay }}</td>
+                  <tr style="border-top:1px solid var(--line)">
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.submittedAtDisplay }}</td>
                     <td style="padding:12px 14px;font-size:14px;font-weight:700">{{ r.playerName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#343A42;white-space:nowrap">{{ r.dob }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.dob }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.club }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#343A42">{{ r.ageGroup }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ r.ageGroup }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.parentName }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67">{{ r.parentEmail }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.parentMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ r.parentEmail }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.parentMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px">{{ r.emergencyContact }}</td>
-                    <td style="padding:12px 14px;font-size:13px;color:#525B67;white-space:nowrap">{{ r.emergencyMobile }}</td>
+                    <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.emergencyMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
                     <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
                   </tr>
@@ -1500,7 +1510,7 @@
               </sc-for>
             </tbody>
           </table>
-          <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5A626E">No player registrations match your filters.</div></sc-if>
+          <sc-if value="{{ playersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:var(--ink-faint)">No player registrations match your filters.</div></sc-if>
         </div>
       </sc-if>
     </div>
@@ -1524,44 +1534,44 @@
        Design: claude/specs/spec-my-account.md -->
   <sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:flex-start;justify-content:center;padding:24px;z-index:190;overflow-y:auto">
-      <div style="width:100%;max-width:460px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.15);border-radius:14px;padding:22px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="width:100%;max-width:460px;background:#FFFFFF;border:1px solid var(--line-strong);border-radius:14px;padding:22px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
           <div style="font-family:'Anton';font-size:20px;text-transform:uppercase;letter-spacing:.4px">{{ acctHeading }}</div>
-          <button onClick="{{ onCloseAccount }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer">Close</button>
+          <button onClick="{{ onCloseAccount }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer">Close</button>
         </div>
 
         <sc-if value="{{ acctLoading }}" hint-placeholder-val="{{ false }}">
-          <div style="padding:28px 0;text-align:center;color:#5A626E;font-size:14px">Loading your account&hellip;</div>
+          <div style="padding:28px 0;text-align:center;color:var(--ink-faint);font-size:14px">Loading your account&hellip;</div>
         </sc-if>
 
         <sc-if value="{{ acctLoadError }}" hint-placeholder-val="">
-          <div style="margin-top:16px;color:#A62626;font-size:13px;font-weight:600">{{ acctLoadError }}</div>
+          <div style="margin-top:16px;color:var(--danger-ink);font-size:13px;font-weight:600">{{ acctLoadError }}</div>
         </sc-if>
 
         <sc-if value="{{ acctLoaded }}" hint-placeholder-val="{{ true }}">
           <div style="margin-top:18px;display:flex;flex-direction:column;gap:12px">
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Name</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Name</div>
               <div style="font-size:15px;font-weight:700;margin-top:2px">{{ acctName }}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">{{ acctUsernameLabel }}</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">{{ acctUsernameLabel }}</div>
               <div style="font-size:15px;font-weight:700;margin-top:2px">{{ acctUsername }}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Role</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Role</div>
               <div style="font-size:15px;margin-top:2px">{{ acctRoleLabel }}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Sign-in method</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Sign-in method</div>
               <div style="font-size:15px;margin-top:2px">{{ acctSignInMethod }}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Member since</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Member since</div>
               <div style="font-size:15px;margin-top:2px">{{ acctMemberSince }}</div>
             </div>
             <div>
-              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:#5A626E;text-transform:uppercase">Last sign in</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Last sign in</div>
               <div style="font-size:15px;margin-top:2px">{{ acctLastSignIn }}</div>
             </div>
             <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
@@ -1572,22 +1582,22 @@
           <!-- YOUR OWN ACCOUNT: change your password. The current one is
                required, so a borrowed laptop is not a permanent takeover. -->
           <sc-if value="{{ acctIsMe }}" hint-placeholder-val="{{ true }}">
-            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+            <div style="border-top:1px solid var(--line);margin-top:20px;padding-top:18px">
               <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Change password</div>
-              <label for="f-current-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
+              <label for="f-current-password" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:12px">CURRENT PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input id="f-current-password" name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleAcctCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctCurrentToggleLabel }}</button>
+                <input id="f-current-password" name="current-password" autocomplete="current-password" type="{{ acctCurrentType }}" value="{{ acctCurrent }}" onInput="{{ onAcctCurrent }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:8px;padding:10px 48px 10px 12px;color:var(--ink);font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleAcctCurrent }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctCurrentToggleLabel }}</button>
               </div>
-              <label for="f-new-password" style="font-size:11px;font-weight:700;color:#5A626E;letter-spacing:.5px;display:block">NEW PASSWORD</label>
+              <label for="f-new-password" style="font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">NEW PASSWORD</label>
               <div style="position:relative;margin:6px 0 12px">
-                <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:#F3F2EF;border:1px solid rgba(0,0,0,0.15);border-radius:8px;padding:10px 48px 10px 12px;color:#1A1C1F;font-size:14px;box-sizing:border-box">
-                <button type="button" onClick="{{ onToggleAcctNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#5A626E;font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctNewToggleLabel }}</button>
+                <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ acctNewType }}" value="{{ acctNew }}" onInput="{{ onAcctNew }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:8px;padding:10px 48px 10px 12px;color:var(--ink);font-size:14px;box-sizing:border-box">
+                <button type="button" onClick="{{ onToggleAcctNew }}" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:10px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ acctNewToggleLabel }}</button>
               </div>
-              <div style="font-size:12px;color:#69727E;margin-bottom:10px">Passwords are at least {{ acctMinPassword }} characters.</div>
-              <sc-if value="{{ acctError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-bottom:10px">{{ acctError }}</div></sc-if>
-              <sc-if value="{{ acctSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-bottom:10px">{{ acctSuccess }}</div></sc-if>
-              <button onClick="{{ onAcctSubmit }}" disabled="{{ acctBusy }}" style="width:100%;background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:11px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ acctSaveLabel }}</button>
+              <div style="font-size:12px;color:var(--ink-faint);margin-bottom:10px">Passwords are at least {{ acctMinPassword }} characters.</div>
+              <sc-if value="{{ acctError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-bottom:10px">{{ acctError }}</div></sc-if>
+              <sc-if value="{{ acctSuccess }}" hint-placeholder-val=""><div style="color:var(--accent-ink);font-size:13px;font-weight:600;margin-bottom:10px">{{ acctSuccess }}</div></sc-if>
+              <button onClick="{{ onAcctSubmit }}" disabled="{{ acctBusy }}" style="width:100%;background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:11px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ acctSaveLabel }}</button>
             </div>
           </sc-if>
 
@@ -1596,29 +1606,29 @@
                refuses to REPLACE one - showing the button otherwise would be
                showing a control whose only possible answer is an error. -->
           <sc-if value="{{ acctCanLinkGoogle }}" hint-placeholder-val="{{ false }}">
-            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+            <div style="border-top:1px solid var(--line);margin-top:20px;padding-top:18px">
               <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Link a Google account</div>
-              <p style="color:#5A626E;font-size:13px;line-height:1.5;margin:8px 0 12px">Adds the Google button as a second way into this same login. Your username and password keep working exactly as they do now.</p>
+              <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">Adds the Google button as a second way into this same login. Your username and password keep working exactly as they do now.</p>
               <div id="account-google-btn" style="display:flex;justify-content:center"></div>
-              <sc-if value="{{ acctGoogleError }}" hint-placeholder-val=""><div style="color:#A62626;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleError }}</div></sc-if>
-              <sc-if value="{{ acctGoogleSuccess }}" hint-placeholder-val=""><div style="color:#0E6B33;font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleSuccess }}</div></sc-if>
+              <sc-if value="{{ acctGoogleError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleError }}</div></sc-if>
+              <sc-if value="{{ acctGoogleSuccess }}" hint-placeholder-val=""><div style="color:var(--accent-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleSuccess }}</div></sc-if>
             </div>
           </sc-if>
 
           <!-- SOMEONE ELSE'S ACCOUNT. No Link Google here, ever - see the
                comment at the top of this card. -->
           <sc-if value="{{ acctIsOther }}" hint-placeholder-val="{{ false }}">
-            <div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:20px;padding-top:18px">
+            <div style="border-top:1px solid var(--line);margin-top:20px;padding-top:18px">
               <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Organiser actions</div>
-              <p style="color:#5A626E;font-size:13px;line-height:1.5;margin:8px 0 14px">Resetting a password does not ask for their old one - the point is that it is lost. Tell them the new one yourself; nothing is emailed.</p>
+              <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 14px">Resetting a password does not ask for their old one - the point is that it is lost. Tell them the new one yourself; nothing is emailed.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onAcctResetPassword }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reset password</button>
+                <button onClick="{{ onAcctResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reset password</button>
                 <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
-                  <button onClick="{{ onAcctApprove }}" style="background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
-                  <button onClick="{{ onAcctReject }}" style="background:transparent;border:1px solid rgba(0,0,0,0.25);color:#1A1C1F;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
+                  <button onClick="{{ onAcctApprove }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:9px 16px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">Approve</button>
+                  <button onClick="{{ onAcctReject }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reject</button>
                 </sc-if>
                 <sc-if value="{{ acctIsApproved }}" hint-placeholder-val="{{ true }}">
-                  <button onClick="{{ onAcctRevoke }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#A62626;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Revoke</button>
+                  <button onClick="{{ onAcctRevoke }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Revoke</button>
                 </sc-if>
               </div>
             </div>
@@ -1635,14 +1645,14 @@
        messages, which are what make a long warning readable. -->
   <sc-if value="{{ isModalOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px">
-      <div style="background:#FFFFFF;border:1px solid rgba(0,0,0,0.14);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:24px;width:100%;max-width:{{ modalMaxWidth }};box-shadow:0 20px 60px rgba(0,0,0,0.5)">
         <div style="font-weight:800;font-size:16px;margin-bottom:16px;line-height:1.4;white-space:pre-line">{{ modalTitle }}</div>
         <sc-if value="{{ isModalPrompt }}" hint-placeholder-val="{{ true }}">
-          <input value="{{ modalValue }}" aria-label="Password" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:#F3F2EF;border:1px solid rgba(0,0,0,0.18);border-radius:9px;padding:11px 13px;color:#1A1C1F;font-size:14px;margin-bottom:18px">
+          <input value="{{ modalValue }}" aria-label="Password" onInput="{{ onModalValueChange }}" onKeyDown="{{ onModalKeyDown }}" autoFocus="{{ true }}" type="password" style="width:100%;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:11px 13px;color:var(--ink);font-size:14px;margin-bottom:18px">
         </sc-if>
         <div style="display:flex;justify-content:flex-end;gap:10px">
-          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid rgba(0,0,0,0.2);color:#343A42;font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
-          <button onClick="{{ onModalConfirm }}" style="background:#E11B22;border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
+          <button onClick="{{ onModalCancel }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Cancel</button>
+          <button onClick="{{ onModalConfirm }}" style="background:var(--brand);border:none;color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer">{{ modalOkLabel }}</button>
         </div>
       </div>
     </div>
@@ -1939,7 +1949,7 @@ const BLOCK_GRID = {
    carries the group id as text, because fifteen colours cannot all be told
    apart and one of them is always going to be someone's bad screen. */
 const AGE_TINT = {
-  u6: '#E11B22', u7: '#F2711C', u8: '#f5c518', u9: '#8DC63F', u10: '#17A34A',
+  u6: '#C8102E', u7: '#F2711C', u8: '#f5c518', u9: '#8DC63F', u10: '#1F9D4D',
   u11: '#00A79D', u12: '#2E9BD6', u12g: '#7B61FF', u13: '#B15BD6',
   u14b: '#E0559C', u14g: '#FF7A9C', u16b: '#C97B3A', u16g: '#9BA84A',
   u18b: '#5B8DEF', u18g: '#40C4B4',
@@ -2582,8 +2592,8 @@ class Component extends DCLogic {
       /* The drop zone changes colour so it is obvious it will accept. A zone
          that looks identical while dragging reads as inert. */
       docDropStyle: s.docDragOver
-        ? 'border:2px dashed #E11B22;background:#FDECEC;border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s'
-        : 'border:2px dashed rgba(0,0,0,0.18);background:#FAFAFA;border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s',
+        ? 'border:2px dashed var(--brand);background:var(--danger-bg);border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s'
+        : 'border:2px dashed var(--line-strong);background:var(--surface-mute);border-radius:12px;padding:18px;text-align:center;margin-bottom:14px;transition:background .12s',
       docDropLabel: s.docDragOver ? 'Drop it here' : 'Drag a file here, or use the button below',
       /* The viewer. isViewing drives the panel; the three inner flags keep
          "loading", "cannot show" and "here it is" apart — collapsing them is
@@ -2602,8 +2612,8 @@ class Component extends DCLogic {
         id: g.id,
         name: g.name,
         style: (s.docTags || []).indexOf(g.id) > -1
-          ? 'padding:5px 10px;border-radius:8px;border:1px solid #E11B22;background:#E11B22;color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
-          : 'padding:5px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
+          ? 'padding:5px 10px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
+          : 'padding:5px 10px;border-radius:8px;border:1px solid var(--line-strong);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
         toggle: () => this.toggleDocTag(g.id),
       })),
       docRows: (s.docs || []).map((d) => ({
@@ -2627,8 +2637,8 @@ class Component extends DCLogic {
         hidden: !!d.hidden,
         notHidden: !d.hidden,
         rowStyle: d.hidden
-          ? 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#F6F6F7;opacity:0.72'
-          : 'padding:12px;border:1px solid rgba(0,0,0,0.10);border-radius:10px;background:#FFFFFF',
+          ? 'padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-mute);opacity:0.72'
+          : 'padding:12px;border:1px solid var(--line);border-radius:10px;background:#FFFFFF',
         isEditing: s.docEditId === d.id,
         /* Server-decided — see canPreview() in _documents.js. Office files
            get no View button at all rather than one that opens nothing. */
@@ -2653,8 +2663,8 @@ class Component extends DCLogic {
         id: g.id,
         name: g.name,
         style: (s.docEditTags || []).indexOf(g.id) > -1
-          ? 'padding:5px 10px;border-radius:8px;border:1px solid #E11B22;background:#E11B22;color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
-          : 'padding:5px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
+          ? 'padding:5px 10px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer'
+          : 'padding:5px 10px;border-radius:8px;border:1px solid var(--line-strong);background:#FFFFFF;color:#333333;font-size:12px;cursor:pointer',
         toggle: () => this.toggleEditTag(g.id),
       })),
       isPurging: !!s.docPurgeId,
@@ -2702,7 +2712,7 @@ class Component extends DCLogic {
         working: 'Working — this link matches the key the site is running with.',
         stale:   'This link no longer works. The key has been rotated in Netlify since it was saved.',
       }[s.clubLinkStatus] || '',
-      clubLinkStatusColour: { working: '#0E6B33', stale: '#A62626', off: '#8F6400' }[s.clubLinkStatus] || '#5A626E',
+      clubLinkStatusColour: { working: 'var(--accent-ink)', stale: 'var(--danger-ink)', off: '#8F6400' }[s.clubLinkStatus] || 'var(--ink-faint)',
       onEditClubLink: () => this.onEditClubLink(),
       onCancelClubLink: () => this.onCancelClubLink(),
       onClubLinkInput: (e) => this.onClubLinkInput(e),
@@ -2724,8 +2734,8 @@ class Component extends DCLogic {
       onToggleClubsFlagged: () => this.setState((p) => ({ clubsOnlyFlagged: !p.clubsOnlyFlagged })),
       clubsFilterLabel: s.clubsOnlyFlagged ? 'Showing only clubs to chase' : 'Show only clubs to chase',
       clubsFilterStyle: s.clubsOnlyFlagged
-        ? 'background:#A62626;border:1px solid #A62626;color:#fff;font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer'
-        : 'background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer',
+        ? 'background:var(--danger-ink);border:1px solid var(--danger-ink);color:#fff;font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer'
+        : 'background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer',
       /* Only reachable while the filter is ON, so it cannot be confused with
          "no declarations at all". */
       clubsNoneFlagged: s.clubsOnlyFlagged && rec.rows.length > 0 && shown.length === 0,
@@ -2740,8 +2750,8 @@ class Component extends DCLogic {
         /* The whole point of the tab, in one cell. */
         statusLabel: r.flagged ? (r.registeredTotal < r.declaredTotal ? 'Short' : 'Over') : 'On track',
         statusStyle: r.flagged
-          ? 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(166,38,38,0.12);color:#A62626;white-space:nowrap'
-          : 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(14,107,51,0.12);color:#0E6B33;white-space:nowrap',
+          ? 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(163,13,37,0.12);color:var(--danger-ink);white-space:nowrap'
+          : 'padding:4px 10px;border-radius:100px;font-size:12px;font-weight:800;background:rgba(14,107,51,0.12);color:var(--accent-ink);white-space:nowrap',
         notes: r.notes,
         hasNotes: !!String(r.notes || '').trim(),
         expanded: s.expandedClub === r.club,
@@ -2754,8 +2764,8 @@ class Component extends DCLogic {
           declared: g.declared,
           registered: g.registered,
           rowStyle: g.flagged
-            ? 'border-top:1px solid rgba(0,0,0,0.06);background:rgba(166,38,38,0.05)'
-            : 'border-top:1px solid rgba(0,0,0,0.06)',
+            ? 'border-top:1px solid var(--line);background:rgba(163,13,37,0.05)'
+            : 'border-top:1px solid var(--line)',
         })),
       })),
 
@@ -2774,13 +2784,13 @@ class Component extends DCLogic {
   venueVals(s) {
     const v = s.venue;
     const viewBase = 'font-weight:700;font-size:14px;padding:9px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
-    const viewOn = viewBase + 'background:#E11B22;color:#fff;';
-    const viewOff = viewBase + 'background:transparent;color:#454D58;';
+    const viewOn = viewBase + 'background:var(--brand);color:#fff;';
+    const viewOff = viewBase + 'background:transparent;color:var(--ink-muted);';
     const problems = v ? this.venueProblems() : [];
     const warnings = v ? this.venueLocalWarnings() : [];
     const dirty = this.venueDirty();
 
-    const dayTint = { day1: '#E11B22', day2: '#17A34A' };
+    const dayTint = { day1: 'var(--brand)', day2: 'var(--accent-mid)' };
     const MAINS = (s.api && s.api.MAIN_PITCHES) || [];
     /* Which day's cards are visible. Falls back to day1 for any stale/unknown
        value rather than showing neither day's cards. */
@@ -2814,17 +2824,17 @@ class Component extends DCLogic {
           name: main,
           inUse: n > 0,
           surfaceLabel: n === 0 ? 'not used today' : surfaces.join(' · '),
-          surfaceColor: n === 0 ? '#69727E' : '#454D58',
+          surfaceColor: n === 0 ? 'var(--ink-faint)' : 'var(--ink-muted)',
           /* Saved fixtures already sitting on this pitch. Changing a split
              renames them out from under the draw, so the count is shown before
              the change rather than after it. */
           usageLabel: used ? `${used} saved match${used === 1 ? '' : 'es'}` : '',
-          rowStyle: 'display:grid;grid-template-columns:70px 1fr auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid rgba(0,0,0,0.07)',
+          rowStyle: 'display:grid;grid-template-columns:70px 1fr auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid var(--line)',
           choices: SPLIT_CHOICES.map((c) => ({
             label: c.label,
             style: (n === c.value)
-              ? 'font-weight:800;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:#17A34A;color:#fff;border:1px solid #17A34A;white-space:nowrap'
-              : 'font-weight:700;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:transparent;color:#5A626E;border:1px solid rgba(0,0,0,0.16);white-space:nowrap',
+              ? 'font-weight:800;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:var(--accent-mid);color:#fff;border:1px solid var(--accent-mid);white-space:nowrap'
+              : 'font-weight:700;font-size:14px;padding:10px 16px;border-radius:9px;cursor:pointer;background:transparent;color:var(--ink-faint);border:1px solid rgba(0,0,0,0.16);white-space:nowrap',
             onPick: () => this.setPitchSplit(id, main, c.value),
           })),
         };
@@ -2861,7 +2871,7 @@ class Component extends DCLogic {
         expandArrow: expanded ? '▾' : '▸',
         onToggleExpand: () => this.toggleGroupExpanded(g.id),
         pickedLabel: chosen.length ? `${chosen.length} pitch${chosen.length === 1 ? '' : 'es'} picked` : 'No pitches picked yet',
-        pickedStyle: chosen.length ? 'font-size:14px;color:#5A626E;font-weight:600;white-space:nowrap' : 'font-size:14px;color:#8F6400;font-weight:700;white-space:nowrap',
+        pickedStyle: chosen.length ? 'font-size:14px;color:var(--ink-faint);font-weight:600;white-space:nowrap' : 'font-size:14px;color:#8F6400;font-weight:700;white-space:nowrap',
         // "Not set" only appears when a group really is on neither day, which
         // the problems list already flags as something to fix before saving.
         dayOptions: (dayId ? [] : [{ value: '', label: 'Not set' }]).concat([
@@ -2884,7 +2894,7 @@ class Component extends DCLogic {
               whole: surfaces.length === 1,
               allOn: onCount === surfaces.length && surfaces.length > 0,
               someOn: onCount > 0,
-              headStyle: `font-size:13px;font-weight:800;letter-spacing:.5px;color:${onCount ? '#1A1C1F' : '#69727E'}`,
+              headStyle: `font-size:13px;font-weight:800;letter-spacing:.5px;color:${onCount ? 'var(--ink)' : 'var(--ink-faint)'}`,
               /* One click to take or drop a whole pitch. With quarters that is
                  four ticks saved every time, and taking all four is the common
                  case — U8 has all of B1. */
@@ -2893,7 +2903,7 @@ class Component extends DCLogic {
                 name,
                 short: name.length > main.length ? name.slice(main.length) : '•',
                 on: chosen.includes(name),
-                color: chosen.includes(name) ? '#1A1C1F' : '#5A626E',
+                color: chosen.includes(name) ? 'var(--ink)' : 'var(--ink-faint)',
                 onToggle: () => this.toggleGroupPitch(g.id, dayId, name),
               })),
             };
@@ -2913,8 +2923,8 @@ class Component extends DCLogic {
       vDayViewLabel: activeDayLabel,
       dayTab1Label: dayLabel('day1'),
       dayTab2Label: dayLabel('day2'),
-      dayTab1Style: dayTabBase + (dayView === 'day1' ? 'background:#E11B22;color:#fff;' : 'background:transparent;color:#454D58;'),
-      dayTab2Style: dayTabBase + (dayView === 'day2' ? 'background:#17A34A;color:#fff;' : 'background:transparent;color:#454D58;'),
+      dayTab1Style: dayTabBase + (dayView === 'day1' ? 'background:var(--brand);color:#fff;' : 'background:transparent;color:var(--ink-muted);'),
+      dayTab2Style: dayTabBase + (dayView === 'day2' ? 'background:var(--accent-mid);color:#fff;' : 'background:transparent;color:var(--ink-muted);'),
       onDayTab1: () => this.setVenueDayView('day1'),
       onDayTab2: () => this.setVenueDayView('day2'),
       vIsSchematic: s.vView !== 'map',
@@ -2927,8 +2937,8 @@ class Component extends DCLogic {
       vUnlocked: !s.vLocked,
       vLockLabel: s.vLocked ? 'Locked — tap to move blocks' : 'Unlocked — drag the blocks',
       vLockStyle: s.vLocked
-        ? 'background:transparent;border:1px solid rgba(0,0,0,0.2);color:#454D58;font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap'
-        : 'background:#f5c518;border:1px solid #f5c518;color:#1A1C1F;font-weight:800;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap',
+        ? 'background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap'
+        : 'background:#f5c518;border:1px solid #f5c518;color:var(--ink);font-weight:800;font-size:14px;padding:10px 15px;border-radius:9px;cursor:pointer;white-space:nowrap',
       onToggleMapLock: () => this.toggleMapLock(),
       onResetPositions: () => this.doResetPositions(),
       vBusy: s.vBusy,
@@ -2941,8 +2951,8 @@ class Component extends DCLogic {
       vSaveDisabled: s.vBusy || !dirty || problems.length > 0,
       vSaveLabel: s.vBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       vSaveStyle: (s.vBusy || !dirty || problems.length > 0)
-        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
-        : 'background:#17A34A;color:#fff;font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+        ? 'background:var(--line);color:var(--ink-muted);font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:11px 17px;border:none;border-radius:10px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onVenueSave: () => this.doSaveVenue(),
       onVenueReset: () => this.doResetVenue(),
     };
@@ -2959,7 +2969,7 @@ class Component extends DCLogic {
   venueMaps(v, positions, locked) {
     if (!v) return [];
     const pos = positions || {};
-    const dayTint = { day1: '#E11B22', day2: '#17A34A' };
+    const dayTint = { day1: 'var(--brand)', day2: 'var(--accent-mid)' };
     const nameOf = (ag) => (MANAGER_AGE_GROUPS.find((g) => g.id === ag) || {}).name || ag.toUpperCase();
 
     return ['day1', 'day2'].map((id) => {
@@ -3000,7 +3010,7 @@ class Component extends DCLogic {
         byBlock[b].forEach((p) => (usersOf[p] || []).forEach((ag) => {
           if (!blockUsers.includes(ag)) blockUsers.push(ag);
         }));
-        const blockTints = blockUsers.map((ag) => AGE_TINT[ag] || '#5A626E');
+        const blockTints = blockUsers.map((ag) => AGE_TINT[ag] || '#636974');
         const at = pos[b];
         const placed = !!(at && Number.isFinite(Number(at.x)) && Number.isFinite(Number(at.y)));
 
@@ -3018,17 +3028,17 @@ class Component extends DCLogic {
            allocation at a glance. */
         let chipBg, chipBorder, chipFg;
         if (!blockUsers.length) {
-          chipBg = '#111317'; chipBorder = '1px dashed rgba(255,255,255,0.45)'; chipFg = '#CFD4DC';
+          chipBg = 'var(--ink)'; chipBorder = '1px dashed rgba(255,255,255,0.45)'; chipFg = 'var(--chrome-muted)';
         } else {
           chipBg = '#FFFFFF';
           chipBorder = '2px solid rgba(0,0,0,0.55)';
-          chipFg = '#1A1C1F';
+          chipFg = 'var(--ink)';
         }
 
         return {
           name: b,
           known: !!BLOCK_GRID[b],
-          style: `grid-area:${area};background:#F3F2EF;border:1px solid rgba(0,0,0,0.10);border-radius:12px;padding:12px 13px 13px`,
+          style: `grid-area:${area};background:var(--surface-sunk);border:1px solid var(--line);border-radius:12px;padding:12px 13px 13px`,
 
           /* --- the map view --- */
           placed,
@@ -3043,8 +3053,8 @@ class Component extends DCLogic {
              always the dark page ink. */
           mapGroups: blockUsers.map((ag) => ({
             code: ag.toUpperCase(),
-            swatchStyle: `display:inline-block;flex:none;width:11px;height:11px;border-radius:3px;background:${AGE_TINT[ag] || '#5A626E'};border:1px solid rgba(0,0,0,0.35)`,
-            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:#1A1C1F',
+            swatchStyle: `display:inline-block;flex:none;width:11px;height:11px;border-radius:3px;background:${AGE_TINT[ag] || '#636974'};border:1px solid rgba(0,0,0,0.35)`,
+            codeStyle: 'font-size:14px;font-weight:800;letter-spacing:.3px;color:var(--ink)',
           })),
           /* How the block is cut up, on the chip, so it can be read off the map
              without switching views. Kept on the same line as the name and set
@@ -3075,18 +3085,18 @@ class Component extends DCLogic {
           mapWhoStyle: 'font-size:13px;font-weight:800;line-height:1.25;margin-top:2px;opacity:.92',
           pitches: byBlock[b].map((p) => {
             const users = usersOf[p] || [];
-            const tints = users.map((ag) => AGE_TINT[ag] || '#5A626E');
+            const tints = users.map((ag) => AGE_TINT[ag] || '#636974');
             let bg, border, who, whoColor, title;
             if (!users.length) {
               bg = 'transparent'; border = '1px dashed rgba(0,0,0,0.22)';
-              who = 'free'; whoColor = '#69727E';
+              who = 'free'; whoColor = 'var(--ink-faint)';
               title = `${p} — no age group is using this pitch`;
             } else if (users.length === 1) {
               bg = tints[0] + '30'; border = `1px solid ${tints[0]}`;
               /* Dark ink, NOT the tint — tint-coloured text on a wash of the
                  same tint was near-invisible on the light page (Jay, 2 Aug).
                  The tint still identifies the group via the fill and border. */
-              who = users[0].toUpperCase(); whoColor = '#1A1C1F';
+              who = users[0].toUpperCase(); whoColor = 'var(--ink)';
               title = `${p} — ${nameOf(users[0])}`;
             } else {
               /* TWO GROUPS ON ONE PITCH IS A TIME-SHARE, NOT A CLASH. D4 and D5
@@ -3099,12 +3109,12 @@ class Component extends DCLogic {
               bg = `linear-gradient(100deg, ${stops})`;
               border = '1px solid rgba(0,0,0,0.34)';
               who = users.map((a) => a.toUpperCase()).join(' · ');
-              whoColor = '#1A1C1F';  /* was #e7eaef — light grey from the dark-mode era */
+              whoColor = 'var(--ink)';  /* was #e7eaef — light grey from the dark-mode era */
               title = `${p} — shared by ${users.map(nameOf).join(' and ')}. Two groups on one pitch at different times is a time-share, not a clash.`;
             }
             return {
               name: p, who, whoColor, title,
-              style: `min-width:70px;background:${bg};border:${border};border-radius:10px;padding:8px 10px;text-align:center;color:#1A1C1F`,
+              style: `min-width:70px;background:${bg};border:${border};border-radius:10px;padding:8px 10px;text-align:center;color:var(--ink)`,
             };
           }),
 
@@ -3131,10 +3141,10 @@ class Component extends DCLogic {
         notes.push({ style: chip('#8F6400'), text: `Not placed yet: ${homeless.map((a) => a.toUpperCase()).join(', ')}` });
       }
       if (unused.length) {
-        notes.push({ style: chip('#5A626E'), text: `No group on: ${unused.join(', ')}` });
+        notes.push({ style: chip('var(--ink-faint)'), text: `No group on: ${unused.join(', ')}` });
       }
       if (shared.length) {
-        notes.push({ style: chip('#454D58'), text: `Time-shared: ${shared.join(', ')} — the Fixture Editor keeps these apart by time` });
+        notes.push({ style: chip('var(--ink-muted)'), text: `Time-shared: ${shared.join(', ')} — the Fixture Editor keeps these apart by time` });
       }
 
       const groupCount = Object.keys(groups).length;
@@ -3158,7 +3168,7 @@ class Component extends DCLogic {
         /* Same aspect ratio as assets/venue-map.png (792x547), so the image
            fills the box exactly and a percentage means the same thing in both
            directions no matter how wide the window is. */
-        mapBoxStyle: 'position:relative;width:100%;aspect-ratio:792/547;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.12);background:#fff',
+        mapBoxStyle: 'position:relative;width:100%;aspect-ratio:792/547;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff',
         strays,
         hasStrays: strays.length > 0,
       };
@@ -3553,7 +3563,7 @@ class Component extends DCLogic {
             pts: t.pts,
             /* Green edge on the qualifying places only — the top `advance`
                rows, not every row and not none. */
-            rowStyle: i < advance ? 'box-shadow:inset 3px 0 0 #17A34A' : '',
+            rowStyle: i < advance ? 'box-shadow:inset 3px 0 0 var(--accent-mid)' : '',
           })),
         }))
       : [];
@@ -4134,14 +4144,14 @@ class Component extends DCLogic {
       const ymd = api.dateOfStamp(stamp);
       return {
         text: `${endOfDay ? 'Closes 23:59' : 'Opens 00:00'} on ${weekdayOf(ymd)} ${api.fmtWindowDate(stamp, true)}, Abu Dhabi time`,
-        color: '#454D58',
+        color: 'var(--ink-muted)',
       };
     };
     const opensEcho = echo(r && r.opensAt, false);
     const closesEcho = echo(r && r.closesAt, true);
 
-    const modeOn = 'text-align:left;background:rgba(23,163,74,0.14);border:1px solid #17A34A;border-radius:11px;padding:13px 15px;color:#1A1C1F;cursor:pointer;width:100%';
-    const modeOff = 'text-align:left;background:#F3F2EF;border:1px solid rgba(0,0,0,0.14);border-radius:11px;padding:13px 15px;color:#454D58;cursor:pointer;width:100%';
+    const modeOn = 'text-align:left;background:rgba(31,157,77,0.14);border:1px solid var(--accent-mid);border-radius:11px;padding:13px 15px;color:var(--ink);cursor:pointer;width:100%';
+    const modeOff = 'text-align:left;background:var(--surface-sunk);border:1px solid var(--line);border-radius:11px;padding:13px 15px;color:var(--ink-muted);cursor:pointer;width:100%';
     const MODES = [
       { value: 'auto', label: 'Follow the dates', desc: 'The two dates above decide. This is the normal setting and the one to leave it on.' },
       { value: 'open', label: 'Force open', desc: 'Open right now whatever the dates say — this is how you test the real forms early. The public page shows a TEST MODE strip the whole time.' },
@@ -4159,8 +4169,8 @@ class Component extends DCLogic {
       rSaveDisabled: s.rBusy || !dirty || problems.length > 0,
       rSaveLabel: s.rBusy ? 'Saving…' : (dirty ? 'Save changes' : 'Saved'),
       rSaveStyle: (s.rBusy || !dirty || problems.length > 0)
-        ? 'background:#E4E2DD;color:#4F5864;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
-        : 'background:#17A34A;color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
+        ? 'background:var(--line);color:var(--ink-muted);font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:default;white-space:nowrap;text-transform:uppercase'
+        : 'background:var(--accent-mid);color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;text-transform:uppercase',
       onRegSave: () => this.doSaveRegistration(),
       onRegReset: () => this.doResetRegistration(),
 
@@ -4177,7 +4187,7 @@ class Component extends DCLogic {
         label: m.label,
         desc: m.desc,
         style: (r && r.mode === m.value) ? modeOn : modeOff,
-        descColor: (r && r.mode === m.value) ? '#343A42' : '#5A626E',
+        descColor: (r && r.mode === m.value) ? 'var(--ink-muted)' : 'var(--ink-faint)',
         onPick: () => this.setRegMode(m.value),
       })),
 
@@ -4186,8 +4196,8 @@ class Component extends DCLogic {
       rPreviewBlurb: copy ? copy.blurb : 'Loading the registration window…',
       rPreviewButtons: copy ? copy.buttons : '',
       rPreviewTestMode: !!(copy && copy.testMode),
-      rPreviewPillBg: (copy && copy.state.open) ? '#17A34A' : '#E11B22',
-      rPreviewTint: (copy && copy.state.open) ? '#0E6B33' : '#5A626E',
+      rPreviewPillBg: (copy && copy.state.open) ? 'var(--accent-mid)' : 'var(--brand)',
+      rPreviewTint: (copy && copy.state.open) ? 'var(--accent-ink)' : 'var(--ink-faint)',
     };
   }
 
@@ -4663,11 +4673,11 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state;
     const roleBase = 'font-weight:700;font-size:13px;padding:9px 18px;border-radius:9px;cursor:pointer;white-space:nowrap;';
-    const roleOn = roleBase + 'background:#17A34A;color:#fff;border:1px solid #17A34A;';
-    const roleOff = roleBase + 'background:transparent;color:#454D58;border:1px solid rgba(0,0,0,0.2);';
+    const roleOn = roleBase + 'background:var(--accent-mid);color:#fff;border:1px solid var(--accent-mid);';
+    const roleOff = roleBase + 'background:transparent;color:var(--ink-muted);border:1px solid var(--line-strong);';
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
-    const tabOn = tabBase + 'background:#E11B22;color:#fff;';
-    const tabOff = tabBase + 'background:transparent;color:#454D58;';
+    const tabOn = tabBase + 'background:var(--brand);color:#fff;';
+    const tabOff = tabBase + 'background:transparent;color:var(--ink-muted);';
 
     const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
     /* Real age order (AGE_GROUP_ORDER), not alphabetical — a plain .sort()
@@ -4694,9 +4704,9 @@ class Component extends DCLogic {
       ...r,
       submittedAtDisplay: this.fmtDate(r.submittedAt),
       medicalDisplay: r.medicalNotes || '—',
-      medicalColor: r.medicalNotes ? '#9A5B00' : '#69727E',
+      medicalColor: r.medicalNotes ? '#9A5B00' : 'var(--ink-faint)',
       medicalWeight: r.medicalNotes ? '700' : '400',
-      consentColor: r.consent === 'Yes' ? '#0E6B33' : '#A62626',
+      consentColor: r.consent === 'Yes' ? 'var(--accent-ink)' : 'var(--danger-ink)',
     }));
 
     return {

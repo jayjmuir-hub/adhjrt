@@ -245,7 +245,7 @@ section('Who is on each pitch');
   /* 2 Aug 2026: the label used to be drawn IN the tint, on a wash of the
      same tint — near-invisible on the light page. Dark ink now; the tint
      identifies the group through the fill and border instead. */
-  eq('the label ink is the dark page ink, never the tint', u10.whoColor, '#1A1C1F');
+  eq('the label ink is the dark page ink, never the tint', u10.whoColor, 'var(--ink)');
   check('the tint still identifies the cell — solid in the border', /border:1px solid #[0-9A-Fa-f]{6}/.test(u10.style), u10.style);
   check('the tooltip names the group in full', /U10 Mixed Contact/.test(u10.title), u10.title);
 }
@@ -261,7 +261,7 @@ section('A time-share is drawn as a time-share, NOT as a problem');
   eq('D4a names both groups', d4a.who, 'U6 · U7');
   check('…as a split of both colours', d4a.style.includes('linear-gradient'), d4a.style);
   check('…and NOT in a warning colour', !/f5c518|8F6400|E11B22|ff8a8a|A62626/i.test(d4a.style.replace(/linear-gradient\([^)]*\)/, '')), d4a.style);
-  eq('the shared label is dark ink too, not the dark-mode-era light grey', d4a.whoColor, '#1A1C1F');
+  eq('the shared label is dark ink too, not the dark-mode-era light grey', d4a.whoColor, 'var(--ink)');
   check('the tooltip says it is a time-share, not a clash', /time-share, not a clash/i.test(d4a.title), d4a.title);
   check('the tooltip names both groups in full', /U6 Tag/.test(d4a.title) && /U7 Tag/.test(d4a.title), d4a.title);
 
@@ -824,7 +824,7 @@ section('The map labels can actually be read');
   m.blocks.filter((b) => b.mapWho !== 'free').forEach((b) => {
     const bg = (b.mapStyle.match(/background:([^;]+);/) || [])[1] || '';
     eq(`${b.name}: the chip body is opaque white`, bg, '#FFFFFF');
-    check(`${b.name}: the ink is the constant page ink`, b.mapStyle.includes('color:#1A1C1F'), b.mapStyle);
+    check(`${b.name}: the ink is the constant page ink`, b.mapStyle.includes('color:var(--ink)'), b.mapStyle);
     check(`${b.name}: the rim still gives it an edge on the drawing`,
       /border:2px solid rgba\(0,0,0,0\.55\)/.test(b.mapStyle), b.mapStyle);
   });
@@ -845,7 +845,7 @@ section('The map labels can actually be read');
     check(`${ag}: the swatch is outlined so pale tints register on white`,
       /border:1px solid rgba\(0,0,0,0\.35\)/.test(g.swatchStyle || ''), g.swatchStyle);
     check(`${ag}: the code is constant dark ink, never the tint`,
-      (g.codeStyle || '').includes('color:#1A1C1F')
+      (g.codeStyle || '').includes('color:var(--ink)')
       && !(g.codeStyle || '').toLowerCase().includes(H.AGE_TINT[ag].replace('#', '').toLowerCase()), g.codeStyle);
     eq(`${ag}: the code names the group`, g.code, ag.toUpperCase());
     check(`${ag}: the code is at least 14px`, /font-size:1[4-9]px/.test(g.codeStyle || ''), g.codeStyle);
@@ -890,7 +890,7 @@ section('The map labels can actually be read');
       { day1: { label: 'x', pitches: ['D1'], groups: {} }, day2: { label: 'y', pitches: [], groups: {} } },
       { D1: { x: 5, y: 5 } }, true
     )[0].blocks[0]) || EMPTY;
-    check('a free block has its own readable colour', /color:#CFD4DC/.test(free.mapStyle), free.mapStyle);
+    check('a free block has its own readable colour', /color:var\(--chrome-muted\)/.test(free.mapStyle), free.mapStyle);
     check('…and is dashed rather than solid, as before', /dashed/.test(free.mapStyle));
     eq('…and carries no swatches', (free.mapGroups || []).length, 0);
     check('…and is flagged for the template the simple way', free.isFree === true && free.hasUsers === false);

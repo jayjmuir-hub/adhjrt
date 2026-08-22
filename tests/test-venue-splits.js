@@ -249,9 +249,9 @@ section('The panel, driven');
     /* Four choices per pitch, exactly one of them selected. */
     eq('four split choices', sat('D3').choices.length, 4);
     eq('…labelled plainly', sat('D3').choices.map((x) => x.label), ['Not used', 'Whole', 'Halves', 'Quarters']);
-    check('exactly one choice is highlighted', sat('D3').choices.filter((x) => (x.style || '').includes('#17A34A')).length === 1);
-    check('…and it is the right one (halves)', style('D3', 2).includes('#17A34A'));
-    check('an unused pitch highlights Not used', style('C1', 0).includes('#17A34A'));
+    check('exactly one choice is highlighted', sat('D3').choices.filter((x) => (x.style || '').includes('var(--accent-mid)')).length === 1);
+    check('…and it is the right one (halves)', style('D3', 2).includes('var(--accent-mid)'));
+    check('an unused pitch highlights Not used', style('C1', 0).includes('var(--accent-mid)'));
 
     /* The age-group rows group surfaces by main pitch. */
     const u8 = vals.vGroups.find((g) => g.id === 'u8');

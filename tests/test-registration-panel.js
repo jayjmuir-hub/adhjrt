@@ -249,7 +249,7 @@ try {
     eq('picking a mode stores it', c.state.reg.mode, 'open');
     const vals = c.renderVals();
     check('the chosen mode is the one shown as selected',
-      vals.rModes.filter((m) => m.style.includes('#17A34A')).length === 1);
+      vals.rModes.filter((m) => m.style.includes('var(--accent-mid)')).length === 1);
     check('force open raises a warning', /force open/i.test((vals.rWarnings || []).join(' ')), JSON.stringify(vals.rWarnings));
   }
 

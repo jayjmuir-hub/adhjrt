@@ -1,4 +1,28 @@
-# ADH JRT — state of play, 7 August 2026
+# ADH JRT — state of play, 22 August 2026
+
+## 22 Aug 2026 — the back office wears the current club brand (on `dev`, NOT merged)
+
+`claude/specs/spec-backoffice-retheme.md` built the same day it was specced,
+with Jay's three calls: dark chrome header band, `/signin` included, teal →
+info blue. `/signin`, `/manager` and `/organizer` re-pointed from the club's
+abandoned palette (`#E11B22` red, warm greys) to the current one, via one
+`:root` token block per file — byte-identical across the three, asserted by
+`tests/test-backoffice-retheme.js` (32 checks, contrast computed from the
+tokens themselves).
+
+**Suite: 930/930 faults, 48 clean, 48 files.** Seven new faults. The clean
+baseline went 47 → 48 — the proof the new file ran undamaged. **19
+pre-existing faults quoting old colours reported COULD NOT INJECT** and were
+repointed in the same sitting, never deleted.
+
+⚠️ **The 8-digit-hex trap, for the next palette sweep:** `#17A34A30` is hex +
+alpha; a 6-digit inventory grep cannot see it, and a var() swapped into it
+produces `var(--x)30` — invalid CSS, silently transparent. `AGE_TINT` and the
+`${t}30` gradient stops must stay literal hexes; a fault now enforces it.
+
+⚠️ **NOT yet looked at signed-in on a rendered page.** The render audit needs
+playwright (absent on the build machine). Jay reviews the dashboards at
+`dev--adhquins-jrt.netlify.app` before any merge; production untouched.
 
 > **If you are picking this up:** read `CLAUDE.md` from a fresh clone first —
 > it is **the rules**. Then `RESTORE.md` for how the code behaves. Then this

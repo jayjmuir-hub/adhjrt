@@ -26,7 +26,8 @@ section('The three back-office pages are light');
 for (const f of LIGHT_PAGES) {
   const src = stripJs(stripHtml(readRepo(f)));
   check(`${f}: the body is the light page colour with dark ink`,
-    /body\{[^}]*background:#F3F2EF;color:#1A1C1F/.test(src));
+    /body\{[^}]*background:var\(--surface\);color:var\(--ink\)/.test(src)
+    && /--surface:#F3F3F3/.test(src) && /--ink:#101116/.test(src));
   check(`${f}: no dark page surface remains`, !/#0C0C0E/i.test(src),
     (src.match(/.{0,50}#0C0C0E.{0,30}/i) || [])[0]);
   check(`${f}: no dark card surface remains`, !/#151517/i.test(src),

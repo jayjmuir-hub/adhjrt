@@ -1,6 +1,11 @@
 # Spec: re-point the back office at the club brand system (22 Aug 2026)
 
-**Status: specced, not built.** Jay asked whether the JRT back office should
+**Status: BUILT, same day — on `dev`, not merged to `main`.** Jay's answers to
+the three open questions: **(1) dark chrome yes**, (2) `/signin` takes the new
+look yes, (3) teal maps to the info blue yes. See "How it was actually built"
+at the end — four deviations from the plan below are recorded there.
+
+Jay asked whether the JRT back office should
 line up with the new main club website and the restyled Club Hub desktop app,
 so all three properties read as one family. This spec says how. **No code
 changes until Jay says build.**
@@ -136,3 +141,39 @@ one.
    look rather than the public look.
 3. **The teal "View" buttons** (`#0B7285`) have no counterpart in the club
    palette. Map to the info blue, or keep teal as a back-office-only accent?
+
+## How it was actually built (22 Aug 2026) — deviations from the plan above
+
+Done as specced — token block identical in the three files, mechanical var()
+swap outside comments, dark chrome, `test-backoffice-retheme.js` with prover
+faults — except for four things learned by doing it:
+
+1. **The warm yellow family stays.** The plan's table mapped the warn colours
+   to Club Hub's; in the files there turned out to be a coordinated five-value
+   family (`#FFF8E6`/`#E8C46A`/`#C98A05`/`#7A5300`/`#5A4A22` and friends)
+   used for the username-preview boxes and warn banners. It already
+   harmonises with the new neutrals, and re-pointing five interlocking values
+   is risk with no brand payoff. Left literal, deliberately.
+2. **The age-group chart tints stay literal hexes, and now a fault enforces
+   it.** `AGE_TINT` values are alpha-suffixed in JS (`${t}30`), so a var()
+   there produces `var(--x)30` — invalid CSS, a transparent chip, no error
+   anywhere. The first transform did exactly this (8-digit hexes were
+   invisible to the 6-digit inventory grep) and the venue-map suite caught
+   it. `u6`/`u10` carry the NEW brand values as literals; the retheme test
+   pins them and scans all three files for the mangle pattern.
+3. **The chrome is a rounded band inside the content column, not a
+   full-bleed bar.** Full-bleed needed restructuring the header out of the
+   `.bo` container, which risks the hard-won phone layout for a purely
+   structural difference. The band reads as chrome; the DOM did not move.
+4. **`--ink` kept a four-step grey ladder** (`ink`/`ink-muted`/`ink-faint`/
+   `ink-dim`) where Club Hub has three, because the files genuinely use four
+   distinct slates and collapsing them changes hierarchy the plan never
+   promised to change.
+
+**Verified:** whole suite green; prover 930/930 with the clean baseline up
+exactly one (the proof the new file runs undamaged); 19 pre-existing faults
+quoting old colours reported COULD NOT INJECT and were repointed, never
+deleted. Contrast is computed inside the test from the token block itself.
+**Not yet verified: a rendered signed-in dashboard.** The render audit needs
+playwright, which the build machine did not have; the dev branch deploy is
+where the signed-in pages get eyes on them before any merge.

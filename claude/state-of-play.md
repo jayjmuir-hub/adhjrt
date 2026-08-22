@@ -1,6 +1,17 @@
 # ADH JRT — state of play, 22 August 2026
 
-## 22 Aug 2026 — the back office wears the current club brand (on `dev`, NOT merged)
+## ✅ 22 Aug 2026 — MERGED AND LIVE at `7b0bc16` — retheme + desktop sidebar
+
+Jay approved on the dev preview ("that looks right now, merge it").
+Fast-forward `8615a90..7b0bc16`, one production deploy, `main`/`dev`/`Compare`
+all level. **Measured on adhjrt.com after the deploy, with controls:** the
+token block serves on `/signin`, the sidebar on `/organizer` and `/manager`,
+the `!important` hide rule shipped; the homepage still carries its dark brand,
+`/app` has no sidebar, `/scores` and `/register-club` answer 200, and
+`/claude/*` still 404s. The section below was written while the work sat
+unmerged — its suite numbers and lessons stand.
+
+## 22 Aug 2026 — the back office wears the current club brand (build record)
 
 `claude/specs/spec-backoffice-retheme.md` built the same day it was specced,
 with Jay's three calls: dark chrome header band, `/signin` included, teal →

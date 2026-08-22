@@ -120,8 +120,13 @@ async function main() {
         src[f].includes('class="bo-band"') && src[f].includes('class="bo-tabs"'));
       check(`${f}: the sidebar is hidden by default (mobile keeps its layout)`,
         src[f].includes('.bo-side{display:none}'));
+      /* ⚠️ !important IS THE CHECK, not a nicety. The band and tab bar carry
+         INLINE display:flex, which beats any stylesheet rule that does not
+         say !important — shipped without it, Jay's screenshot showed the
+         sidebar AND the tabs together, and this test passed because it only
+         asked whether the rule existed, not whether it could win. */
       check(`${f}: at 1100px the band and tabs hide and the content clears the sidebar`,
-        src[f].includes('.bo-band,.bo-tabs{display:none}')
+        src[f].includes('.bo-band,.bo-tabs{display:none!important}')
         && src[f].includes('.bo{margin:0 auto 0 280px !important}'));
     }
     check('the two dashboards share one identical sidebar CSS block',

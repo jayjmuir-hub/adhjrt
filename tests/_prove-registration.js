@@ -8988,7 +8988,7 @@ const FAULTS = [
     name: 'the desktop gate stops hiding the tab bar',
     suite: 'test-backoffice-retheme.js',
     apply: () => patch('Manager.dc.html',
-      '.bo-band,.bo-tabs{display:none}', '.bo-band{display:none}'),
+      '.bo-band,.bo-tabs{display:none!important}', '.bo-band,.bo-tabs{display:none}'),
     expect: ['Manager.dc.html: at 1100px the band and tabs hide'],
   },
   {

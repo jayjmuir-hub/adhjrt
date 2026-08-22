@@ -79,6 +79,24 @@
     --danger:#C2352C; --danger-ink:#A30D25; --danger-bg:#FDECEB;
     --chrome:#0A0A0A; --chrome-line:rgba(255,255,255,0.16); --chrome-muted:#8B9099;
   }
+
+  /* ===== DESKTOP SIDEBAR (22 Aug 2026) ===================================
+     "Still feels like an app and not a website" — Jay, of the palette-only
+     first pass. The answer is Club Hub's phase-2 shell: a fixed dark
+     sidebar on desktop carrying the nav and the session controls, content
+     beside it. CSS-ONLY GATING, the same trick as Club Hub's
+     "hidden desktop:flex": below 1100px NOTHING changes — the chrome band
+     and the pill tab bar are the phone/tablet layout, and the phone @media
+     block further down is untouched. The band and the sidebar are TWO
+     COPIES of the same controls wired to the same bindings; CSS alone
+     decides which shows, so neither can drift out of date. */
+  .bo-side{display:none}
+  @media(min-width:1100px){
+    .bo-band,.bo-tabs{display:none}
+    .bo-side{display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;width:256px;background:var(--chrome);color:#FFFFFF;border-right:1px solid var(--chrome-line);z-index:30;overflow-y:auto;padding:18px 14px}
+    .bo-side .sgroup{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--chrome-muted);padding:16px 12px 6px;white-space:nowrap}
+    .bo{margin:0 auto 0 280px !important}
+  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Barlow',system-ui,sans-serif;background:var(--surface);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
   input,select,button{font-family:inherit}
@@ -220,7 +238,43 @@
          reader who has seen one recognises the other. Removing this class
          silently removes the whole phone layout; a test asserts it is here. -->
     <div class="bo" style="max-width:{{ dashboardMaxWidth }};margin:0 auto;padding:28px 24px 80px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;background:var(--chrome);border-radius:14px;padding:16px 20px">
+      <aside class="bo-side" aria-label="Primary">
+        <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:12px;color:#FFFFFF;padding:4px 10px 16px;border-bottom:1px solid var(--chrome-line)">
+          <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--brand-ondark) 0 50%,var(--accent-mid) 50% 100%)"></div>
+          </div>
+          <div style="line-height:1">
+            <div style="font-family:'Anton';font-size:20px;letter-spacing:.5px">ADH JRT</div>
+            <div style="font-size:10px;letter-spacing:2px;color:var(--accent-ondark);font-weight:700;margin-top:3px">ORGANISER BACK OFFICE</div>
+          </div>
+        </a>
+        <div class="sgroup">Registrations</div>
+        <button onClick="{{ showClubs }}" style="{{ sideClubsStyle }}">Clubs<sc-if value="{{ hasFlaggedClubs }}" hint-placeholder-val="{{ false }}"> ({{ flaggedClubCount }} to chase)</sc-if></button>
+        <button onClick="{{ showTeams }}" style="{{ sideTeamsStyle }}">Teams ({{ teamCount }})</button>
+        <button onClick="{{ showPlayers }}" style="{{ sidePlayersStyle }}">Players ({{ playerCount }})</button>
+        <div class="sgroup">Tournament configuration</div>
+        <button onClick="{{ showTournament }}" style="{{ sideTournamentStyle }}">Tournament</button>
+        <button onClick="{{ showFixturesView }}" style="{{ sideFixturesStyle }}">Fixtures &amp; tables</button>
+        <button onClick="{{ showVenue }}" style="{{ sideVenueStyle }}">Venue &amp; days</button>
+        <button onClick="{{ showRegistration }}" style="{{ sideRegistrationStyle }}">Registration</button>
+        <button onClick="{{ showDocuments }}" style="{{ sideDocumentsStyle }}">Documents<sc-if value="{{ hasDocs }}" hint-placeholder-val="{{ false }}"> ({{ docCount }})</sc-if></button>
+        <div class="sgroup">Site admin</div>
+        <button onClick="{{ showAccounts }}" style="{{ sideAccountsStyle }}">Accounts<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}"> ({{ pendingCount }} pending)</sc-if></button>
+        <div style="flex:1"></div>
+        <div style="border-top:1px solid var(--chrome-line);padding:14px 10px 0;margin-top:14px">
+          <div style="font-weight:700;font-size:14px;color:#FFFFFF">{{ sessionName }}</div>
+          <div style="font-size:12px;color:var(--chrome-muted)">{{ sessionRole }}</div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button onClick="{{ onOpenMyAccount }}" style="background:transparent;border:1px solid var(--chrome-line);color:#FFFFFF;font-weight:700;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12px">My account</button>
+            <button onClick="{{ onLogout }}" style="background:transparent;border:1px solid var(--chrome-line);color:#FFFFFF;font-weight:700;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:12px">Sign out</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;padding-bottom:4px">
+            <a href="Quins JRT.dc.html" style="font-size:12.5px;font-weight:700;color:var(--chrome-muted)" style-hover="color:#FFFFFF">← Main site</a>
+            <a href="/manager" style="font-size:12.5px;font-weight:700;color:var(--chrome-muted)" style-hover="color:#FFFFFF">View manager area</a>
+          </div>
+        </div>
+      </aside>
+      <div class="bo-band" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;background:var(--chrome);border-radius:14px;padding:16px 20px">
         <div style="display:flex;align-items:center;gap:14px">
           <a href="Quins JRT.dc.html" style="display:flex;align-items:center;gap:14px;color:#FFFFFF">
             <div style="width:40px;height:40px;border-radius:9px;overflow:hidden;position:relative;flex:none">
@@ -280,7 +334,7 @@
            Registration tab is the window SETTINGS. Kept as-is at Jay's order.
            If it ever confuses someone, the fix is renaming the tab to
            "Registration window", not moving it between groups. -->
-      <div style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%;align-items:flex-end">
+      <div class="bo-tabs" style="display:flex;gap:8px;margin-top:24px;background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:5px;width:fit-content;flex-wrap:wrap;max-width:100%;align-items:flex-end">
 
         <div style="display:flex;flex-direction:column;gap:5px">
           <div style="font-size:10.5px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--ink-dim);padding:0 6px;white-space:nowrap">Registrations</div>
@@ -4678,6 +4732,9 @@ class Component extends DCLogic {
     const tabBase = 'font-weight:700;font-size:14px;padding:9px 18px;border:none;border-radius:9px;cursor:pointer;white-space:nowrap;';
     const tabOn = tabBase + 'background:var(--brand);color:#fff;';
     const tabOff = tabBase + 'background:transparent;color:var(--ink-muted);';
+    const sideBase = 'display:block;width:100%;text-align:left;font-weight:700;font-size:14px;padding:10px 12px;border:none;border-radius:9px;cursor:pointer;';
+    const sideOn = sideBase + 'background:var(--brand);color:#fff;';
+    const sideOff = sideBase + 'background:transparent;color:var(--chrome-muted);';
 
     const allClubs = Array.from(new Set([...s.teams.map((t) => t.club), ...s.players.map((p) => p.club)])).sort();
     /* Real age order (AGE_GROUP_ORDER), not alphabetical — a plain .sort()
@@ -4828,6 +4885,15 @@ class Component extends DCLogic {
       tabTournamentStyle: s.tab === 'tournament' ? tabOn : tabOff,
       tabFixturesStyle: s.tab === 'fixtures' ? tabOn : tabOff,
       tabDocumentsStyle: s.tab === 'documents' ? tabOn : tabOff,
+      sideTeamsStyle: s.tab === 'teams' ? sideOn : sideOff,
+      sidePlayersStyle: s.tab === 'players' ? sideOn : sideOff,
+      sideAccountsStyle: s.tab === 'accounts' ? sideOn : sideOff,
+      sideVenueStyle: s.tab === 'venue' ? sideOn : sideOff,
+      sideClubsStyle: s.tab === 'clubs' ? sideOn : sideOff,
+      sideRegistrationStyle: s.tab === 'registration' ? sideOn : sideOff,
+      sideTournamentStyle: s.tab === 'tournament' ? sideOn : sideOff,
+      sideFixturesStyle: s.tab === 'fixtures' ? sideOn : sideOff,
+      sideDocumentsStyle: s.tab === 'documents' ? sideOn : sideOff,
       showFilters: s.tab === 'teams' || s.tab === 'players',
       teamCount: s.teams.length, playerCount: s.players.length,
 

@@ -255,6 +255,13 @@ section('Tab bar');
     vals.tabs[0].style.includes('background:var(--brand);color:#fff;'));
   check('an unselected tab uses Organizer\'s transparent style',
     vals.tabs[1].style.includes('background:transparent;color:var(--ink-muted);'));
+  /* The desktop sidebar renders the SAME tabs list with sideStyle — the
+     active item must discriminate there too, or the sidebar shows no
+     current-tab at all and nothing errors. */
+  check('the selected tab\'s sidebar entry wears the red active style',
+    vals.tabs[0].sideStyle.includes('background:var(--brand);color:#fff;'));
+  check('an unselected tab\'s sidebar entry is the muted chrome style',
+    vals.tabs[1].sideStyle.includes('background:transparent;color:var(--chrome-muted);'));
 
   vals.tabs[2].onPick();
   const vals2 = c.renderVals();
@@ -332,17 +339,27 @@ section('Header: an organiser can get back to the organizer area, and sees who t
      The slice is safe because there is exactly one such block — asserted
      first, or this test starts describing the wrong part of the file. */
   const src = readRepo('Manager.dc.html');
-  const gateRe = /<sc-if value="\{\{ isOrganiser \}\}"/g;
-  check('there is exactly one organiser-gated block in the template', (src.match(gateRe) || []).length === 1);
-  const gateStart = src.indexOf('<sc-if value="{{ isOrganiser }}"');
-  const GATE = src.slice(gateStart, src.indexOf('</sc-if>', gateStart));
-  check('the organiser block links back to the organizer area', /href="\/organizer"/.test(GATE));
-  check('…named for where it goes', />View organizer area</.test(GATE));
-  check('…and labels the age switcher "Viewing as"', /Viewing as/.test(GATE));
-  check('the switcher itself is inside the same block', /onChange="\{\{ onSwitchAge \}\}"/.test(GATE));
-  // FAULT-PROOF companions for the structural slice: outside the gate the
+  /* Three gates since the desktop sidebar (22 Aug 2026): the band's
+     switcher-and-link block, the sidebar's switcher, the sidebar's footer
+     link. The band and the sidebar are two CSS-gated copies of the same
+     controls, so the organiser-only bits are gated in both. */
+  const gates = [];
+  {
+    const gateRe = /<sc-if value="\{\{ isOrganiser \}\}"/g;
+    let m;
+    while ((m = gateRe.exec(src)) !== null) {
+      gates.push(src.slice(m.index, src.indexOf('</sc-if>', m.index)));
+    }
+  }
+  check('the organiser-gated blocks exist — band, sidebar switcher, sidebar link', gates.length === 3);
+  check('a gated block links back to the organizer area', gates.some((g) => /href="\/organizer"/.test(g)));
+  check('…named for where it goes', gates.some((g) => />View organizer area</.test(g)));
+  check('…and labels the age switcher "Viewing as"', gates.some((g) => /Viewing as/.test(g)));
+  check('the switcher itself is inside a gate', gates.some((g) => /onChange="\{\{ onSwitchAge \}\}"/.test(g)));
+  // FAULT-PROOF companions for the structural slice: outside the gates the
   // link must NOT exist, or a manager would see a door they cannot open.
-  const OUTSIDE = src.slice(0, gateStart) + src.slice(src.indexOf('</sc-if>', gateStart));
+  let OUTSIDE = src;
+  for (const g of gates) OUTSIDE = OUTSIDE.replace(g, '');
   check('no organizer-area link leaks outside the organiser gate', !/href="\/organizer"/.test(OUTSIDE));
   check('everyone still gets the main-site link', /href="Quins JRT\.dc\.html"[^>]*>← Main site</.test(src));
 }

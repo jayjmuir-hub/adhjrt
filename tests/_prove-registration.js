@@ -5451,8 +5451,14 @@ const FAULTS = [
   {
     name: 'the View organizer area link is dropped from the header',
     suite: 'test-manager-dc.js',
-    apply: () => patch('Manager.dc.html',
-      '            <a href="/organizer" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View organizer area</a>\n', ''),
+    /* Two CSS-gated copies since the desktop sidebar — the regression that
+       matters is losing the affordance EVERYWHERE, so both go. */
+    apply: () => {
+      patch('Manager.dc.html',
+        '            <a href="/organizer" style="font-size:13px;font-weight:700;color:var(--chrome-muted);border-left:1px solid var(--chrome-line);padding-left:14px;transition:color .18s ease" style-hover="color:#FFFFFF">View organizer area</a>\n', '');
+      patch('Manager.dc.html',
+        '<sc-if value="{{ isOrganiser }}" hint-placeholder-val="{{ false }}"><a href="/organizer" style="font-size:12.5px;font-weight:700;color:var(--chrome-muted)" style-hover="color:#FFFFFF">View organizer area</a></sc-if>', '');
+    },
     expect: ['links back to the organizer area'],
   },
   {
@@ -5470,7 +5476,10 @@ const FAULTS = [
   {
     name: 'the "Viewing as" label on the age switcher is dropped',
     suite: 'test-manager-dc.js',
-    apply: () => patch('Manager.dc.html', '>Viewing as</span>', '></span>'),
+    apply: () => {
+      patch('Manager.dc.html', '>Viewing as</span>', '></span>');
+      patch('Manager.dc.html', '<div class="sgroup">Viewing as</div>', '<div class="sgroup"></div>');
+    },
     expect: ['labels the age switcher "Viewing as"'],
   },
   {
@@ -7480,7 +7489,7 @@ const FAULTS = [
     suite: 'test-design-polish.js',
     apply: () => patch(ORG, '  @media(max-width:760px){',
       '  @media(max-width:99999px) and (min-width:99998px){'),
-    expect: ['it is the 760px phone breakpoint'],
+    expect: ['one is the 760px phone breakpoint'],
   },
   {
     /* ⚠️ THE COMMENT DECOY. Removes the class from the shell while leaving the
@@ -8964,6 +8973,46 @@ const FAULTS = [
     suite: 'test-backoffice-retheme.js',
     apply: () => patch('Manager.dc.html', 'background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px', 'background:var(--surface-sunk)30;border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px'),
     expect: ['no var() token wears an alpha suffix'],
+  },
+  /* ---- the desktop sidebar (22 Aug 2026) --------------------------------- */
+  {
+    name: 'the sidebar loses its landmark role',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Organizer.dc.html',
+      '<aside class="bo-side" aria-label="Primary">', '<aside class="bo-side">'),
+    expect: ['Organizer.dc.html: the sidebar exists and is the primary nav landmark'],
+  },
+  {
+    /* The likeliest CSS rot: someone "tidies" the selector and the pill tab
+       bar renders BESIDE the sidebar on desktop. */
+    name: 'the desktop gate stops hiding the tab bar',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Manager.dc.html',
+      '.bo-band,.bo-tabs{display:none}', '.bo-band{display:none}'),
+    expect: ['Manager.dc.html: at 1100px the band and tabs hide'],
+  },
+  {
+    /* Without the default, the sidebar is a visible block element on every
+       phone, on top of the layout that was measured at 390px. */
+    name: 'the sidebar loses its mobile display:none default',
+    suite: 'test-backoffice-retheme.js',
+    apply: () => patch('Manager.dc.html', '.bo-side{display:none}', ''),
+    expect: ['Manager.dc.html: the sidebar is hidden by default'],
+  },
+  {
+    name: 'the sidebar organizer link escapes the organiser gate',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      '<sc-if value="{{ isOrganiser }}" hint-placeholder-val="{{ false }}"><a href="/organizer" style="font-size:12.5px;font-weight:700;color:var(--chrome-muted)" style-hover="color:#FFFFFF">View organizer area</a></sc-if>',
+      '<a href="/organizer" style="font-size:12.5px;font-weight:700;color:var(--chrome-muted)" style-hover="color:#FFFFFF">View organizer area</a>'),
+    expect: ['no organizer-area link leaks outside the organiser gate'],
+  },
+  {
+    name: 'the sidebar stops marking the active tab',
+    suite: 'test-manager-dc.js',
+    apply: () => patch('Manager.dc.html',
+      'sideStyle: s.tab === t.id ? sideOn : sideOff,', 'sideStyle: sideOff,'),
+    expect: ["the selected tab's sidebar entry wears the red active style"],
   },
   {
     name: 'the bright on-dark red lands on the light sign-in card',

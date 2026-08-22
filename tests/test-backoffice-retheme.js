@@ -67,11 +67,12 @@ async function main() {
 
   section('The bright red never lands on a light surface');
   {
-    /* Outside the :root definition, --brand-ondark may appear only in the
-       dashboards' dark chrome header (the crest gradient) — once each. */
+    /* Outside the :root definition, --brand-ondark may appear only on the
+       dashboards' dark chrome — the band's crest and the sidebar's, two
+       CSS-gated copies of the same header. */
     for (const f of FILES) {
       const uses = (live(src[f]).match(/var\(--brand-ondark\)/g) || []).length;
-      const want = f === 'Signin.dc.html' ? 0 : 1;
+      const want = f === 'Signin.dc.html' ? 0 : 2;
       eq(`${f}: var(--brand-ondark) used exactly ${want}x outside the token block`, uses, want);
     }
   }
@@ -102,6 +103,38 @@ async function main() {
       const mangled = live(src[f]).match(/var\(--[\w-]+\)[0-9A-Fa-f]{2}(?![\w%])/);
       check(`${f}: no var() token wears an alpha suffix`, !mangled, mangled && mangled[0]);
     }
+  }
+
+  section('The desktop sidebar — the "website, not app" shell');
+  {
+    /* Jay, of the palette-only first pass: "still feels like an app and not
+       a website". The shell is Club Hub's phase 2: fixed dark sidebar on
+       desktop, CSS-only gating, phone layout untouched. The band and the
+       sidebar are two copies of the same controls; CSS decides which shows,
+       so the gate CSS is as load-bearing as the markup. */
+    const DASHES = ['Manager.dc.html', 'Organizer.dc.html'];
+    for (const f of DASHES) {
+      check(`${f}: the sidebar exists and is the primary nav landmark`,
+        src[f].includes('<aside class="bo-side" aria-label="Primary">'));
+      check(`${f}: the band and tab bar carry the classes the gate hides`,
+        src[f].includes('class="bo-band"') && src[f].includes('class="bo-tabs"'));
+      check(`${f}: the sidebar is hidden by default (mobile keeps its layout)`,
+        src[f].includes('.bo-side{display:none}'));
+      check(`${f}: at 1100px the band and tabs hide and the content clears the sidebar`,
+        src[f].includes('.bo-band,.bo-tabs{display:none}')
+        && src[f].includes('.bo{margin:0 auto 0 280px !important}'));
+    }
+    check('the two dashboards share one identical sidebar CSS block',
+      (() => {
+        const slice = (t) => {
+          const i = t.indexOf('@media(min-width:1100px){');
+          return i === -1 ? '' : t.slice(i, t.indexOf('\n  }\n', i));
+        };
+        const a = slice(src['Manager.dc.html']), b = slice(src['Organizer.dc.html']);
+        return a.length > 0 && a === b;
+      })());
+    check('Signin.dc.html has no sidebar — one centred card needs no shell',
+      !src['Signin.dc.html'].includes('bo-side'));
   }
 
   section('Contrast — computed from the token block, not asserted from memory');

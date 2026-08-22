@@ -424,8 +424,11 @@ section('The organiser dashboard has a phone layout at all');
   /* ⚠️ THE COUNT, NOT JUST THE PRESENCE. Exactly one media rule survives
      comment-stripping. The raw file contains the string three times. */
   const orgMedia = (ORG.match(/@media/g) || []).length;
-  eq('exactly one real @media rule, once the warnings are stripped out', orgMedia, 1);
-  check('…and it is the 760px phone breakpoint', /@media\(max-width:760px\)\{/.test(ORG));
+  /* Two since the desktop sidebar (22 Aug 2026): the 760px phone block and
+     the 1100px sidebar block. */
+  eq('exactly two real @media rules, once the warnings are stripped out', orgMedia, 2);
+  check('…one is the 760px phone breakpoint', /@media\(max-width:760px\)\{/.test(ORG));
+  check('…and the other is the 1100px desktop-sidebar breakpoint', /@media\(min-width:1100px\)\{/.test(ORG));
 
   /* Scoped to the shell, not the document — and the class has to be ON the
      shell, not merely mentioned in a comment about it. */

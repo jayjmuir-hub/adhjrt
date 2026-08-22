@@ -170,7 +170,39 @@ faults — except for four things learned by doing it:
    distinct slates and collapsing them changes hierarchy the plan never
    promised to change.
 
-**Verified:** whole suite green; prover 930/930 with the clean baseline up
+## Phase 2, same day: the desktop sidebar — the part that was the actual point
+
+⚠️ **The palette pass above missed the goal.** Jay, on seeing it: *"i don't
+really see much different, no side tool bar, still feels like an app and not
+a website, that was the main goal of redesigning the desktop version of Club
+Hub."* The retheme this spec was named for is the paint; the SHELL is what
+makes the three properties read as one family. Recorded so the next
+"line up with X" request gets asked what X *feels* like, not just what
+colours it wears.
+
+What shipped, modelled on Club Hub's phase-2 shell (`src/components/
+Sidebar.jsx`, itself measured off the member portal):
+
+- **A fixed 256px dark-chrome sidebar on both dashboards**: crest and
+  wordmark at top, the full tab nav as a column (Organizer keeps its three
+  group labels; Manager renders the same `tabs` list the pill bar uses, via
+  a new per-tab `sideStyle`), active item in brand red, and the session
+  block — name, role, My account, Sign out, cross-links — at the bottom.
+- **CSS-only gating at 1100px**, the same trick as Club Hub's
+  `hidden desktop:flex`: below it, NOTHING changes — the chrome band and
+  pill tabs are the phone/tablet layout and the measured 390px behaviour is
+  untouched. The band and sidebar are **two copies of the same controls
+  wired to the same bindings**; CSS alone decides which shows.
+- **The organiser-only bits stay gated in both copies** (Manager's age
+  switcher and organizer-area link) — the privacy line moved with them, and
+  the leak check now subtracts every gate, not just the first.
+- **Faults follow the two-copy rule:** a fault that used to delete the
+  band's link alone proved nothing once a sidebar copy existed (the prover
+  said NOT CAUGHT, twice) — those faults now delete BOTH copies, because the
+  regression that matters is losing the affordance everywhere.
+
+**Verified:** whole suite green; prover **935/935, 48 clean** after the
+sidebar; the palette pass alone measured 930/930 with the clean baseline up
 exactly one (the proof the new file runs undamaged); 19 pre-existing faults
 quoting old colours reported COULD NOT INJECT and were repointed, never
 deleted. Contrast is computed inside the test from the token block itself.

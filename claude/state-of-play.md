@@ -15,6 +15,16 @@ baseline went 47 → 48 — the proof the new file ran undamaged. **19
 pre-existing faults quoting old colours reported COULD NOT INJECT** and were
 repointed in the same sitting, never deleted.
 
+⚠️ **AND THE PALETTE WAS NOT THE POINT.** Jay, on the preview: *"no side tool
+bar, still feels like an app and not a website, that was the main goal."* Same
+day, phase 2: **a fixed dark sidebar on both dashboards at ≥1100px**, Club
+Hub's shell shape — nav column, active tab in brand red, session block at the
+bottom — CSS-gated so phones keep the measured layout, band and sidebar being
+two copies of the same controls on the same bindings. **Suite after phase 2:
+935/935, 48 clean.** Two faults that deleted only the band's copy of a control
+went NOT CAUGHT once a sidebar copy existed and now delete both — a two-copy
+control needs two-copy faults.
+
 ⚠️ **The 8-digit-hex trap, for the next palette sweep:** `#17A34A30` is hex +
 alpha; a 6-digit inventory grep cannot see it, and a var() swapped into it
 produces `var(--x)30` — invalid CSS, silently transparent. `AGE_TINT` and the

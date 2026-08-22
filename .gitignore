@@ -15,3 +15,7 @@ _msg*.txt
 
 # Node, if anything ever installs here. The site itself has no build step.
 node_modules/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+# Anchored to the root: an unanchored `graft/` also swallows .claude/skills/graft.
+/graft/

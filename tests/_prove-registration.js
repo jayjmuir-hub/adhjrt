@@ -7978,6 +7978,51 @@ const FAULTS = [
       '  <url>\n    <loc>https://adhjrt.com/register-club</loc>\n  </url>\n  <url>\n    <loc>https://adhjrt.com/legal</loc>'),
     expect: ['sitemap does NOT list /register-club'],
   },
+  {
+    /* The live Google symptom: favicon + domain, not the brand. Presence of
+       og:site_name is not the guard — the unhyphenated name was already
+       there and Google still showed adhjrt.com. */
+    name: 'the homepage og:site_name reverts to the domain',
+    suite: 'test-head-metadata.js',
+    apply: () => patch(HOME,
+      '<meta property="og:site_name" content="Abu Dhabi Harlequins - Junior Rugby Tournament">',
+      '<meta property="og:site_name" content="adhjrt.com">'),
+    expect: ['og:site_name is the brand'],
+  },
+  {
+    /* The tag that was live before this change. A check that only asked
+       "is there an og:site_name" would stay green against it. */
+    name: 'og:site_name loses the hyphen Jay named',
+    suite: 'test-head-metadata.js',
+    apply: () => patch(HOME,
+      '<meta property="og:site_name" content="Abu Dhabi Harlequins - Junior Rugby Tournament">',
+      '<meta property="og:site_name" content="Abu Dhabi Harlequins Junior Rugby Tournament">'),
+    expect: ['og:site_name is the brand'],
+  },
+  {
+    name: 'the WebSite JSON-LD is deleted from the homepage',
+    suite: 'test-head-metadata.js',
+    apply: () => patch(HOME,
+      '<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Abu Dhabi Harlequins - Junior Rugby Tournament","alternateName":["ADH JRT","Abu Dhabi Harlequins JRT"],"url":"https://adhjrt.com/"}</script>\n',
+      ''),
+    expect: ['WebSite JSON-LD is in the real <head>'],
+  },
+  {
+    name: 'the WebSite JSON-LD name is the domain instead of the brand',
+    suite: 'test-head-metadata.js',
+    apply: () => patch(HOME,
+      '"@type":"WebSite","name":"Abu Dhabi Harlequins - Junior Rugby Tournament"',
+      '"@type":"WebSite","name":"adhjrt.com"'),
+    expect: ['WebSite name is the brand'],
+  },
+  {
+    /* Adding WebSite by replacing SportsEvent would drop the tournament
+       dates crawlers already read. Beside, not instead. */
+    name: 'SportsEvent JSON-LD is replaced by a second WebSite',
+    suite: 'test-head-metadata.js',
+    apply: () => patch(HOME, '"@type":"SportsEvent"', '"@type":"WebSite"'),
+    expect: ['homepage SportsEvent JSON-LD is still there'],
+  },
 
   /* ==================================================================== */
   /* IMAGE WEIGHT (Aug 2026).

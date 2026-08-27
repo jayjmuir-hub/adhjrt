@@ -855,6 +855,8 @@ The same applies to the club form's `noindex`: present on production at line 19
 The split is simply *does a non-rendering crawler need it*. Everything in the
 left column is a constant — none of it ever needed the engine.
 
+- **The Google site name is `Abu Dhabi Harlequins - Junior Rugby Tournament`, not the domain.** Google's site-name line (the text next to the favicon, not the purple result title) is signalled by `og:site_name` plus a `WebSite` JSON-LD (`name`, `alternateName` of `ADH JRT` then `Abu Dhabi Harlequins JRT`, `url` `https://adhjrt.com/`) in the real `<head>` of every public page. There is no shared layout — each public file carries its own copy, and they must stay byte-identical. The homepage `SportsEvent` JSON-LD stays; WebSite sits beside it. Do not rewrite page titles to carry the site name — Google wants one consistent name, not a slogan stuffed into every `<title>`. `test-head-metadata.js` pins the strings.
+
 - **⚠️ MOVE, never copy.** The helmet is appended to `document.head`, so a tag
   left in both places becomes two `<title>` tags on the live page.
   `test-head-metadata.js` checks each tag is present in `<head>` **and absent

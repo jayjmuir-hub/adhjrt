@@ -120,9 +120,19 @@ section('⚠️ The JSON-LD dates are pinned — they CANNOT be derived');
   /* Structured data is read by crawlers that do not execute JavaScript. That is
      precisely why it lives in the literal <head>, and precisely why it cannot
      be filled in from a fetch. Hardcoded is correct here; unpinned is not. */
-  const ld = (HOME.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/) || [])[1];
-  check('the JSON-LD block was found', !!ld);
-  const data = ld ? JSON.parse(ld) : {};
+  /* ⚠️ PICK SportsEvent BY @type, not "the first JSON-LD script". The homepage
+     now also carries a WebSite block for Google's site-name line. A first-match
+     would silently pin dates on whichever script happened to come first, and
+     adding WebSite ahead of SportsEvent would make this section check a block
+     that has no startDate. || {} so a missing or broken block reports here
+     instead of throwing and taking the rest of the file with it. */
+  const rawBlocks = [...HOME.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  check('at least one JSON-LD block was found', rawBlocks.length > 0);
+  const parsed = rawBlocks.map((m) => {
+    try { return JSON.parse(m[1]); } catch (e) { return {}; }
+  });
+  const data = parsed.find((b) => b && b['@type'] === 'SportsEvent') || {};
+  check('the SportsEvent JSON-LD block was found', data['@type'] === 'SportsEvent');
   check('…and parses as JSON', !!data['@type'], 'a broken block is worse than none — crawlers drop it silently');
 
   eq('startDate matches day one of the default layout', data.startDate, DEFAULT_VENUE.day1.date);

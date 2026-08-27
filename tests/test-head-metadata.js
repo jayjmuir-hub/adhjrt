@@ -92,6 +92,69 @@ section('The pages parents actually share carry a title, a description and a car
 });
 
 /* ====================================================================== */
+section('Google site-name is the brand, not the domain');
+
+/* Google's site-name line (the text next to the favicon, not the purple
+   result title) prefers WebSite JSON-LD, then og:site_name. The homepage
+   already had og:site_name without the hyphen Jay named, and no WebSite
+   block at all — Google showed `adhjrt.com`. There is no shared <head>
+   (no index.html either); each public file carries its own copy.
+
+   ⚠️ PRESENCE OF og:site_name IS NOT ENOUGH. The unhyphenated string was
+   already live and Google still fell back to the domain. Pin the exact
+   brand, and parse the JSON-LD rather than grepping "@type":"WebSite"
+   which a comment could satisfy. || {} so a missing block reports here
+   instead of throwing and taking the rest of the file with it. */
+const SITE_NAME = 'Abu Dhabi Harlequins - Junior Rugby Tournament';
+const SITE_NAME_TAG = `<meta property="og:site_name" content="${SITE_NAME}">`;
+const PUBLIC_PAGES = [
+  'Quins JRT.dc.html', 'Scores & Standings.dc.html',
+  'app.html', 'legal.html', 'rules.html',
+];
+
+function jsonLdOfType(head, type) {
+  const blocks = [...head.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  for (const m of blocks) {
+    let data = {};
+    try { data = JSON.parse(m[1]); } catch (e) { data = {}; }
+    if (data && data['@type'] === type) return data;
+  }
+  return {};
+}
+
+PUBLIC_PAGES.forEach((page) => {
+  const src = readRepo(page);
+  const head = regions(src).head || src;
+
+  /* CONTROL: the share-card section above already proved these heads have
+     crawler tags. An empty head here would fail the exact-string check too,
+     but the count pins that we did not add a second copy (old name + new). */
+  eq(`${page}: exactly one og:site_name`, count(head, /<meta property="og:site_name"/g), 1);
+  check(`${page}: og:site_name is the brand`, head.includes(SITE_NAME_TAG));
+
+  const site = jsonLdOfType(head, 'WebSite');
+  check(`${page}: WebSite JSON-LD is in the real <head>`, site['@type'] === 'WebSite');
+  eq(`${page}: WebSite name is the brand`, site.name, SITE_NAME);
+  eq(`${page}: WebSite url is the homepage`, site.url, 'https://adhjrt.com/');
+  check(`${page}: WebSite alternateName lists ADH JRT first`,
+    Array.isArray(site.alternateName) && site.alternateName[0] === 'ADH JRT',
+    JSON.stringify(site.alternateName || null));
+  check(`${page}: …and Abu Dhabi Harlequins JRT`,
+    Array.isArray(site.alternateName) && site.alternateName.includes('Abu Dhabi Harlequins JRT'));
+});
+
+{
+  /* The homepage already had a SportsEvent block. WebSite sits beside it,
+     never instead of it — crawlers that want the tournament dates still
+     have them. */
+  const homeHead = regions(readRepo('Quins JRT.dc.html')).head;
+  const event = jsonLdOfType(homeHead, 'SportsEvent');
+  check('homepage SportsEvent JSON-LD is still there', event['@type'] === 'SportsEvent');
+  check('⚠️ homepage titles were not rewritten to stuff the site name',
+    /<title>Abu Dhabi Harlequins Junior Rugby Tournament 2026 \| ADH JRT<\/title>/.test(homeHead));
+}
+
+/* ====================================================================== */
 section('⚠️ The back-office pages really do carry noindex — netlify.toml depends on it');
 
 ['Club.dc.html', 'Manager.dc.html', 'Organizer.dc.html', 'Signin.dc.html'].forEach((page) => {

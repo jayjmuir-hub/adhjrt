@@ -2,7 +2,7 @@
 
 Abu Dhabi Harlequins Junior Rugby Tournament. A public marketing site plus a
 live scores app plus an organiser back office, for a two-day youth rugby
-festival on **14–15 November 2026** at Zayed Sports City, Abu Dhabi.
+festival on **7–8 November 2026** at Zayed Sports City, Abu Dhabi.
 
 > **Moving the tournament dates is a code change, in one place.** They live in
 > `DEFAULT_VENUE` in `netlify/functions/_venue.js` (mirrored in

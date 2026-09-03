@@ -68,7 +68,7 @@ function fakeApi(overrides) {
        fault after it reports as caught while proving nothing. */
     isDayOne: (id) => !/^u1[2-6]g?$|^u13$|^u14/.test(String(id)),
     dayLabelOfAgeGroup: (id) => (/^u1[2-6]g?$|^u13$|^u14/.test(String(id))
-      ? 'Sunday 15 November' : 'Saturday 14 November'),
+      ? 'Sunday 8 November' : 'Saturday 7 November'),
     teamShort: (v) => v,
     teamLogoSrc: () => '',
     teamKey: () => [{ code: 'ZZ1', name: 'Zebra Zoo', logoSrc: '' }],

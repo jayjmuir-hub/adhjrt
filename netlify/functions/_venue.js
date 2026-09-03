@@ -34,8 +34,8 @@
    different start times, which the clash check reads correctly. */
 const DEFAULT_VENUE = {
   day1: {
-    date: '2026-11-14',
-    label: 'Saturday 14 November',
+    date: '2026-11-07',
+    label: 'Saturday 7 November',
     short: 'Sat',
     /* Whole / halves / quarters, per pitch, for this day. THE SOURCE OF TRUTH —
        `pitches` below is derived from it and is only written out so the two
@@ -58,8 +58,8 @@ const DEFAULT_VENUE = {
     },
   },
   day2: {
-    date: '2026-11-15',
-    label: 'Sunday 15 November',
+    date: '2026-11-08',
+    label: 'Sunday 8 November',
     short: 'Sun',
     splits: { D3: 1, D2: 1, D1: 1, C4: 2, C5: 1, B1: 2, A1: 2 },
     pitches: ['D3', 'D2', 'D1', 'C4a', 'C4b', 'C5', 'B1a', 'B1b', 'A1a', 'A1b'],

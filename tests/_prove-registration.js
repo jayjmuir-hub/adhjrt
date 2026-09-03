@@ -3507,7 +3507,7 @@ const FAULTS = [
     expect: ['a near-miss is refused, not run'],
   },
   {
-    name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 14-15 November',
+    name: 'onSimulateTournament loses the tournament-day guard, so it can be pressed on 7-8 November',
     suite: 'test-simulate-tournament.js',
     apply: () => patch('Organizer.dc.html',
       "  onSimulateTournament() {\n    if (this.isTournamentDayNow()) return;\n    this.promptModal(",
@@ -5278,7 +5278,7 @@ const FAULTS = [
   {
     name: 'a fourth ad-hoc green sneaks back in',
     suite: 'test-design-polish.js',
-    apply: () => patch(HOME, 'color:#3bd070">SAT 14', 'color:#22c55e">SAT 14'),
+    apply: () => patch(HOME, 'color:#3bd070">SAT 7', 'color:#22c55e">SAT 7'),
     expect: ['one light green tint'],
   },
   /* ---- the wordmark (test-design-polish.js, 3 Aug 2026) ----------------- */
@@ -8359,7 +8359,7 @@ const FAULTS = [
        pinned to the default layout instead. */
     name: 'the JSON-LD tournament dates drift from the layout',
     suite: 'test-homepage-dates.js',
-    apply: () => patch(HOME, '"startDate":"2026-11-14"', '"startDate":"2026-11-07"'),
+    apply: () => patch(HOME, '"startDate":"2026-11-07"', '"startDate":"2026-11-14"'),
     expect: ['startDate matches day one of the default layout'],
   },
 
@@ -8371,25 +8371,25 @@ const FAULTS = [
   {
     name: 'the homepage hero pill keeps the old dates in an abbreviated spelling',
     suite: 'test-homepage-dates.js',
-    apply: () => patch(HOME, 'SAT 14 &amp; SUN 15 NOVEMBER 2026', 'SAT 7 &amp; SUN 8 NOVEMBER 2026'),
+    apply: () => patch(HOME, 'SAT 7 &amp; SUN 8 NOVEMBER 2026', 'SAT 14 &amp; SUN 15 NOVEMBER 2026'),
     expect: ['no page states a day number the layout disagrees with'],
   },
   {
     name: 'the /app hero keeps the old dates in an abbreviated spelling',
     suite: 'test-homepage-dates.js',
-    apply: () => patch('app.html', 'Sat 14 &amp; Sun 15 November 2026', 'Sat 7 &amp; Sun 8 November 2026'),
+    apply: () => patch('app.html', 'Sat 7 &amp; Sun 8 November 2026', 'Sat 14 &amp; Sun 15 November 2026'),
     expect: ['no page states a day number the layout disagrees with'],
   },
   {
     name: 'the age-at-tournament label drifts from the layout',
     suite: 'test-homepage-dates.js',
-    apply: () => patch(HOME, 'Age at tournament (14 Nov 2026)', 'Age at tournament (7 Nov 2026)'),
+    apply: () => patch(HOME, 'Age at tournament (7 Nov 2026)', 'Age at tournament (14 Nov 2026)'),
     expect: ['no page states a day number the layout disagrees with'],
   },
   {
     name: 'the club page banner keeps the old dates',
     suite: 'test-homepage-dates.js',
-    apply: () => patch('Club.dc.html', '14&ndash;15 NOVEMBER 2026', '7&ndash;8 NOVEMBER 2026'),
+    apply: () => patch('Club.dc.html', '7&ndash;8 NOVEMBER 2026', '14&ndash;15 NOVEMBER 2026'),
     expect: ['no page states a day number the layout disagrees with'],
   },
   {

@@ -906,7 +906,7 @@ section('Publish and unpublish');
   let unpublishCalls = 0;
   const c = buildDraw({
     canPublishNow: () => true,
-    getDraw: async () => ({ ...freshDraw(), _publish: { published: true, publishedAt: '2026-11-14T09:00:00Z', publishedBy: 'x', managerCanPublishNow: true } }),
+    getDraw: async () => ({ ...freshDraw(), _publish: { published: true, publishedAt: '2026-11-07T09:00:00Z', publishedBy: 'x', managerCanPublishNow: true } }),
     unpublishDraw: async () => { unpublishCalls++; return { ok: true, published: false }; },
   });
   await c.loadDraw('u14b');

@@ -52,7 +52,7 @@ function makeStore() {
   };
 }
 
-const result = (n) => ({ homeScore: n, awayScore: 0, submittedAt: `2026-11-14T10:0${n}:00.000Z` });
+const result = (n) => ({ homeScore: n, awayScore: 0, submittedAt: `2026-11-07T10:0${n}:00.000Z` });
 
 (async () => {
   /* ==================================================================== */

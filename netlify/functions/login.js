@@ -37,7 +37,7 @@ const { recordSignIn } = require('./_signins');
 /* ⚠️ TWO BUCKETS, AND ONLY FAILURES COUNT AGAINST EITHER. There used to be one,
    keyed on the connection address alone, incremented before the password was
    even looked at. Every manager at Zayed Sports City shares one
-   x-nf-client-connection-ip, so on the morning of 14 November the eleventh
+   x-nf-client-connection-ip, so on the morning of 7 November the eleventh
    manager to sign in — correctly, first time — would have been refused, and any
    mistyped password brought that forward. Ten CORRECT sign-ins exhausted it
    exactly as fast as ten wrong ones.

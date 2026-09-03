@@ -1,4 +1,13 @@
-# ADH JRT — state of play, 22 August 2026
+# ADH JRT — state of play, 3 September 2026
+
+## 3 Sep 2026 — tournament dates restored to 7–8 November 2026
+
+Jay moved ADH JRT back to the original weekend. Source of truth is
+`DEFAULT_VENUE` (day1 = Saturday 7 November, day2 = Sunday 8 November).
+Homepage JSON-LD, countdown fallback (`2026-11-07T04:00:00Z` = 08:00 Asia/Dubai),
+waiver, share-card, and confirmation emails match. Day split unchanged: Saturday
+= Mini, Midi & Colts; Sunday = Youth & Girls; U16B still plays Sunday. Not
+merged yet — production still serves 14–15 until this lands.
 
 ## ✅ 22 Aug 2026 — MERGED AND LIVE at `7b0bc16` — retheme + desktop sidebar
 
@@ -1230,7 +1239,7 @@ as the path you give it.**
 
 | | |
 |---|---|
-| Tournament | **14–15 November 2026**, Zayed Sports City |
+| Tournament | **7–8 November 2026**, Zayed Sports City |
 | Registration | not open; the link goes out ~mid-October. No real club has registered. |
 | Site password | ⚠️ **NOT RECORDED HERE, DELIBERATELY.** Read `projectAccessControls` from the Netlify MCP. This row has been wrong six times. Jay holds the password; it has never been in a message or a tool call. |
 | Branch deploys | allow-list is **`dev, Compare`**. ⚠️ **Free — 0 credits.** ⚠️ A branch deploy outlives its branch and reads production's env vars and stores. **Whether they are password-gated: read the Netlify MCP, not this page.** |

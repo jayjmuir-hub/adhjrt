@@ -483,11 +483,11 @@ section('WHEN the tournament is comes from the code, not the blob');
   /* A blob shaped exactly like a real saved one, but carrying last month's
      dates - which is what production actually held. */
   const stale = clone(V.DEFAULT_VENUE);
-  stale.day1.date = '2026-11-07';
-  stale.day1.label = 'Saturday 7 November';
+  stale.day1.date = '2026-11-14';
+  stale.day1.label = 'Saturday 14 November';
   stale.day1.short = 'SAT-OLD';
-  stale.day2.date = '2026-11-08';
-  stale.day2.label = 'Sunday 8 November';
+  stale.day2.date = '2026-11-15';
+  stale.day2.label = 'Sunday 15 November';
 
   const merged = V.mergeVenue(stale);
   eq('a stale date in the blob does not win on read', merged.day1.date, V.DEFAULT_VENUE.day1.date);

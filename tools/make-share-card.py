@@ -81,7 +81,7 @@ def tournament_dates():
 
 
 def date_line(d1, d2):
-    """'SAT 14 & SUN 15 NOV' - weekday and month COMPUTED, never typed."""
+    """'SAT 7 & SUN 8 NOV' - weekday and month COMPUTED, never typed."""
     a = d1.strftime("%a").upper()
     b = d2.strftime("%a").upper()
     mon = d2.strftime("%b").upper()

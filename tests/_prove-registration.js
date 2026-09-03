@@ -154,8 +154,6 @@ const NEEDED = [
   path.join('assets', 'sponsor-westminster-construction.webp'),
   path.join('assets', 'sponsor-broadway-malyan.webp'),
   path.join('assets', 'sponsor-mccaffertys.webp'),
-  path.join('assets', 'sponsor-bottle-store.webp'),
-  path.join('assets', 'sponsor-sportsmans-arms.webp'),
   path.join('assets', 'sponsor-yas-cycles.webp'),
   path.join('assets', 'sponsor-arabian-swim-academy.webp'),
   path.join('assets', 'sponsor-align-health.webp'),
@@ -2060,7 +2058,7 @@ const FAULTS = [
     name: 'a supporter is dropped without anybody noticing',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, url: 'https://alignhealth.ae/' },\n", ''),
-    expect: ['eighteen confirmed supporters'],
+    expect: ['sixteen confirmed supporters'],
   },
   {
     /* A mistyped filename is a broken image on the live site that reports
@@ -2102,7 +2100,7 @@ const FAULTS = [
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Oak View Group',",
       "  { name: 'HSBC', file: 'assets/sponsor-hsbc-white.webp', h: 44, url: 'https://www.hsbc.ae/' },\n  { name: 'Oak View Group',"),
-    expect: ['eighteen confirmed supporters'],
+    expect: ['sixteen confirmed supporters'],
   },
   {
     /* ⚠️ REPOINTED 5 Aug. This used to inject a half-added Recover — a name
@@ -2113,7 +2111,7 @@ const FAULTS = [
     name: 'a sponsor is named with no file behind it',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "file: 'assets/sponsor-align-health.webp'", "file: ''"),
-    expect: ['eighteen confirmed supporters'],
+    expect: ['sixteen confirmed supporters'],
   },
   {
     name: 'the grid label is changed so it reads as one flat wall with HSBC',
@@ -2390,7 +2388,7 @@ const FAULTS = [
     name: 'Bili Boys is dropped from the supporters list',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Bili Boys Biltong',                      file: 'assets/sponsor-bili-boys.webp',              h: 61, url: 'https://www.biliboys.ae/' },\n", ''),
-    expect: ['eighteen confirmed supporters', 'Bili Boys is on the page'],
+    expect: ['sixteen confirmed supporters', 'Bili Boys is on the page'],
   },
   {
     /* ⚠️ REPOINTED 5 Aug. This guarded Anderson's red while the grid recoloured
@@ -2411,7 +2409,7 @@ const FAULTS = [
     name: 'Anderson is dropped from the supporters list',
     suite: 'test-sponsors.js',
     apply: () => patch(HOME, "  { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 56, url: 'https://anderson.ae/' },\n", ''),
-    expect: ['eighteen confirmed supporters', 'Anderson is on the page'],
+    expect: ['sixteen confirmed supporters', 'Anderson is on the page'],
   },
   {
     /* ⚠️ A white box spreading to a logo that reads perfectly well on the dark
@@ -2459,8 +2457,22 @@ const FAULTS = [
        stamp bug, and it is invisible to every check that only counts rows. */
     name: "the near-square marks are shrunk back to the pack",
     suite: 'test-sponsors.js',
-    apply: () => patch(HOME, "sponsor-sportsmans-arms.webp',        h: 68,", "sponsor-sportsmans-arms.webp',        h: 35,"),
+    apply: () => patch(HOME, "sponsor-ashurst-perkins-coie.webp',   h: 68,", "sponsor-ashurst-perkins-coie.webp',   h: 35,"),
     expect: ['squarest marks'],
+  },
+  {
+    /* A tidy-up that puts a removed pub back under another company's logo.
+       Count stays 16, so only the named-absence check can catch it. */
+    name: "Sportsman's Arms is put back on the live supporters list",
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "{ name: 'Align Health',", '{ name: "The Sportsman\'s Arms",'),
+    expect: ['not a current supporter'],
+  },
+  {
+    name: 'The Bottle Store is put back on the live supporters list',
+    suite: 'test-sponsors.js',
+    apply: () => patch(HOME, "{ name: 'Yas Mena Cycles',", "{ name: 'The Bottle Store',"),
+    expect: ['not a current supporter'],
   },
 
   /* ---- the club form's window exemption (4 Aug 2026) -------------------- */

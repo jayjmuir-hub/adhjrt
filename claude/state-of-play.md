@@ -1,5 +1,11 @@
 # ADH JRT — state of play, 3 September 2026
 
+## 3 Sep 2026 — two pubs off the live sponsor strip
+
+Jay asked Sportsman's Arms and The Bottle Store off the homepage supporters
+grid. Brighton College Abu Dhabi was already a sponsor and is untouched.
+HSBC stays principal. Not merged.
+
 ## 3 Sep 2026 — tournament dates restored to 7–8 November 2026
 
 Jay moved ADH JRT back to the original weekend. Source of truth is
@@ -1252,7 +1258,7 @@ as the path you give it.**
 | Manager dashboard `/manager` | LIVE |
 | `/organizer` Clubs tab | LIVE, 4 Aug |
 | Club registration | **LIVE, WORKING, AND READY TO SEND.** Key rotated; Jay tested the live link 5 Aug and the sheet is verified EMPTY (header row only). Nothing left to do before emailing clubs. |
-| The supporters grid | **LIVE, 5 Aug** — 18 sponsors, every logo linked |
+| The supporters grid | **LIVE, 5 Aug** — 16 sponsors, every logo linked. Sportsman's Arms and The Bottle Store came off 3 Sep 2026; Brighton College Abu Dhabi was already on the list and stays. |
 | **The header nav** | **LIVE (`24fb84c`)** — holo pill + underline on hover, current section underlined, bar condenses past 90px of scroll. ⚠️ `data-sec` and `.hdr-tight` live on `<html>`; never move them onto the header. ⚠️ The nav's width is now load-bearing — pill padding and gap are pinned by tests because widening them overflows the sticky bar. |
 | **`/rules`** | **LIVE (`24fb84c`), button themed and centred (`f24ae0d`)** — placeholder page. ⚠️ **Jay owes the actual rules;** the block to replace is marked in `rules.html` and nothing else on that page needs touching. ⚠️ The button's `width:fit-content` wrapper is load-bearing — see `f24ae0d` above. |
 | **The About section** | **LIVE, 6 Aug.** A **coverflow carousel** — six cards recycling eleven photos, auto-advancing every 6s, no drag and no keys. ⚠️ **The box bleeds past its grid column to the right edge of the page**, which is what buys the width without shrinking the 66px heading; `100vw` counts the scrollbar and the centred section does not, so it subtracts `--sbw`. ⚠️ **The crest and flying bat are back** — badge is the HOLED `crest-shield.png` and it stands or falls with the bat. ⚠️ **Hidden below 760px and the photos are not fetched there.** ⚠️ `prefers-reduced-motion` does NOT stop the timer — with no controls there is nothing to press. Phone walkthrough still **pending**. |

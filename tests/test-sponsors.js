@@ -647,7 +647,16 @@ section('The supporters grid');
      the COUNT check instead of the format check — the fault run caught that.
      A pattern that only matches the healthy case cannot report the sick one. */
   const rows = [...PAGE.matchAll(/\{ name: (.+?), *file: '(assets\/sponsor-[a-z0-9-]+\.[a-z]+)', *h: (\d+)(, light: true)?, url: '([^']*)' \}/g)];
-  eq('eighteen confirmed supporters', rows.length, 18);
+  eq('sixteen confirmed supporters', rows.length, 16);
+
+  /* Jay, 3 Sep 2026: take the two pubs off the live strip. Brighton College
+     Abu Dhabi was already a row and is not this change. Asserted against the
+     parsed rows, not PAGE.includes, because the tombstone next to the list
+     names them on purpose. */
+  check("Sportsman's Arms is not a current supporter",
+    !rows.some((r) => /Sportsman/i.test(r[1]) || /sportsmans/i.test(r[2])));
+  check('The Bottle Store is not a current supporter',
+    !rows.some((r) => /Bottle Store|Bottle Shop/i.test(r[1]) || /bottle/i.test(r[2])));
 
   /* ⚠️ EVERY ROW CARRIES ITS OWN HEIGHT, and the markup must use it as a
      MAXIMUM. The first version rendered every logo at a fixed height:44px with
@@ -656,7 +665,7 @@ section('The supporters grid');
            Malyan is 11.5:1; at 44px tall it wants 506px of width, gets ~246,
            and renders distorted rather than smaller. Nothing reports it.
        (b) equal height is not equal presence. The near-square marks (Ashurst,
-           The Sportsman's Arms, ~1.1:1) read as postage stamps beside a 5:1
+           Sedbergh, ~1.1:1) read as postage stamps beside a 5:1
            wordmark, which is exactly the sponsor-relations problem this
            section exists to avoid.
      h normalises optical AREA instead — see claude/specs/spec-sponsors-grid.md.
@@ -697,8 +706,8 @@ section('The supporters grid');
      only reason it was noticed. The claim is widest < mid-pack < squarest, so
      the middle term has to be a middle mark. */
   check('the squarest marks are sized UP, not left as postage stamps',
-    hOf('sportsmans-arms') > hOf('oak-view-group') && hOf('ashurst') > hOf('oak-view-group'),
-    `${hOf('sportsmans-arms')}/${hOf('ashurst')} vs ${hOf('oak-view-group')}`);
+    hOf('ashurst') > hOf('oak-view-group') && hOf('sedbergh') > hOf('oak-view-group'),
+    `${hOf('ashurst')}/${hOf('sedbergh')} vs ${hOf('oak-view-group')}`);
 
   /* ⚠️ BROADWAY MALYAN'S FILE IS THE WORDMARK, NOT THE TAGLINE. The first one
      they supplied was "Creating places. Together." — theirs, but it does not
@@ -855,7 +864,7 @@ section('The supporters grid');
   eq('⚠️ no sponsor gets a white box any more', lit.length, 0);
   /* CONTROL. "none are light" is also true of an empty list, which is what a
      broken row regex produces — and that would pass every check below. */
-  eq('CONTROL: the rows really were parsed', rows.length, 18);
+  eq('CONTROL: the rows really were parsed', rows.length, 16);
 
   /* ⚠️ THE TILES ALTERNATE, AND THE ORDER OF THE LIST IS WHAT DOES IT — not an
      :nth-child rule. A positional CSS rule would paint every other tile white

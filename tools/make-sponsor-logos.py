@@ -63,7 +63,6 @@ MAP = {
     "2 McCaffertys Dark Mode.png":           "sponsor-mccaffertys.webp",
     "3 Crompton Partners Dark Mode.png":     "sponsor-crompton-partners.webp",
     "3 Sedbergh Dark Mode.png":              "sponsor-sedbergh.webp",
-    "3 Sportsmans Arms Dark Mode.png":       "sponsor-sportsmans-arms.webp",
     "3 V&P Dark Mode.png":                   "sponsor-value-performance.webp",
     # ⚠️ THE SOURCE FILENAME IS MISSPELLED AND THE SITE IS RIGHT. The pack calls
     # them "Andersen"; they are Anderson Executive Development Centre. Checked
@@ -82,7 +81,6 @@ MAP = {
     "5 Beond Dark Mode.png":                 "sponsor-beond.webp",
     "5 Broadway Malyan Dark Mode.png":       "sponsor-broadway-malyan.webp",
     "5 Recover Dark Mode.png":               "sponsor-recover.webp",
-    "5 The Bottle Store Dark Mode.png":      "sponsor-bottle-store.webp",
     "5 Yas Dark Mode.png":                   "sponsor-yas-cycles.webp",
 }
 
@@ -93,6 +91,11 @@ MAP = {
 # glaring white rectangle in the grid. The asset already on the site reads
 # correctly on dark, so it is left alone. Listing them here and letting the
 # ground-keying below "handle" it would erase their black type instead.
+#
+# TOMBSTONE 3 Sep 2026 — Sportsmans Arms and The Bottle Store came off the
+# live supporters list at Jay's request. Do not put their MAP entries back: a
+# re-run would recreate the deleted assets and invite the rows back onto the
+# homepage.
 
 
 def ground_kind(im):

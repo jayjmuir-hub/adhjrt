@@ -503,8 +503,13 @@ just above the mobile breakpoint.
 
 ## The supporters grid
 
-Eighteen sponsors under **With the support of**, below the HSBC card in
+Sixteen sponsors under **With the support of**, below the HSBC card in
 `<section id="sponsors">`. Spec: `claude/specs/spec-sponsors-grid.md`.
+
+⚠️ **The Sportsman's Arms and The Bottle Store came off this list on 3 Sep
+2026**, at Jay's request. They were two of the original eighteen. Do not put
+them back from the old logo pack. Brighton College Abu Dhabi was already a
+row and is not this change.
 
 **The list is DATA** — `SPONSORS` near the top of the homepage script block,
 bound through `renderVals()`. Adding a sponsor is one line and one file, never

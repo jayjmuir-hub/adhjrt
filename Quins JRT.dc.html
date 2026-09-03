@@ -2911,7 +2911,7 @@
                        mark - width is clamped while height is not, so Broadway
                        Malyan (11.5:1) renders distorted, not shrunk;
                    (b) equal height is not equal presence. At 44px the near
-                       square marks (Ashurst, The Sportsman's Arms, ~1.1:1)
+                       square marks (Ashurst, Sedbergh, ~1.1:1)
                        read as postage stamps next to a 5:1 wordmark.
                    s.h is per-logo and normalises optical AREA. See
                    claude/specs/spec-sponsors-grid.md. -->
@@ -3514,8 +3514,8 @@ const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.
 /* h = the logo's MAX height in the supporters grid, in px.
    Every file is white-on-transparent and already trimmed to 160px tall with
    no padding, so the only thing that differs is aspect ratio - and it differs
-   by more than ten times (Broadway Malyan is 11.5:1, The Sportsman's Arms is
-   1.1:1). Rendering them all at one height makes the square ones look tiny
+   by more than ten times (Broadway Malyan is 11.5:1, Ashurst is
+   ~1.1:1). Rendering them all at one height makes the square ones look tiny
    and the wide ones look enormous, so h normalises optical area instead:
        h = round(83.5 / sqrt(width / height)), clamped to 26..68
    68 is what fits inside the 104px tile with 16px of padding; 26 is the floor
@@ -3572,8 +3572,9 @@ const SPONSORS = [
   { name: 'Sedbergh School',                        file: 'assets/sponsor-sedbergh.webp',               h: 68, url: 'https://www.sedberghschool.org/' },
   { name: 'Broadway Malyan',                        file: 'assets/sponsor-broadway-malyan.webp',        h: 27, url: 'https://www.broadwaymalyan.com/' },
   { name: "McCafferty's",                           file: 'assets/sponsor-mccaffertys.webp',            h: 40, url: 'https://mccaffertysyas.com/' },
-  { name: 'The Bottle Store',                       file: 'assets/sponsor-bottle-store.webp',           h: 68, url: 'https://www.thebottlestore.ae/' },
-  { name: "The Sportsman's Arms",                   file: 'assets/sponsor-sportsmans-arms.webp',        h: 68, url: 'https://sportsmanszsc.com/' },
+  /* TOMBSTONE 3 Sep 2026 — The Sportsman's Arms and The Bottle Store came
+     off the live supporters list at Jay's request. Do not put them back from
+     the old logo pack. Their asset files were deleted with the rows. */
   { name: 'Align Health',                           file: 'assets/sponsor-align-health.webp',           h: 40, url: 'https://alignhealth.ae/' },
   { name: 'Yas Mena Cycles',                        file: 'assets/sponsor-yas-cycles.webp',             h: 65, url: 'https://yascycles.com/' },
   { name: 'Anderson Executive Development Centre',  file: 'assets/sponsor-anderson-education.webp',     h: 56, url: 'https://anderson.ae/' },

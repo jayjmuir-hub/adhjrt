@@ -1,4 +1,36 @@
-# ADH JRT — state of play, 3 September 2026
+# ADH JRT — state of play, 8 September 2026
+
+## 8 Sep 2026 — sign in with Quins Club Hub specced, not built — GOES FIRST
+
+Jay: nobody uses the tournament site until early October, so the back end
+is free to change, and each piece deploys as it lands rather than batching.
+Order: hub sign-in → draw rights → pitch marshals.
+Spec at `claude/specs/spec-club-hub-sign-in-sep-2026.md`. Measured: the
+club hub's Supabase (`lusmshimxdcxpnrktlgz`) signs with ES256 and publishes
+its JWKS, so no secret is shared. A second Supabase project, `adhjrt-app`
+(`nnlfjbnoiyqcvxwbwsjf`, created 21 Jul, never used, empty), was found on
+the way and **deleted by Jay the same day**; tombstone in the spec.
+All three draw-rights decisions are now taken (1 by this spec; 2 and 3 on
+Jay's "go with your recommendations", 8 Sep). No open decisions on any of
+the three specs.
+
+## 8 Sep 2026 — draw rights specced, not built
+
+Jay wants managers to stop getting the full draw editor by default. Spec at
+`claude/specs/spec-draw-rights-sep-2026.md`: per-manager switches on the
+Accounts tab (pools/teams, times/pitches), publishing organiser-only, a
+match-day freeze, send-for-review by email, and a ten-deep draft history.
+All decisions taken (see the entry above). No code yet.
+On branch `claude/graft-deep-build-41417f`, not on `dev` or `main`.
+
+## 8 Sep 2026 — pitch marshals specced, not built
+
+Volunteer parents score at the pitch through a per-pitch, per-day link the
+manager issues as a QR code; name typed on every save, so rotation needs no
+admin. Spec at `claude/specs/spec-pitch-marshals-sep-2026.md`. Same branch,
+no code. ⚠️ Found on the way: `get-results.js` serves `submittedBy`
+(a production username) and the spirit nominees to the public today; the
+spec makes stripping them part of the change.
 
 ## 3 Sep 2026 — two pubs off the live sponsor strip
 

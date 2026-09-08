@@ -299,8 +299,10 @@ section('accounts-admin.js stays organiser-only — the other-people actions are
      because a REVOKED organiser's token still carried role:'organizer'. */
   check('…and re-reads the account behind the token',
     /await resolveSession\(event\)/.test(admin));
-  check('the account listing still strips passwordHash AND googleSub',
-    /accounts\.map\(\(\{ passwordHash, googleSub, \.\.\.rest \}\)/.test(admin),
+  /* hubSub joined the strip list in Sep 2026 (spec-club-hub-sign-in): it is
+     the club hub's internal user id, no more for display than googleSub. */
+  check('the account listing still strips passwordHash, googleSub AND hubSub',
+    /accounts\.map\(\(\{ passwordHash, googleSub, hubSub, \.\.\.rest \}\)/.test(admin),
     'the card is now what renders this listing');
 
   /* changeMine moved here with its subject — two ways to change your own

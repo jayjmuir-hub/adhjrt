@@ -256,6 +256,10 @@ function hasAgeGroupAccess(session, ageGroupId) {
    one copy, and a test asserts neither file derives it for itself again. */
 function signInMethodOf(account) {
   const a = account || {};
+  /* Club Hub (Sep 2026) accounts hold no password and no Google id; they are
+     the hub's people. An account cannot be both hub and anything else,
+     because hub-auth.js never links onto an existing record. */
+  if (a.hubSub) return 'Club Hub';
   if (a.passwordHash && a.googleSub) return 'Both';
   if (a.googleSub) return 'Google';
   return 'Password';

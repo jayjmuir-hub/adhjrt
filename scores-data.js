@@ -2007,6 +2007,42 @@ export async function googleAuth({ idToken, role = 'manager', inviteCode, userna
   return { ok: false, error: json.error || 'Could not sign in with Google.' };
 }
 
+/* ---- Sign in with Quins Club Hub (Sep 2026) --------------------------------
+   Spec: claude/specs/spec-club-hub-sign-in-sep-2026.md. The club hub is the
+   identity provider; hub-auth.js checks its token against the hub's PUBLIC
+   key and answers with the tournament's own session, or "pending" while an
+   organiser has yet to give the person a role.
+
+   ⚠️ THE HUB ORIGIN IS A CONSTANT. One club, one hub, both answered 200 on
+   8 Sep 2026 (adhquins-clubhub.com and quins-club-hub.netlify.app); the
+   custom domain is the one people know. The hub's /connect/tournament screen
+   allow-lists the tournament origins it will send a token back to — a
+   deploy preview is NOT on that list, so test this on the dev branch URL. */
+export const HUB_ORIGIN = 'https://adhquins-clubhub.com';
+
+export function hubSignInUrl() {
+  const back = (typeof window !== 'undefined' && window.location && window.location.origin) || 'https://adhjrt.com';
+  return `${HUB_ORIGIN}/connect/tournament?return=${encodeURIComponent(back)}`;
+}
+
+/* No local-preview stand-in: a hub token can only be minted by the hub, so
+   this function is honest about needing the live site. */
+export async function hubAuth(hubToken) {
+  const r = await tryFetchJson('/.netlify/functions/hub-auth', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hubToken }),
+  });
+  if (!r.real) return { ok: false, error: 'Club Hub sign-in needs the live site.' };
+  const json = r.json;
+  if (json.ok) {
+    const session = { ...json.session, token: json.token };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true, session };
+  }
+  if (json.pending) return { ok: false, pending: true, message: json.error };
+  return { ok: false, error: json.error || 'Could not sign in with the Club Hub.' };
+}
+
 /* ---- Your own account (my-account.js, added 3 Aug 2026) -------------------
    BOTH ROLES. The endpoint's door is any valid session, not an organiser one,
    which is why these live here in the shared layer rather than in

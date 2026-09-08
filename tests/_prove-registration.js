@@ -166,6 +166,13 @@ const NEEDED = [
   path.join('netlify', 'functions', '_agegroups.js'),
   path.join('netlify', 'functions', '_intake.js'),
   path.join('netlify', 'functions', '_ratelimit.js'),
+  /* Sign in with Quins Club Hub (Sep 2026). NINTH time a new module has had
+     to be added here — same trap as every entry above: test-hub-auth.js
+     REQUIRES both files, so leaving them out reads as MODULE_NOT_FOUND, the
+     suite fails UNDAMAGED, and every fault aimed at it reports "caught"
+     while proving nothing. */
+  path.join('netlify', 'functions', 'hub-auth.js'),
+  path.join('netlify', 'functions', '_hubAuth.js'),
   path.join('netlify', 'functions', '_teams.js'),
   path.join('netlify', 'functions', '_sheets.js'),
   path.join('netlify', 'functions', 'submit-registration.js'),
@@ -3402,7 +3409,8 @@ const FAULTS = [
     name: 'accounts-admin.js stops stripping googleSub from the account listing',
     suite: 'test-google-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      "accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }), lastSignInAt: signIns[rest.username] || null })),",
+      /* Repointed 8 Sep 2026 when hubSub joined the strip list (spec-club-hub-sign-in). */
+      "accounts.map(({ passwordHash, googleSub, hubSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub }), lastSignInAt: signIns[rest.username] || null })),",
       "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: 'Password', lastSignInAt: null })),"),
     expect: ['googleSub is stripped from the listing the same way passwordHash is'],
   },
@@ -3413,7 +3421,8 @@ const FAULTS = [
     name: 'accounts-admin.js goes back to deriving signInMethod for itself',
     suite: 'test-google-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      "signInMethod: signInMethodOf({ passwordHash, googleSub })",
+      /* Repointed 8 Sep 2026 when hubSub joined the strip list. */
+      "signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub })",
       "signInMethod: googleSub ? 'Google' : 'Password'"),
     expect: ['it is NOT derived locally', 'a human-readable sign-in method is shown instead'],
   },
@@ -9078,6 +9087,144 @@ const FAULTS = [
       'style="width:100%;background:var(--brand);color:#fff;font-weight:800',
       'style="width:100%;background:var(--brand-ondark);color:#fff;font-weight:800'),
     expect: ['var(--brand-ondark) used exactly 0x outside the token block'],
+  },
+
+  /* ---- Sign in with Quins Club Hub (Sep 2026) ---------------------------
+     spec-club-hub-sign-in-sep-2026.md. Every fault here is driven through
+     real ES256 signatures in test-hub-auth.js, never grepped. */
+  {
+    name: 'the hub verifier stops checking the signature',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (!verified) return { ok: false, reason: 'signature' };", '    if (false) return { ok: false, reason: \'signature\' };'),
+    expect: ['a token signed by a DIFFERENT key is refused', 'edited after signing is refused'],
+  },
+  {
+    name: 'the hub verifier stops pinning the issuer',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (payload.iss !== HUB_ISSUER) return { ok: false, reason: 'issuer' };", ''),
+    expect: ['wrong issuer is refused'],
+  },
+  {
+    name: 'the hub verifier stops checking the audience',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (!aud.includes(HUB_AUDIENCE)) return { ok: false, reason: 'audience' };", ''),
+    expect: ['wrong audience is refused'],
+  },
+  {
+    name: 'the hub verifier accepts an expired token',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (!Number.isFinite(payload.exp) || payload.exp * 1000 <= now) return { ok: false, reason: 'expired' };", ''),
+    expect: ['an expired token is refused'],
+  },
+  {
+    name: 'the hub verifier accepts an anonymous session',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (payload.is_anonymous === true) return { ok: false, reason: 'anonymous' };", ''),
+    expect: ['an anonymous session is refused'],
+  },
+  {
+    name: 'the hub verifier accepts an explicitly unconfirmed email',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "    if (meta.email_verified === false) return { ok: false, reason: 'unconfirmed' };", ''),
+    expect: ['an explicitly unconfirmed email is refused'],
+  },
+  {
+    name: 'the hub verifier never refetches the JWKS on an unknown kid (rotation breaks sign-in)',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      '  if (cache.byKid.has(kid)) return cache.byKid.get(kid);\n  await fetchJwks(fetchImpl);',
+      '  if (cache.byKid.has(kid)) return cache.byKid.get(kid);\n  if (cache.fetchedAt) return null;\n  await fetchJwks(fetchImpl);'),
+    expect: ['once the JWKS carries the new kid, the token verifies'],
+  },
+  {
+    name: 'hub-auth matches on EMAIL instead of hubSub',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      'const existing = accounts.find((a) => a.hubSub === identity.sub);',
+      'const existing = accounts.find((a) => a.hubSub === identity.sub || (a.email || \'\').toLowerCase() === identity.email);'),
+    expect: ['a matching EMAIL on a password account does not sign in'],
+  },
+  {
+    name: 'hub-auth signs in a pending account',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      '      if (!existing.approved || !existing.role) {', '      if (false) {'),
+    expect: ['a second sign-in while pending is still 403'],
+  },
+  {
+    name: 'hub-auth creates the first-time account already approved with a role',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      "      role: null,\n      approved: false,", "      role: 'manager', ageGroupId: '*',\n      approved: true,"),
+    expect: ['with role null', 'not approved'],
+  },
+  {
+    name: 'hub-auth counts SUCCESSFUL sign-ins against the connection bucket',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      '    const perConnection = await peekRate(store, connectionBucket(event), now, CONNECTION_RATE_OPTS);',
+      "    const perConnection = await require('./_ratelimit').checkRate(store, connectionBucket(event), now, CONNECTION_RATE_OPTS);"),
+    expect: ['sixty CORRECT sign-ins from one address all get through'],
+  },
+  {
+    name: 'hub-auth stops counting failures at all',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      '      await recordFailure(store, connectionBucket(event), now, CONNECTION_RATE_OPTS);', ''),
+    expect: ['fifty failures then a good token is refused'],
+  },
+  {
+    name: 'hub-auth tells a forger which check they got past',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      "error: 'Club Hub sign-in could not be verified. Please try again from the Club Hub.'",
+      "error: 'Club Hub sign-in refused: ' + verified.reason"),
+    expect: ['with one sentence that names no reason'],
+  },
+  {
+    name: 'accounts-admin approves a roleless hub account without a role',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "          if (role !== 'manager' && role !== 'organizer') {\n            return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Choose a role for this login: manager or organiser.' }) };\n          }",
+      "          if (role !== 'manager' && role !== 'organizer') { accounts[idx].approved = true; await saveAccounts(accounts); return { statusCode: 200, body: JSON.stringify({ ok: true }) }; }"),
+    expect: ['approving a roleless account with no role is 400'],
+  },
+  {
+    name: 'accounts-admin lets Approve CHANGE the role of an account that already has one',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      '        if (!accounts[idx].role) {', '        if (payload.role || !accounts[idx].role) {'),
+    expect: ['a role in the payload does NOT change it'],
+  },
+  {
+    name: 'accounts-admin leaks hubSub in the listing',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      'accounts.map(({ passwordHash, googleSub, hubSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub })',
+      'accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub: rest.hubSub })'),
+    expect: ['the listing never carries hubSub'],
+  },
+  {
+    name: "hub-auth's sessionFor drifts from login.js's",
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
+      "role: account.title || 'Organizer', _role: 'organizer' },\n      token: sign({ username: account.username, role: 'organizer' }),",
+      "role: 'Organizer', _role: 'organizer' },\n      token: sign({ username: account.username, role: 'organizer' }),"),
+    expect: ["sessionFor is character-for-character login.js's"],
+  },
+  {
+    name: 'the hub issuer becomes an environment variable',
+    suite: 'test-hub-auth.js',
+    apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),
+      "const HUB_PROJECT_REF = 'lusmshimxdcxpnrktlgz';",
+      "const HUB_PROJECT_REF = process.env.HUB_PROJECT_REF || 'lusmshimxdcxpnrktlgz';"),
+    expect: ['does not come from an environment variable'],
   },
 
 ];

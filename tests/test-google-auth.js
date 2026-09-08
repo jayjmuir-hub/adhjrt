@@ -162,7 +162,7 @@ section('accounts-admin.js — the Accounts tab never receives a raw googleSub')
 {
   const src = admin();
   check('googleSub is stripped from the listing the same way passwordHash is',
-    /accounts\.map\(\(\{ passwordHash, googleSub, \.\.\.rest \}\)/.test(src));
+    /accounts\.map\(\(\{ passwordHash, googleSub, hubSub, \.\.\.rest \}\)/ /* hubSub joined the list Sep 2026 */.test(src));
   /* ⚠️ REPOINTED, NOT DELETED, Aug 2026. The rule — the listing shows a
      human-readable sign-in method rather than a raw googleSub — is still
      alive; what changed is where it is computed. It used to be derived here
@@ -172,7 +172,7 @@ section('accounts-admin.js — the Accounts tab never receives a raw googleSub')
      displays it as one of five facts about a person. The derivation moved to
      _auth.js's signInMethodOf() — one copy for both readers. */
   check('a human-readable sign-in method is shown instead',
-    /signInMethod: signInMethodOf\(\{ passwordHash, googleSub \}\)/.test(src));
+    /signInMethod: signInMethodOf\(\{ passwordHash, googleSub, hubSub \}\)/.test(src));
   check('…and it is NOT derived locally, so it cannot drift from my-account.js',
     !/signInMethod:\s*\w*\s*googleSub \?/.test(src));
   check('…which means accounts-admin.js imports the shared one',

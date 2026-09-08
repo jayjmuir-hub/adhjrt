@@ -85,7 +85,10 @@ exports.handler = async (event) => {
           // derived here: the local version this replaced could not return
           // 'Both', so a password login with Google linked read as "Google
           // only" — see the comment on that function.
-          accounts: accounts.map(({ passwordHash, googleSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub }), lastSignInAt: signIns[rest.username] || null })),
+          /* hubSub (Sep 2026) is the club hub's internal user id — stripped
+             for the same reason as googleSub. `email` and `source: 'hub'`
+             stay: the Accounts tab shows them. */
+          accounts: accounts.map(({ passwordHash, googleSub, hubSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub }), lastSignInAt: signIns[rest.username] || null })),
         }),
       };
     }
@@ -179,6 +182,36 @@ exports.handler = async (event) => {
       }
 
       if (action === 'approve') {
+        /* A club hub account arrives with NO role (hub-auth.js, Sep 2026) —
+           nothing about a club hub login says whether this person runs an
+           age group or the desk, so the organiser says so here, at approval,
+           with the same validation `create` applies. An account that already
+           has a role (invite-code signups, restores) keeps it; a role in the
+           payload is ignored for those, because changing a role is not what
+           Approve means.
+           ⚠️ VALIDATED BEFORE `approved` IS TOUCHED. The list is one object
+           in memory until saveAccounts(); a 400 returned after flipping the
+           flag leaves nothing on disk, but it is the wrong order to read and
+           the wrong order to test against. */
+        if (!accounts[idx].role) {
+          const role = (payload.role || '').trim();
+          const ageGroupId = (payload.ageGroupId || '').trim();
+          if (role !== 'manager' && role !== 'organizer') {
+            return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Choose a role for this login: manager or organiser.' }) };
+          }
+          if (role === 'manager') {
+            if (!ageGroupId) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A manager login needs an age group.' }) };
+            if (!VALID_AGE_GROUP_IDS.has(ageGroupId)) {
+              return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown age group.' }) };
+            }
+            accounts[idx].ageGroupId = ageGroupId;
+          } else {
+            accounts[idx].title = (payload.title || '').trim() || 'Organizer';
+          }
+          accounts[idx].role = role;
+          accounts[idx].roleGivenAt = new Date().toISOString();
+          accounts[idx].roleGivenBy = session.username;
+        }
         accounts[idx].approved = true;
         /* Approving a REVOKED account is a restore, so the mark comes off and
            it goes back to the ordinary list. Their old tokens stay dead:

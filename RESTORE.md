@@ -213,7 +213,8 @@ good reason.
 | File | Purpose |
 |---|---|
 | `_auth.js` | shared helpers — Blobs store, bcrypt hashing, HMAC session tokens, `hasAgeGroupAccess` |
-| `login.js` | **THE sign-in endpoint (Aug 2026)** — and since 3 Aug, the ONLY password endpoint. Both roles, account looked up by username alone, session/token minted from the account's own stored role. `${ip}:login` rate bucket, kept separate from the registration bucket. |
+| `login.js` | **THE password sign-in endpoint (Aug 2026)** — and since 3 Aug, the ONLY password endpoint. Both roles, account looked up by username alone, session/token minted from the account's own stored role. `${ip}:login` rate bucket, kept separate from the registration bucket. |
+| `hub-auth.js` / `_hubAuth.js` | **Sign in with Quins Club Hub (Sep 2026)** — verifies a club hub Supabase access token against the hub's PUBLIC key (ES256, JWKS), matches on `hubSub`, mints the same session `login.js` does. A first-time person becomes a PENDING account with **no role**; `accounts-admin` `approve` then takes `role` (+ `ageGroupId`). Only failed verifications count, `${ip}:hub` bucket. See § Sign in with Quins Club Hub. |
 | `manager-signup.js` | per-age-group invite code decides the age group; account starts pending |
 | `organizer-signup.js` | shared invite code; first organiser account auto-approved |
 | `accounts-admin.js` | organiser-only: list / approve / reject / revoke; create a manager **or organiser** login directly (`action:'create'`); reset someone's password (`action:'password'`) or change your own (`action:'changeMine'`) |
@@ -1413,10 +1414,60 @@ following the docs would have got a broken account and no error message
 anywhere. Nothing validates these key names against the real age-group ids
 either, so an ordinary typo fails the same silent way.
 
+### Sign in with Quins Club Hub (Sep 2026)
+
+Spec: `claude/specs/spec-club-hub-sign-in-sep-2026.md`. **The club hub is
+the identity; the tournament site only decides the role.**
+
+- `/signin` opens with one button, **Sign in with Quins Club Hub**, which
+  sends the person to `<hub>/connect/tournament?return=<this origin>`. The
+  hub sends them back to `/signin#hub_token=<access token>`. The page reads
+  the fragment once, wipes it from the address bar, and POSTs it to
+  `hub-auth.js`. **Fragment, never query string** — it must not reach a log.
+- `_hubAuth.js` verifies the token with Node's built-in crypto against the
+  hub's JWKS (`https://lusmshimxdcxpnrktlgz.supabase.co/auth/v1/.well-known/jwks.json`,
+  ES256, measured 8 Sep 2026). **No dependency, no secret, no environment
+  variable**: the issuer is a constant because there is one club, and a test
+  fails if it ever becomes `process.env.…`. Unknown `kid` → one refetch (key
+  rotation), then refusal.
+- ⚠️ **Matching is on `hubSub`, never on email** — the same ruling
+  `google-auth.js` made about `googleSub`. A hub sign-in whose email matches
+  an existing password account does NOT sign in; it creates a separate
+  pending hub account. Existing managers are re-approved once by hand.
+- **A first-time hub account has `role: null` and `approved: false`.** The
+  organiser gives it a role on the Accounts tab: `accounts-admin`
+  `{ action:'approve', username, role, ageGroupId?, title? }`, validated
+  exactly as `create` validates. An account that already has a role ignores
+  a role in the approve payload — Approve does not mean "change role". The
+  role is validated BEFORE `approved` is touched.
+- The listing strips `hubSub` beside `passwordHash` and `googleSub`, and
+  `signInMethodOf()` answers `'Club Hub'` for such accounts. `email` and
+  `source: 'hub'` are shown.
+- `hub-auth.js` refuses every bad token with ONE sentence. The reason
+  (`signature`, `issuer`, `expired`…) is returned by the verifier for tests
+  and logs only; naming it to the caller would tell a forger which check
+  they got past.
+- Rate limiting is the LOGIN limiter's shape: only failed verifications
+  count, connection bucket only (`${ip}:hub`, 50 per 15 min), so fifteen
+  managers behind one venue address never share a budget a correct sign-in
+  spends.
+- **Organiser password logins keep working, unchanged, and stay as
+  break-glass** for the desk if the hub is unreachable on the morning.
+  Sessions minted the day before do not call the hub again.
+- `tests/test-hub-auth.js` drives all of this with a throwaway P-256 key
+  generated per run and a stubbed JWKS; eighteen faults in
+  `_prove-registration.js`, including "match on email" and "issuer from an
+  environment variable".
+
+⚠️ **The club hub side (`/connect/tournament` with its return-origin
+allow-list) is a change in the club hub repo.** Until it is live, the button
+on `/signin` sends people to a page that does not exist yet.
+
 ### One sign-in for everything
 
 **Sign-in lives at `/signin`, and only there.** `Signin.dc.html` carries
-password sign-in, the Google button and BOTH signup flows. After sign-in it
+the Club Hub button (above), password sign-in, the Google button and BOTH
+signup flows. After sign-in it
 routes by the account's role — organizer → `/organizer`, manager →
 `/manager`; `?next=` is honoured only from the allow-list of exactly those
 two paths and only when the role permits it. `/organizer` and `/manager`

@@ -114,6 +114,20 @@
       <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Sign in</div>
       <p style="color:var(--ink-muted);font-size:14px;margin-top:6px">One sign-in for organisers and age-group managers &mdash; you land on the right page for your account.</p>
 
+      <!-- Sign in with Quins Club Hub (Sep 2026, spec-club-hub-sign-in). The
+           club hub is the identity; the tournament site only decides the
+           role. The button sends the person to the hub, which sends them back
+           with a token in the URL fragment — see componentDidMount(). The
+           username/password form below stays for organiser desk accounts. -->
+      <button onClick="{{ onHubSignIn }}" disabled="{{ hubBusy }}" style="width:100%;margin-top:22px;background:var(--accent-mid);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ hubLabel }}</button>
+      <div style="font-size:12px;color:var(--ink-faint);margin-top:8px;text-align:center">Use the same login as the Quins Club Hub. New here? Sign in once and an organiser will give you a role.</div>
+      <sc-if value="{{ hubError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ hubError }}</div></sc-if>
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0 0">
+        <div style="flex:1;height:1px;background:rgba(0,0,0,0.12)"></div>
+        <div style="font-size:11px;color:var(--ink-faint);font-weight:700;letter-spacing:.5px">OR, ORGANISER DESK</div>
+        <div style="flex:1;height:1px;background:rgba(0,0,0,0.12)"></div>
+      </div>
+
       <label for="f-username" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:22px">USERNAME</label>
       <input id="f-username" name="username" autocomplete="username" aria-describedby="username-hint" value="{{ loginUser }}" onInput="{{ onUser }}" onKeyDown="{{ onLoginKey }}" style="width:100%;margin:6px 0 4px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 14px;color:var(--ink);font-size:15px">
       <!-- ⚠️ NOT DECORATION. Jay, who built this site, could not sign in to a
@@ -246,6 +260,7 @@ class Component extends DCLogic {
     signupPending: false, signupPendingMessage: '',
     googleClientId: '', googleBusy: false, googleError: '',
     googlePendingToken: '', googlePendingName: '', googleTitle: '', googleCode: '',
+    hubBusy: false, hubError: '',
   };
 
   /* Where a session belongs. ?next= is honoured ONLY from this allow-list —
@@ -262,6 +277,23 @@ class Component extends DCLogic {
 
   redirect(url) {
     try { window.location.replace(url); } catch (e) { /* non-browser context */ }
+  }
+
+  /* A full-page hop the user can come BACK from (history kept), unlike
+     redirect() above, which replaces. Seam for tests, like redirect(). */
+  goTo(url) {
+    try { window.location.assign(url); } catch (e) { /* non-browser context */ }
+  }
+
+  /* Reads #hub_token=… once and wipes it from the address bar, so a reload or
+     a shared screenshot never carries it. Returns '' when there is none. */
+  hubTokenFromUrl() {
+    let hash = '';
+    try { hash = (window.location && window.location.hash) || ''; } catch (e) { return ''; }
+    const m = /(?:^#|&)hub_token=([^&]+)/.exec(hash);
+    if (!m) return '';
+    try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* fine */ }
+    return decodeURIComponent(m[1]);
   }
 
   async componentDidMount() {
@@ -287,6 +319,20 @@ class Component extends DCLogic {
     /* Already signed in (or migrated from an old key)? Straight through. */
     const session = api.currentSession();
     if (session) { this.redirect(this.destFor(session)); return; }
+
+    /* Back from the Quins Club Hub with #hub_token=… in the fragment. The
+       fragment never reaches a server or a log, which is why it is a fragment.
+       It is read once, wiped from the address bar, and posted to hub-auth.js,
+       which decides between a session, "pending", or a refusal. A pending
+       answer reuses the signup-pending panel: same message, same shape. */
+    const hubToken = this.hubTokenFromUrl();
+    if (hubToken) {
+      this.setState({ hubBusy: true, hubError: '', loginError: '' });
+      const res = await api.hubAuth(hubToken);
+      if (res.ok) { this.setState({ hubBusy: false }); this.redirect(this.destFor(res.session)); return; }
+      if (res.pending) { this.setState({ hubBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message }); return; }
+      this.setState({ hubBusy: false, hubError: res.error || 'Could not sign in with the Club Hub.' });
+    }
 
     /* Google sign-in is an enhancement only — anything that goes wrong here
        must never block password sign-in. */
@@ -449,6 +495,10 @@ class Component extends DCLogic {
       onPass: (e) => this.setState({ loginPass: e.target.value }),
       onLoginKey: (e) => { if (e.key === 'Enter') this.doLogin(); },
       onLogin: () => this.doLogin(),
+      /* Club Hub sign-in: a full-page hop to the hub and back. */
+      hubBusy: s.hubBusy, hubError: s.hubError,
+      hubLabel: s.hubBusy ? 'Signing in…' : 'Sign in with Quins Club Hub',
+      onHubSignIn: () => { this.setState({ hubBusy: true, hubError: '' }); this.goTo(s.api.hubSignInUrl()); },
       loginPassType: s.showLoginPass ? 'text' : 'password',
       loginPassToggleLabel: s.showLoginPass ? 'HIDE' : 'SHOW',
       onToggleLoginPass: () => this.setState((st) => ({ showLoginPass: !st.showLoginPass })),

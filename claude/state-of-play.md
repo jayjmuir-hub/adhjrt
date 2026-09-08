@@ -1,6 +1,23 @@
 # ADH JRT — state of play, 8 September 2026
 
-## 8 Sep 2026 — sign in with Quins Club Hub specced, not built — GOES FIRST
+## 8 Sep 2026 — hub sign-in, tournament side, deploy 1 BUILT (not yet merged)
+
+`hub-auth.js`, `_hubAuth.js`, the `/signin` button and fragment handling,
+`accounts-admin` approve-with-role, `signInMethodOf` → 'Club Hub',
+`scores-data.js` `hubSignInUrl()`/`hubAuth()`. Old password, invite-code and
+Google paths untouched and still working (deploy 2 removes them later).
+Suite: 54 files, 6,072 checks, all green in the sandbox loop. Prover, run
+on this PC: **960/960 faults caught by the named check; 49 suites clean on
+an undamaged copy**. The 18 new faults account for the whole rise in the
+first number; the second number went UP by one for `test-hub-auth.js`,
+which is the proof the new suite ran undamaged. `tests/test-hub-auth.js` is registered
+in `runall.ps1` and carries 18 faults; two older faults on the accounts
+listing were repointed for the new strip list, not deleted.
+⚠️ **The club hub's `/connect/tournament` screen is NOT built yet** — the
+button sends people to a page that does not exist until that lands in the
+club hub repo. Live verification of the whole loop waits on it.
+
+## 8 Sep 2026 — sign in with Quins Club Hub specced — GOES FIRST
 
 Jay: nobody uses the tournament site until early October, so the back end
 is free to change, and each piece deploys as it lands rather than batching.
@@ -20,15 +37,18 @@ Jay wants managers to stop getting the full draw editor by default. Spec at
 `claude/specs/spec-draw-rights-sep-2026.md`: per-manager switches on the
 Accounts tab (pools/teams, times/pitches), publishing organiser-only, a
 match-day freeze, send-for-review by email, and a ten-deep draft history.
-All decisions taken (see the entry above). No code yet.
-On branch `claude/graft-deep-build-41417f`, not on `dev` or `main`.
+All decisions taken (see the entry above). No code yet. Specs landed on
+`main` at `6eaa877` with `[skip ci]` (deploy id did not move); `dev` and
+`Compare` fast-forwarded to the same commit. ⚠️ Work starts NOW, not in
+October — Jay, 8 Sep: *"we are pushing everything now as we do it."*
+October is when people come back to the site, not when the build begins.
 
 ## 8 Sep 2026 — pitch marshals specced, not built
 
 Volunteer parents score at the pitch through a per-pitch, per-day link the
 manager issues as a QR code; name typed on every save, so rotation needs no
-admin. Spec at `claude/specs/spec-pitch-marshals-sep-2026.md`. Same branch,
-no code. ⚠️ Found on the way: `get-results.js` serves `submittedBy`
+admin. Spec at `claude/specs/spec-pitch-marshals-sep-2026.md`. On `main`
+with the other two; no code. ⚠️ Found on the way: `get-results.js` serves `submittedBy`
 (a production username) and the spirit nominees to the public today; the
 spec makes stripping them part of the change.
 

@@ -4973,7 +4973,15 @@ class Component extends DCLogic {
          The two states are now told apart by `revokedAt`, which only revoke
          writes. An account that has never been approved does not carry it, so
          nothing that predates this change is misfiled. */
-      pendingAccounts: s.accounts.filter((a) => !a.approved && !a.revokedAt).map((a) => {
+      /* ⚠️ AN APPROVED ACCOUNT WITH NO ROLE IS STILL PENDING HERE. The OLD
+         production page could approve a Club Hub login without a role (it
+         had no picker and sent the username alone), and Jay did exactly that
+         on 8 Sep 2026, ten minutes before reading the message saying not to.
+         Such an account cannot sign in anywhere — hub-auth.js answers
+         "pending" while the role is missing — so it belongs in this list,
+         with the picker, until an organiser gives it one. Approve on the
+         server sets the role on any roleless account, approved or not. */
+      pendingAccounts: s.accounts.filter((a) => (!a.approved && !a.revokedAt) || (a.approved && !a.role)).map((a) => {
         /* A Club Hub account (Sep 2026) arrives with NO role — the organiser
            picks one right here, on the row, before Approve. The choice lives
            in acctRoleChoice keyed by username, so switching tabs does not
@@ -5013,14 +5021,15 @@ class Component extends DCLogic {
         onPurge: () => this.doPurgeAccount(a.username, a.name),
         onOpen: () => this.openOtherAccount(a.username),
       })),
-      approvedAccounts: s.accounts.filter((a) => a.approved).map((a) => ({
+      /* `a.role` too: a roleless approved account is listed as pending above, not here. */
+      approvedAccounts: s.accounts.filter((a) => a.approved && a.role).map((a) => ({
         ...a,
         roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
         onRevoke: () => this.doRevoke(a.username),
         onResetPassword: () => this.doResetPassword(a.username),
         onOpen: () => this.openOtherAccount(a.username),
       })),
-      hasPending: s.accounts.some((a) => !a.approved && !a.revokedAt),
+      hasPending: s.accounts.some((a) => (!a.approved && !a.revokedAt) || (a.approved && !a.role)),
       pendingCount: s.accounts.filter((a) => !a.approved && !a.revokedAt).length,
       hasRevoked: s.accounts.some((a) => !a.approved && a.revokedAt),
       revokedCount: s.accounts.filter((a) => !a.approved && a.revokedAt).length,

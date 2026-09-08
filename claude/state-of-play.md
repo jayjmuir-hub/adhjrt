@@ -19,6 +19,13 @@ Approve for a roleless hub account) — 19 more checks in `test-hub-auth.js`,
 three more faults. Suite 54 files / 6,099 checks; prover **963/963, 49
 clean**. Jay: *"wait, do the role picker and club hub screen
 first"* before the production merge.
+**Third commit:** Jay tested the loop and landed as pending — then pressed
+Approve on the PRODUCTION Accounts tab (old page, no picker), which
+approved his hub login with no role. Fix: an approved-but-roleless account
+is listed as pending with the picker on the new page, never among the
+approved, and Approve gives it its role. ⚠️ **Until `main` carries the new
+page, production's Accounts tab shows a hub row it cannot handle** — one
+more reason to merge soon.
 **Club hub side:** `/connect/tournament` is built on branch
 `claude/connect-tournament` in the club hub repo, PR #787 open
 (23 checks, lint clean, docs-check clean). ⚠️ Until #787 is merged AND

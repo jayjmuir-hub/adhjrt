@@ -9240,6 +9240,14 @@ const FAULTS = [
     expect: ['hides Approve'],
   },
   {
+    name: 'an approved-but-roleless hub account falls out of the Pending list (stuck forever)',
+    suite: 'test-hub-auth.js',
+    apply: () => patch('Organizer.dc.html',
+      'pendingAccounts: s.accounts.filter((a) => (!a.approved && !a.revokedAt) || (a.approved && !a.role)).map((a) => {',
+      'pendingAccounts: s.accounts.filter((a) => !a.approved && !a.revokedAt).map((a) => {'),
+    expect: ['an APPROVED account with no role is listed as pending'],
+  },
+  {
     name: 'the hub issuer becomes an environment variable',
     suite: 'test-hub-auth.js',
     apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),

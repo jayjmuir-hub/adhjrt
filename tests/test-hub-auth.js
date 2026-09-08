@@ -280,6 +280,13 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     eq('…role organizer', accountsList[1].role, 'organizer');
     eq('…title kept', accountsList[1].title, 'Registrar');
 
+    /* The server side of the same repair: approved + roleless takes a role. */
+    fresh();
+    accountsList[1].approved = true;
+    r = await parse(await call({ action: 'approve', username: 'nobody.real', role: 'organizer' }));
+    eq('an already-approved roleless account can still be given a role', r.status, 200);
+    eq('…and gets it', accountsList[1].role, 'organizer');
+
     fresh();
     r = await parse(await call({ action: 'approve', username: 'old.mgr', role: 'organizer' }));
     eq('an invite-code account that already has a role approves as before', r.status, 200);
@@ -395,6 +402,19 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     row(c, 'hub.person').onAgeChoice({ target: { value: 'u16b' } });
     await row(c, 'hub.person').onApprove();
     eq('a server refusal is shown above the list', c.renderVals().acctApproveError, 'Unknown age group.');
+
+    /* ⚠️ Approved-but-roleless (what the OLD production page did on 8 Sep):
+       still listed as pending, with the picker, and never among the approved. */
+    c = fresh();
+    c.state.accounts.push({ username: 'stuck.person', name: 'Stuck Person', role: null, approved: true, source: 'hub', email: 'stuck@example.com', signInMethod: 'Club Hub', createdAt: '2026-09-08T00:00:00.000Z' });
+    const vs = c.renderVals();
+    const stuck = vs.pendingAccounts.find((a) => a.username === 'stuck.person') || {};
+    check('⚠️ an APPROVED account with no role is listed as pending, with the picker', stuck.needsRole === true, JSON.stringify(vs.pendingAccounts.map((a) => a.username)));
+    check('…and not among the approved accounts', !vs.approvedAccounts.some((a) => a.username === 'stuck.person'));
+    check('…and the Pending section shows even when it is the only one', (() => { const c2 = fresh(); c2.state.accounts = [{ username: 'stuck.person', name: 'S', role: null, approved: true }]; return c2.renderVals().hasPending === true; })());
+    stuck.onAgeChoice({ target: { value: 'u16b' } });
+    await (row(c, 'stuck.person') || {}).onApprove();
+    eq('…and Approve sends the role for it', JSON.stringify(calls[0]), JSON.stringify(['stuck.person', { role: 'manager', ageGroupId: 'u16b' }]));
 
     /* The account card hides Approve for a roleless hub account and points at the list. */
     c = fresh();

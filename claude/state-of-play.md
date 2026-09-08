@@ -1,5 +1,27 @@
 # ADH JRT — state of play, 8 September 2026
 
+## 8 Sep 2026 — PITCH MARSHALS built on `dev` (the last of the three specs)
+
+`_marshal.js`, `marshal-links.js`, `marshal-info.js`, `get-result-history.js`;
+`submit-result.js` takes a marshal token first; `_results.js` files result
+history twenty deep; **`get-results.js` now serves the public scoring fields
+only** (usernames and Spirit nominees were public until today) and the
+signed-in pages pass their session for the full record. `app.html` pitch
+mode; the **Pitch marshals** tab on `/manager` with QR, copy and print
+sheet; `qr.js` vendored (MIT). `tests/test-pitch-marshals.js` + 18 faults.
+Merge record below once it lands.
+
+## ✅ 8 Sep 2026 — DRAW RIGHTS LIVE on adhjrt.com (`18bc508`, deploy `6a9ff1394468eb00097469cf`)
+
+Fast-forward `bca6242..18bc508` (four commits: part 1, part 2, two test
+guards); `dev` and `Compare` level. Measured live: `draw-review` and
+`draw-history` answer 401 unsigned, `get-schedule-override` says
+`managerCanPublishNow:false`, `/manager` carries Send for review, Draft
+history and the rights note, `/organizer` carries the switches and the
+Awaiting-review strip, `login.js` still answers. Suite 55 files / 6,308
+checks; prover 993/993, 50 clean. ⚠️ **Every manager is now results-only
+until an organiser flips a switch on their card.** Next: pitch marshals.
+
 ## 8 Sep 2026 — draw rights COMPLETE on `dev` (part 2: send-for-review + draft history)
 
 Jay: *"build everything until its all live"* / *"however you want, just do it

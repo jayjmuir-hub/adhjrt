@@ -730,6 +730,52 @@
            function returned for THIS manager's signed token — documents
            tagged for everyone, plus their own age group. Nothing is hidden
            here, because a client-side filter is not a filter. -->
+      <!-- Pitch marshals (Sep 2026) — spec claude/specs/spec-pitch-marshals-sep-2026.md.
+           One link per pitch the group holds on its day. The token is shown
+           ONCE, right after issuing, as a QR, a copyable link and a print
+           sheet; reload and it is gone, by design. -->
+      <sc-if value="{{ isMarshals }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;max-width:820px">
+          <p style="color:var(--ink-faint);font-size:13px;margin:0 0 14px;line-height:1.5">Volunteer parents score at the pitch by scanning a QR code. One link per pitch, for <b style="color:var(--ink-muted)">{{ marshalDay }}</b> only; whoever scans it types their first name and scores that pitch's matches. Swapping marshals needs nothing from you — the next parent scans the same sheet. <b style="color:var(--ink-muted)">Issue new</b> kills the old link on every phone.</p>
+          <sc-if value="{{ marshalLoading }}" hint-placeholder-val="{{ false }}"><p style="font-size:13px;color:var(--ink-faint)">Loading…</p></sc-if>
+          <sc-if value="{{ marshalError }}" hint-placeholder-val=""><p style="font-size:13px;color:var(--danger-ink);font-weight:600">{{ marshalError }}</p></sc-if>
+          <sc-if value="{{ marshalNone }}" hint-placeholder-val="{{ false }}"><p style="font-size:13px;color:var(--ink-faint)">This age group holds no pitches in the venue layout yet — ask an organiser.</p></sc-if>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ marshalCards }}" as="c" hint-placeholder-count="2">
+              <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:16px 18px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-family:'Anton';font-size:20px;text-transform:uppercase">{{ c.pitch }}</div>
+                    <div style="font-size:12.5px;margin-top:2px;{{ c.statusStyle }}">{{ c.status }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button onClick="{{ c.onIssue }}" disabled="{{ marshalBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">{{ c.issueLabel }}</button>
+                    <sc-if value="{{ c.live }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ c.onRevoke }}" disabled="{{ marshalBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer">Revoke</button>
+                    </sc-if>
+                  </div>
+                </div>
+                <sc-if value="{{ c.hasFresh }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+                    <sc-if value="{{ c.hasQr }}" hint-placeholder-val="{{ false }}"><img src="{{ c.qr }}" alt="QR code for the {{ c.pitch }} scoring link" width="180" height="180" style="border:1px solid var(--line);border-radius:8px"></sc-if>
+                    <div style="flex:1;min-width:220px">
+                      <p style="font-size:12.5px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">This is the link. It is shown once — print the sheet or copy it now. If you lose it, press Issue new.</p>
+                      <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button onClick="{{ c.onPrint }}" disabled="{{ marshalBusy }}" style="background:var(--brand);color:#fff;font-weight:800;font-size:13px;padding:10px 16px;border:none;border-radius:9px;cursor:pointer;text-transform:uppercase">Print pitch sheet</button>
+                        <button onClick="{{ c.onCopy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer">Copy link</button>
+                        <sc-if value="{{ c.hasQr }}" hint-placeholder-val="{{ true }}"></sc-if>
+                        <button onClick="{{ c.onShowQr }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:10px 16px;border-radius:9px;cursor:pointer">Show QR</button>
+                      </div>
+                      <input readonly value="{{ c.url }}" aria-label="Marshal link for {{ c.pitch }}" style="width:100%;margin-top:10px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--ink-muted);box-sizing:border-box">
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:18px;max-width:820px">
           <p style="color:var(--ink-faint);font-size:13px;margin:0 0 14px;line-height:1.5">Documents the organisers have shared with you &mdash; for everyone, or for your age group.</p>
@@ -1081,6 +1127,10 @@ const MANAGER_TABS = [
      tests/test-documents.js asserts the absent verbs BY NAME rather than
      trusting that this page simply does not happen to call them. */
   { id: 'documents', label: 'Documents' },
+  /* Pitch marshals (Sep 2026) -- spec claude/specs/spec-pitch-marshals-sep-2026.md.
+     One QR link per pitch the group holds on its day; whoever scans it
+     scores that pitch. Issued and revoked here, by the manager. */
+  { id: 'marshals', label: 'Pitch marshals' },
 ];
 
 /* Mirrors MIN_PASSWORD_LENGTH in netlify/functions/_auth.js, which is the
@@ -1107,6 +1157,7 @@ class Component extends DCLogic {
        tells those two apart. */
     draw: undefined, drawLoadedFor: null, drawBusy: false, drawMsg: '', drawDirty: false,
     historyOpen: false, historyEntries: null, historyError: '',
+    marshalLinks: null, marshalDay: '', marshalFresh: {}, marshalError: '', marshalBusy: false,
     picked: null, newTeamDrafts: {},
     importOpen: false, importMode: 'add', importRows: null, importNote: '',
     clash: null, clashBusy: false,
@@ -1226,6 +1277,7 @@ class Component extends DCLogic {
       session: null, tab: 'fixtures', fixtures: null, standings: null, spiritAward: null,
       draw: undefined, drawLoadedFor: null, drawDirty: false, drawMsg: '', drawBusy: false,
       historyOpen: false, historyEntries: null, historyError: '',
+      marshalLinks: null, marshalDay: '', marshalFresh: {}, marshalError: '',
       picked: null, newTeamDrafts: {},
       importOpen: false, importMode: 'add', importRows: null, importNote: '',
       clash: null, clashBusy: false,
@@ -1348,6 +1400,98 @@ class Component extends DCLogic {
     if (tab === 'draw' && s.drawLoadedFor !== s.ageId && !s.drawDirty) this.loadDraw(s.ageId);
     if (tab === 'registrations' && s.regs === undefined) this.loadRegistrations();
     if (tab === 'documents' && !s.docsLoaded) this.loadDocuments();
+    if (tab === 'marshals') this.loadMarshalLinks();
+  }
+
+  /* ===== PITCH MARSHALS (spec-pitch-marshals § 1) ==========================
+     The links are per PITCH per DAY. The token comes back ONCE, at issue, and
+     is held in memory for this page load only (marshalFresh), which is what
+     draws the QR and the print sheet; reload the page and it is gone, and
+     the card offers Issue new. The server never stores or lists it. */
+  async loadMarshalLinks() {
+    const { api, ageId, session } = this.state;
+    this.setState({ marshalLinks: null, marshalError: '' });
+    const res = await api.marshalLinks(ageId, session);
+    if (ageId !== this.state.ageId) return;
+    if (!res || !res.ok) { this.setState({ marshalLinks: [], marshalError: (res && res.error) || 'Could not load the pitch links.' }); return; }
+    this.setState({ marshalLinks: res.links || [], marshalDay: res.dayLabel || '' });
+  }
+  issueMarshal(pitch) {
+    const { api, ageId, session } = this.state;
+    const already = (this.state.marshalLinks || []).find((l) => l.pitch === pitch);
+    const ask = already && already.live
+      ? `Issue a NEW link for ${pitch}? The current one stops working on every phone that holds it the moment this is done.`
+      : `Issue a marshal link for ${pitch}? Anyone who scans it can score this pitch's matches on ${this.state.marshalDay || 'the group’s day'}.`;
+    this.confirmModal(ask, async () => {
+      this.setState({ marshalBusy: true, marshalError: '' });
+      const res = await api.issueMarshalLink(ageId, pitch, session);
+      if (!res || !res.ok) { this.setState({ marshalBusy: false, marshalError: (res && res.error) || 'Could not issue the link.' }); return; }
+      const fresh = { ...(this.state.marshalFresh || {}), [pitch]: { url: res.url, token: res.token, issuedAt: res.issuedAt } };
+      this.setState({ marshalBusy: false, marshalFresh: fresh });
+      await this.loadMarshalLinks();
+      this.drawQr(pitch);
+    }, { okLabel: 'Issue link' });
+  }
+  revokeMarshal(pitch) {
+    const { api, ageId, session } = this.state;
+    this.confirmModal(`Revoke the ${pitch} link? Every phone holding it gets "no longer live" on its next save.`, async () => {
+      this.setState({ marshalBusy: true, marshalError: '' });
+      const res = await api.revokeMarshalLink(ageId, pitch, session);
+      const fresh = { ...(this.state.marshalFresh || {}) }; delete fresh[pitch];
+      this.setState({ marshalBusy: false, marshalFresh: fresh, marshalError: res && res.ok ? '' : ((res && res.error) || 'Could not revoke.') });
+      await this.loadMarshalLinks();
+    }, { okLabel: 'Revoke' });
+  }
+  /* qr.js is the vendored encoder (repo root, MIT). Loaded on demand, once. */
+  loadQrScript() {
+    if (window.qrcode) return Promise.resolve();
+    if (this._qrPromise) return this._qrPromise;
+    this._qrPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = '/qr.js'; s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Could not load the QR encoder.'));
+      document.head.appendChild(s);
+    });
+    return this._qrPromise;
+  }
+  qrDataUrl(url) {
+    if (!window.qrcode) return '';
+    const q = window.qrcode(0, 'M'); q.addData(url); q.make();
+    return q.createDataURL(6, 8);
+  }
+  async drawQr(pitch) {
+    try { await this.loadQrScript(); } catch (e) { this.setState({ marshalError: 'The QR encoder did not load — use Copy link instead.' }); return; }
+    const f = (this.state.marshalFresh || {})[pitch];
+    if (!f) return;
+    const fresh = { ...this.state.marshalFresh, [pitch]: { ...f, qr: this.qrDataUrl(f.url) } };
+    this.setState({ marshalFresh: fresh });
+  }
+  copyMarshalLink(pitch) {
+    const f = (this.state.marshalFresh || {})[pitch]; if (!f) return;
+    try { navigator.clipboard.writeText(f.url); this.showToast('Link copied.'); } catch (e) { this.showToast('Could not copy — select the link and copy it by hand.'); }
+  }
+  /* One A4 sheet per pitch: the QR large, the pitch and group, four lines of
+     instructions. Opens in a new window and prints; nothing is stored. */
+  printMarshalSheet(pitch) {
+    const f = (this.state.marshalFresh || {})[pitch]; if (!f || !f.qr) return;
+    const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    /* No <title> tag in this string: test-head-metadata counts exactly one
+       per page file. The window's title is set after the write instead. */
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <style>body{font-family:Helvetica,Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#111}h1{font-size:44px;margin:0 0 4px}h2{font-size:26px;font-weight:600;margin:0 0 20px;color:#444}img{width:70vw;max-width:520px;height:auto}ol{text-align:left;display:inline-block;font-size:19px;line-height:1.7;margin-top:20px}small{display:block;margin-top:18px;color:#777;font-size:13px}@media print{@page{size:A4;margin:16mm}}</style></head>
+      <body><h1>${esc(pitch)}</h1><h2>${esc(this.ageName(this.state.ageId))} &middot; ${esc(this.state.marshalDay)}</h2>
+      <img src="${f.qr}" alt="QR code for the ${esc(pitch)} scoring link">
+      <ol><li>Scan this with your phone's camera.</li><li>Type your first name.</li><li>Tap the match, enter the score, tries and cards.</li><li>Press Save. Made a mistake? Open it again and save again.</li></ol>
+      <small>Abu Dhabi Harlequins Junior Rugby Tournament &middot; this link works on ${esc(this.state.marshalDay)} only and can be replaced by the age-group table.</small>
+      </body></html>`;
+    try {
+      const w = window.open('', '_blank');
+      if (!w) { this.showToast('Allow pop-ups to print the sheet.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+      try { w.document.title = `Pitch marshal — ${pitch}`; } catch (e) {}
+      w.focus(); setTimeout(() => { try { w.print(); } catch (e) {} }, 300);
+    } catch (e) { this.showToast('Could not open the print sheet.'); }
   }
 
   /* Documents the SERVER says this manager may see. Nothing is filtered
@@ -2687,6 +2831,30 @@ class Component extends DCLogic {
       isResults: s.tab === 'results', isTables: s.tab === 'tables',
       isDraw: s.tab === 'draw', isRegistrations: s.tab === 'registrations',
       isDocuments: s.tab === 'documents',
+      /* Pitch marshals (spec-pitch-marshals § 1). */
+      isMarshals: s.tab === 'marshals',
+      marshalDay: s.marshalDay || '',
+      marshalLoading: s.tab === 'marshals' && s.marshalLinks === null,
+      marshalError: s.marshalError || '',
+      marshalBusy: !!s.marshalBusy,
+      marshalNone: Array.isArray(s.marshalLinks) && s.marshalLinks.length === 0 && !s.marshalError,
+      marshalCards: (Array.isArray(s.marshalLinks) ? s.marshalLinks : []).map((l) => {
+        const f = (s.marshalFresh || {})[l.pitch] || null;
+        const when = (iso) => { try { return new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso; } };
+        return {
+          pitch: l.pitch,
+          status: l.revokedAt ? `Revoked ${when(l.revokedAt)}` : (l.live ? `Live — issued ${when(l.issuedAt)} by ${l.issuedBy || '?'}` : 'Not issued'),
+          statusStyle: l.live ? 'color:var(--accent-ink);font-weight:700' : 'color:var(--ink-faint);font-weight:600',
+          live: !!l.live,
+          issueLabel: l.live ? 'Issue new' : 'Issue link',
+          hasFresh: !!f, qr: (f && f.qr) || '', url: (f && f.url) || '', hasQr: !!(f && f.qr),
+          onIssue: () => this.issueMarshal(l.pitch),
+          onRevoke: () => this.revokeMarshal(l.pitch),
+          onCopy: () => this.copyMarshalLink(l.pitch),
+          onPrint: () => this.printMarshalSheet(l.pitch),
+          onShowQr: () => this.drawQr(l.pitch),
+        };
+      }),
       docsUnavailable: s.docsUnavailable,
       /* Stays FALSE while unavailable -- "no documents yet" is a LIE when
          the truth is that we could not ask. */

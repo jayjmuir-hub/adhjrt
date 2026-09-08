@@ -868,8 +868,13 @@ async function tryFetchJson(url, opts) {
   }
 }
 
-async function readStore() {
-  const r = await tryFetchJson('/.netlify/functions/get-results');
+/* `session` (Sep 2026, spec-pitch-marshals § 5): get-results strips who-entered
+   and the Spirit nominees from the PUBLIC answer. A manager or organiser
+   session rides along so the Spirit award tab and the Results tab still see
+   them; a public reader passes nothing and gets scores only. */
+async function readStore(session) {
+  const headers = session && session.token ? { 'Authorization': `Bearer ${session.token}` } : undefined;
+  const r = await tryFetchJson('/.netlify/functions/get-results', headers ? { headers } : undefined);
   if (r.real) return r.json.ok ? r.json.results : {};
   return (await local()).getResults();
 }
@@ -1602,7 +1607,7 @@ export async function getSchedule(agId) {
 export async function getStandings(agId, session) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return null;
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const [store, state] = await Promise.all([readStore(session), fetchOverrideState(agId, session)]);
   const view = viewModeOf(state);
   if (view === 'none') {
     return {
@@ -1672,7 +1677,7 @@ export async function getSpiritAward(agId, session) {
 export async function getFixtures(agId, session) {
   await delay(80);
   const ag = findAg(agId); if (!ag) return [];
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const [store, state] = await Promise.all([readStore(session), fetchOverrideState(agId, session)]);
   const view = viewModeOf(state);
   if (view === 'none') return { awaitingPublication: true, view, pool: [], knockout: [] };
   const override = state.schedule;
@@ -1735,7 +1740,7 @@ export function teamNamesFromRegs(regTeams, agName) {
 export async function getDraw(agId, session) {
   const ag = findAg(agId); if (!ag) return null;
   // Editor works on the draft, so pass the session through.
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const [store, state] = await Promise.all([readStore(session), fetchOverrideState(agId, session)]);
   const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const tables = computeStandings(draw, store);
@@ -1762,7 +1767,7 @@ export async function getDraw(agId, session) {
 // editor's "Regenerate from standings" button.
 export async function autoKnockoutSlots(agId, session) {
   const ag = findAg(agId); if (!ag) return [];
-  const [store, state] = await Promise.all([readStore(), fetchOverrideState(agId, session)]);
+  const [store, state] = await Promise.all([readStore(session), fetchOverrideState(agId, session)]);
   const override = state.schedule;
   const draw = await resolveDraw(ag, override);
   const tables = computeStandings(draw, store);
@@ -2070,6 +2075,29 @@ export async function hubAuth(hubToken) {
   }
   if (json.pending) return { ok: false, pending: true, message: json.error };
   return { ok: false, error: json.error || 'Could not sign in with the Club Hub.' };
+}
+
+/* ---- Pitch marshals (Sep 2026, spec-pitch-marshals) -----------------------
+   A marshal "session" on /app is { marshal: true, token, ageGroupId, pitch }:
+   the token is the per-pitch link, and ageGroupId is set so submitResult()'s
+   own-group check above lets it through — the SERVER decides the rest. */
+export async function marshalInfo(token) {
+  if (!token) return { ok: false, error: 'No pitch link.' };
+  const r = await tryFetchJson('/.netlify/functions/marshal-info', { headers: { 'Authorization': `Bearer ${token}` } });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Pitch mode needs the live site.' };
+}
+export function marshalLinks(agId, session) {
+  return authedJson(`/.netlify/functions/marshal-links?ageGroupId=${encodeURIComponent(agId)}`, { method: 'GET' }, session);
+}
+export function issueMarshalLink(agId, pitch, session) {
+  return authedJson('/.netlify/functions/marshal-links', { method: 'POST', body: JSON.stringify({ action: 'issue', ageGroupId: agId, pitch }) }, session);
+}
+export function revokeMarshalLink(agId, pitch, session) {
+  return authedJson('/.netlify/functions/marshal-links', { method: 'POST', body: JSON.stringify({ action: 'revoke', ageGroupId: agId, pitch }) }, session);
+}
+export function getResultHistory(matchId, session) {
+  return authedJson(`/.netlify/functions/get-result-history?matchId=${encodeURIComponent(matchId)}`, { method: 'GET' }, session);
 }
 
 /* ---- Your own account (my-account.js, added 3 Aug 2026) -------------------

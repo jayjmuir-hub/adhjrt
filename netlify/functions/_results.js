@@ -226,7 +226,35 @@ async function clearMatch(store, matchId) {
   await store.setJSON(matchKey(matchId), { cleared: true, clearedAt: new Date().toISOString() });
 }
 
+/* ---- Result history (Sep 2026, spec-pitch-marshals § 4) -------------------
+   Before a result is overwritten or cleared, the PREVIOUS entry is appended to
+   `hist:<matchId>`, an array capped at HISTORY_KEEP, newest first. Every writer
+   — marshal, manager, organiser — because the table corrects scores too. The
+   `hist:` prefix is outside 'm:' and 'ag:', so readAll() never lists it as a
+   phantom match; a test injects one and asserts it is not served. */
+const HISTORY_KEEP = 20;
+const historyKey = (matchId) => `hist:${matchId}`;
+
+async function fileResultHistory(store, matchId, previous) {
+  if (!previous || typeof previous !== 'object') return;
+  let list = [];
+  try { list = (await store.get(historyKey(matchId), { type: 'json' })) || []; } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  list.unshift({ ...previous, filedAt: new Date().toISOString() });
+  await store.setJSON(historyKey(matchId), list.slice(0, HISTORY_KEEP));
+}
+
+async function readResultHistory(store, matchId) {
+  try {
+    const list = await store.get(historyKey(matchId), { type: 'json' });
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 module.exports = {
   readGroup, readAll, readMatch, writeMatch, clearMatch,
   groupKey, matchKey, matchPrefix, groupOf, isTombstone, LEGACY_KEY,
+  HISTORY_KEEP, historyKey, fileResultHistory, readResultHistory,
 };

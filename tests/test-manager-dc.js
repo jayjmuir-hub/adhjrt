@@ -246,10 +246,11 @@ section('Tab bar');
      asked for. Both the ids and the labels are pinned, because a tab that
      works perfectly under a renamed label is still a manager who cannot
      find it. Add a tab, add it here in the same commit. */
-  check('all six tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
-    ['fixtures', 'results', 'tables', 'draw', 'registrations', 'documents']));
+  /* Seven since 8 Sep 2026: Pitch marshals (spec-pitch-marshals). */
+  check('all seven tabs are offered', eq('tab ids', vals.tabs.map((t) => t.id),
+    ['fixtures', 'results', 'tables', 'draw', 'registrations', 'documents', 'marshals']));
   check('their labels are the agreed ones', eq('tab labels', vals.tabs.map((t) => t.label),
-    ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations', 'Documents']));
+    ['Fixtures & scoring', 'Results', 'Tables', 'Draw', 'Registrations', 'Documents', 'Pitch marshals']));
   check('Fixtures & scoring is the tab you land on', vals.isFixtures === true && c.state.tab === 'fixtures');
   check('the selected tab uses Organizer\'s red pill style',
     vals.tabs[0].style.includes('background:var(--brand);color:#fff;'));

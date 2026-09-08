@@ -2099,6 +2099,56 @@ Spec: `claude/specs/spec-draw-rights-sep-2026.md`. Rules live in
 - `tests/test-draw-rights.js` drives all of it; twenty-nine faults in the
   prover.
 
+## Pitch marshals — volunteers score at the pitch (Sep 2026)
+
+Spec: `claude/specs/spec-pitch-marshals-sep-2026.md`. Rules in
+`netlify/functions/_marshal.js`; the phone side is pitch mode in `app.html`;
+the manager side is the **Pitch marshals** tab on `/manager`.
+
+- **A marshal link is per PITCH per DAY, never per person.** A manager (own
+  group) or organiser issues one from the tab; `marshal-links.js` mints a
+  signed token `{ kind:'marshal', ageGroupId, day, pitch, jti }` and stores
+  `{ jti, issuedAt, issuedBy, revokedAt }` in the `marshals` store under
+  `<ag>:<day>:<pitch>`. **The token is returned once and never stored or
+  listed.** Issue new mints a new `jti`, so the old link dies; Revoke stamps
+  the record. Live only on its day, 00:00–24:00 Gulf, from `DEFAULT_VENUE`.
+  Festival groups refused; the pitch must be one the group holds in the
+  saved layout.
+- **Pitch mode** (`/app#marshal=<token>`): the fragment is read once, kept
+  under `adhjrt_marshal_v1`, wiped from the address bar. `marshal-info.js`
+  answers the group, pitch, day, that pitch's slots from the PUBLISHED draw
+  in kickoff order, `teamNames`, and `scoredBy` (first names only — the only
+  path a marshal has to any name). The sheet is the manager's inputs plus a
+  required **Your name** box, pre-filled from the last save on that phone.
+  A dead link gets one sentence and Leave pitch mode. A local timer with ONE
+  never-cleared interval (test-app-polling's rule).
+- **`submit-result.js` tries the marshal token FIRST**, then the session.
+  A marshal save must be for the token's group, on the token's pitch in the
+  published draw, carry a name, never clear, and may overwrite only a
+  MARSHAL's score — a score the table set is refused with "ask the table".
+  Thirty saves per ten minutes per link. Every entry now carries
+  `enteredBy: { kind, name, pitch? | username }`; `submittedBy` stays.
+- **Result history**: before any overwrite or clear, the previous entry is
+  appended to `hist:<matchId>` (twenty deep, newest first) in `_results.js`,
+  for every writer. `get-result-history.js` serves it to the group's manager
+  or an organiser; a marshal token is refused. The `hist:` prefix is outside
+  `m:`/`ag:`, so `readAll()` never lists it as a match.
+- ⚠️ **`get-results.js` serves the PUBLIC a positive allow-list of scoring
+  fields only** — until 8 Sep 2026 it served the record whole, including the
+  manager's username and the Spirit nominees (children's names). A manager or
+  organiser session (`optionalSession`) gets the full record, which is what
+  the Spirit award tab needs; `readStore(session)` in `scores-data.js` passes
+  the token along. A marshal token gets the public shape.
+- **The Marshals tab**: one card per pitch; Issue / Issue new / Revoke; after
+  issuing, the QR (vendored `qr.js`, loaded on demand), Copy link and
+  **Print pitch sheet** (an A4 page: QR, pitch, group, day, four
+  instructions). Reload and the token is gone from the page by design.
+- `qr.js` at the repo root is qrcode-generator 1.4.4 (MIT, Kazuhiko Arase),
+  vendored verbatim with a provenance header; on CLAUDE.md's do-not-read
+  list.
+- `tests/test-pitch-marshals.js` drives all of it; eighteen faults in the
+  prover.
+
 ## Publishing fixtures
 
 ⚠️ **`loadDraw(agId)` ON `/manager` OPENS WITH AN ENTRY GUARD, AND IT IS

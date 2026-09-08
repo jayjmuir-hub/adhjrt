@@ -15,8 +15,11 @@
 
 const { resolveSession, sessionRefusal, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { scoringFor, totalFor, loadRules, FESTIVAL_AGE_IDS } = require('./_scoring');
-const { readMatch, writeMatch, clearMatch } = require('./_results');
+const { readMatch, writeMatch, clearMatch, fileResultHistory } = require('./_results');
 const { MAX_FIELD_CHARS } = require('./_intake');
+const { verifyMarshal, NOT_LIVE } = require('./_marshal');
+const { publishedKey } = require('./_publish');
+const { checkRate, tooManyResponse } = require('./_ratelimit');
 
 // 30 Jul: every free-text field on the public registration form is capped at
 // MAX_FIELD_CHARS (see _intake.js) before it's ever stored — this was the one
@@ -81,20 +84,69 @@ async function clearAndVerify(store, matchId) {
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    const auth = await resolveSession(event);
-    if (!auth.ok) {
-      return sessionRefusal(auth);
-    }
-    const session = auth.session;
-    if (session.role !== 'manager' && session.role !== 'organizer') {
-      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed.' }) };
-    }
-
     const { matchId, data } = JSON.parse(event.body || '{}');
     if (!matchId || !data) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Missing matchId or data.' }) };
     const agId = matchId.split(':')[0];
-    if (!hasAgeGroupAccess(session, agId)) {
-      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'You can only enter scores for your own age group.' }) };
+
+    /* ===== THE SECOND WAY IN: A PITCH MARSHAL (Sep 2026, spec-pitch-marshals § 3)
+       A marshal token is a per-pitch, per-day credential the manager issued
+       (see _marshal.js). It is tried FIRST because it is not a session:
+       resolveSession would 401 it. A token that is not a marshal token falls
+       through to the session path exactly as before. */
+    let session = null;
+    let marshal = null;
+    const mv = await verifyMarshal(event);
+    if (mv.ok) {
+      marshal = mv.marshal;
+    } else if (mv.reason !== 'not-marshal') {
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: NOT_LIVE }) };
+    } else {
+      const auth = await resolveSession(event);
+      if (!auth.ok) {
+        return sessionRefusal(auth);
+      }
+      session = auth.session;
+      if (session.role !== 'manager' && session.role !== 'organizer') {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Not allowed.' }) };
+      }
+      if (!hasAgeGroupAccess(session, agId)) {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'You can only enter scores for your own age group.' }) };
+      }
+    }
+
+    const store = blobStore('results');
+    let marshalName = '';
+    if (marshal) {
+      if (marshal.ageGroupId !== agId) {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'This pitch link is for a different age group.' }) };
+      }
+      /* The match must be on THIS pitch in the PUBLISHED draw. A match that
+         moved pitch since the link was issued is refused — the marshal is at
+         the old pitch. */
+      const pub = await blobStore('schedules').get(publishedKey(agId), { type: 'json' });
+      const sched = (pub && pub.schedule) || {};
+      const slot = [...(sched.slots || []), ...(sched.knockout || [])].find((s) => s && s.id === matchId);
+      if (!slot) return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'That match is not in the published fixtures.' }) };
+      if ((slot.pitch || '') !== marshal.pitch) {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: `That match is on ${slot.pitch || 'another pitch'}, not ${marshal.pitch}. Ask the age-group table.` }) };
+      }
+      if (data.clear === true) {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Clearing a result is done at the age-group table.' }) };
+      }
+      marshalName = String(data.marshalName || '').trim().slice(0, 40);
+      if (!marshalName) return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Type your name before saving the score.' }) };
+      /* Precedence: a score the TABLE set is the table's to change. A marshal
+         may overwrite a marshal's. */
+      let existing = null;
+      try { existing = await readMatch(store, matchId); } catch (e) { existing = null; }
+      const kind = existing && existing.enteredBy ? existing.enteredBy.kind : (existing ? 'manager' : null);
+      if (existing && kind !== 'marshal') {
+        return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'This score was set by the age-group table. Ask them to change it.' }) };
+      }
+      /* Thirty saves per ten minutes per link — far beyond a real pitch, and
+         enough to stop a looping phone. */
+      const rate = await checkRate(blobStore('config'), `marshal:${marshal.jti}`, Date.now(), { max: 30, windowMs: 10 * 60 * 1000 });
+      if (!rate.ok) return tooManyResponse(rate);
     }
 
     /* U6 and U7 are non-competitive festival groups: no scores, no standings.
@@ -111,8 +163,8 @@ exports.handler = async (event) => {
 
     /* Results are stored one blob per MATCH — see _results.js for why. A save
        writes only its own key, so it cannot clobber any other match's score,
-       in this age group or any other. */
-    const store = blobStore('results');
+       in this age group or any other. (`store` is declared above, before the
+       marshal checks, since Sep 2026.) */
 
     /* Clearing has to REMOVE the entry, not write zeros. A 0-0 draw is a real
        rugby result worth two league points each, so an emptied form saved as
@@ -122,9 +174,13 @@ exports.handler = async (event) => {
          there". It used to swallow the error, which made a failed read look
          exactly like an already-clear match — so a result that was still very
          much present got reported as cleared and the manager moved on. */
-      if (!(await readMatch(store, matchId))) {
+      const present = await readMatch(store, matchId);
+      if (!present) {
         return { statusCode: 200, body: JSON.stringify({ ok: true, cleared: true }) };
       }
+      /* History keeps the cleared entry too, so "who wiped the 10:20 score"
+         is answerable (spec-pitch-marshals § 4). */
+      try { await fileResultHistory(store, matchId, { ...present, clearedBy: session.username }); } catch (e) { console.warn('submit-result: could not file history -', e && e.message); }
       const gone = await clearAndVerify(store, matchId);
       if (!gone) {
         return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'Could not confirm the result was cleared. Reload and try again.' }) };
@@ -172,8 +228,23 @@ exports.handler = async (event) => {
       walkover: wo,
       spiritNomineeHome: clip(data.spiritNomineeHome),
       spiritNomineeAway: clip(data.spiritNomineeAway),
-      submittedBy: session.username, submittedAt: new Date().toISOString(),
+      /* `submittedBy` stays for every existing reader; `enteredBy` (Sep 2026)
+         says WHO in a shape the table can show: a marshal's typed first name
+         and pitch, or an account's username. */
+      submittedBy: marshal ? `marshal:${marshal.pitch}` : session.username,
+      submittedAt: new Date().toISOString(),
+      enteredBy: marshal
+        ? { kind: 'marshal', name: marshalName, pitch: marshal.pitch }
+        : { kind: session.role === 'organizer' ? 'organizer' : 'manager', name: session.username, username: session.username },
     };
+
+    /* History (spec-pitch-marshals § 4): the entry being overwritten is kept,
+       twenty deep, for every writer. Best-effort — a save must not fail
+       because its history could not be filed. */
+    try {
+      const previous = await readMatch(store, matchId);
+      if (previous) await fileResultHistory(store, matchId, previous);
+    } catch (e) { console.warn('submit-result: could not file history -', e && e.message); }
 
     const saved = await saveAndVerify(store, matchId, entry);
     if (!saved) {

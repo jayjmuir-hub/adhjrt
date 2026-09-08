@@ -1048,6 +1048,11 @@ function matchRow(m, agId, hideScore){
 /* animate=true only on a deliberate tab change. A data refresh re-renders too,
    and animating that would make the screen twitch every time a score lands. */
 function render(animate){
+  /* Pitch mode (Sep 2026, spec-pitch-marshals § 2): one pitch, one day, the
+     score sheet and nothing else. Painted INSTEAD of the tabs, never beside
+     them, and only when a live marshal link is held — with no token stored
+     this branch is never reached and the public app is untouched. */
+  if (S.pitch) { renderPitch(animate); return; }
   paintRole();
   const m = $('main');
   m.innerHTML = S.view==='today' ? viewToday()
@@ -1586,7 +1591,184 @@ function openMatch(id){
 }
 
 /* ---------------- boot ---------------- */
+/* ===================== PITCH MODE (spec-pitch-marshals) =====================
+   A volunteer scans the QR on the pitch sheet and lands on /app#marshal=<token>.
+   The token is read ONCE, kept in localStorage under its own key, wiped from
+   the address bar, and shown to marshal-info.js, which answers the pitch, the
+   day, that pitch's matches and who has scored what. Everything below renders
+   from that answer. The name is asked for on EVERY save, pre-filled from the
+   last save on this phone — that is the whole of rotation handling. */
+const MARSHAL_KEY = 'adhjrt_marshal_v1';
+const MARSHAL_NAME_KEY = 'adhjrt_marshal_name_v1';
+
+function marshalTokenFromUrl(){
+  let hash = '';
+  try { hash = window.location.hash || ''; } catch (e) { return ''; }
+  const m = /(?:^#|&)marshal=([^&]+)/.exec(hash);
+  if (!m) return '';
+  try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) {}
+  return decodeURIComponent(m[1]);
+}
+function storedMarshalToken(){ try { return localStorage.getItem(MARSHAL_KEY) || ''; } catch (e) { return ''; } }
+function leavePitchMode(){
+  try { localStorage.removeItem(MARSHAL_KEY); } catch (e) {}
+  S.pitch = null; S.pitchToken = null; S.pitchDead = '';
+  try { window.location.replace('/app'); } catch (e) { render(); }
+}
+
+/* Loads pitch mode for a token: true when live, false when the link is dead
+   (revoked, reissued, not today), in which case the one dead-link screen
+   shows. A network failure keeps the token and shows retry. */
+async function enterPitchMode(token){
+  S.pitchToken = token;
+  try { localStorage.setItem(MARSHAL_KEY, token); } catch (e) {}
+  const info = await api.marshalInfo(token);
+  if (info && info.ok) {
+    S.pitch = info; S.pitchDead = '';
+    await refreshPitchResults();
+    return true;
+  }
+  S.pitch = { dead: true }; S.pitchDead = (info && info.error) || 'This pitch link is no longer live. Ask the age-group table for a new one.';
+  return false;
+}
+
+/* Scores for this pitch's matches come from the PUBLIC fixtures answer —
+   what parents see — so nothing beyond the score itself is fetched here. */
+async function refreshPitchResults(){
+  if (!S.pitch || S.pitch.dead) return;
+  try {
+    const fx = await api.getFixtures(S.pitch.ageGroupId, null);
+    const all = (fx.pool || []).concat(fx.knockout || []);
+    S.pitchResults = {};
+    all.forEach(m => { if (m.result) S.pitchResults[m.id] = m.result; });
+    const info = await api.marshalInfo(S.pitchToken);
+    if (info && info.ok) S.pitch = info;
+  } catch (e) { /* keep what we have */ }
+}
+
+const pitchTeam = (code) => esc((S.pitch && S.pitch.teamNames && S.pitch.teamNames[code]) || code || 'TBD');
+
+function renderPitch(animate){
+  const b = $('roleBadge'); if (b) { b.className = 'badge badge-mgr'; b.textContent = 'Pitch marshal'; }
+  try { $('tabbar').innerHTML = ''; $('navDesktop').innerHTML = ''; } catch (e) {}
+  const m = $('main');
+  const p = S.pitch;
+  if (p.dead) {
+    m.innerHTML = `<div class="card"><div class="row"><div><b>This pitch link is not live</b><small>${esc(S.pitchDead)}</small></div></div></div>
+      <button class="btn btn-o" data-pact="leave" style="margin-top:12px">Leave pitch mode</button>`;
+  } else {
+    const name = (() => { try { return localStorage.getItem(MARSHAL_NAME_KEY) || ''; } catch (e) { return ''; } })();
+    const rows = (p.matches || []).map(mt => {
+      const r = (S.pitchResults || {})[mt.id];
+      const who = p.scoredBy && p.scoredBy[mt.id] ? `Scored by ${esc(p.scoredBy[mt.id])}` : '';
+      return `<button class="row" data-pmatch="${esc(mt.id)}" style="width:100%;text-align:left">
+        <div><div class="mtime">${esc(api.minutesToDisplay ? api.minutesToDisplay(mt.startMins) : mt.startMins)}</div><div class="mpitch">${esc(mt.poolName || mt.round || '')}</div></div>
+        <div style="flex:1"><b>${pitchTeam(mt.home)} v ${pitchTeam(mt.away)}</b>${who ? `<small>${who}</small>` : ''}</div>
+        <div>${r ? `<span class="mscore">${r.homeScore}&ndash;${r.awayScore}</span>` : ICON.chev}</div>
+      </button>`;
+    }).join('') || '<div class="card"><div class="row"><div><small>No matches on this pitch in the published fixtures yet.</small></div></div></div>';
+    m.innerHTML = `<div class="card" style="margin-bottom:14px">
+        <div class="row"><div><b>${esc(p.pitch)} &middot; ${esc(p.ageGroupName)}</b><small>${esc(p.dayLabel || '')} &middot; Scoring as <b id="pname">${esc(name || 'nobody yet')}</b> &middot; <a href="#" data-pact="name">change</a></small></div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">${rows}</div>
+      <div class="card" style="margin-top:14px"><div class="row"><div><b>Match timer</b><small id="ptimer">00:00</small></div>
+        <div style="display:flex;gap:6px"><button class="btn btn-o" data-pact="tstart" style="padding:8px 12px">Start</button><button class="btn btn-o" data-pact="tpause" style="padding:8px 12px">Pause</button><button class="btn btn-o" data-pact="treset" style="padding:8px 12px">Reset</button></div></div>
+        <p class="muted" style="font-size:12px;margin-top:6px">Local to this phone. Nothing is stored or sent.</p></div>
+      <button class="btn btn-o" data-pact="refresh" style="margin-top:12px">Refresh scores</button>
+      <button class="btn btn-o" data-pact="leave" style="margin-top:10px;color:#c0392b">Leave pitch mode</button>`;
+  }
+  if (animate) { m.classList.remove('main-anim'); void m.offsetWidth; m.classList.add('main-anim'); }
+  document.querySelectorAll('[data-pmatch]').forEach(el => el.onclick = () => openPitchMatch(el.dataset.pmatch));
+  document.querySelectorAll('[data-pact]').forEach(el => el.onclick = (e) => { e.preventDefault(); pitchAct(el.dataset.pact); });
+  paintTimer();
+}
+
+/* The timer: start/pause/reset, seconds on the phone, nothing else.
+   ⚠️ ONE interval, started once when pitch mode loads and NEVER cleared —
+   the same rule the match-day poll follows (test-app-polling.js): a missed
+   clear leaves a second loop running with nothing on screen to show it.
+   paintTimer() is a no-op when the timer is not on screen. */
+const T = { running: false, startedAt: 0, elapsed: 0, ticking: false };
+function startTimerTicks(){ if (T.ticking) return; T.ticking = true; setInterval(paintTimer, 500); }
+function paintTimer(){
+  const el = $('ptimer'); if (!el) return;
+  const ms = T.elapsed + (T.running ? Date.now() - T.startedAt : 0);
+  const s = Math.floor(ms / 1000);
+  el.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+function pitchAct(a){
+  if (a === 'leave') return leavePitchMode();
+  if (a === 'refresh') return refreshPitchResults().then(() => render());
+  if (a === 'name') return askMarshalName();
+  if (a === 'tstart' && !T.running) { T.running = true; T.startedAt = Date.now(); startTimerTicks(); }
+  if (a === 'tpause' && T.running) { T.elapsed += Date.now() - T.startedAt; T.running = false; }
+  if (a === 'treset') { T.running = false; T.elapsed = 0; }
+  paintTimer();
+}
+function askMarshalName(){
+  const cur = (() => { try { return localStorage.getItem(MARSHAL_NAME_KEY) || ''; } catch (e) { return ''; } })();
+  openSheet('Your name', `<div class="field"><label for="mname">First name</label><input id="mname" maxlength="40" value="${esc(cur)}" autocomplete="given-name"></div>
+    <p class="muted" style="font-size:12.5px;line-height:1.5">Typed once per phone and confirmed on every save, so whoever takes over just changes it.</p>
+    <button class="btn btn-g" id="mnameok">Save name</button>`);
+  $('mnameok').onclick = () => { const v = ($('mname').value || '').trim().slice(0, 40); try { localStorage.setItem(MARSHAL_NAME_KEY, v); } catch (e) {} closeSheet(); render(); };
+}
+
+/* The pitch score sheet: the manager's inputs plus the name box. The server
+   recomputes totals from the parts and refuses anything not on this pitch. */
+function openPitchMatch(id){
+  const p = S.pitch; const mt = (p.matches || []).find(x => x.id === id); if (!mt) return;
+  const agId = p.ageGroupId;
+  const r = (S.pitchResults || {})[id] || null;
+  const parts = api.scoringFor(agId);
+  const cur = (() => { try { return localStorage.getItem(MARSHAL_NAME_KEY) || ''; } catch (e) { return ''; } })();
+  const sideInputs = (side, label) => `
+    <div class="scoreblock"><div class="sb-head"><span>${label}</span><b id="ptot-${side}">0</b></div>
+      ${parts.map(k => `<div class="sb-row"><label for="p${side}-${k}">${esc(api.scoreLabel(k))} <span class="sb-pts">${api.scorePoints(k)} pts</span></label>
+        <input id="p${side}-${k}" class="sb-in" type="number" inputmode="numeric" min="0" step="1" value="${r ? (r[side + k.charAt(0).toUpperCase() + k.slice(1)] || 0) : 0}"></div>`).join('')}
+    </div>`;
+  openSheet('Enter score', `<div class="card" style="margin-bottom:16px"><div class="row"><div><b>${pitchTeam(mt.home)} v ${pitchTeam(mt.away)}</b>
+      <small>${esc(mt.poolName || mt.round || '')} &middot; ${esc(p.pitch)}${p.scoredBy && p.scoredBy[id] ? ' &middot; scored by ' + esc(p.scoredBy[id]) : ''}</small></div></div></div>
+    <div id="scErr"></div>
+    ${sideInputs('home', pitchTeam(mt.home))}
+    ${sideInputs('away', pitchTeam(mt.away))}
+    <div class="field" style="margin-top:4px"><label>Walk-over</label><select id="pwo" aria-label="Walkover">
+      <option value="">No walk-over</option><option value="home" ${r && r.walkover === 'home' ? 'selected' : ''}>${pitchTeam(mt.home)} awarded the match</option>
+      <option value="away" ${r && r.walkover === 'away' ? 'selected' : ''}>${pitchTeam(mt.away)} awarded the match</option></select></div>
+    <div class="field" style="margin-top:8px"><label for="pmname">Your name</label><input id="pmname" maxlength="40" value="${esc(cur)}" autocomplete="given-name" placeholder="First name"></div>
+    <button class="btn btn-g" id="pgo">${r ? 'Update result' : 'Save result'}</button>`);
+  const readSide = (side) => { const o = {}; parts.forEach(k => { o[k] = Number(($(`p${side}-${k}`) || {}).value || 0); }); return o; };
+  const recalc = () => {
+    const wo = $('pwo').value;
+    ['home','away'].forEach(side => { $('ptot-' + side).textContent = wo ? (wo === side ? 20 : 0) : api.scoreTotal(agId, readSide(side)); });
+    parts.forEach(k => ['home','away'].forEach(side => { const el = $(`p${side}-${k}`); if (el) { el.disabled = !!wo; el.style.opacity = wo ? .45 : 1; } }));
+  };
+  parts.forEach(k => ['home','away'].forEach(side => { const el = $(`p${side}-${k}`); if (el) el.oninput = recalc; }));
+  $('pwo').onchange = recalc; recalc();
+  $('pgo').onclick = async () => {
+    const name = ($('pmname').value || '').trim().slice(0, 40);
+    if (!name) { $('scErr').innerHTML = '<div class="err">Type your first name before saving.</div>'; return; }
+    try { localStorage.setItem(MARSHAL_NAME_KEY, name); } catch (e) {}
+    const done = busy('pgo', 'Saving…');
+    const payload = { walkover: $('pwo').value || null, marshalName: name };
+    ['home','away'].forEach(side => parts.forEach(k => { payload[side + k.charAt(0).toUpperCase() + k.slice(1)] = Number(($(`p${side}-${k}`) || {}).value || 0); }));
+    const res = await api.submitResult(id, payload, { marshal: true, token: S.pitchToken, ageGroupId: agId, pitch: p.pitch });
+    if (res.ok) { closeSheet(); toast(res.stored ? `Saved ${res.stored.homeScore}–${res.stored.awayScore}` : 'Result saved'); await refreshPitchResults(); render(); }
+    else if (res.sessionEnded || /no longer live/i.test(res.error || '')) { S.pitch = { dead: true }; S.pitchDead = res.error || ''; closeSheet(); render(); }
+    else { $('scErr').innerHTML = `<div class="err">${esc(res.error || 'Could not save.')}</div>`; done(); }
+  };
+}
+
 (async function init(){
+  /* Pitch mode first: a marshal link in the fragment, or one kept from an
+     earlier scan on this phone. If it is live, that is the whole app. */
+  const marshalToken = marshalTokenFromUrl() || storedMarshalToken();
+  if (marshalToken) {
+    if (api.loadScoringRules) { try { await api.loadScoringRules(); } catch (e) {} }
+    await enterPitchMode(marshalToken);
+    render();
+    return;
+  }
+
   S.session = resolveSession();
 
   /* ⚠️ /app DELIBERATELY DOES NOT GO TO /signin WHEN THE SERVER ENDS A

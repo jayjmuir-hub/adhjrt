@@ -197,7 +197,8 @@ read files "just to understand the code." Map:
 **Do NOT read these unless something is provably broken inside them** — they are
 framework/runtime plumbing, never edited, and together larger than the rest of
 the repo combined: `deck-stage.js`, `support.js`, `image-slot.js`,
-`doc-page.js`, `local-backend.js`.
+`doc-page.js`, `local-backend.js`, and `qr.js` (the vendored QR encoder for the pitch
+marshal sheets, Sep 2026 — MIT, committed verbatim, never edited).
 
 ---
 

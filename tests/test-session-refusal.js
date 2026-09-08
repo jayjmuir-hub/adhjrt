@@ -326,8 +326,11 @@ section('The server marks a finished session, and only a finished session');
 
     /* ⚠️ BOTH ENDS. "It is not in the pending queue" passes just as well
        against an account that has vanished from the page altogether. */
+    /* Repointed 8 Sep 2026: the filter gained a second arm for an
+       approved-but-roleless Club Hub login (spec-club-hub-sign-in). The
+       revoked exclusion is the same clause it always was. */
     check('⚠️ the pending queue excludes revoked accounts',
-      /pendingAccounts: s\.accounts\.filter\(\(a\) => !a\.approved && !a\.revokedAt\)/.test(ORGP),
+      /pendingAccounts: s\.accounts\.filter\(\(a\) => \(!a\.approved && !a\.revokedAt\) \|\| \(a\.approved && !a\.role\)\)/.test(ORGP),
       'this is the filter that put a revoked person among new signups');
     check('⚠️ …and they appear in a Revoked list instead',
       /revokedAccounts: s\.accounts\.filter\(\(a\) => !a\.approved && a\.revokedAt\)/.test(ORGP));

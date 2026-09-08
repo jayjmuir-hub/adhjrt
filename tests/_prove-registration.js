@@ -8743,9 +8743,10 @@ const FAULTS = [
     /* THE ORIGINAL BUG, PUT BACK. */
     name: 'the pending queue goes back to holding revoked people',
     suite: 'test-session-refusal.js',
+    /* Repointed 8 Sep 2026 when the filter gained its Club Hub arm. */
     apply: () => patch('Organizer.dc.html',
-      'pendingAccounts: s.accounts.filter((a) => !a.approved && !a.revokedAt)',
-      'pendingAccounts: s.accounts.filter((a) => !a.approved)'),
+      'pendingAccounts: s.accounts.filter((a) => (!a.approved && !a.revokedAt) || (a.approved && !a.role))',
+      'pendingAccounts: s.accounts.filter((a) => !a.approved || (a.approved && !a.role))'),
     expect: ['the pending queue excludes revoked accounts'],
   },
   {

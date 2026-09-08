@@ -2077,7 +2077,27 @@ Spec: `claude/specs/spec-draw-rights-sep-2026.md`. Rules live in
 - ⚠️ `loadVenue` takes the store FACTORY. Called bare it throws, the fallback
   is the code's layout, and a group an organiser has moved to the other day
   would be frozen on the wrong one. Both callers pass `blobStore`.
-- `tests/test-draw-rights.js` drives all of it; eighteen faults in the prover.
+- **Send for review** (`draw-review.js`): a manager with an edit right and a
+  SAVED draft presses the button on the Draw tab; the server writes
+  `review:<id>` in the `schedules` store and emails every approved organiser
+  account that carries an email (the hub sign-in gives them one). One request
+  per group per ten minutes; the draft check runs BEFORE the limit so a
+  refused request spends nothing. The email is best-effort: mail down → the
+  record is still written and the answer says `emailed: false`, which the
+  Draw tab turns into "tell the desk as well". The organiser's Fixtures tab
+  shows an **Awaiting review** strip (Open in `/manager?ag=<id>`, Dismiss);
+  publishing deletes the record. The strip names no draft-writing function.
+- **Draft history** (`_drawHistory.js`, `draw-history.js`): every save files
+  the draft being REPLACED under `hist:<id>:<ISO>` before overwriting, ten
+  deep; a reset files a `cleared` entry that still carries the wiped draw,
+  so it is the undo for a wipe. Organiser-only GET (metadata, newest first)
+  and POST restore, which files the current draft first so a restore is
+  undoable and never touches the published copy. The Draw tab's **Draft
+  history** card is inside an `isOrganiser` gate (the fourth on the page;
+  `test-manager-dc.js` counts them).
+- `/manager?ag=<id>` lands an organiser on that group (from the strip).
+- `tests/test-draw-rights.js` drives all of it; twenty-nine faults in the
+  prover.
 
 ## Publishing fixtures
 

@@ -1859,6 +1859,31 @@ export function isOrganizerSession(session) {
   );
 }
 
+/* ---- Send for review, and draft history (Sep 2026, spec-draw-rights § 5, § 7) ----
+   All authenticated; the server decides who may do what. No local-preview
+   stand-ins: these need the live site, and say so. */
+async function authedJson(path, opts, session) {
+  if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
+  const r = await tryFetchJson(path, { ...opts, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}`, ...(opts.headers || {}) } });
+  if (r.real) return r.json;
+  return { ok: false, error: 'This needs the live site.' };
+}
+export function requestDrawReview(agId, note, session) {
+  return authedJson('/.netlify/functions/draw-review', { method: 'POST', body: JSON.stringify({ action: 'request', ageGroupId: agId, note: note || '' }) }, session);
+}
+export function listDrawReviews(session) {
+  return authedJson('/.netlify/functions/draw-review', { method: 'GET' }, session);
+}
+export function dismissDrawReview(agId, session) {
+  return authedJson('/.netlify/functions/draw-review', { method: 'POST', body: JSON.stringify({ action: 'dismiss', ageGroupId: agId }) }, session);
+}
+export function getDrawHistory(agId, session) {
+  return authedJson(`/.netlify/functions/draw-history?ageGroupId=${encodeURIComponent(agId)}`, { method: 'GET' }, session);
+}
+export function restoreDraw(agId, savedAt, session) {
+  return authedJson('/.netlify/functions/draw-history', { method: 'POST', body: JSON.stringify({ ageGroupId: agId, savedAt }) }, session);
+}
+
 export async function resetDraw(agId, session) {
   if (!session || !session.token) return { ok: false, error: 'Not signed in.' };
   const r = await tryFetchJson('/.netlify/functions/save-schedule-override', {

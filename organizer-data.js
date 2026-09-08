@@ -264,6 +264,11 @@ export { myAccount, changeMyPassword, linkGoogle, verifySession } from './scores
    died before it existed. */
 export { googleClientId } from './scores-data.js';
 
+/* The organiser's review queue (Sep 2026, spec-draw-rights § 5) — re-exported,
+   same reasoning as the account helpers above: one implementation, and the
+   api.* sweep in test-accounts.js sees them. */
+export { listDrawReviews, dismissDrawReview } from './scores-data.js';
+
 /* -------- The venue: pitches per day, and which day each age group plays --------
    Read is public (venue-layout.js GET); adding ?usage=1 with an organiser token
    also returns how many saved match slots sit on each pitch, so the back office

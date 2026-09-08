@@ -365,6 +365,56 @@ const resetStores = () => { stores.clear(); };
     check('the publish note names organisers and review', /Only tournament organisers/.test(v.publishBlockedNote) && /review/.test(v.publishBlockedNote));
     check('the Draw tab markup carries the note box', /drawLockedNote/.test(readRepo('Manager.dc.html')));
 
+    /* Send for review on the Draw tab, and the organiser's history card. */
+    const reviewCalls = [];
+    api.requestDrawReview = async (...a) => { reviewCalls.push(a); return { ok: true, emailed: true }; };
+    api.getDrawHistory = async () => ({ ok: true, entries: [{ savedAt: '2026-09-08T05:00:00.000Z', savedBy: 'orga', cleared: false, pools: 2, teams: 8, slots: 12 }, { savedAt: '2026-09-08T04:00:00.000Z', savedBy: 'mgr', cleared: true, pools: 0, teams: 0, slots: 0 }] });
+    const restores = [];
+    api.restoreDraw = async (...a) => { restores.push(a); return { ok: true }; };
+    c = page(POOLS); v = c.renderVals();
+    check('a manager with an edit right and a saved draft can Send for review', v.canRequestReview === true);
+    c.setState({ drawDirty: true }); v = c.renderVals();
+    check('⚠️ …but not with unsaved changes', v.canRequestReview === false && /Save your changes first/.test(v.reviewHint));
+    c = page(NONE); v = c.renderVals();
+    check('…and never without a right', v.canRequestReview === false);
+    c = page(FROZEN); v = c.renderVals();
+    check('…nor on match day', v.canRequestReview === false);
+    c = page(BOTH, { ageGroupId: '*', token: 't', isOrganizer: true }); v = c.renderVals();
+    check('an organiser is not offered Send for review (they publish)', v.canRequestReview === false);
+    c.confirmModal = (msg, ok) => ok();
+    check('…but is offered the history card', /historyLabel/.test(readRepo('Manager.dc.html')) && v.historyOpen === false);
+    await c.toggleHistory(); v = c.renderVals();
+    eq('opening History lists the entries', v.historyEntries.length, 2);
+    check('…a cleared entry says so and still offers Restore', v.historyEntries[1].summary === 'Draw cleared' && v.historyEntries[1].canRestore === true);
+    await v.historyEntries[0].onRestore();
+    eq('Restore calls the API with the group and the stamp', JSON.stringify(restores[0].slice(0, 2)), JSON.stringify(['u14b', '2026-09-08T05:00:00.000Z']));
+    c = page(POOLS); c.confirmModal = (msg, ok) => ok();
+    await c.doRequestReview();
+    eq('Send for review calls the API with the group', reviewCalls[0][0], 'u14b');
+    check('…and says the organisers were emailed', /emailed/.test(c.state.drawMsg));
+
+    /* The organiser's Awaiting-review strip. */
+    const O2 = load('Organizer.dc.html');
+    const dismissed = [];
+    const o2 = new O2(); o2.props = {};
+    o2.state = { ...o2.state, tab: 'fixtures', session: { isOrganizer: true }, api: {
+      listDrawReviews: async () => ({ ok: true, reviews: [{ ageGroupId: 'u14b', requestedBy: 'mgr', requestedAt: '2026-09-08T05:00:00.000Z', note: 'ready' }] }),
+      dismissDrawReview: async (ag) => { dismissed.push(ag); return { ok: true }; },
+      getFixtures: async () => ({ pool: [], knockout: [] }), getStandings: async () => ({ tables: [] }),
+      canPublishNow: () => false, isOrganiserSession: () => true, canScoreAgeGroup: () => true, teamLabel: (x) => x, teamShort: (x) => x,
+      minutesToDisplay: (m) => String(m), minutesToTimeInput: (m) => String(m), pitchesForAgeGroup: () => [], scoringRules: () => ({}), registrationCopy: () => ({}), venueDays: () => [],
+    } };
+    await o2.loadReviews();
+    let ov2 = o2.renderVals();
+    check('the Fixtures tab shows the Awaiting-review strip', ov2.fxvHasReviews === true && ov2.fxvReviews.length === 1);
+    eq('…the row opens /manager on that group', ov2.fxvReviews[0].openHref, '/manager?ag=u14b');
+    check('…names the group, not the id', /U14/.test(ov2.fxvReviews[0].name));
+    o2.confirmModal = (msg, ok) => ok();
+    await ov2.fxvReviews[0].onDismiss();
+    eq('Dismiss calls the API', dismissed[0], 'u14b');
+    check('…and the row goes', o2.renderVals().fxvHasReviews === false);
+    check('the strip markup names no draft-writing function', !/saveDraw|save-schedule-override/.test((readRepo('Organizer.dc.html').match(/Awaiting review[\s\S]*?<\/sc-if>/) || [''])[0]));
+
     /* The Accounts card: two switches on a manager, none on an organiser. */
     const O = load('Organizer.dc.html');
     const rightsCalls = [];
@@ -394,6 +444,139 @@ const resetStores = () => { stores.clear(); };
     check('⚠️ an organiser\'s card shows no switches', ov.acctIsManagerAcct === false);
     o.openMyAccount && o.setState({ acctSubject: '' });
     check('the card markup carries both switch labels', /Edit pools and teams/.test(readRepo('Organizer.dc.html')) && /Edit kickoff times and pitches/.test(readRepo('Organizer.dc.html')));
+  }
+
+  /* ==================================================================== */
+  section('⚠️ Draft history: filed BEFORE every overwrite, ten deep, organiser-only restore');
+  {
+    const hist = require(path.join(FN, '_drawHistory.js'));
+    const history = require(path.join(FN, 'draw-history.js'));
+    resetStores(); seedAccounts();
+    let r = await parse(await call(save.handler, 'orga', { ageGroupId: DAY2_GROUP, schedule: draft() }));
+    eq('first save: 200', r.status, 200);
+    eq('…files NO history (there was nothing to replace)', (await hist.historyKeys(schedules(), DAY2_GROUP)).length, 0);
+    for (let i = 1; i <= 12; i += 1) {
+      const d = draft(); d.pools[0].name = `Pool v${i}`;
+      await new Promise((res) => setTimeout(res, 2));
+      r = await parse(await call(save.handler, 'orga', { ageGroupId: DAY2_GROUP, schedule: d }));
+    }
+    const keys = await hist.historyKeys(schedules(), DAY2_GROUP);
+    eq('⚠️ twelve overwrites keep exactly ten entries', keys.length, 10);
+    const entries = await parse(await call(history.handler, 'orga', null, 'GET', { ageGroupId: DAY2_GROUP }));
+    eq('the listing is newest first', entries.entries[0].savedAt > entries.entries[9].savedAt, true);
+    check('…with a summary, not the schedule', entries.entries[0].pools === 1 && !('schedule' in entries.entries[0]));
+    eq('…stamped with who saved over it', entries.entries[0].savedBy, 'orga');
+    const newest = await schedules().get(hist.histKey(DAY2_GROUP, entries.entries[0].savedAt), { type: 'json' });
+    eq('⚠️ the newest entry is the draft that was REPLACED by the last save (v11), not the current one', newest.schedule.pools[0].name, 'Pool v11');
+
+    r = await parse(await call(history.handler, 'mgr', null, 'GET', { ageGroupId: DAY2_GROUP }));
+    eq('a manager cannot read the history', r.status, 403);
+    r = await parse(await call(history.handler, 'mgr', { ageGroupId: DAY2_GROUP, savedAt: entries.entries[0].savedAt }));
+    eq('…nor restore', r.status, 403);
+
+    const target = entries.entries[3].savedAt;
+    const before = await schedules().get(DAY2_GROUP, { type: 'json' });
+    r = await parse(await call(history.handler, 'orga', { ageGroupId: DAY2_GROUP, savedAt: target }));
+    eq('an organiser restores', r.status, 200);
+    const after = await schedules().get(DAY2_GROUP, { type: 'json' });
+    eq('…and the draft is that version', after.pools[0].name, (await schedules().get(hist.histKey(DAY2_GROUP, target), { type: 'json' })).schedule.pools[0].name);
+    const after2 = await parse(await call(history.handler, 'orga', null, 'GET', { ageGroupId: DAY2_GROUP }));
+    const newestNow = await schedules().get(hist.histKey(DAY2_GROUP, after2.entries[0].savedAt), { type: 'json' });
+    eq('⚠️ restore filed the previous current draft FIRST, so it is undoable', newestNow.schedule.pools[0].name, before.pools[0].name);
+    check('…and no published copy was touched', !(await schedules().get(`pub:${DAY2_GROUP}`, { type: 'json' })));
+    r = await parse(await call(history.handler, 'orga', { ageGroupId: DAY2_GROUP, savedAt: '2020-01-01T00:00:00.000Z' }));
+    eq('a version that is gone is 404', r.status, 404);
+    r = await parse(await call(history.handler, 'orga', { ageGroupId: DAY2_GROUP, savedAt: '../pub:u16b' }));
+    eq('a savedAt that is not a timestamp is 404, never a key', r.status, 404);
+
+    r = await parse(await call(save.handler, 'orga', { ageGroupId: DAY2_GROUP, reset: true }));
+    eq('a reset succeeds', r.status, 200);
+    const afterReset = await parse(await call(history.handler, 'orga', null, 'GET', { ageGroupId: DAY2_GROUP }));
+    eq('…and files a cleared entry', afterReset.entries[0].cleared, true);
+    r = await parse(await call(history.handler, 'orga', { ageGroupId: DAY2_GROUP, savedAt: afterReset.entries[0].savedAt }));
+    eq('…which CAN be restored: a cleared entry carries the draw that was wiped', r.status, 200);
+    check('…and the draft is back', !!(await schedules().get(DAY2_GROUP, { type: 'json' })));
+  }
+
+  /* ==================================================================== */
+  section('⚠️ Send for review: the record, the email, the rate limit, and who may');
+  {
+    /* ⚠️ The mail env vars are read at REQUIRE time by _email.js, so they go
+       first. Every value is invented. */
+    process.env.MAIL_FROM = 'noreply@example.com'; process.env.MS_TENANT_ID = 'not-a-real-tenant'; process.env.MS_CLIENT_ID = 'not-a-real-client'; process.env.MS_CLIENT_SECRET = 'not-a-real-value';
+    const review = require(path.join(FN, 'draw-review.js'));
+    const publishFn = publish;
+    const sent = [];
+    /* Capture the mail without a network: _email.js reads the token from the
+       environment and posts to Graph; with fetch stubbed the call records. */
+    const realFetch = global.fetch;
+    global.fetch = async (url, opts) => {
+      if (String(url).includes('login.microsoftonline.com')) return { ok: true, json: async () => ({ access_token: 'not-a-real-token' }) };
+      if (String(url).includes('graph.microsoft.com')) { sent.push(JSON.parse(opts.body)); return { ok: true, text: async () => '' }; }
+      return { ok: false, status: 404, text: async () => '' };
+    };
+    try {
+      resetStores(); seedAccounts();
+      accountsList[0].email = 'Desk@example.com';
+      accountsList.push({ username: 'orga2', name: 'Orga Two', role: 'organizer', approved: true, email: 'two@example.com', passwordHash: 'hashed:x' });
+      accountsList.push({ username: 'orga3', name: 'Orga Three', role: 'organizer', approved: false, email: 'three@example.com', passwordHash: 'hashed:x' });
+      accountsList[1].drawPools = true;
+
+      let r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP }));
+      eq('no saved draft yet: 400', r.status, 400);
+      await schedules().setJSON(DAY2_GROUP, draft());
+      r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP, note: 'Pool B needs a look' }));
+      eq('a manager with an edit right sends for review: 200', r.status, 200);
+      const rec = await schedules().get(`review:${DAY2_GROUP}`, { type: 'json' });
+      check('…the record is written', rec && rec.requestedBy === 'mgr' && rec.note === 'Pool B needs a look', JSON.stringify(rec));
+      eq('…one email went', sent.length, 1);
+      const to = (sent[0].message.toRecipients || []).map((x) => x.emailAddress.address).sort();
+      eq('⚠️ …to every APPROVED organiser with an address, lower-cased, and nobody else', JSON.stringify(to), JSON.stringify(['desk@example.com', 'two@example.com']));
+      check('…naming the group in the subject', /U16 Boys|U14|U1|U6|U7|U8|U9/.test(sent[0].message.subject) && /review/i.test(sent[0].message.subject), sent[0].message.subject);
+      eq('…and the answer says so', r.emailed, true);
+
+      r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP }));
+      eq('⚠️ a second request inside ten minutes is 429', r.status, 429);
+      eq('…and sent no second email', sent.length, 1);
+
+      accountsList[1].drawPools = false;
+      r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY1_GROUP }));
+      check('another group is refused (not theirs)', r.status === 403);
+      resetStores(); await schedules().setJSON(DAY2_GROUP, draft());
+      r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP }));
+      eq('⚠️ a manager with NO edit right cannot send for review', r.status, 403);
+
+      const list = await parse(await call(review.handler, 'orga', null, 'GET'));
+      eq('the organiser lists the queue', list.status, 200);
+      r = await parse(await call(review.handler, 'mgr', null, 'GET'));
+      eq('…a manager cannot', r.status, 403);
+
+      accountsList[1].drawPools = true; sent.length = 0;
+      await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP });
+      const q = await parse(await call(review.handler, 'orga', null, 'GET'));
+      eq('the queue carries the group', (q.reviews || []).map((x) => x.ageGroupId).join(','), DAY2_GROUP);
+      r = await parse(await call(publishFn.handler, 'orga', { ageGroupId: DAY2_GROUP, action: 'publish' }));
+      eq('publishing it: 200', r.status, 200);
+      check('⚠️ …clears the review record', !(await schedules().get(`review:${DAY2_GROUP}`, { type: 'json' })));
+
+      resetStores(); await schedules().setJSON(DAY2_GROUP, draft());
+      await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP });
+      r = await parse(await call(review.handler, 'mgr', { action: 'dismiss', ageGroupId: DAY2_GROUP }));
+      eq('a manager cannot dismiss', r.status, 403);
+      r = await parse(await call(review.handler, 'orga', { action: 'dismiss', ageGroupId: DAY2_GROUP }));
+      eq('an organiser dismisses', r.status, 200);
+      check('…and the record is gone', !(await schedules().get(`review:${DAY2_GROUP}`, { type: 'json' })));
+
+      /* Mail down: the record still lands and the answer says emailed:false. */
+      resetStores(); await schedules().setJSON(DAY2_GROUP, draft());
+      global.fetch = async () => { throw new Error('graph down'); };
+      r = await parse(await call(review.handler, 'mgr', { action: 'request', ageGroupId: DAY2_GROUP }));
+      eq('⚠️ with the mail service down the request still succeeds', r.status, 200);
+      eq('…and says the email did not go', r.emailed, false);
+      check('…with the record written', !!(await schedules().get(`review:${DAY2_GROUP}`, { type: 'json' })));
+    } finally {
+      global.fetch = realFetch;
+    }
   }
 
   summary('test-draw-rights.js');

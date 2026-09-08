@@ -21,6 +21,7 @@ const { resolveSession, sessionRefusal, hasAgeGroupAccess, blobStore } = require
 const { draftKey } = require('./_publish');
 const { saveDenialReason } = require('./_drawRights');
 const { loadVenue, DEFAULT_VENUE } = require('./_venue');
+const { fileHistory } = require('./_drawHistory');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
@@ -51,9 +52,11 @@ exports.handler = async (event) => {
        The Draw tab greys out what a manager cannot change, so an honest one
        never sees this 403; it exists for the dishonest one. */
     const store = blobStore('schedules');
-    let stored = null;
+    /* Read for everyone now (Sep 2026): the rights comparison needs it for a
+       manager, and history needs it for anybody — the PREVIOUS draft is what
+       gets filed before this save overwrites it. */
+    const stored = await store.get(draftKey(ageGroupId), { type: 'json' });
     if (session.role === 'manager') {
-      stored = await store.get(draftKey(ageGroupId), { type: 'json' });
       let venue = DEFAULT_VENUE;
       /* loadVenue takes the store factory; the saved layout decides which
          DAY a group plays, which decides when its freeze starts. */
@@ -65,6 +68,13 @@ exports.handler = async (event) => {
     /* Saves go to the DRAFT only. Nothing here changes what the public sees —
        that needs publish-schedule.js. Reset clears the draft; any published
        copy stays live until it is explicitly unpublished. */
+    /* History (spec-draw-rights § 7): the draft being replaced is filed
+       BEFORE the overwrite, ten deep; a reset files a `cleared` entry so
+       "who wiped the draw" is answerable. Filing failing must not lose the
+       save itself, so it is best-effort and logged. */
+    if (stored) {
+      try { await fileHistory(store, ageGroupId, stored, { savedBy: session.username, cleared: !!reset }); } catch (e) { console.warn('save-schedule-override: could not file history -', e && e.message); }
+    }
     if (reset) {
       await store.delete(draftKey(ageGroupId));
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };

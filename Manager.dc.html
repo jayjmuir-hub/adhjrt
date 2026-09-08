@@ -650,7 +650,47 @@
             <sc-if value="{{ publishBlocked }}" hint-placeholder-val="{{ true }}">
               <p style="font-size:13px;color:#8F6400;font-weight:600">{{ publishBlockedNote }}</p>
             </sc-if>
+            <!-- Send for review (spec-draw-rights § 5): the manager's way to say
+                 "done" without being able to publish. -->
+            <sc-if value="{{ canRequestReview }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px">
+                <button onClick="{{ onRequestReview }}" disabled="{{ drawBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">Send for review</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ reviewHint }}" hint-placeholder-val="">
+              <p style="margin-top:10px;font-size:12.5px;color:var(--ink-faint)">{{ reviewHint }}</p>
+            </sc-if>
           </div>
+
+          <!-- Draft history (spec-draw-rights § 7): organisers only — the only
+               undo the blob store will ever have. -->
+          <sc-if value="{{ isOrganiser }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                <span style="font-family:'Anton';font-size:17px;text-transform:uppercase">Draft history</span>
+                <button onClick="{{ onToggleHistory }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:12px;padding:9px 14px;border-radius:9px;cursor:pointer">{{ historyLabel }}</button>
+              </div>
+              <sc-if value="{{ historyOpen }}" hint-placeholder-val="{{ false }}">
+                <p style="max-width:70ch;color:var(--ink-faint);font-size:12.5px;margin-top:8px">The last ten saved versions of this group's draft. Restoring makes one the draft again and files the current one here first, so it can be undone. Nothing is published by restoring.</p>
+                <sc-if value="{{ historyLoading }}" hint-placeholder-val="{{ false }}"><p style="font-size:13px;color:var(--ink-faint);margin-top:10px">Loading…</p></sc-if>
+                <sc-if value="{{ historyError }}" hint-placeholder-val=""><p style="font-size:13px;color:var(--danger-ink);font-weight:600;margin-top:10px">{{ historyError }}</p></sc-if>
+                <sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ false }}"><p style="font-size:13px;color:var(--ink-faint);margin-top:10px">No earlier versions yet — history starts with the next save.</p></sc-if>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+                  <sc-for list="{{ historyEntries }}" as="h" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+                      <div>
+                        <div style="font-size:13.5px;font-weight:700">{{ h.label }} <span style="color:var(--ink-faint);font-weight:500">{{ h.byLabel }}</span></div>
+                        <div style="font-size:12px;color:var(--ink-faint);margin-top:2px">{{ h.summary }}</div>
+                      </div>
+                      <sc-if value="{{ h.canRestore }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ h.onRestore }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer">Restore</button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
 
           <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px">
             <div style="font-family:'Anton';font-size:17px;text-transform:uppercase;margin-bottom:6px">Check the whole weekend</div>
@@ -1066,6 +1106,7 @@ class Component extends DCLogic {
        (getDraw() answers null when nothing is saved) — drawLoadedFor is what
        tells those two apart. */
     draw: undefined, drawLoadedFor: null, drawBusy: false, drawMsg: '', drawDirty: false,
+    historyOpen: false, historyEntries: null, historyError: '',
     picked: null, newTeamDrafts: {},
     importOpen: false, importMode: 'add', importRows: null, importNote: '',
     clash: null, clashBusy: false,
@@ -1158,7 +1199,11 @@ class Component extends DCLogic {
        whatever sorts first, which can be a festival group (hasStandings:false)
        — and there is no switcher here to escape it with. Prefer the first
        competitive group, index 0 only as a last resort. */
-    const ageId = agId || (session.ageGroupId === '*'
+    /* `?ag=<id>` (Sep 2026): the organiser's "Open in /manager" link from the
+       Awaiting-review strip lands on that group. Organisers only — a manager
+       has one group and no switcher — and only a group that exists. */
+    const wanted = api.isOrganiserSession(session) ? this.requestedAgeId() : '';
+    const ageId = (wanted && ageGroups.some((a) => a.id === wanted) ? wanted : null) || agId || (session.ageGroupId === '*'
       ? ((ageGroups.find((a) => a.hasStandings) || ageGroups[0] || {}).id)
       : session.ageGroupId);
     this.setState({ session, ageGroups, ageId });
@@ -1170,11 +1215,17 @@ class Component extends DCLogic {
     try { window.location.replace(url); } catch (e) { /* non-browser context — the shell's own link covers it */ }
   }
 
+  /* The `ag` query parameter, or ''. Seam for tests. */
+  requestedAgeId() {
+    try { return String(new URLSearchParams(window.location.search || '').get('ag') || '').trim(); } catch (e) { return ''; }
+  }
+
   doLogout() {
     this.state.api.logout();
     this.setState({
       session: null, tab: 'fixtures', fixtures: null, standings: null, spiritAward: null,
       draw: undefined, drawLoadedFor: null, drawDirty: false, drawMsg: '', drawBusy: false,
+      historyOpen: false, historyEntries: null, historyError: '',
       picked: null, newTeamDrafts: {},
       importOpen: false, importMode: 'add', importRows: null, importNote: '',
       clash: null, clashBusy: false,
@@ -2123,6 +2174,49 @@ class Component extends DCLogic {
      group goes into the question as a WARNING — never a block. On the morning
      of the tournament, the person who has to move a game must not be locked
      out by a validator. */
+  /* ===== SEND FOR REVIEW (spec-draw-rights § 5) ============================
+     A manager with an edit right, once the draft is saved, asks the
+     organisers to check and publish it. The server writes the review record
+     and emails every organiser with an address; `emailed: false` means the
+     record is there but the mail did not go, so the manager should tell the
+     desk another way. */
+  doRequestReview() {
+    const { api, ageId, session } = this.state;
+    this.confirmModal(`Send the ${this.ageName(ageId)} draw to the organisers for review? They will check it for pitch clashes and publish it.`, async () => {
+      this.setState({ drawBusy: true, drawMsg: '' });
+      const res = await api.requestDrawReview(ageId, '', session);
+      this.setState({
+        drawBusy: false,
+        drawMsg: res.ok
+          ? (res.emailed ? 'Sent. The organisers have been emailed and will publish it when it is right.' : 'Sent to the organisers’ review list — the email could not be delivered, so tell the desk as well.')
+          : (res.error || 'Could not send for review.'),
+      });
+    }, { okLabel: 'Send for review' });
+  }
+
+  /* ===== DRAFT HISTORY (spec-draw-rights § 7), organisers only ============ */
+  async toggleHistory() {
+    const open = !this.state.historyOpen;
+    this.setState({ historyOpen: open });
+    if (open) await this.loadHistory();
+  }
+  async loadHistory() {
+    const { api, ageId, session } = this.state;
+    this.setState({ historyEntries: null });
+    const res = await api.getDrawHistory(ageId, session);
+    if (ageId !== this.state.ageId) return;
+    this.setState({ historyEntries: res.ok ? (res.entries || []) : [], historyError: res.ok ? '' : (res.error || 'Could not load the history.') });
+  }
+  doRestore(savedAt, label) {
+    const { api, ageId, session } = this.state;
+    this.confirmModal(`Restore the ${this.ageName(ageId)} draw saved ${label}? The current draft goes into the history first, so this can be undone. Nothing is published by restoring.`, async () => {
+      this.setState({ drawBusy: true, drawMsg: '' });
+      const res = await api.restoreDraw(ageId, savedAt, session);
+      this.setState({ drawBusy: false, drawMsg: res.ok ? 'Restored as the draft. Publish when it is right.' : (res.error || 'Could not restore.') });
+      if (res.ok) { await this.loadDraw(ageId); await this.loadHistory(); }
+    }, { okLabel: 'Restore' });
+  }
+
   async doPublish() {
     const { api, ageId, session } = this.state;
     this.setState({ drawBusy: true, drawMsg: 'Checking the weekend for pitch clashes…' });
@@ -2717,6 +2811,34 @@ class Component extends DCLogic {
       publishBlockedNote: 'Only tournament organisers can publish fixtures. Send your draft for review instead.',
       onPublish: () => this.doPublish(),
       onUnpublish: () => this.doUnpublish(),
+      /* Send for review (spec-draw-rights § 5): a manager with an edit right,
+         with a SAVED draft, not on match day. Organisers publish instead. */
+      canRequestReview: !!(s.session && s.session.ageGroupId !== '*' && (dr.pools || dr.times) && !dr.frozen && d && !s.drawDirty),
+      reviewHint: s.drawDirty ? 'Save your changes first, then send the draw for review.' : '',
+      onRequestReview: () => this.doRequestReview(),
+      /* Draft history (§ 7): organisers only. */
+      historyOpen: !!s.historyOpen,
+      historyLabel: s.historyOpen ? 'Hide history' : 'History',
+      onToggleHistory: () => this.toggleHistory(),
+      historyLoading: s.historyOpen && s.historyEntries === null,
+      historyEmpty: s.historyOpen && Array.isArray(s.historyEntries) && s.historyEntries.length === 0,
+      historyError: s.historyError || '',
+      historyEntries: (s.historyOpen && Array.isArray(s.historyEntries) ? s.historyEntries : []).map((h) => {
+        /* Gulf time, day and clock, e.g. "Sat 7 Nov, 09:41" — the store
+           stamps UTC and nobody at the desk thinks in UTC. */
+        let label = h.savedAt;
+        try { label = new Date(h.savedAt).toLocaleString('en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { /* keep the ISO stamp */ }
+        return {
+          ...h,
+          label,
+          summary: h.cleared ? 'Draw cleared' : `${h.pools} pool${h.pools === 1 ? '' : 's'} · ${h.teams} team${h.teams === 1 ? '' : 's'} · ${h.slots} match${h.slots === 1 ? '' : 'es'}`,
+          byLabel: h.savedBy ? `by ${h.savedBy}` : '',
+          /* A cleared entry carries the draw a reset wiped — restoring it IS
+             the undo for the wipe. The server decides what has nothing in it. */
+          canRestore: true,
+          onRestore: () => this.doRestore(h.savedAt, label),
+        };
+      }),
 
       clashBusy: s.clashBusy,
       clashButtonLabel: s.clashBusy ? 'Checking all 15 age groups…' : 'Check the whole weekend',

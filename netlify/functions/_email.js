@@ -345,4 +345,7 @@ async function sendConfirmation(formName, data) {
   return { sent: false, reason: `no template for form "${formName}"` };
 }
 
-module.exports = { sendConfirmation };
+/* sendMail, wrap, esc and row are exported for draw-review.js (Sep 2026),
+   which composes its own one-off organiser notice rather than adding a
+   fourth form template here. */
+module.exports = { sendConfirmation, sendMail, wrap, esc, row };

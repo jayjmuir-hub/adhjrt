@@ -351,7 +351,10 @@ section('Header: an organiser can get back to the organizer area, and sees who t
       gates.push(src.slice(m.index, src.indexOf('</sc-if>', m.index)));
     }
   }
-  check('the organiser-gated blocks exist — band, sidebar switcher, sidebar link', gates.length === 3);
+  /* Four since 8 Sep 2026: the Draft history card on the Draw tab is
+     organiser-only too (spec-draw-rights § 7). */
+  check('the organiser-gated blocks exist — band, sidebar switcher, sidebar link, draft history', gates.length === 4);
+  check('…and one of them is the draft history', gates.some((g) => /Draft history/.test(g)));
   check('a gated block links back to the organizer area', gates.some((g) => /href="\/organizer"/.test(g)));
   check('…named for where it goes', gates.some((g) => />View organizer area</.test(g)));
   check('…and labels the age switcher "Viewing as"', gates.some((g) => /Viewing as/.test(g)));

@@ -67,6 +67,10 @@ exports.handler = async (event) => {
       publishedBy: session.username,
     };
     await store.setJSON(publishedKey(ageGroupId), record);
+    /* Publishing answers a review request (spec-draw-rights § 5): the group
+       leaves the organiser's "Awaiting review" strip. Best-effort — a
+       leftover note is a nuisance, a failed publish is not. */
+    try { await store.delete(`review:${ageGroupId}`); } catch (e) { /* see above */ }
 
     return {
       statusCode: 200,

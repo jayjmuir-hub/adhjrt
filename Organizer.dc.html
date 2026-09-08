@@ -799,6 +799,29 @@
             </div>
           </div>
 
+          <!-- Awaiting review (spec-draw-rights § 5): groups whose manager has
+               pressed Send for review. Publishing from /manager clears a row;
+               Dismiss clears the note only. -->
+          <sc-if value="{{ fxvHasReviews }}" hint-placeholder-val="{{ false }}">
+            <div style="background:rgba(245,197,24,0.10);border:1px solid rgba(245,197,24,0.45);border-radius:14px;padding:16px 20px;margin-bottom:18px">
+              <div style="font-family:'Anton';font-size:16px;text-transform:uppercase;color:#8F6400;margin-bottom:10px">Awaiting review</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ fxvReviews }}" as="r" hint-placeholder-count="1">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#FFFFFF;border:1px solid var(--line);border-radius:10px;padding:10px 14px">
+                    <div>
+                      <div style="font-weight:700;font-size:14px">{{ r.name }} <span style="color:var(--ink-faint);font-weight:500">— sent by {{ r.requestedBy }}, {{ r.when }}</span></div>
+                      <sc-if value="{{ r.noteLine }}" hint-placeholder-val=""><div style="font-size:12.5px;color:var(--ink-muted);margin-top:2px">{{ r.noteLine }}</div></sc-if>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                      <a href="{{ r.openHref }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:12px;padding:9px 14px;border-radius:8px;text-decoration:none;text-transform:uppercase">Open in /manager</a>
+                      <button onClick="{{ r.onDismiss }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:12px;padding:9px 14px;border-radius:8px;cursor:pointer">Dismiss</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <sc-if value="{{ fxvLoading }}" hint-placeholder-val="{{ false }}">
             <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:34px 22px;text-align:center;color:var(--ink-faint);font-size:14px">Loading…</div>
           </sc-if>
@@ -2125,7 +2148,7 @@ class Component extends DCLogic {
        fxvUnavailable is SEPARATE from an empty draw, the same distinction the
        docs and clubs tabs both needed: "nothing drawn yet" and "the fetch
        failed" are different facts and have to read differently. */
-    fxvAgeId: '', fxvFixtures: null, fxvStandings: null,
+    fxvAgeId: '', fxvFixtures: null, fxvStandings: null, fxvReviews: null,
     fxvLoading: false, fxvUnavailable: false,
     /* Documents (Aug 2026) -- spec claude/specs/spec-documents.md.
        docsUnavailable is SEPARATE from an empty list on purpose: "none yet"
@@ -3532,8 +3555,27 @@ class Component extends DCLogic {
      job is to check it before it goes out. Threading the session fixed the
      other two surfaces; this tab is the one that was missing entirely.
      Spec: claude/specs/spec-draft-visibility-aug-2026.md. */
+  /* The review queue (spec-draw-rights § 5): every group a manager has sent
+     for review, newest first, until it is published or dismissed. Read on
+     every open of the Fixtures tab; a failed read shows nothing rather than
+     an error, because the tab's purpose is the fixtures. */
+  async loadReviews() {
+    const { api, session } = this.state;
+    if (!api || !api.listDrawReviews) return;
+    const res = await api.listDrawReviews(session);
+    this.setState({ fxvReviews: res && res.ok ? (res.reviews || []) : [] });
+  }
+  dismissReview(agId) {
+    const { api, session } = this.state;
+    this.confirmModal(`Dismiss the review request for ${this.ageGroupName(agId) || agId}? The draft is untouched; only the note goes.`, async () => {
+      const res = await api.dismissDrawReview(agId, session);
+      if (res && res.ok) this.setState((p) => ({ fxvReviews: (p.fxvReviews || []).filter((r) => r.ageGroupId !== agId) }));
+    }, { okLabel: 'Dismiss' });
+  }
+
   openFixturesView() {
     this.setState({ tab: 'fixtures' });
+    this.loadReviews();
     /* First open picks a group so the tab is never a blank frame with a
        dropdown. Any later open keeps whatever was being looked at. */
     if (this.state.fxvAgeId) { this.loadFixturesView(this.state.fxvAgeId); return; }
@@ -3668,6 +3710,18 @@ class Component extends DCLogic {
       fxvAgeId: s.fxvAgeId,
       fxvAgeOptions: MANAGER_AGE_GROUPS,
       fxvAgeName: (MANAGER_AGE_GROUPS.find((g) => g.id === s.fxvAgeId) || {}).name || s.fxvAgeId,
+      /* Awaiting review (spec-draw-rights § 5). Read-only against the draft:
+         the strip names no write function — Open goes to /manager, Dismiss
+         removes the NOTE only. */
+      fxvHasReviews: Array.isArray(s.fxvReviews) && s.fxvReviews.length > 0,
+      fxvReviews: (s.fxvReviews || []).map((r) => ({
+        ...r,
+        name: this.ageGroupName(r.ageGroupId) || r.ageGroupId,
+        when: this.fmtDate ? this.fmtDate(r.requestedAt) : r.requestedAt,
+        noteLine: r.note ? `“${r.note}”` : '',
+        openHref: `/manager?ag=${encodeURIComponent(r.ageGroupId)}`,
+        onDismiss: () => this.dismissReview(r.ageGroupId),
+      })),
       onFxvAge: (e) => this.loadFixturesView(e.target.value),
       fxvLoading: s.fxvLoading,
       fxvUnavailable: s.fxvUnavailable,

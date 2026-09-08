@@ -1,5 +1,15 @@
 # ADH JRT — state of play, 8 September 2026
 
+## 8 Sep 2026 — draw rights COMPLETE on `dev` (part 2: send-for-review + draft history)
+
+Jay: *"build everything until its all live"* / *"however you want, just do it
+all until live"*. Plan: draw rights as one production deploy, pitch marshals
+as the next. Part 2 adds `draw-review.js` (record + organiser email +
+rate limit), `_drawHistory.js` + `draw-history.js` (ten-deep, organiser
+restore), the Send for review button, the organiser Awaiting-review strip,
+the Draft history card, `/manager?ag=`. Numbers in the entry that records
+the merge, below this one once it exists.
+
 ## 8 Sep 2026 — draw rights, part 1 BUILT on `dev` (switches, enforcement, freeze, organiser-only publish)
 
 Jay: *"start on draw rights."* Built: `_drawRights.js` (rights, stored-draft

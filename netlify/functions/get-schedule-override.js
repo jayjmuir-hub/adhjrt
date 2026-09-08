@@ -17,7 +17,8 @@
 // whether this age group is live and when it went out.
 
 const { optionalSession, hasAgeGroupAccess, blobStore } = require('./_auth');
-const { draftKey, publishedKey, isTournamentWindow } = require('./_publish');
+const { draftKey, publishedKey } = require('./_publish');
+const { rightsView } = require('./_drawRights');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
@@ -36,7 +37,10 @@ exports.handler = async (event) => {
       published: !!publishedRecord,
       publishedAt: publishedRecord ? publishedRecord.publishedAt || null : null,
       publishedBy: publishedRecord ? publishedRecord.publishedBy || null : null,
-      managerCanPublishNow: isTournamentWindow(),
+      /* Always false since 8 Sep 2026 (spec-draw-rights § 2): publishing is
+         organiser-only. The key stays so every reader of the publish state
+         keeps its shape; scores-data.js's canPublishNow() reads it. */
+      managerCanPublishNow: false,
 
       /* An auto-generated draw is NEVER shown to the public, at any point.
          Those pools are sample data, and a parent cannot tell a placeholder
@@ -54,9 +58,15 @@ exports.handler = async (event) => {
       const session = await optionalSession(event);
       if (session && hasAgeGroupAccess(session, ageGroupId)) {
         const draft = await store.get(draftKey(ageGroupId), { type: 'json' });
+        /* `rights` (Sep 2026, spec-draw-rights): what THIS caller may change on
+           THIS group, computed server-side from the stored account and the
+           freeze — the Draw tab renders against it and never derives a right
+           for itself. Only the draft answer carries it; the public one has
+           no caller to describe. */
+        const rights = await rightsView(session, ageGroupId);
         return {
           statusCode: 200,
-          body: JSON.stringify({ ok: true, schedule: draft || null, isDraft: true, ...state }),
+          body: JSON.stringify({ ok: true, schedule: draft || null, isDraft: true, rights, ...state }),
         };
       }
     }

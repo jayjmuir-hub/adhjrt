@@ -181,6 +181,22 @@ exports.handler = async (event) => {
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       }
 
+      /* Draw rights (Sep 2026, spec-draw-rights): the two switches on a
+         manager's card. Organisers have both implicitly and no switch is
+         shown for them, so setting one on an organiser is a 400, not a no-op —
+         a UI that offered it would be lying about what it changes. */
+      if (action === 'drawRights') {
+        if (accounts[idx].role !== 'manager') {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Draw rights apply to age-group managers only; organisers already have them.' }) };
+        }
+        accounts[idx].drawPools = payload.drawPools === true;
+        accounts[idx].drawTimes = payload.drawTimes === true;
+        accounts[idx].drawRightsChangedAt = new Date().toISOString();
+        accounts[idx].drawRightsChangedBy = session.username;
+        await saveAccounts(accounts);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, drawPools: accounts[idx].drawPools, drawTimes: accounts[idx].drawTimes }) };
+      }
+
       if (action === 'approve') {
         /* A club hub account arrives with NO role (hub-auth.js, Sep 2026) —
            nothing about a club hub login says whether this person runs an

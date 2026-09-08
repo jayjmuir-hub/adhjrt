@@ -181,6 +181,19 @@ export async function rejectAccount(username) {
   return (await local()).accountsAction(session && session.token, 'reject', username);
 }
 
+/* Draw rights (Sep 2026, spec-draw-rights): the two switches on a manager's
+   account card. Organiser-only on the server; a manager's next request sees
+   the change with no sign-out. */
+export async function setDrawRights(username, { drawPools, drawTimes }) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'drawRights', username, drawPools: !!drawPools, drawTimes: !!drawTimes }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Draw rights need the live site.' };
+}
+
 export async function revokeAccount(username) {
   const session = currentSession();
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', {

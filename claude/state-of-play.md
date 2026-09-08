@@ -1,5 +1,18 @@
 # ADH JRT — state of play, 8 September 2026
 
+## 8 Sep 2026 — draw rights, part 1 BUILT on `dev` (switches, enforcement, freeze, organiser-only publish)
+
+Jay: *"start on draw rights."* Built: `_drawRights.js` (rights, stored-draft
+comparison, freeze), `resolveSession` overlays the two flags, `accounts-admin`
+`drawRights` action, `save-schedule-override` enforces, `publishDenialReason`
+refuses managers (tombstone in `_publish.js`), `get-schedule-override` serves
+`rights` on the draft answer, the Draw tab gates every handler against it,
+the Accounts card carries the two switches. `tests/test-draw-rights.js`
+(99 checks) + 18 faults. **Not yet built from the spec:** § 5 send-for-review
+(+ the organiser "Awaiting review" strip) and § 7 draft history/restore —
+part 2. ⚠️ On deploy every manager becomes results-only until an organiser
+flips a switch; tell them first.
+
 ## ✅ 8 Sep 2026 — SIGN IN WITH QUINS CLUB HUB IS LIVE on adhjrt.com (`bca6242`)
 
 Jay: *"yes, merge to main when green."* Merged as a fast-forward

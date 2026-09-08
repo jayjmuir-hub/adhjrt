@@ -1709,6 +1709,23 @@
                   <button onClick="{{ onAcctRevoke }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Revoke</button>
                 </sc-if>
               </div>
+
+              <!-- Draw rights (Sep 2026, spec-draw-rights). Managers default to
+                   results only; these two switches unlock the Draw tab in two
+                   halves. Organisers have both and see no switch. -->
+              <sc-if value="{{ acctIsManagerAcct }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+                  <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Draw rights</div>
+                  <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">Off by default. Pools and teams are local to one age group; kickoff times and pitches are shared across the day, so grant those only to a manager who will run the clash check with you.</p>
+                  <label style="display:flex;align-items:center;gap:10px;font-size:14px;margin-bottom:8px;cursor:pointer">
+                    <input type="checkbox" checked="{{ acctDrawPools }}" onChange="{{ onToggleDrawPools }}" disabled="{{ acctRightsBusy }}" aria-label="Edit pools and teams"> Edit pools and teams
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">
+                    <input type="checkbox" checked="{{ acctDrawTimes }}" onChange="{{ onToggleDrawTimes }}" disabled="{{ acctRightsBusy }}" aria-label="Edit kickoff times and pitches"> Edit kickoff times and pitches
+                  </label>
+                  <sc-if value="{{ acctRightsMsg }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:600;margin-top:10px;color:var(--danger-ink)">{{ acctRightsMsg }}</div></sc-if>
+                </div>
+              </sc-if>
             </div>
           </sc-if>
         </sc-if>
@@ -4370,6 +4387,20 @@ class Component extends DCLogic {
     }
   }
 
+  /* Draw rights (Sep 2026, spec-draw-rights). Sends BOTH flags every time —
+     the one just toggled and the other as it stands — so the server's record
+     is exactly what the card shows. On success the card and the list are
+     updated from the server's answer, not from the click. */
+  async doSetDrawRights(username, patch) {
+    const acct = (this.state.accounts || []).find((a) => a.username === username) || this.state.acct || {};
+    const next = { drawPools: acct.drawPools === true, drawTimes: acct.drawTimes === true, ...patch };
+    this.setState({ acctRightsBusy: true, acctRightsMsg: '' });
+    const r = await this.state.api.setDrawRights(username, next);
+    if (!r || r.ok === false) { this.setState({ acctRightsBusy: false, acctRightsMsg: (r && r.error) || 'Could not change draw rights.' }); return; }
+    const apply = (a) => (a && a.username === username ? { ...a, drawPools: r.drawPools === true, drawTimes: r.drawTimes === true } : a);
+    this.setState((p) => ({ acctRightsBusy: false, acct: apply(p.acct), accounts: (p.accounts || []).map(apply) }));
+  }
+
   /* Approve. For a Club Hub account (no role yet) the row's picker supplies
      the role and, for a manager, the age group; the server validates both
      and refuses with a sentence, which is shown above the list rather than
@@ -4855,6 +4886,14 @@ class Component extends DCLogic {
          the Pending list row, so the card hides Approve for those. */
       acctNeedsRole: !!(s.acct && !s.acct.approved && !s.acct.role),
       acctCanApproveHere: !!(s.acct && !s.acct.approved && s.acct.role),
+      /* Draw rights (Sep 2026): switches on another person's MANAGER card only. */
+      acctIsManagerAcct: !!(s.acctSubject && s.acct && s.acct.role === 'manager'),
+      acctDrawPools: !!(s.acct && s.acct.drawPools === true),
+      acctDrawTimes: !!(s.acct && s.acct.drawTimes === true),
+      acctRightsBusy: !!s.acctRightsBusy,
+      acctRightsMsg: s.acctRightsMsg || '',
+      onToggleDrawPools: (e) => this.doSetDrawRights(s.acctSubject, { drawPools: !!(e && e.target && e.target.checked) }),
+      onToggleDrawTimes: (e) => this.doSetDrawRights(s.acctSubject, { drawTimes: !!(e && e.target && e.target.checked) }),
       acctCurrent: s.acctCurrent, acctNew: s.acctNew,
       acctCurrentType: s.acctShowCurrent ? 'text' : 'password',
       acctCurrentToggleLabel: s.acctShowCurrent ? 'HIDE' : 'SHOW',

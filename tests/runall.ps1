@@ -97,7 +97,11 @@ $tests = @(
   # Sign in with Quins Club Hub (Sep 2026) - spec
   # claude/specs/spec-club-hub-sign-in-sep-2026.md. A NEW TEST FILE DOES NOT
   # JOIN THE SUITE BY ITSELF; this line is the whole registration.
-  'test-hub-auth.js'
+  'test-hub-auth.js',
+  # Draw rights (Sep 2026) - spec claude/specs/spec-draw-rights-sep-2026.md.
+  # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the
+  # whole registration.
+  'test-draw-rights.js'
 )
 
 Write-Host ''

@@ -481,6 +481,12 @@
       <sc-if value="{{ isDraw }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:24px">
           <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Draw</div>
+          <!-- Draw rights (Sep 2026, spec-draw-rights): what this person may
+               change here, as the server said. Empty for an organiser or a
+               manager with both switches on. -->
+          <sc-if value="{{ drawLockedNote }}" hint-placeholder-val="">
+            <div style="background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.45);border-radius:12px;padding:12px 16px;color:#8F6400;font-size:13.5px;font-weight:600;margin-bottom:16px">{{ drawLockedNote }}</div>
+          </sc-if>
 
           <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -609,9 +615,16 @@
 
           <div style="background:#FFFFFF;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px">
             <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button onClick="{{ onSaveDraw }}" disabled="{{ drawBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ drawSaveLabel }}</button>
-              <button onClick="{{ onDiscardDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Discard changes</button>
-              <button onClick="{{ onResetDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Regenerate times &amp; bracket</button>
+              <sc-if value="{{ drawCanSave }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ onSaveDraw }}" disabled="{{ drawBusy }}" style="background:var(--accent-mid);color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ drawSaveLabel }}</button>
+                <button onClick="{{ onDiscardDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Discard changes</button>
+              </sc-if>
+              <sc-if value="{{ drawCanTimes }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ onResetDraw }}" disabled="{{ drawBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:800;font-size:14px;padding:12px 20px;border-radius:10px;cursor:pointer;text-transform:uppercase">Regenerate times &amp; bracket</button>
+              </sc-if>
+              <sc-if value="{{ drawReadOnly }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:13px;color:var(--ink-faint);font-weight:600;align-self:center">Read-only.</span>
+              </sc-if>
             </div>
             <sc-if value="{{ drawDirty }}" hint-placeholder-val="{{ false }}">
               <p style="margin-top:10px;font-size:12.5px;color:#8F6400;font-weight:700">✎ You have unsaved changes.</p>
@@ -1441,10 +1454,40 @@ class Component extends DCLogic {
     this.setState({ drawMsg: '' });
   }
 
+  /* ===== DRAW RIGHTS (Sep 2026, spec-draw-rights) =========================
+     What this person may change on this group, AS THE SERVER SAID when the
+     draft was fetched (get-schedule-override's `rights`). Two halves:
+     `pools` (teams, pools, bracket placement) and `times` (kickoffs, pitches,
+     regenerate), plus `frozen` on the group's own match day. The page never
+     derives a right for itself; before the draft has answered, an organiser
+     gets everything and a manager nothing, which is what the server would
+     say too. The server refuses anyway — this is what stops an honest
+     manager ever seeing that 403. */
+  drawRights() {
+    const r = this.state.draw && this.state.draw._rights;
+    if (r) return r;
+    const org = !!(this.state.session && this.state.session.ageGroupId === '*');
+    return { pools: org, times: org, frozen: false, frozenNote: '' };
+  }
+  /* Gate at the top of every editing handler. Says why in drawMsg. */
+  mayEdit(kind) {
+    const r = this.drawRights();
+    if (r.frozen) { this.setState({ drawMsg: r.frozenNote || 'The draw is locked on match day. Ask the organiser desk to make changes.' }); return false; }
+    if (r[kind]) return true;
+    const note = !r.pools && !r.times
+      ? 'Your organisers manage this group’s draw. Ask them if something is wrong.'
+      : (kind === 'times'
+        ? 'You can change pools and teams, but kickoff times and pitches are set by the organisers.'
+        : 'You can change kickoff times and pitches, but pools and teams are set by the organisers.');
+    this.setState({ drawMsg: note });
+    return false;
+  }
+
   /* Tap-to-select, then tap-to-place. This page is phone-primary and HTML5
      drag-and-drop is unreliable on touch, so there is no dragging anywhere in
      this editor. Tapping the same team in the same place again deselects. */
   pickTeam(team, from) {
+    if (!this.mayEdit('pools')) return;
     const p = this.state.picked;
     if (p && p.team === team && this.sameSource(p.from, from)) this.setState({ picked: null });
     else this.setState({ picked: { team, from } });
@@ -1492,6 +1535,7 @@ class Component extends DCLogic {
   }
 
   addPool() {
+    if (!this.mayEdit('pools')) return;
     this.setState((s) => {
       /* No draw loaded (still fetching, or none exists) — s.draw.pools would
          throw on null and the button should do nothing rather than crash. */
@@ -1626,11 +1670,14 @@ class Component extends DCLogic {
      nothing in hand arms itself; anything with something in hand receives it;
      an empty box with nothing in hand does nothing at all. */
   onBoxTap(kind, slotId, side, team) {
+    if (!this.mayEdit('pools')) return;
     if (team && !this.state.picked) { this.pickTeam(team, { kind, slotId, side }); return; }
     if (this.state.picked) this.placeTeam({ kind, slotId, side });
   }
 
   addSlot(poolId) {
+    /* A new slot is a new kickoff and pitch as much as a new pairing. */
+    if (!this.mayEdit('times')) return;
     const { api, ageId } = this.state;
     const step = api.slotLengthMins();
     this.setState((s) => {
@@ -1647,6 +1694,7 @@ class Component extends DCLogic {
   }
 
   removeSlot(slotId) {
+    if (!this.mayEdit('times')) return;
     this.setState((s) => ({
       draw: { ...s.draw, slots: (s.draw.slots || []).filter((sl) => sl.id !== slotId) },
       drawDirty: true,
@@ -1670,6 +1718,7 @@ class Component extends DCLogic {
   }
 
   onSlotTimeChange(slotId, hhmm) {
+    if (!this.mayEdit('times')) return;
     const mins = this.state.api.timeToMinutes(hhmm);
     /* A NaN startMins sorts unpredictably and breaks the public fixture
        list's own time sort, so garbage is refused and the last good time
@@ -1682,6 +1731,7 @@ class Component extends DCLogic {
   }
 
   onSlotPitchChange(slotId, val) {
+    if (!this.mayEdit('times')) return;
     this.setState((s) => ({
       draw: { ...s.draw, slots: (s.draw.slots || []).map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) },
       drawDirty: true,
@@ -1689,6 +1739,7 @@ class Component extends DCLogic {
   }
 
   addKnockoutSlot() {
+    if (!this.mayEdit('times')) return;
     const { ageId } = this.state;
     this.setState((s) => {
       const list = s.draw.knockout || [];
@@ -1704,6 +1755,7 @@ class Component extends DCLogic {
   }
 
   removeKnockoutSlot(slotId) {
+    if (!this.mayEdit('times')) return;
     this.setState((s) => ({
       draw: { ...s.draw, knockout: (s.draw.knockout || []).filter((sl) => sl.id !== slotId) },
       drawDirty: true,
@@ -1723,6 +1775,7 @@ class Component extends DCLogic {
   }
 
   onKnockoutTimeChange(slotId, hhmm) {
+    if (!this.mayEdit('times')) return;
     const mins = this.state.api.timeToMinutes(hhmm);
     if (mins == null || isNaN(mins)) return;
     this.setState((s) => ({
@@ -1732,6 +1785,7 @@ class Component extends DCLogic {
   }
 
   onKnockoutPitchChange(slotId, val) {
+    if (!this.mayEdit('times')) return;
     this.setState((s) => ({
       draw: { ...s.draw, knockout: (s.draw.knockout || []).map((sl) => (sl.id === slotId ? { ...sl, pitch: val } : sl)) },
       drawDirty: true,
@@ -1769,12 +1823,16 @@ class Component extends DCLogic {
   }
 
   clearKnockout() {
+    if (!this.mayEdit('times')) return;
     this.confirmModal('Clear all knockout matches for this age group? You can generate them again from the standings afterwards. (Remember to Save changes.)', () => {
       this.setState((s) => ({ draw: { ...s.draw, knockout: [] }, drawDirty: true }));
     }, { okLabel: 'Clear knockout' });
   }
 
   async saveDraw() {
+    const r = this.drawRights();
+    if (!r.pools && !r.times) { this.mayEdit('pools'); return; }
+    if (r.frozen) { this.mayEdit('pools'); return; }
     const { api, ageId, session } = this.state;
     this.setState({ drawBusy: true, drawMsg: '' });
     await this.ensureRegsForNames();
@@ -1796,6 +1854,7 @@ class Component extends DCLogic {
   }
 
   resetDraw() {
+    if (!this.mayEdit('times')) return;
     const { api, ageId, session } = this.state;
     this.confirmModal('Regenerate match times and the knockout bracket from the current teams and pools? Your teams and pool assignments are kept — only match pairings, times, and the bracket are rebuilt.', async () => {
       this.setState({ drawBusy: true, drawMsg: '' });
@@ -2012,6 +2071,7 @@ class Component extends DCLogic {
   }
 
   confirmImport() {
+    if (!this.mayEdit('pools')) return;
     const { api, ageId } = this.state;
     const draw = this.state.draw;
     if (!draw) return;
@@ -2499,6 +2559,13 @@ class Component extends DCLogic {
     }));
     const pubState = (d && d._publish) || {};
     const canPublish = !!(s.api && s.api.canPublishNow(s.session, pubState));
+    /* Draw rights (Sep 2026): the sentence at the top of the Draw tab. */
+    const dr = this.drawRights();
+    const drawLockedNote = dr.frozen ? (dr.frozenNote || 'The draw is locked on match day. Ask the organiser desk to make changes.')
+      : (!dr.pools && !dr.times) ? 'Your organisers manage this group’s draw. Ask them if something is wrong.'
+      : (!dr.times) ? 'You can change pools and teams here. Kickoff times and pitches are set by the organisers.'
+      : (!dr.pools) ? 'You can change kickoff times and pitches here. Pools and teams are set by the organisers.'
+      : '';
     const cl = s.clash;
     const clashOk = !!(cl && !cl.error);
     const reg = (s.regs === undefined || s.regs === null) ? null : this.regRows();
@@ -2617,6 +2684,12 @@ class Component extends DCLogic {
       onSaveDraw: () => this.saveDraw(),
       /* Busy label — every other async button here has one. */
       drawSaveLabel: s.drawBusy ? 'Saving…' : 'Save changes',
+      /* Draw rights (Sep 2026, spec-draw-rights). */
+      drawLockedNote,
+      drawCanPools: !!dr.pools && !dr.frozen,
+      drawCanTimes: !!dr.times && !dr.frozen,
+      drawCanSave: (!!dr.pools || !!dr.times) && !dr.frozen,
+      drawReadOnly: (!dr.pools && !dr.times) || !!dr.frozen,
       onDiscardDraw: () => this.discardDraw(),
       onResetDraw: () => this.resetDraw(),
       importCount: this.importSourceTeams().length,
@@ -2639,7 +2712,9 @@ class Component extends DCLogic {
       publishBlocked: !canPublish,
       isPublished: !!pubState.published,
       publishLabel: pubState.published ? 'Republish' : 'Publish fixtures',
-      publishBlockedNote: 'Managers can publish on the tournament days only (7–8 November 2026). Ask a tournament organiser to publish before then.',
+      /* Since 8 Sep 2026 (spec-draw-rights § 2) publishing is organiser-only;
+         the sentence matches publishDenialReason() in _publish.js. */
+      publishBlockedNote: 'Only tournament organisers can publish fixtures. Send your draft for review instead.',
       onPublish: () => this.doPublish(),
       onUnpublish: () => this.doUnpublish(),
 

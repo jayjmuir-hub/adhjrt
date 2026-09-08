@@ -80,15 +80,24 @@ function publishDenialReason(session, ageGroupId, now = Date.now()) {
 
   if (session.role === 'organizer') return null;
 
+  /* ⚠️ TOMBSTONE (8 Sep 2026, spec-draw-rights § 2). Until this date a
+     manager could publish their own group on the two tournament days:
+
+       if (!isTournamentWindow(now)) return `Managers can publish fixtures on
+         the tournament days only (…). Ask a tournament organiser…`;
+       return null;
+
+     It existed so that match-day scoring would not sit behind an unpublished
+     draw, and that problem was solved on 8 Aug 2026 by letting managers see
+     and score an unpublished draw (spec-draft-visibility). What was left was
+     the wrong way round: managers blocked in the weeks when a mistake is
+     cheap, allowed on the two days when it is most expensive, without being
+     able to see the other fourteen groups' pitches. Publishing is the one
+     act that changes what a parent sees; it is an organiser's. Managers send
+     a draft for review instead (§ 5). `now` stays a parameter and
+     isTournamentWindow() stays exported because _drawRights.js uses it. */
   if (session.role === 'manager') {
-    const ownGroup = session.ageGroupId === '*' || session.ageGroupId === ageGroupId;
-    if (!ownGroup) return 'You can only publish fixtures for your own age group.';
-    if (!isTournamentWindow(now)) {
-      /* Names the days rather than spelling them out a third time — the wording
-         follows the layout, so it cannot tell a manager the wrong date. */
-      return `Managers can publish fixtures on the tournament days only (${DEFAULT_VENUE.day1.label} and ${DEFAULT_VENUE.day2.label} 2026). Ask a tournament organiser to publish before then.`;
-    }
-    return null;
+    return 'Only tournament organisers can publish fixtures. Send your draft for review instead.';
   }
 
   return 'You do not have permission to publish fixtures.';

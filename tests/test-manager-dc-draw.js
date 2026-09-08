@@ -55,6 +55,11 @@ function freshDraw() {
     ],
     pitches: ['A1', 'A2'],
     _publish: { published: false, publishedAt: null, publishedBy: null, managerCanPublishNow: false },
+    /* Draw rights (Sep 2026, spec-draw-rights): this file drives the editor
+       as a manager holding BOTH switches, which is what the server sends for
+       one. Without it every editing handler is a no-op by design — the
+       results-only default — and that case is test-draw-rights.js's. */
+    _rights: { pools: true, times: true, frozen: false, frozenNote: '' },
   };
 }
 

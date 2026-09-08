@@ -179,6 +179,12 @@ async function resolveSession(event) {
       username: account.username,
       role: account.role,
       ageGroupId: account.role === 'manager' ? (account.ageGroupId || '') : '',
+      /* Draw rights (Sep 2026, spec-draw-rights): read from the STORED
+         account on every request, never from the token, so an organiser's
+         click takes effect on the manager's next request with no sign-out —
+         and a forged payload claiming a right is ignored. See _drawRights.js. */
+      drawPools: account.role === 'manager' && account.drawPools === true,
+      drawTimes: account.role === 'manager' && account.drawTimes === true,
     },
   };
 }

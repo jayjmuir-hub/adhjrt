@@ -1744,6 +1744,10 @@ export async function getDraw(agId, session) {
   return JSON.parse(JSON.stringify({
     pools: draw.pools, slots: draw.slots, knockout,
     pitches: draw.pitches || [],
+    /* Draw rights (Sep 2026, spec-draw-rights): what THIS caller may change,
+       as the server computed it for the draft answer — null on the public
+       answer. The Draw tab renders against it and never derives a right. */
+    _rights: state.rights || null,
     _publish: {
       published: state.published,
       publishedAt: state.publishedAt,

@@ -2040,6 +2040,45 @@ asserting every `api.*` the page calls actually exists.
 
 ---
 
+## Draw rights — who may change a draw, and when (Sep 2026)
+
+Spec: `claude/specs/spec-draw-rights-sep-2026.md`. Rules live in
+`netlify/functions/_drawRights.js`, the ONE place.
+
+- **Managers default to results only.** Two switches on a manager's account
+  card (Accounts tab, other-person mode): **Edit pools and teams**
+  (`drawPools`) and **Edit kickoff times and pitches** (`drawTimes`).
+  Organisers have both and see no switch; the `*` admin-manager gets both
+  when either is set. Absent means false.
+- `resolveSession()` overlays the two flags from the STORED account on every
+  request, so an organiser's click takes effect on the manager's next
+  request and a token that claims a right is ignored.
+- `save-schedule-override.js` refuses a manager by comparing the incoming
+  draw with the **stored draft**: pools-only may change pools, team lists
+  and pairings but not any `startMins`/`pitch`, nor add or remove a slot,
+  nor reset; times-only the mirror. **No stored draft yet → a partial-rights
+  manager is told to ask an organiser to save once** (decision 2). The
+  comparison never trusts the client's word for the old value.
+- **The freeze**: from 00:00 Gulf time on the group's OWN day (which day is
+  the saved layout's `groups`; the date is `DEFAULT_VENUE`) until the
+  tournament ends, a manager's save is refused: *"The draw is locked on
+  match day…"*. Organisers are never frozen. A day-2 manager is free on
+  day 1.
+- **Publishing is organiser-only, any day** (`publishDenialReason`, with a
+  tombstone for the tournament-day carve-out). `get-schedule-override`
+  serves `managerCanPublishNow: false` always, and, on the DRAFT answer,
+  `rights: { pools, times, frozen, frozenNote }` for the caller.
+- The Draw tab (`Manager.dc.html`) renders against `draw._rights` and never
+  derives a right: `drawRights()` / `mayEdit(kind)` gate every editing
+  handler and put the sentence in `drawMsg`; a note box at the top says what
+  this person may change; Save/Discard hide without any right, Regenerate
+  without times. Before the draft answers, an organiser is unrestricted and
+  a manager read-only — what the server would say.
+- ⚠️ `loadVenue` takes the store FACTORY. Called bare it throws, the fallback
+  is the code's layout, and a group an organiser has moved to the other day
+  would be frozen on the wrong one. Both callers pass `blobStore`.
+- `tests/test-draw-rights.js` drives all of it; eighteen faults in the prover.
+
 ## Publishing fixtures
 
 ⚠️ **`loadDraw(agId)` ON `/manager` OPENS WITH AN ENTRY GUARD, AND IT IS

@@ -1,6 +1,16 @@
 # ADH JRT — state of play, 8 September 2026
 
-## 8 Sep 2026 — Google sign-in REMOVED (on `dev`, merge record below once it lands)
+## ✅ 8 Sep 2026 — Google sign-in REMOVED and LIVE (`8d3773a`)
+
+Fast-forward `8f8cd53..8d3773a`, one commit, 24 files, −1,645 lines; `dev`
+and `Compare` level. Measured live: `google-auth` and `google-config`
+answer 404, `/signin` carries no Google markup, `login.js`, `hub-auth` and
+`my-account` still answer. Suite 54 files / 6,264 checks; prover 987/987,
+49 clean (two Google suites gone, so M went DOWN by two, as expected).
+⚠️ **Jay: delete `GOOGLE_CLIENT_ID` in Netlify** (Site configuration →
+Environment variables). Nothing reads it any more.
+
+Original entry:
 
 Jay: *"we should remove the option to sign in with google on the jrt site,
 no longer needed."* Gone: `google-auth.js`, `_googleAuth.js`,

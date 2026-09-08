@@ -1,5 +1,27 @@
 # ADH JRT — state of play, 8 September 2026
 
+## ✅ 8 Sep 2026 — ALL THREE SPECS LIVE on adhjrt.com (`96192ba`, deploy `6a9ff797c62ac000077f6683`)
+
+Jay: *"build everything until its all live."* Third and last production
+deploy of the day: pitch marshals, fast-forward `18bc508..96192ba`; `dev`
+and `Compare` level. Measured live: `marshal-links`, `marshal-info` and
+`get-result-history` answer 401 unsigned, `/qr.js` 200, `/app` carries pitch
+mode, `/manager` carries the Pitch marshals tab, **the public `get-results`
+answer carries no `submittedBy` and no Spirit nominees** (one real stored
+result, scoring fields only), and `login.js` / `hub-auth` still answer.
+Final suite 56 files / 6,422 checks; prover **1011/1011, 51 clean**.
+Deploys today: hub sign-in, draw rights, pitch marshals — 45 credits, plus
+club hub PR #787.
+
+**What the day changed for people:** sign in through the Club Hub; managers
+are results-only until an organiser flips a switch; managers send drafts for
+review instead of publishing; organisers have a ten-deep draft undo; a
+manager issues one QR link per pitch and volunteer parents score at the
+pitch with their name on every save; the table sees every score's history.
+**Not yet done from the sign-in spec:** deploy 2, removing invite codes,
+manager passwords and Google sign-in — waits until every organiser has a
+hub-linked account.
+
 ## 8 Sep 2026 — PITCH MARSHALS built on `dev` (the last of the three specs)
 
 `_marshal.js`, `marshal-links.js`, `marshal-info.js`, `get-result-history.js`;

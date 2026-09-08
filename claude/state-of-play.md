@@ -1,6 +1,19 @@
 # ADH JRT — state of play, 8 September 2026
 
-## 8 Sep 2026 — hub sign-in, tournament side, deploy 1 BUILT (not yet merged)
+## ✅ 8 Sep 2026 — SIGN IN WITH QUINS CLUB HUB IS LIVE on adhjrt.com (`bca6242`)
+
+Jay: *"yes, merge to main when green."* Merged as a fast-forward
+`6eaa877..bca6242` (four commits: hub sign-in, role picker, roleless
+repair, test repoint); `dev` and `Compare` level with it. Netlify deploy
+`6a9fd4abe1b77d0008614e3c` ready; measured live: `/signin` carries the
+button, `hub-auth` answers a junk token 401, the Accounts picker markup is
+served, `login.js` still answers. Club hub side: PR #787 merged as
+`debf2361` and live. **Jay drove the full loop on dev before the merge:**
+hub sign-in → pending → approved as Organiser with the picker → hub
+sign-in → organiser dashboard. Final suite 54 files / 6,105 checks;
+prover 964/964, 49 clean. Next: draw rights (spec), then pitch marshals.
+
+## 8 Sep 2026 — hub sign-in, tournament side, deploy 1 (build record)
 
 `hub-auth.js`, `_hubAuth.js`, the `/signin` button and fragment handling,
 `accounts-admin` approve-with-role, `signInMethodOf` → 'Club Hub',

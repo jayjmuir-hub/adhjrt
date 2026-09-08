@@ -1,8 +1,16 @@
 # Spec — who may change a draw, and when (draw rights)
 
-**Status: specced 8 Sep 2026, not built.** Read this before touching
-`save-schedule-override.js`, `publish-schedule.js`, `_publish.js` or the
-Draw tab on `/manager`.
+**Status: BUILT AND LIVE, 8 Sep 2026** — specced, built and deployed the
+same day, in full: § 1–4 and § 7 in the first commit, § 5 (send for review,
+the Awaiting-review strip) and the history UI in the second; on `main` at
+`18bc508`, Netlify deploy `6a9ff1394468eb00097469cf`, measured live.
+Behaviour: `RESTORE.md` § Draw rights. The rules live in
+`netlify/functions/_drawRights.js`; tests in `tests/test-draw-rights.js`
+with twenty-nine faults in the prover. ⚠️ On deploy every manager became
+results-only until an organiser ticks a switch on their card. Read this
+before touching `save-schedule-override.js`, `publish-schedule.js`,
+`_publish.js`, `draw-review.js`, `draw-history.js` or the Draw tab on
+`/manager`.
 
 Jay, 8 Sep 2026: *"I think we need to rethink giving age group managers
 automatically the ability to create and/or change their fixtures schedule, it

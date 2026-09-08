@@ -1,9 +1,18 @@
 # Spec — pitch marshals: handing match scoring to volunteers at the pitch
 
-**Status: specced 8 Sep 2026, not built.** Read this before touching
-`submit-result.js`, `get-results.js`, `_results.js` or the score sheet in
-`app.html`. Companion to `spec-draw-rights-sep-2026.md`; the two are
-separate features and separate deploy decisions.
+**Status: BUILT AND LIVE, 8 Sep 2026** — specced, built and deployed the
+same day, in full: on `main` at `96192ba`, Netlify deploy
+`6a9ff797c62ac000077f6683`, measured live (the marshal functions answer,
+`/qr.js` is served, `/app` carries pitch mode, `/manager` the Pitch marshals
+tab, and **the public `get-results` answer carries no username and no
+Spirit nominee** — § 5 is done). Behaviour: `RESTORE.md` § Pitch marshals.
+Rules in `netlify/functions/_marshal.js`; tests in
+`tests/test-pitch-marshals.js` with eighteen faults in the prover. Not yet
+exercised by a real marshal: that happens the week before the tournament,
+when each manager issues their links and prints the sheets. Read this
+before touching `submit-result.js`, `get-results.js`, `_results.js`,
+`_marshal.js` or pitch mode in `app.html`. Companion to
+`spec-draw-rights-sep-2026.md`; the two were separate deploys.
 
 Jay, 8 Sep 2026: *"we also need a way for managers to handoff the match
 scoring to volunteer pitch marshalls … some way for that pitch marshall to be

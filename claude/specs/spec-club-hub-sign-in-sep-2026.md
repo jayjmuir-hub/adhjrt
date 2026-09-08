@@ -1,11 +1,17 @@
 # Spec — sign in to the tournament site with a Quins Club Hub account
 
-**Status: specced 8 Sep 2026, not built. Goes FIRST**, before
-`spec-draw-rights-sep-2026.md` and `spec-pitch-marshals-sep-2026.md`, because
-both of those assume an account exists and neither cares how it was signed
-in. Each piece deploys as it lands (Jay, 8 Sep: *"we will deploy what we do
-immediately, not wait"*); nobody uses the tournament site until early
-October, so the back end is free to change.
+**Status: BUILT AND LIVE, 8 Sep 2026 — deploy 1 of this spec.** Specced,
+built and deployed the same day. Tournament side on `main` at `bca6242`
+(hub-auth, the role picker, the roleless repair), club hub side merged as
+PR #787 (`debf2361`). Jay drove the loop live: hub sign-in → pending →
+approved as Organiser with the picker → hub sign-in → organiser dashboard.
+Behaviour: `RESTORE.md` § Sign in with Quins Club Hub. ⚠️ **Deploy 2 of
+this spec — § 4's removals (invite codes, manager passwords, Google
+sign-in) — is NOT done** and waits until every organiser holds a hub-linked
+account. It went FIRST, before `spec-draw-rights-sep-2026.md` and
+`spec-pitch-marshals-sep-2026.md` (both also live), because both assume an
+account exists and neither cares how it was signed in. Each piece deployed
+as it landed (Jay: *"we will deploy what we do immediately, not wait"*).
 
 Jay, 8 Sep 2026: *"couldn't we federate login between club hub and jrt? no
 other clubs can log into club hub, its just our club and we already have all

@@ -155,12 +155,16 @@ export async function listAccounts() {
   return { accounts: await (await local()).accountsList(session && session.token) };
 }
 
-export async function approveAccount(username) {
+/* `extra` (Sep 2026, spec-club-hub-sign-in): a Club Hub account arrives with
+   NO role, so the organiser chooses one at approval — { role, ageGroupId?,
+   title? }. For an account that already has a role the server ignores it;
+   Approve never changes a role. */
+export async function approveAccount(username, extra = {}) {
   const session = currentSession();
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ action: 'approve', username }),
+    body: JSON.stringify({ action: 'approve', username, ...extra }),
   });
   if (r.real) return r.json;
   return (await local()).accountsAction(session && session.token, 'approve', username);

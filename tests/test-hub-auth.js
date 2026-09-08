@@ -318,5 +318,95 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     check('a failed verification names no reason to the caller', /could not be verified/.test(readRepo('netlify/functions/hub-auth.js')));
   }
 
+  /* ==================================================================== */
+  section('⚠️ The Accounts tab: a hub account is approved WITH a role, from the row');
+  {
+    /* Drives the real /organizer component the way test-my-account.js does. */
+    class DCLogic {
+      setState(patch, cb) {
+        const p = typeof patch === 'function' ? patch(this.state) : patch;
+        this.state = { ...this.state, ...p };
+        if (typeof cb === 'function') cb();
+      }
+    }
+    const t = readRepo('Organizer.dc.html');
+    const m = t.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/);
+    check('Organizer.dc.html has its x-dc script', !!m);
+    // eslint-disable-next-line no-new-func
+    const C = new Function('DCLogic', 'window', 'document', m[1] + '\n;return Component;')(
+      DCLogic,
+      { addEventListener() {}, google: undefined },
+      { addEventListener() {}, body: { style: {} }, baseURI: 'https://adhjrt.com/', getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } }
+    );
+    const calls = [];
+    let approveAnswer = { ok: true };
+    const api = {
+      approveAccount: async (...a) => { calls.push(a); return approveAnswer; },
+      rejectAccount: async () => ({ ok: true }), revokeAccount: async () => ({ ok: true }),
+      listAccounts: async () => ({ ok: true, accounts: [] }),
+      canPublishNow: () => false, isOrganiserSession: (x) => !!(x && x.isOrganizer), canScoreAgeGroup: () => true,
+      teamLabel: (c) => c, minutesToDisplay: (v) => String(v), minutesToTimeInput: (v) => String(v),
+      pitchesForAgeGroup: () => [], scoringRules: () => ({}), registrationCopy: () => ({}), venueDays: () => [],
+    };
+    const fresh = () => {
+      const c = new C(); c.props = {};
+      c.state = { ...c.state, api, tab: 'accounts', accounts: [
+        { username: 'hub.person', name: 'Hub Person', role: null, approved: false, source: 'hub', email: 'hub.person@example.com', signInMethod: 'Club Hub', createdAt: '2026-09-01T00:00:00.000Z' },
+        { username: 'code.person', name: 'Code Person', role: 'manager', ageGroupId: 'u9', approved: false, signInMethod: 'Password', createdAt: '2026-09-01T00:00:00.000Z' },
+      ] };
+      calls.length = 0; approveAnswer = { ok: true };
+      return c;
+    };
+    const row = (c, u) => c.renderVals().pendingAccounts.find((a) => a.username === u);
+
+    let c = fresh();
+    let hub = row(c, 'hub.person'), code = row(c, 'code.person');
+    check('the hub account row offers the role picker', hub && hub.needsRole === true);
+    check('…and an invite-code account row does not', code && code.needsRole === false);
+    eq('…the hub row names the email, not "Manager · undefined"', hub.roleLabel, 'Club Hub · hub.person@example.com');
+    eq('…defaulting to manager', hub.roleChoice, 'manager');
+    check('…with the age-group list to choose from', Array.isArray(hub.ageOptions) && hub.ageOptions.some((g) => g.id === 'u16b'));
+
+    await hub.onApprove();
+    eq('⚠️ Approve with no age group chosen sends NOTHING to the server', calls.length, 0);
+    check('…and says so above the list', /choose an age group/i.test(c.renderVals().acctApproveError), c.renderVals().acctApproveError);
+
+    hub.onAgeChoice({ target: { value: 'u16b' } });
+    hub = row(c, 'hub.person') || {}; /* || {} so a fault cannot make this file fall over */
+    eq('the age choice is remembered on the row', hub.ageChoice, 'u16b');
+    await hub.onApprove();
+    eq('Approve then sends role + age group', JSON.stringify(calls[0]), JSON.stringify(['hub.person', { role: 'manager', ageGroupId: 'u16b' }]));
+    eq('…and the error clears', c.renderVals().acctApproveError, '');
+
+    c = fresh();
+    hub = row(c, 'hub.person') || {}; /* || {} so a fault cannot make this file fall over */
+    hub.onRoleChoice({ target: { value: 'organizer' } });
+    hub = row(c, 'hub.person') || {}; /* || {} so a fault cannot make this file fall over */
+    eq('choosing Organiser hides the age-group picker', hub.roleIsManager, false);
+    await hub.onApprove();
+    eq('…and Approve sends role organizer with no age group', JSON.stringify(calls[0]), JSON.stringify(['hub.person', { role: 'organizer' }]));
+
+    c = fresh();
+    await row(c, 'code.person').onApprove();
+    eq('⚠️ an invite-code account is approved exactly as before — username only', JSON.stringify(calls[0]), JSON.stringify(['code.person']));
+
+    c = fresh();
+    approveAnswer = { ok: false, error: 'Unknown age group.' };
+    row(c, 'hub.person').onAgeChoice({ target: { value: 'u16b' } });
+    await row(c, 'hub.person').onApprove();
+    eq('a server refusal is shown above the list', c.renderVals().acctApproveError, 'Unknown age group.');
+
+    /* The account card hides Approve for a roleless hub account and points at the list. */
+    c = fresh();
+    c.openOtherAccount('hub.person');
+    let v = c.renderVals();
+    check('the card for a hub account without a role hides Approve', v.acctNeedsRole === true && v.acctCanApproveHere === false);
+    c.openOtherAccount('code.person');
+    v = c.renderVals();
+    check('…and still offers it for an invite-code account', v.acctNeedsRole === false && v.acctCanApproveHere === true);
+    check('the card markup carries the pointer sentence', /Choose a role in the Pending list/.test(t));
+    check('the pending row markup carries the two selects', /aria-label="Role"/.test(t) && /aria-label="Age group"/.test(t));
+  }
+
   summary('test-hub-auth.js');
 })().catch((e) => { console.error(e); process.exit(1); });

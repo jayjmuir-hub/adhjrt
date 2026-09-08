@@ -13,9 +13,17 @@ first number; the second number went UP by one for `test-hub-auth.js`,
 which is the proof the new suite ran undamaged. `tests/test-hub-auth.js` is registered
 in `runall.ps1` and carries 18 faults; two older faults on the accounts
 listing were repointed for the new strip list, not deleted.
-⚠️ **The club hub's `/connect/tournament` screen is NOT built yet** — the
-button sends people to a page that does not exist until that lands in the
-club hub repo. Live verification of the whole loop waits on it.
+**Second commit, same day:** the Accounts tab role picker (Pending row:
+Role + Age group selects, Approve refuses without an age group, card hides
+Approve for a roleless hub account) — 19 more checks in `test-hub-auth.js`,
+three more faults. Suite 54 files / 6,099 checks; prover **963/963, 49
+clean**. Jay: *"wait, do the role picker and club hub screen
+first"* before the production merge.
+**Club hub side:** `/connect/tournament` is built on branch
+`claude/connect-tournament` in the club hub repo, PR #787 open
+(23 checks, lint clean, docs-check clean). ⚠️ Until #787 is merged AND
+deployed, the tournament button sends people to a page that does not
+exist. Live verification of the whole loop waits on it.
 
 ## 8 Sep 2026 — sign in with Quins Club Hub specced — GOES FIRST
 

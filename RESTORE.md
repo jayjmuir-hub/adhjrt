@@ -1443,6 +1443,13 @@ the identity; the tournament site only decides the role.**
 - The listing strips `hubSub` beside `passwordHash` and `googleSub`, and
   `signInMethodOf()` answers `'Club Hub'` for such accounts. `email` and
   `source: 'hub'` are shown.
+- **The Accounts tab's Pending list carries the role picker** on a roleless
+  row: a Role select (manager default) and, for a manager, an Age group
+  select. Approve with no age group chosen sends nothing and says so above
+  the list; a server refusal is shown there too. An invite-code account is
+  approved with the username alone, exactly as before (`test-my-account.js`
+  pins the arguments). The account card hides Approve for a roleless hub
+  account and points at the list; Reject works from either place.
 - `hub-auth.js` refuses every bad token with ONE sentence. The reason
   (`signature`, `issuer`, `expired`…) is returned by the verifier for tests
   and logs only; naming it to the caller would tell a forger which check

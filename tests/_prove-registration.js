@@ -9219,6 +9219,27 @@ const FAULTS = [
     expect: ["sessionFor is character-for-character login.js's"],
   },
   {
+    name: 'the Accounts tab approves a hub manager with NO age group chosen',
+    suite: 'test-hub-auth.js',
+    apply: () => patch('Organizer.dc.html',
+      "      if (choice.role === 'manager' && !choice.ageGroupId) {", '      if (false) {'),
+    expect: ['Approve with no age group chosen sends NOTHING to the server'],
+  },
+  {
+    name: 'the Accounts tab sends a role for an invite-code account too (Approve starts changing roles)',
+    suite: 'test-hub-auth.js',
+    apply: () => patch('Organizer.dc.html',
+      '    if (!found.role) {\n      const choice', '    if (true) {\n      const choice'),
+    expect: ['an invite-code account is approved exactly as before'],
+  },
+  {
+    name: 'the account card offers Approve for a roleless hub account (which would 400)',
+    suite: 'test-hub-auth.js',
+    apply: () => patch('Organizer.dc.html',
+      'acctCanApproveHere: !!(s.acct && !s.acct.approved && s.acct.role),', 'acctCanApproveHere: !!(s.acct && !s.acct.approved),'),
+    expect: ['hides Approve'],
+  },
+  {
     name: 'the hub issuer becomes an environment variable',
     suite: 'test-hub-auth.js',
     apply: () => patch(path.join('netlify', 'functions', '_hubAuth.js'),

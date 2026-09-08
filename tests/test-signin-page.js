@@ -167,33 +167,6 @@ section('Signup: the role picker decides which invite-code gate is called');
 }
 
 /* ====================================================================== */
-section('Google: existing account routes by its stored role; new one needs role + code');
-{
-  const c = build();
-  const gone = spy(c);
-  c._next = '';
-  c.state = { ...c.state, api: { googleAuth: async () => ({ ok: true, session: { ...ORG_SESSION } }) } };
-  await c.onGoogleCredential({ credential: 'id-token' });
-  eq('an existing Google-linked organizer lands on /organizer — no role asked', gone, ['/organizer']);
-}
-{
-  const c = build();
-  spy(c);
-  c.state = { ...c.state, api: { googleAuth: async () => ({ ok: true, needsSignup: true, name: 'New Person' }) } };
-  await c.onGoogleCredential({ credential: 'id-token' });
-  check('a first-time Google sign-in is sent to the role + invite-code step',
-    c.state.authMode === 'google-code' && c.state.googlePendingName === 'New Person');
-
-  const calls = [];
-  c.state.api.googleAuth = async (args) => { calls.push(args); return { ok: true, session: MGR_SESSION }; };
-  c.setState({ googleCode: 'CODE-U9' });
-  await c.doGoogleSignup();
-  /* No role is chosen any more — 'manager' is the only one the page can send,
-     and that is the assertion, not a passthrough of whatever state said. */
-  eq('the Google signup posts manager and the code', [calls[0].role, calls[0].inviteCode], ['manager', 'CODE-U9']);
-}
-
-/* ====================================================================== */
 section('Already signed in: straight through, no form');
 {
   const src = readRepo('Signin.dc.html');
@@ -216,23 +189,10 @@ section('The pages around it: rewrites and hand-offs');
     /href="\/signin\?next=\/organizer"/.test(org));
   const orgCode = org.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   check('no login form remains on /organizer', !/loginPass/.test(orgCode) && !/doLogin/.test(orgCode));
-  /* ⚠️ NARROWED ON PURPOSE, Aug 2026 — and split into four so the narrowing
-     cannot be mistaken for coverage. This was one assertion that NO Google
-     machinery of any kind existed here, which was right when the unify moved
-     sign-in to /signin and became wrong the moment the My account card added
-     Link Google: that card loads Google's own script to ATTACH an identity to
-     the session you already hold. Signing IN with Google still cannot happen
-     on /organizer, and that is what the first two assert. A widened check is a
-     check with less to say, so the linking machinery gets its own positive
-     assertions rather than being covered by the silence. */
-  check('no Google SIGN-IN remains on /organizer — googleAuth is never called there',
-    !/\bgoogleAuth\s*\(/.test(orgCode));
-  check('…and /signin\'s sign-in button is not rendered there either',
-    !/google-signin-btn/.test(orgCode) && !/\brenderGoogleButton\b/.test(orgCode));
-  check('the only Google code on /organizer is the account card\'s LINK button',
-    /renderAccountGoogleButton/.test(orgCode) && /account-google-btn/.test(orgCode));
-  check('…and it calls linkGoogle, which acts on the session token alone',
-    /\.linkGoogle\(/.test(orgCode));
+  /* Google sign-in AND the account card's Link Google went on 8 Sep 2026
+     (spec-club-hub-sign-in § 4) — nothing Google-shaped may remain. */
+  check('no Google machinery of any kind remains on /organizer',
+    !/googleAuth\s*\(|google-signin-btn|renderGoogleButton|renderAccountGoogleButton|account-google-btn|\.linkGoogle\(|accounts\.google\.com/.test(orgCode));
 
   const mgr = readRepo('Manager.dc.html');
   /* Same anchoring: boot()'s no-session path, not doLogout()'s. */
@@ -241,16 +201,11 @@ section('The pages around it: rewrites and hand-offs');
   check('…and sign-out hands over to /signin as well',
     /doLogout\(\) \{[\s\S]{0,700}?this\.redirect\('\/signin\?next=\/manager'\);/.test(mgr));
 
-  /* The same split for /manager, which grew the identical card. */
   const mgrCode = mgr.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  check('no Google SIGN-IN on /manager either — googleAuth is never called there',
-    !/\bgoogleAuth\s*\(/.test(mgrCode));
-  check('…nor /signin\'s sign-in button',
-    !/google-signin-btn/.test(mgrCode) && !/\brenderGoogleButton\b/.test(mgrCode));
-  check('the only Google code on /manager is the account card\'s LINK button',
-    /renderAccountGoogleButton/.test(mgrCode) && /account-google-btn/.test(mgrCode));
-  check('…and it calls linkGoogle too',
-    /\.linkGoogle\(/.test(mgrCode));
+  check('no Google machinery of any kind remains on /manager',
+    !/googleAuth\s*\(|google-signin-btn|renderGoogleButton|renderAccountGoogleButton|account-google-btn|\.linkGoogle\(|accounts\.google\.com/.test(mgrCode));
+  check('…nor on /signin itself',
+    !/googleAuth\s*\(|google-signin-btn|renderGoogleButton|accounts\.google\.com|google-code/.test(readRepo('Signin.dc.html').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '')));
 }
 
 summary('test-signin-page.js');

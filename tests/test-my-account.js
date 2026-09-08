@@ -202,78 +202,18 @@ section('Changing your own password — a MANAGER can, and the current one is re
   eq('a Google-only account gets a clean 401, not a 500', noHash.status, 401);
 
   reset();
+  /* ⚠️ THE ACCOUNT COMES FROM THE TOKEN, NEVER THE BODY. This used to be
+     proved through linkGoogle; Google went on 8 Sep 2026 and the rule did
+     not, so it is proved through the password change instead. */
+  reset();
+  const spoof = parse(await call(TOKENS.mgr, 'POST', { action: 'password', currentPassword: 'pw-mgr', password: 'a-long-enough-one', username: 'orga', account: 'orga' }));
+  eq('a body naming somebody else still acts on the CALLER', spoof.status, 200);
+  eq('…the caller’s hash changed', stored('mgr').passwordHash, 'hash-NEW-a-long-enough-one');
+  eq('…and the named account was untouched', stored('orga').passwordHash, 'hash-orga');
+
+  reset();
   eq('signed out cannot change a password', parse(await call(null, 'POST', { action: 'password', currentPassword: 'pw-mgr', password: 'a-long-enough-one' })).status, 401);
   eq('…and nothing was written', stored('mgr').passwordHash, 'hash-mgr');
-}
-
-/* ====================================================================== */
-section('Linking Google — the account is the one in the TOKEN, never the body');
-{
-  reset();
-  const r = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-mgrgoogle' }));
-  eq('a MANAGER can link their own Google account', r.status, 200);
-  eq('…and it is stored on them', stored('mgr').googleSub, 'sub-mgrgoogle');
-  eq('…and the card now says Both', r.account.signInMethod, 'Both');
-  check('…the response still leaks no googleSub', !/googleSub|sub-/.test(JSON.stringify(r)));
-
-  /* ⚠️ THE ONE THAT MATTERS MOST. */
-  reset();
-  const spoof = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-x', username: 'orga', account: 'orga', role: 'organizer' }));
-  eq('a body naming somebody else still succeeds — for the CALLER', spoof.status, 200);
-  eq('…the caller got the identity', stored('mgr').googleSub, 'sub-x');
-  eq('…and the named account was untouched', stored('orga').googleSub, undefined);
-
-  reset();
-  const bad = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'not-a-real-token' }));
-  eq('an unverifiable Google token is refused', bad.status, 401);
-  eq('…and nothing was written', stored('mgr').googleSub, undefined);
-
-  reset();
-  eq('signed out cannot link', parse(await call(null, 'POST', { action: 'linkGoogle', idToken: 'tok-x' })).status, 401);
-  eq('…and nothing was written', stored('mgr').googleSub, undefined);
-}
-
-/* ====================================================================== */
-section('One Google identity, one login');
-{
-  reset();
-  const taken = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-goog' }));
-  eq('an identity already on another account is refused', taken.status, 409);
-  eq('…the caller did not get it', stored('mgr').googleSub, undefined);
-  eq('…AND the other account still has it', stored('goog').googleSub, 'sub-goog');
-
-  /* Refuse, do not replace: replacing survives the owner changing their
-     password, so a stolen session becomes permanent. */
-  reset();
-  await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-first' });
-  const second = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-second' }));
-  eq('linking a DIFFERENT identity over an existing one is refused', second.status, 409);
-  eq('…and the original survives', stored('mgr').googleSub, 'sub-first');
-
-  const again = parse(await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-first' }));
-  eq('re-linking the SAME identity is a no-op success, so a retry is harmless', again.status, 200);
-  eq('…still the same identity', stored('mgr').googleSub, 'sub-first');
-}
-
-/* ====================================================================== */
-section('And google-auth.js then actually signs that person in');
-{
-  /* Asserting the stored field proves the write, not the outcome. This drives
-     the REAL google-auth handler afterwards, which is the thing the whole
-     feature exists for. */
-  reset();
-  await call(TOKENS.mgr, 'POST', { action: 'linkGoogle', idToken: 'tok-newlink' });
-
-  const googleAuth = require(FN('google-auth.js')).handler;
-  const res = parse(await googleAuth({
-    httpMethod: 'POST',
-    headers: { 'x-nf-client-connection-ip': '198.51.100.77' },
-    body: JSON.stringify({ idToken: 'tok-newlink' }),
-  }));
-  eq('signing in with the newly linked Google account works', res.status, 200);
-  eq('…and it is the right person', res.session && res.session.username, 'mgr');
-  eq('…with their age group intact', res.session && res.session.ageGroupId, 'u14b');
-  check('…and it did NOT ask them to sign up', !res.needsSignup, JSON.stringify(res));
 }
 
 /* ====================================================================== */
@@ -304,6 +244,11 @@ section('accounts-admin.js stays organiser-only — the other-people actions are
   check('the account listing still strips passwordHash, googleSub AND hubSub',
     /accounts\.map\(\(\{ passwordHash, googleSub, hubSub, \.\.\.rest \}\)/.test(admin),
     'the card is now what renders this listing');
+  /* Moved here from test-google-auth.js when Google sign-in went (8 Sep 2026):
+     the rule outlives the feature. The listing must call the ONE copy, never
+     derive `googleSub ? 'Google' : 'Password'` for itself again. */
+  check('…and derives signInMethod from the one copy, NOT locally',
+    /signInMethod: signInMethodOf\(\{ passwordHash, googleSub, hubSub \}\)/.test(admin) && !/signInMethod:\s*\w*\s*googleSub \?/.test(admin));
 
   /* changeMine moved here with its subject — two ways to change your own
      password is two rules that drift. */
@@ -353,8 +298,6 @@ function accountApi(overrides) {
     calls,
     myAccount: async () => { calls.push(['myAccount', ...arguments]); return { ok: true, account: { name: 'Pat Tester', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password' } }; },
     changeMyPassword: async (...a) => { calls.push(['changeMyPassword', ...a]); return { ok: true }; },
-    linkGoogle: async (...a) => { calls.push(['linkGoogle', ...a]); return { ok: true, account: { name: 'Pat Tester', username: 'pat', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Both' } }; },
-    googleClientId: async () => 'client-id.apps.googleusercontent.com',
     resetAccountPassword: async (...a) => { calls.push(['resetAccountPassword', ...a]); return { ok: true }; },
     approveAccount: async (...a) => { calls.push(['approveAccount', ...a]); return { ok: true }; },
     rejectAccount: async (...a) => { calls.push(['rejectAccount', ...a]); return { ok: true }; },
@@ -440,28 +383,13 @@ section('/manager — the card, on a page that had no account UI at all');
   const api = accountApi();
   c.state = { ...c.state, api, ageGroups: [] };
   await c.openAccount();
-  c.setState({ acctGoogleClientId: 'cid' });
-  check('Link Google is offered to a password-only account', c.renderVals().acctCanLinkGoogle === true);
-  await c.onAccountGoogleCredential({ credential: 'google-id-token' });
-  const call = api.calls.find((x) => x[0] === 'linkGoogle');
-  eq('the credential is passed straight to linkGoogle', call.slice(1), ['google-id-token']);
-  check('…and the card now says both methods work',
-    c.renderVals().acctSignInMethod === 'Password and Google');
-  /* The server REFUSES to replace an identity, so the button would only ever
-     produce an error once one is attached. */
-  check('Link Google disappears once it is linked', c.renderVals().acctCanLinkGoogle === false);
+  check('no Link Google is offered any more (removed 8 Sep 2026)', c.renderVals().acctCanLinkGoogle === undefined);
 }
 {
-  /* GOOGLE_CLIENT_ID not set in Netlify — googleClientId() answers null, the
-     same signal /signin uses to decide Google sign-in exists at all. */
   const c = buildPage('Manager.dc.html');
-  c.state = { ...c.state, api: accountApi({ googleClientId: async () => null }), ageGroups: [] };
+  c.state = { ...c.state, api: accountApi(), ageGroups: [] };
   await c.openAccount();
-  check('with no Google client id configured, no link button is offered',
-    c.renderVals().acctCanLinkGoogle === false,
-    'the same clientId===null rule /signin uses to decide Google exists at all');
-  check('…and the rest of the card still works — linking is an enhancement only',
-    c.renderVals().acctLoaded === true && c.renderVals().acctUsername === 'pat');
+  check('the card still works with no Google anywhere', c.renderVals().acctLoaded === true && c.renderVals().acctUsername === 'pat');
 }
 
 /* ====================================================================== */
@@ -471,11 +399,9 @@ section('/organizer — the same card, and the line between the two modes');
   const api = accountApi();
   c.state = { ...c.state, api, accounts: [] };
   await c.openMyAccount();
-  c.setState({ acctGoogleClientId: 'cid' });
   const v = c.renderVals();
   check('your own account opens in "me" mode', v.acctIsMe === true && v.acctIsOther === false);
   eq('…titled as yours', v.acctHeading, 'My account');
-  check('…with Link Google offered', v.acctCanLinkGoogle === true);
 }
 {
   const c = buildPage('Organizer.dc.html');
@@ -485,7 +411,7 @@ section('/organizer — the same card, and the line between the two modes');
      thing that can be suppressing it is the mode. */
   c.state = { ...c.state, api, accounts: [
     { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, createdAt: '2026-07-02T00:00:00.000Z', signInMethod: 'Password' },
-  ], acctGoogleClientId: 'cid' };
+  ] };
   c.openOtherAccount('mgr');
   const v = c.renderVals();
   check('a row opens that person in other-person mode', v.acctIsOther === true && v.acctIsMe === false);
@@ -493,26 +419,6 @@ section('/organizer — the same card, and the line between the two modes');
   eq('…showing their details', [v.acctName, v.acctUsername], ['Mgr Person', 'mgr']);
   eq('…with their role in words', v.acctRoleLabel, 'Age-group manager · U14B Contact');
 
-  /* ⚠️ THE ONE THAT MATTERS. An organiser attaching a Google identity to
-     somebody else's login would be attaching their OWN — exactly the takeover
-     google-auth.js's googleSub-only lookup exists to prevent. Every other
-     condition for the button is true here, so this can only be failing on the
-     mode itself. */
-  check('LINK GOOGLE IS ABSENT from somebody else’s account', v.acctCanLinkGoogle === false);
-}
-{
-  /* Defence in depth: even if the button were somehow rendered, the handler
-     refuses. Two guards, and this one is provable on its own because the
-     view-model guard is bypassed by calling the handler directly. */
-  const c = buildPage('Organizer.dc.html');
-  const api = accountApi();
-  c.state = { ...c.state, api, accounts: [
-    { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, signInMethod: 'Password' },
-  ] };
-  c.openOtherAccount('mgr');
-  await c.onAccountGoogleCredential({ credential: 'google-id-token' });
-  check('…and the credential handler refuses outright in that mode',
-    !api.calls.some((x) => x[0] === 'linkGoogle'));
 }
 {
   const c = buildPage('Organizer.dc.html');
@@ -520,7 +426,7 @@ section('/organizer — the same card, and the line between the two modes');
   c.state = { ...c.state, api, accounts: [
     { username: 'mgr', name: 'Mgr Person', role: 'manager', ageGroupId: 'u14b', approved: true, signInMethod: 'Password' },
     { username: 'newbie', name: 'New Person', role: 'manager', ageGroupId: 'u9', approved: false, signInMethod: 'Password' },
-  ], acctGoogleClientId: 'cid' };
+  ] };
 
   c.openOtherAccount('newbie');
   let v = c.renderVals();
@@ -554,7 +460,7 @@ section('The two copies of the card cannot drift on WHAT they call');
   /* There is no build step and no shared component system, so the card's
      MARKUP is a second copy by design. Its DATA LAYER is not: both pages call
      the same three functions out of scores-data.js. */
-  for (const fn of ['myAccount', 'changeMyPassword', 'linkGoogle']) {
+  for (const fn of ['myAccount', 'changeMyPassword']) {
     check(`/organizer calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(o));
     check(`/manager calls api.${fn}`, new RegExp('\\.' + fn + '\\(').test(m));
   }
@@ -574,10 +480,8 @@ section('The two copies of the card cannot drift on WHAT they call');
       new RegExp("export \\{[^}]*\\b" + name + "\\b[^}]*\\} from '\\./scores-data\\.js';").test(od)
       && !new RegExp('function ' + name + '\\b').test(od);
     check('organizer-data.js re-exports them rather than reimplementing',
-      ['myAccount', 'changeMyPassword', 'linkGoogle'].every(reexported));
+      ['myAccount', 'changeMyPassword'].every(reexported));
   }
-  check('…and the Google client id the link button needs, which it did not before',
-    /export \{ googleClientId \} from '\.\/scores-data\.js';/.test(readRepo('organizer-data.js')));
 
   /* ⚠️ accounts-admin.js is organiser-only and stays that way. The card now
      living on /manager is exactly the change that might tempt someone to
@@ -707,17 +611,6 @@ section('Last sign in — recorded by BOTH doors, and only on success');
   const pending = await login({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ username: 'mgr', password: 'pw-mgr' }) });
   eq('a pending account is refused even with the right password', pending.statusCode, 403);
   check('…and records nothing — it did not sign in', (await readSignIn('mgr')) === null);
-}
-{
-  /* The Google door. Signing in through it is still signing in. */
-  blobData.clear();
-  const { readSignIn } = require(FN('_signins.js'));
-  const { saveAccounts } = require(FN('_auth.js'));
-  await saveAccounts(SEED());
-  const googleAuth = require(FN('google-auth.js')).handler;
-  const res = await googleAuth({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ idToken: 'tok-goog' }) });
-  eq('Google sign-in works', res.statusCode, 200);
-  check('…and is recorded the same way', typeof (await readSignIn('goog')) === 'string');
 }
 
 section('Last sign in — how it reaches each half of the card');

@@ -1006,7 +1006,8 @@
        system, so this is a second copy by design (the cost already paid by
        DEFAULT_VENUE and the registration copy block). What is NOT duplicated
        is the data layer: both pages call api.myAccount / api.changeMyPassword
-       / api.linkGoogle out of scores-data.js, and a test asserts both pages
+       out of scores-data.js (api.linkGoogle too, until Google sign-in went on
+       8 Sep 2026), and a test asserts both pages
        call the same functions so one page cannot grow its own version.
        Design: claude/specs/spec-my-account.md -->
   <sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
@@ -1071,20 +1072,8 @@
             <button onClick="{{ onAcctSubmit }}" disabled="{{ acctBusy }}" style="width:100%;background:var(--accent-mid);color:#fff;font-weight:800;font-size:13px;padding:11px;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase">{{ acctSaveLabel }}</button>
           </div>
 
-          <!-- Link Google. Only offered when GOOGLE_CLIENT_ID is configured
-               (the same clientId===null rule /signin uses), and only when this
-               account has no Google identity yet — the server REFUSES rather
-               than replaces an existing one, so offering the button there would
-               be offering a guaranteed error. -->
-          <sc-if value="{{ acctCanLinkGoogle }}" hint-placeholder-val="{{ false }}">
-            <div style="border-top:1px solid var(--line);margin-top:20px;padding-top:18px">
-              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Link a Google account</div>
-              <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">Adds the Google button as a second way into this same login. Your username and password keep working exactly as they do now.</p>
-              <div id="account-google-btn" style="display:flex;justify-content:center"></div>
-              <sc-if value="{{ acctGoogleError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleError }}</div></sc-if>
-              <sc-if value="{{ acctGoogleSuccess }}" hint-placeholder-val=""><div style="color:var(--accent-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleSuccess }}</div></sc-if>
-            </div>
-          </sc-if>
+          <!-- "Link a Google account" lived here until 8 Sep 2026; Google
+               sign-in is gone (spec-club-hub-sign-in § 4). -->
         </sc-if>
       </div>
     </div>
@@ -1171,7 +1160,6 @@ class Component extends DCLogic {
     acctOpen: false, acct: undefined, acctLoadError: '',
     acctCurrent: '', acctNew: '', acctShowCurrent: false, acctShowNew: false,
     acctError: '', acctSuccess: '', acctBusy: false,
-    acctGoogleClientId: '', acctGoogleError: '', acctGoogleSuccess: '',
   };
 
   async componentDidMount() {
@@ -1206,16 +1194,6 @@ class Component extends DCLogic {
     document.addEventListener('keydown', this._escHandler);
   }
 
-  componentDidUpdate() {
-    /* The My account card sits inside an sc-if, so opening it mounts a FRESH
-       #account-google-btn div and Google's button has to be drawn into that
-       new one. Guarded on _acctGoogleRendered so it is not redrawn on every
-       keystroke in the password fields. */
-    const s = this.state;
-    const canLink = !!(s.acctOpen && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password');
-    if (canLink && !this._acctGoogleRendered) this.renderAccountGoogleButton();
-    if (!s.acctOpen) this._acctGoogleRendered = false;
-  }
 
   componentWillUnmount() {
     if (this._toastT) clearTimeout(this._toastT);
@@ -1298,19 +1276,16 @@ class Component extends DCLogic {
     this.setState({
       acctOpen: true, acct: undefined, acctLoadError: '',
       acctCurrent: '', acctNew: '', acctError: '', acctSuccess: '',
-      acctGoogleError: '', acctGoogleSuccess: '',
     });
     const res = await this.state.api.myAccount();
     if (res && res.ok) this.setState({ acct: res.account });
     else this.setState({ acct: null, acctLoadError: (res && res.error) || 'Could not load your account.' });
-    this.setupAccountGoogle();
   }
 
   closeAccount() {
-    this._acctGoogleRendered = false;
     this.setState({
       acctOpen: false, acctCurrent: '', acctNew: '',
-      acctError: '', acctSuccess: '', acctGoogleError: '', acctGoogleSuccess: '',
+      acctError: '', acctSuccess: '',
     });
   }
 
@@ -1332,65 +1307,6 @@ class Component extends DCLogic {
     }
   }
 
-  /* Google linking is an ENHANCEMENT ONLY, exactly as on /signin: if the
-     client id is absent or Google's script will not load, the card still
-     shows the details and still changes passwords. Hence the blanket try. */
-  async setupAccountGoogle() {
-    const { api } = this.state;
-    if (!api || !api.googleClientId) return;
-    try {
-      const clientId = this.state.acctGoogleClientId || await api.googleClientId();
-      if (!clientId) return;
-      this.setState({ acctGoogleClientId: clientId });
-      await this.loadGoogleScript();
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => this.onAccountGoogleCredential(r) });
-        this.renderAccountGoogleButton();
-      }
-    } catch (e) { /* enhancement only */ }
-  }
-
-  loadGoogleScript() {
-    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
-    if (this._googleScriptPromise) return this._googleScriptPromise;
-    this._googleScriptPromise = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client';
-      s.async = true; s.defer = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('Could not load Google sign-in.'));
-      document.head.appendChild(s);
-    });
-    return this._googleScriptPromise;
-  }
-
-  renderAccountGoogleButton() {
-    const el = document.getElementById('account-google-btn');
-    if (!el || !(window.google && window.google.accounts && window.google.accounts.id)) return;
-    el.innerHTML = '';
-    window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', text: 'continue_with', width: 280 });
-    this._acctGoogleRendered = true;
-  }
-
-  async onAccountGoogleCredential(resp) {
-    const token = resp && resp.credential;
-    if (!token) { this.setState({ acctGoogleError: 'Google sign-in did not return a token.' }); return; }
-    this.setState({ acctGoogleError: '', acctGoogleSuccess: '' });
-    const res = await this.state.api.linkGoogle(token);
-    if (res && res.ok) {
-      this.setState({
-        acct: res.account || this.state.acct,
-        acctGoogleSuccess: res.alreadyLinked
-          ? 'That Google account is already linked to this login.'
-          : 'Google account linked. You can use the Google button next time you sign in.',
-      });
-    } else {
-      /* The server refuses rather than replaces — an identity already on
-         another login, or a different one already on this one. Both are
-         deliberate, and its sentence says which. */
-      this.setState({ acctGoogleError: (res && res.error) || 'Could not link that Google account.' });
-    }
-  }
 
   go(tab) {
     const s = this.state;
@@ -3137,11 +3053,6 @@ class Component extends DCLogic {
       acctMinPassword: MIN_PASSWORD_LENGTH,
       acctError: s.acctError, acctSuccess: s.acctSuccess,
       acctBusy: s.acctBusy, acctSaveLabel: s.acctBusy ? 'Saving…' : 'Save',
-      /* Offered only when Google is configured AND this login has no identity
-         yet: the server REFUSES to replace one, so showing it otherwise would
-         be showing a button whose only possible answer is an error. */
-      acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),
-      acctGoogleError: s.acctGoogleError, acctGoogleSuccess: s.acctGoogleSuccess,
       onOpenAccount: () => this.openAccount(),
       onCloseAccount: () => this.closeAccount(),
       onAcctCurrent: (e) => this.setState({ acctCurrent: e.target.value }),

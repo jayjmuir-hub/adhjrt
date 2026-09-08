@@ -1694,19 +1694,8 @@
             </div>
           </sc-if>
 
-          <!-- YOUR OWN ACCOUNT: link Google. Offered only when Google is
-               configured AND this login has no identity yet, because the server
-               refuses to REPLACE one - showing the button otherwise would be
-               showing a control whose only possible answer is an error. -->
-          <sc-if value="{{ acctCanLinkGoogle }}" hint-placeholder-val="{{ false }}">
-            <div style="border-top:1px solid var(--line);margin-top:20px;padding-top:18px">
-              <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Link a Google account</div>
-              <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">Adds the Google button as a second way into this same login. Your username and password keep working exactly as they do now.</p>
-              <div id="account-google-btn" style="display:flex;justify-content:center"></div>
-              <sc-if value="{{ acctGoogleError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleError }}</div></sc-if>
-              <sc-if value="{{ acctGoogleSuccess }}" hint-placeholder-val=""><div style="color:var(--accent-ink);font-size:13px;font-weight:600;margin-top:10px;text-align:center">{{ acctGoogleSuccess }}</div></sc-if>
-            </div>
-          </sc-if>
+          <!-- "Link a Google account" lived here until 8 Sep 2026; Google
+               sign-in is gone (spec-club-hub-sign-in § 4). -->
 
           <!-- SOMEONE ELSE'S ACCOUNT. No Link Google here, ever - see the
                comment at the top of this card. -->
@@ -2253,7 +2242,6 @@ class Component extends DCLogic {
     acctOpen: false, acctSubject: null, acct: undefined, acctLoadError: '',
     acctCurrent: '', acctNew: '', acctShowCurrent: false, acctShowNew: false,
     acctError: '', acctSuccess: '', acctBusy: false,
-    acctGoogleClientId: '', acctGoogleError: '', acctGoogleSuccess: '',
   };
 
   async componentDidMount() {
@@ -2321,16 +2309,6 @@ class Component extends DCLogic {
     return (found && found.name) || '';
   }
 
-  componentDidUpdate() {
-    /* The account card sits inside an sc-if, so opening it mounts a FRESH
-       #account-google-btn div and Google's button has to be drawn into that
-       new one. Guarded on _acctGoogleRendered so it is not redrawn on every
-       keystroke in the password fields. */
-    const s = this.state;
-    const canLink = !!(s.acctOpen && !s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password');
-    if (canLink && !this._acctGoogleRendered) this.renderAccountGoogleButton();
-    if (!s.acctOpen) this._acctGoogleRendered = false;
-  }
 
   componentWillUnmount() {
     if (this._regClock) clearInterval(this._regClock);
@@ -4637,12 +4615,10 @@ class Component extends DCLogic {
     this.setState({
       acctOpen: true, acctSubject: null, acct: undefined, acctLoadError: '',
       acctCurrent: '', acctNew: '', acctError: '', acctSuccess: '',
-      acctGoogleError: '', acctGoogleSuccess: '',
     });
     const res = await this.state.api.myAccount();
     if (res && res.ok) this.setState({ acct: res.account });
     else this.setState({ acct: null, acctLoadError: (res && res.error) || 'Could not load your account.' });
-    this.setupAccountGoogle();
   }
 
   /* Somebody else's. No fetch: accounts-admin.js's listing already returns
@@ -4655,15 +4631,13 @@ class Component extends DCLogic {
       acctOpen: true, acctSubject: username, acct: found || null,
       acctLoadError: found ? '' : 'That account is no longer in the list.',
       acctCurrent: '', acctNew: '', acctError: '', acctSuccess: '',
-      acctGoogleError: '', acctGoogleSuccess: '',
     });
   }
 
   closeAccount() {
-    this._acctGoogleRendered = false;
     this.setState({
       acctOpen: false, acctSubject: null, acctCurrent: '', acctNew: '',
-      acctError: '', acctSuccess: '', acctGoogleError: '', acctGoogleSuccess: '',
+      acctError: '', acctSuccess: '',
     });
   }
 
@@ -4685,67 +4659,6 @@ class Component extends DCLogic {
     }
   }
 
-  /* Google linking is an ENHANCEMENT ONLY, exactly as on /signin: if the
-     client id is absent or Google's script will not load, the card still shows
-     the details and still changes passwords. Hence the blanket try. */
-  async setupAccountGoogle() {
-    const { api } = this.state;
-    if (!api || !api.googleClientId) return;
-    try {
-      const clientId = this.state.acctGoogleClientId || await api.googleClientId();
-      if (!clientId) return;
-      this.setState({ acctGoogleClientId: clientId });
-      await this.loadGoogleScript();
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.initialize({ client_id: clientId, callback: (r) => this.onAccountGoogleCredential(r) });
-        this.renderAccountGoogleButton();
-      }
-    } catch (e) { /* enhancement only */ }
-  }
-
-  loadGoogleScript() {
-    if (window.google && window.google.accounts && window.google.accounts.id) return Promise.resolve();
-    if (this._googleScriptPromise) return this._googleScriptPromise;
-    this._googleScriptPromise = new Promise((resolve, reject) => {
-      const el = document.createElement('script');
-      el.src = 'https://accounts.google.com/gsi/client';
-      el.async = true; el.defer = true;
-      el.onload = () => resolve();
-      el.onerror = () => reject(new Error('Could not load Google sign-in.'));
-      document.head.appendChild(el);
-    });
-    return this._googleScriptPromise;
-  }
-
-  renderAccountGoogleButton() {
-    const el = document.getElementById('account-google-btn');
-    if (!el || !(window.google && window.google.accounts && window.google.accounts.id)) return;
-    el.innerHTML = '';
-    window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', text: 'continue_with', width: 280 });
-    this._acctGoogleRendered = true;
-  }
-
-  async onAccountGoogleCredential(resp) {
-    const token = resp && resp.credential;
-    if (!token) { this.setState({ acctGoogleError: 'Google sign-in did not return a token.' }); return; }
-    /* ⚠️ Only ever called from YOUR OWN card. The button it belongs to lives
-       inside the acctCanLinkGoogle gate, which is false in other-person mode -
-       linking somebody else's login to the organiser's own Google identity is
-       the takeover this whole design refuses. */
-    if (this.state.acctSubject) return;
-    this.setState({ acctGoogleError: '', acctGoogleSuccess: '' });
-    const res = await this.state.api.linkGoogle(token);
-    if (res && res.ok) {
-      this.setState({
-        acct: res.account || this.state.acct,
-        acctGoogleSuccess: res.alreadyLinked
-          ? 'That Google account is already linked to this login.'
-          : 'Google account linked. You can use the Google button next time you sign in.',
-      });
-    } else {
-      this.setState({ acctGoogleError: (res && res.error) || 'Could not link that Google account.' });
-    }
-  }
 
   /* Sign-in and sign-up live on /signin now. Sign-out clears the unified
      session (and the old keys) and hands over to the sign-in page. modal is
@@ -4956,11 +4869,6 @@ class Component extends DCLogic {
       acctMinPassword: MIN_PASSWORD_LENGTH,
       acctError: s.acctError, acctSuccess: s.acctSuccess,
       acctBusy: s.acctBusy, acctSaveLabel: s.acctBusy ? 'Saving…' : 'Save',
-      /* ⚠️ `!s.acctSubject` is the load-bearing clause: Link Google is offered
-         on YOUR OWN account only. Never widen this to cover other-person mode
-         - see the comment on the card itself. */
-      acctCanLinkGoogle: !!(!s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),
-      acctGoogleError: s.acctGoogleError, acctGoogleSuccess: s.acctGoogleSuccess,
       onOpenMyAccount: () => this.openMyAccount(),
       onCloseAccount: () => this.closeAccount(),
       onAcctCurrent: (e) => this.setState({ acctCurrent: e.target.value }),

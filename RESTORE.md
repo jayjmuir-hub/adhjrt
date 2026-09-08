@@ -241,8 +241,8 @@ good reason.
 | `_agegroups.js` | the fifteen age groups server-side, and each group's squad cap |
 | `_scoring.js` / `scoring-rules.js` | scoring rules — shared helper and its endpoint |
 | `_signins.js` | last-sign-in records. ⚠️ Their OWN blob store, not the accounts list |
-| `my-account.js` | the My account card — read own account, change own password, link/unlink Google |
-| `_googleAuth.js` / `google-auth.js` / `google-config.js` | Google sign-in: token verification, the endpoint, and the client-id config the button reads |
+| `my-account.js` | the My account card — read own account, change own password (Google linking went 8 Sep 2026) |
+| ~~`_googleAuth.js` / `google-auth.js` / `google-config.js`~~ | **Tombstone.** Google sign-in, 3 Aug – 8 Sep 2026. Removed with `linkGoogle` once the Club Hub became the identity (Jay: "no longer needed"); `GOOGLE_CLIENT_ID` is deleted from Netlify. Accounts created through Google keep a `googleSub` as history and cannot sign in with it — they sign in through the hub |
 | `_documents.js` / `documents.js` | organiser-to-manager document sharing (specced, parked — see `claude/specs/spec-documents.md`) |
 
 ⚠️ **`submission-created.js` was DELETED on 28 Jul 2026** with Netlify Forms.
@@ -267,7 +267,7 @@ age group from the match id itself; preserve that pattern).
 `CLUB_FORM_KEY` (the silent club link — absent means the club form is CLOSED),
 `BLOBS_SITE_ID`, `BLOBS_TOKEN`,
 `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MAIL_FROM`,
-`GOOGLE_CLIENT_ID` (gates the Google sign-in button)
+~~`GOOGLE_CLIENT_ID`~~ (gated the Google sign-in button — Google sign-in removed 8 Sep 2026; delete the variable in Netlify)
 
 ⚠️ **`ORGANIZER_INVITE_CODE` is read by `organizer-signup.js` and is
 DELETED in Netlify on purpose.** Its absence is what closes organiser
@@ -1184,35 +1184,26 @@ point:
   tournament moves, the JSON-LD needs a human edit, and that check is what makes
   it impossible to forget rather than a substitute for it.
 
-## Google sign-in is tested by being DRIVEN, not by grepping its source
+## Google sign-in — TOMBSTONE (removed 8 Sep 2026)
 
-`test-google-auth.js` had 40 checks of which **34 were regexes over source
-text**, and it never called the handler once — on the highest-security surface
-in the repo: the audience check, the `googleSub` lookup, the invite-code gate,
-and the rule deciding whether a new account is approved. That cuts both ways:
-reformatting `(a) => a.googleSub` to `a => a.googleSub` broke three tests
-without a bug, and any bug leaving the text intact passed.
+Google sign-in existed from 3 Aug to 8 Sep 2026: `google-auth.js`,
+`_googleAuth.js`, `google-config.js`, the button on `/signin`, a first-time
+role + invite-code step, and "Link a Google account" on both account cards
+(`my-account.js` `linkGoogle`). Jay, 8 Sep 2026: *"we should remove the option
+to sign in with google on the jrt site, no longer needed"* — the Club Hub is
+the identity now (`spec-club-hub-sign-in-sep-2026.md` § 4). All of it went in
+one commit, with its two test files (`test-google-auth.js`,
+`test-google-auth-behaviour.js`) and their prover faults; the two faults that
+patched still-live rules (the listing strips `googleSub`; `signInMethodOf()`
+is the one copy) were repointed to `test-my-account.js`, not deleted.
 
-`test-google-auth-behaviour.js` drives both files with a stubbed `OAuth2Client`.
-What it holds: a token for a different client id is refused; an unverified email
-is refused; the account lookup is by **`googleSub`, never email** (matching on
-email would let whoever controls an address take over the account that used it);
-a pending account is refused rather than signed in; a new manager lands
-**pending** and bound to the age group its code names; a Google account keeps a
-**null** `passwordHash`; and organiser self-signup stays shut while
-`ORGANIZER_INVITE_CODE` is absent from Netlify — which is deliberate, and
-"fixing" the missing variable reopens the door.
-
-⚠️ **THE STUB HAD TO MODEL THE REAL FAILURE, AND THE FIRST VERSION DID NOT.** It
-threw whenever the caller's `audience` was not our client id — so injecting
-"stop pinning the audience" made every sign-in fail, and the check that names
-that exact risk went on passing, because it expects `null` and got `null`. The
-fault was caught by twenty-three unrelated checks and not by the one guarding
-it. What unpinning really does is REMOVE the restriction, so a token minted for
-someone else's site is **accepted**. The stub now models that, and the right
-check goes red. **A stub that cannot express the vulnerability cannot test it.**
-
----
+What this section used to record, and is still true of the design that was
+removed: the account lookup was by **`googleSub`, never email**, because
+matching on email would let whoever controls an address take over the
+account that used it — the same ruling `hub-auth.js` inherited. Accounts
+created through Google keep their `googleSub` as a historical field and
+`signInMethodOf()` still answers `'Google'` for them so the Accounts tab can
+say why such a login has no password; none can sign in with it.
 
 ## Gotchas found the hard way
 

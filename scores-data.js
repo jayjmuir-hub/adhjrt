@@ -2019,27 +2019,10 @@ export function logout() {
   try { localStorage.removeItem(OLD_ORG_SESSION_KEY); } catch (e) {}
 }
 
-// Google sign-in, either role. For an EXISTING Google-linked account the
-// role sent here is irrelevant — google-auth.js matches on the verified
-// googleSub and answers with the account's own stored role. The role only
-// matters on first-time signup, where it decides which invite-code gate the
-// request goes through; Google supplies a verified identity, never a role
-// or an age group.
-export async function googleAuth({ idToken, role = 'manager', inviteCode, username, name, title }) {
-  const r = await tryFetchJson('/.netlify/functions/google-auth', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken, role, inviteCode, username, name, title }),
-  });
-  const json = r.real ? r.json : (await local()).googleAuth({ idToken, role, inviteCode, username, name, title });
-  if (json.ok && json.needsSignup) return { ok: true, needsSignup: true, name: json.name };
-  if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
-  if (json.ok) {
-    const session = { ...json.session, token: json.token };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return { ok: true, session };
-  }
-  return { ok: false, error: json.error || 'Could not sign in with Google.' };
-}
+/* ⚠️ TOMBSTONE (8 Sep 2026): googleAuth() lived here — "Sign in with Google"
+   for both roles, via netlify/functions/google-auth.js. Removed with the
+   whole Google path once the Club Hub became the identity (Jay: "no longer
+   needed"). See spec-club-hub-sign-in-sep-2026.md § 4. */
 
 /* ---- Sign in with Quins Club Hub (Sep 2026) --------------------------------
    Spec: claude/specs/spec-club-hub-sign-in-sep-2026.md. The club hub is the
@@ -2177,24 +2160,7 @@ export async function changeMyPassword(currentPassword, password) {
     'Changing your password needs the deployed site (not available in local preview).');
 }
 
-/* Attach a Google identity to the account you are signed in as, so the Google
-   button works next time. You prove both halves: the account by holding a
-   session for it, the identity by producing a valid token for it. The server
-   refuses an identity already on another login, and refuses to REPLACE one
-   rather than silently moving it — see the spec for why. */
-export async function linkGoogle(idToken) {
-  return myAccountPost({ action: 'linkGoogle', idToken },
-    'Linking a Google account needs the deployed site (not available in local preview).');
-}
 
-// The Client ID the page needs to render the Google button — see
-// netlify/functions/google-config.js. null means Google sign-in isn't
-// configured (local preview, or GOOGLE_CLIENT_ID not set yet in Netlify).
-export async function googleClientId() {
-  const r = await tryFetchJson('/.netlify/functions/google-config', { method: 'GET' });
-  if (!r.real) return null;
-  return (r.json && r.json.clientId) || null;
-}
 
 // Registrations for the signed-in manager's OWN age group (teams + players,
 // including medical notes and emergency contacts — a manager is responsible

@@ -243,7 +243,7 @@ export async function resetAccountPassword(username, password) {
   return { ok: false, error: 'Resetting a password needs the deployed site (not available in local preview).' };
 }
 
-/* Your own account — details, password, Google linking. RE-EXPORTED from
+/* Your own account — details and password. RE-EXPORTED from
    scores-data.js rather than reimplemented: the my-account.js endpoint takes
    any valid session, so /manager uses exactly the same three calls, and a
    second copy here would be a second copy of the rules. changeMyPassword used
@@ -253,16 +253,10 @@ export async function resetAccountPassword(username, password) {
    the rule, re-exported rather than rewritten. /organizer has exactly the same
    blind spot /manager had — its boot calls are public or optional-session, so
    without this a revoked organiser's dashboard renders indefinitely. */
-export { myAccount, changeMyPassword, linkGoogle, verifySession } from './scores-data.js';
+export { myAccount, changeMyPassword, verifySession } from './scores-data.js';
 
-/* The Google CLIENT ID, for the Link Google button on the account card.
-   ⚠️ This is NOT a sign-in path. /organizer has no way to sign in with Google
-   and must not grow one - the card only ever ATTACHES an identity to the
-   account you already hold a session for. Re-exported rather than
-   reimplemented, same as the three above; test-accounts.js's api.* sweep is
-   what caught it missing, which is exactly how the two password features
-   died before it existed. */
-export { googleClientId } from './scores-data.js';
+/* googleClientId and linkGoogle were re-exported here until 8 Sep 2026;
+   Google sign-in is gone (spec-club-hub-sign-in § 4). */
 
 /* The organiser's review queue (Sep 2026, spec-draw-rights § 5) — re-exported,
    same reasoning as the account helpers above: one implementation, and the

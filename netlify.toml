@@ -242,7 +242,7 @@
 #
 # This is the one directory in the repo whose source IS security logic:
 # _auth.js (session signing and the revocation check), _intake.js (the
-# CLUB_FORM_KEY gate), _googleAuth.js. The repo is public, so this discloses
+# CLUB_FORM_KEY gate), _hubAuth.js. The repo is public, so this discloses
 # nothing new to anyone who thinks to look on github.com — but "already public
 # elsewhere" is not a reason to serve it from the site as well.
 #

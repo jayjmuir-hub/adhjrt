@@ -52,8 +52,6 @@ $tests = @(
   'test-organizer-clubs.js',
   'test-documents.js',
   'test-email.js',
-  'test-google-auth.js',
-  'test-google-auth-behaviour.js',
   'test-fixtures-results-sync.js',
   'test-simulate-tournament.js',
   'test-team-logos.js',

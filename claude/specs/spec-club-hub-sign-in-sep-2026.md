@@ -5,10 +5,12 @@ built and deployed the same day. Tournament side on `main` at `bca6242`
 (hub-auth, the role picker, the roleless repair), club hub side merged as
 PR #787 (`debf2361`). Jay drove the loop live: hub sign-in → pending →
 approved as Organiser with the picker → hub sign-in → organiser dashboard.
-Behaviour: `RESTORE.md` § Sign in with Quins Club Hub. ⚠️ **Deploy 2 of
-this spec — § 4's removals (invite codes, manager passwords, Google
-sign-in) — is NOT done** and waits until every organiser holds a hub-linked
-account. It went FIRST, before `spec-draw-rights-sep-2026.md` and
+Behaviour: `RESTORE.md` § Sign in with Quins Club Hub. **Of § 4's removals,
+Google sign-in went the same day** (Jay: *"no longer needed"*):
+`google-auth.js`, `_googleAuth.js`, `google-config.js`, the button, the
+first-time code step, and Link Google on both account cards, with their two
+test files. ⚠️ **The rest of deploy 2 — invite codes and manager passwords —
+is NOT done** and waits until every organiser holds a hub-linked account. It went FIRST, before `spec-draw-rights-sep-2026.md` and
 `spec-pitch-marshals-sep-2026.md` (both also live), because both assume an
 account exists and neither cares how it was signed in. Each piece deployed
 as it landed (Jay: *"we will deploy what we do immediately, not wait"*).

@@ -1,5 +1,20 @@
 # ADH JRT — state of play, 8 September 2026
 
+## 8 Sep 2026 — Google sign-in REMOVED (on `dev`, merge record below once it lands)
+
+Jay: *"we should remove the option to sign in with google on the jrt site,
+no longer needed."* Gone: `google-auth.js`, `_googleAuth.js`,
+`google-config.js`, `googleAuth()`/`googleClientId()`/`linkGoogle()` in the
+data layer, `my-account.js`'s `linkGoogle` action, the `/signin` button and
+first-time code step, Link Google on both account cards, and the two Google
+test files with their prover faults (the two that guard still-live rules
+were re-homed in `test-my-account.js`). Tombstones in `RESTORE.md`,
+`my-account.js`, `scores-data.js`, `organizer-data.js` and the pages.
+⚠️ **In Netlify, after this deploys: delete `GOOGLE_CLIENT_ID`.** Nothing
+reads it any more. Accounts created through Google keep their `googleSub`
+as history and sign in through the hub. This is the Google half of the
+sign-in spec's deploy 2; invite codes and manager passwords still wait.
+
 ## ✅ 8 Sep 2026 — ALL THREE SPECS LIVE on adhjrt.com (`96192ba`, deploy `6a9ff797c62ac000077f6683`)
 
 Jay: *"build everything until its all live."* Third and last production

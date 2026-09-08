@@ -315,7 +315,6 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     const login = grab('netlify/functions/login.js');
     check('login.js has sessionFor', login.length > 0);
     eq('⚠️ hub-auth.js\'s sessionFor is character-for-character login.js\'s', grab('netlify/functions/hub-auth.js'), login);
-    eq('…and so is google-auth.js\'s', grab('netlify/functions/google-auth.js'), login);
 
     const hubSrc = readRepo('netlify/functions/_hubAuth.js') + readRepo('netlify/functions/hub-auth.js');
     const requires = [...hubSrc.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]);

@@ -75,7 +75,8 @@ const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 
 /* The same sessionFor() switch google-auth.js already uses — the two files
    must agree, or which door somebody came in through starts to matter to
-   every downstream reader. test-google-auth.js asserts both sides. */
+   every downstream reader (google-auth.js went 8 Sep 2026; test-hub-auth.js
+   asserts hub-auth.js's copy is character-for-character this one). */
 function sessionFor(account) {
   if (account.role === 'organizer') {
     return {

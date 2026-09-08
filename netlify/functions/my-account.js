@@ -5,7 +5,7 @@
 //
 //   GET                                                -> your own account, safe fields
 //   POST { action:'password',   currentPassword, password } -> change your own password
-//   POST { action:'linkGoogle', idToken }                   -> attach a Google identity to your own login
+//   (linkGoogle was removed 8 Sep 2026 — see the tombstone in the handler)
 //
 // ⚠️ THE DOOR IS ANY VALID SESSION, NOT AN ORGANISER SESSION, and that is the
 // whole reason this is not in accounts-admin.js — that file's requireOrganizer
@@ -29,7 +29,6 @@
 // google-auth.js still never attaches itself to anyone silently.
 
 const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, sessionRefusal, passwordProblem, signInMethodOf } = require('./_auth');
-const { verifyGoogleIdToken } = require('./_googleAuth');
 const { readSignIn } = require('./_signins');
 
 const json = (statusCode, body) => ({ statusCode, body: JSON.stringify(body) });
@@ -104,43 +103,13 @@ exports.handler = async (event) => {
       return json(200, { ok: true, account: publicView(all[me]) });
     }
 
-    if (payload.action === 'linkGoogle') {
-      const identity = await verifyGoogleIdToken(payload.idToken);
-      if (!identity) return fail(401, 'Google sign-in could not be verified. Please try again.');
-
-      /* ⚠️ ALREADY ON ANOTHER ACCOUNT -> REFUSE. The one that really matters.
-         google-auth.js resolves a sign-in with find(), so two accounts sharing
-         an identity resolve to whichever comes first in the list — a silent
-         account mix-up in a system holding children's dates of birth and
-         medical notes. Compared against every account, not just this one. */
-      const clash = all.findIndex((a) => a.googleSub === identity.sub);
-      if (clash !== -1 && clash !== me) {
-        return fail(409, 'That Google account is already linked to a different login.');
-      }
-
-      /* Re-linking the SAME identity is a no-op success, so a double-click or
-         a retry after a dropped connection is harmless. */
-      if (all[me].googleSub === identity.sub) {
-        return json(200, { ok: true, alreadyLinked: true, account: publicView(all[me]) });
-      }
-
-      /* ⚠️ REFUSE, DO NOT REPLACE. Replacing would let a stolen session swap
-         the Google identity to the attacker's own — a way back in that
-         survives the real owner changing their password. There is deliberately
-         no unlink and no move; if that is ever needed it belongs behind the
-         organiser door as an explicit clear, not hidden inside a link. */
-      if (all[me].googleSub) {
-        return fail(409, 'This login already has a different Google account linked. Ask a tournament organizer.');
-      }
-
-      all[me].googleSub = identity.sub;
-      // Only fill the email in if there isn't one — never overwrite what the
-      // account was created with.
-      if (!all[me].email && identity.email) all[me].email = identity.email;
-      all[me].googleLinkedAt = new Date().toISOString();
-      await saveAccounts(all);
-      return json(200, { ok: true, account: publicView(all[me]) });
-    }
+    /* ⚠️ TOMBSTONE (8 Sep 2026): `linkGoogle` lived here from 3 Aug to 8 Sep
+       2026 — attach a Google identity to your own login, refusing one already
+       on another account and refusing to REPLACE one. Google sign-in was
+       removed from the site altogether (Jay: "no longer needed") once the
+       Club Hub became the identity (spec-club-hub-sign-in § 4). Accounts that
+       still carry a `googleSub` keep it as a historical field; none can sign
+       in with it. An unknown action falls through to the 400 below. */
 
     return fail(400, 'Unknown action.');
   } catch (err) {

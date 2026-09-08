@@ -64,10 +64,6 @@ const NEEDED = [
   'rules.html',
   '404.html',
   'netlify/functions/_scoring.js',
-  /* test-google-auth-behaviour.js DRIVES both of these rather than reading
-     them as text, so they have to be in the temp copy. */
-  'netlify/functions/google-auth.js',
-  'netlify/functions/_googleAuth.js',
   'netlify/functions/_signins.js',
   'netlify/functions/_signins.js',
   'netlify/functions/accounts-admin.js',
@@ -220,9 +216,6 @@ const NEEDED = [
      on 3 Aug 2026. Do not add them back to satisfy a check — the check that
      asserts they are GONE is satisfied by their absence from this list too,
      and the fault that proves it CREATES one in the damaged copy. */
-  path.join('netlify', 'functions', '_googleAuth.js'),
-  path.join('netlify', 'functions', 'google-auth.js'),
-  path.join('netlify', 'functions', 'google-config.js'),
 ];
 
 /* ⚠️ THE ABOUT-SECTION PHOTO BOARD (5 Aug 2026). test-about-board.js asserts
@@ -312,8 +305,6 @@ const INTAKE_F = path.join('netlify', 'functions', '_intake.js');
 const SD = 'scores-data.js';
 const SCORING_MODEL_F = path.join('netlify', 'functions', '_scoring.js');
 const PASSWORD_F = path.join('netlify', 'functions', '_password.js');
-const GOOGLE_F = path.join('netlify', 'functions', 'google-auth.js');
-const GOOGLE_V = path.join('netlify', 'functions', '_googleAuth.js');
 /* The confirmation block from _intake.js, verbatim, so a fault can move it
    rather than duplicate it. If this stops matching, the fault refuses to inject
    and that is a FAILURE of this script, not a pass. */
@@ -1152,18 +1143,7 @@ const FAULTS = [
       'if (inviteCode !== process.env.ORGANIZER_INVITE_CODE) {'),
     expect: ['a missing invite code refuses every signup'],
   },
-  {
-    /* The twin of the organizer-signup.js fault above, for the Google path.
-       Since 3 Aug 2026 organiser signup is closed by the ABSENCE of
-       ORGANIZER_INVITE_CODE, and that only holds while BOTH paths refuse on
-       absence. This half had only its mismatch clause pinned. */
-    name: 'google-auth.js stops refusing organiser signup when ORGANIZER_INVITE_CODE is absent',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      'if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
-      'if (inviteCode !== process.env.ORGANIZER_INVITE_CODE) {'),
-    expect: ['refuses on the variable being ABSENT'],
-  },
+
   {
     name: 'the Registration tab stops reading the shared validator',
     suite: 'test-registration-panel.js',
@@ -3376,70 +3356,24 @@ const FAULTS = [
      link CREEPING BACK, which is now the mistake worth catching. */
 
   /* Google sign-in (added 29 Jul 2026). */
-  {
-    name: '_googleAuth.js stops checking the audience, so a token minted for a different app would verify here too',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', '_googleAuth.js'),
-      'const ticket = await getClient().verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });',
-      'const ticket = await getClient().verifyIdToken({ idToken });'),
-    expect: ['verifies against OUR OWN client id as the audience, not just any valid Google token'],
-  },
-  {
-    name: '_googleAuth.js stops refusing an unverified email',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', '_googleAuth.js'),
-      "    if (payload.email_verified === false) return null;\n",
-      ''),
-    expect: ['refuses a token whose email Google has not itself verified'],
-  },
-  {
-    name: 'google-auth.js starts matching an existing account by email instead of googleSub',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "const existing = accounts.find((a) => a.googleSub === identity.sub);",
-      "const existing = accounts.find((a) => a.email === identity.email);"),
-    expect: ['looks up the account by the STORED googleSub, not by email'],
-  },
-  {
-    name: 'google-auth.js stops refusing a duplicate username when signing up via Google',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "    if (accounts.some((a) => a.username === uname)) {\n      return { statusCode: 409, body: JSON.stringify({ ok: false, error: 'That username is already taken.' }) };\n    }\n",
-      ''),
-    expect: ['a duplicate username is refused with the exact same message as every other signup path'],
-  },
-  {
-    name: 'google-auth.js leaves passwordHash undefined instead of an explicit null on a Google-created account',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "      passwordHash: null, // signed in with Google, not a password — see verifyPassword callers, none of which this account ever reaches\n",
-      ''),
-    expect: ['the created account stores no password — passwordHash is explicitly null, not omitted'],
-  },
+
+
+
+
+
   /* ⚠️ REPOINTED Aug 2026, not dropped: the RULE (the listing shows a readable
      sign-in method and never a raw googleSub) is still alive, but the
      derivation moved out to _auth.js's signInMethodOf(). */
   {
     name: 'accounts-admin.js stops stripping googleSub from the account listing',
-    suite: 'test-google-auth.js',
+    suite: 'test-my-account.js',
     apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
       /* Repointed 8 Sep 2026 when hubSub joined the strip list (spec-club-hub-sign-in). */
       "accounts.map(({ passwordHash, googleSub, hubSub, ...rest }) => ({ ...rest, signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub }), lastSignInAt: signIns[rest.username] || null })),",
       "accounts.map(({ passwordHash, ...rest }) => ({ ...rest, signInMethod: 'Password', lastSignInAt: null })),"),
-    expect: ['googleSub is stripped from the listing the same way passwordHash is'],
+    expect: ['the account listing still strips passwordHash, googleSub AND hubSub'],
   },
-  {
-    /* The exact bug the shared helper was created to end: a local derivation
-       that cannot ever return 'Both', so a password login with Google linked
-       reads as "Google only" on the card. */
-    name: 'accounts-admin.js goes back to deriving signInMethod for itself',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
-      /* Repointed 8 Sep 2026 when hubSub joined the strip list. */
-      "signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub })",
-      "signInMethod: googleSub ? 'Google' : 'Password'"),
-    expect: ['it is NOT derived locally', 'a human-readable sign-in method is shown instead'],
-  },
+
   {
     name: "signInMethodOf() loses the Both case, so a linked password login reads as Google only",
     suite: 'test-my-account.js',
@@ -3448,14 +3382,7 @@ const FAULTS = [
       "  if (false) return 'Both';"),
     expect: ['BOTH, once a password login has Google linked'],
   },
-  {
-    name: 'google-auth.js goes back to hardcoding every Google-created organiser’s title, ignoring a custom one',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "...(role === 'manager' ? { ageGroupId } : { title: title || 'Organizer' }),",
-      "...(role === 'manager' ? { ageGroupId } : { title: 'Organizer' }),"),
-    expect: ['an organiser can still set a custom title, same default as organizer-signup.js — not hardcoded to "Organizer"'],
-  },
+
   {
     name: 'onScoresAgeChange loses its same-id guard, re-reloading a group that hasn’t changed',
     suite: 'test-fixtures-results-sync.js',
@@ -3855,14 +3782,7 @@ const FAULTS = [
       "    if (!account.approved) {\n      await recordSignIn(account.username);"),
     expect: ['and records nothing — it did not sign in'],
   },
-  {
-    name: 'the Google door stops recording, so half the sign-ins go unseen',
-    suite: 'test-my-account.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "      await recordSignIn(existing.username);",
-      "      await Promise.resolve();"),
-    expect: ['and is recorded the same way'],
-  },
+
   {
     name: 'my-account.js stops carrying the stamp to your own card',
     suite: 'test-my-account.js',
@@ -3909,29 +3829,8 @@ const FAULTS = [
   },
 
   /* ---- the My account card (test-my-account.js) ------------------------- */
-  {
-    /* ⚠️ THE ONE THAT MATTERS. Widening this gate to cover other-person mode
-       would let an organiser attach their OWN Google identity to somebody
-       else's login — the takeover google-auth.js's googleSub-only lookup
-       exists to prevent. */
-    name: "the Link Google gate on /organizer loses its 'this is my own account' clause",
-    suite: 'test-my-account.js',
-    apply: () => patch('Organizer.dc.html',
-      "acctCanLinkGoogle: !!(!s.acctSubject && s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),",
-      "acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),"),
-    expect: ['LINK GOOGLE IS ABSENT from somebody'],
-  },
-  {
-    /* The second guard, provable on its own because the test calls the
-       handler directly and so bypasses the view-model gate above. Two guards,
-       two faults — a guard nothing can catch alone is a guard too many. */
-    name: 'the credential handler stops refusing in other-person mode',
-    suite: 'test-my-account.js',
-    apply: () => patch('Organizer.dc.html',
-      '    if (this.state.acctSubject) return;',
-      '    if (false) return;'),
-    expect: ['the credential handler refuses outright in that mode'],
-  },
+
+
   {
     /* The account acted on must come from the TOKEN. A username in the body
        is the thing my-account.js has no code path to read — and the card must
@@ -3959,14 +3858,7 @@ const FAULTS = [
       '      acctLoading: false,'),
     expect: ['while the fetch is in flight the card says loading'],
   },
-  {
-    name: 'Link Google keeps being offered after an identity is already attached',
-    suite: 'test-my-account.js',
-    apply: () => patch('Manager.dc.html',
-      "      acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct && s.acct.signInMethod === 'Password'),",
-      '      acctCanLinkGoogle: !!(s.acctGoogleClientId && s.acct),'),
-    expect: ['Link Google disappears once it is linked'],
-  },
+
   {
     /* accounts-admin.js is organiser-only and stays that way. The card now
        living on /manager is exactly the change that might tempt someone to
@@ -3978,14 +3870,7 @@ const FAULTS = [
       '  async revokeSomeone(u) { return this.state.api.revokeAccount(u); }\n\n  async openAccount() {'),
     expect: ['never calls api.revokeAccount'],
   },
-  {
-    name: 'organizer-data.js stops re-exporting the Google client id the link button needs',
-    suite: 'test-accounts.js',
-    apply: () => patch('organizer-data.js',
-      "export { googleClientId } from './scores-data.js';",
-      "// export { googleClientId } from './scores-data.js';"),
-    expect: ['organizer-data.js provides api.googleClientId()'],
-  },
+
   {
     name: 'the age group on the card reverts to its raw id instead of its name',
     suite: 'test-my-account.js',
@@ -4134,28 +4019,13 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
       "    const me = all.findIndex((a) => a.username === session.username);",
       "    const bodyName = (() => { try { return (JSON.parse(event.body || '{}').username || '').trim().toLowerCase(); } catch (e) { return ''; } })();\n    const me = all.findIndex((a) => a.username === (bodyName || session.username));"),
-    expect: ['the named account was untouched'],
+    /* Re-homed on the password change (8 Sep 2026). With the fault the
+       body's name is looked up and the CALLER's current password no longer
+       matches, so the 401 lands on the first check. */
+    expect: ['a body naming somebody else still acts on the CALLER', 'the named account was untouched'],
   },
-  {
-    /* Two logins resolving to one Google identity: google-auth.js uses find(),
-       so one person silently lands in the other's account. */
-    name: 'my-account.js stops checking whether the Google identity is already on another login',
-    suite: 'test-my-account.js',
-    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
-      "      if (clash !== -1 && clash !== me) {\n        return fail(409, 'That Google account is already linked to a different login.');\n      }\n",
-      ""),
-    expect: ['an identity already on another account is refused'],
-  },
-  {
-    /* Replace-instead-of-refuse: a stolen session becomes permanent, surviving
-       the real owner changing their password. */
-    name: 'my-account.js REPLACES an existing Google identity instead of refusing',
-    suite: 'test-my-account.js',
-    apply: () => patch(path.join('netlify', 'functions', 'my-account.js'),
-      "      if (all[me].googleSub) {\n        return fail(409, 'This login already has a different Google account linked. Ask a tournament organizer.');\n      }\n",
-      ""),
-    expect: ['linking a DIFFERENT identity over an existing one is refused'],
-  },
+
+
   {
     name: 'my-account.js stops verifying the current password, so a borrowed laptop is a takeover',
     suite: 'test-my-account.js',
@@ -4221,22 +4091,8 @@ const FAULTS = [
      3 Aug 2026. If it had quietly become a one-sided check on google-auth.js
      alone, a drift in the PASSWORD path would sail past it — which is the
      half a Google-signed-in organiser would never notice. */
-  {
-    name: 'login.js hardcodes the organiser title, so a Google organiser and a password organiser get different sessions',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
-      "session: { username: account.username, name: account.name, role: 'Organizer', _role: 'organizer' },"),
-    expect: ['organiser session fields match login.js'],
-  },
-  {
-    name: 'login.js renames ageGroupId in the manager session, so the two sign-in doors disagree',
-    suite: 'test-google-auth.js',
-    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      "session: { username: account.username, name: account.name, ageGroupId: account.ageGroupId },",
-      "session: { username: account.username, name: account.name, ageGroup: account.ageGroupId },"),
-    expect: ['manager session fields match login.js'],
-  },
+
+
 
   /* ---- the invite codes are rate limited now (3 Aug 2026) ---------------
      Until this shipped, ORGANIZER_INVITE_CODE took unlimited guesses from an
@@ -4259,13 +4115,7 @@ const FAULTS = [
       "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
     expect: ['manager-signup.js: the eleventh is refused'],
   },
-  {
-    name: "google-auth.js's signup branch loses its rate limit",
-    suite: 'test-signup-ratelimit.js',
-    apply: () => patch(path.join('netlify', 'functions', 'google-auth.js'),
-      "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
-    expect: ['google-auth.js (signup branch): the eleventh is refused'],
-  },
+
   {
     /* The guard still reads as present at every call site — this is the shape
        that looks fixed in review and is not. */
@@ -4280,20 +4130,7 @@ const FAULTS = [
     },
     expect: ['and at manager-signup.js, which never had ten of its own'],
   },
-  {
-    /* The realistic tidy-up: "why is this halfway down the handler?" Because
-       above that line the request is a SIGN-IN, and fifteen managers on one
-       venue wifi share an address on tournament morning. */
-    name: "google-auth.js's rate limit is tidied up to the top of the handler, locking managers out of Google sign-in",
-    suite: 'test-signup-ratelimit.js',
-    apply: () => {
-      const f = path.join('netlify', 'functions', 'google-auth.js');
-      patch(f, "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", '');
-      patch(f, "    const body = JSON.parse(event.body || '{}');",
-        "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n    const body = JSON.parse(event.body || '{}');");
-    },
-    expect: ['but a SIGN-IN from the same address is still answered'],
-  },
+
   {
     name: 'the signup bucket starts trusting x-forwarded-for, so a caller can pick its own bucket',
     suite: 'test-signup-ratelimit.js',
@@ -5268,14 +5105,7 @@ const FAULTS = [
     apply: () => patch('Signin.dc.html', 'name="password" autocomplete="current-password" ', ''),
     expect: ['password field is announced'],
   },
-  {
-    name: 'the double Google error comes back (same sentence twice on the login view)',
-    suite: 'test-design-polish.js',
-    apply: () => patch('Signin.dc.html',
-      "this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.' });",
-      "this.setState({ googleBusy: false, googleError: res.error || 'Could not sign in with Google.', loginError: res.error || 'Could not sign in with Google.' });"),
-    expect: ['ONE error, not the same sentence twice'],
-  },
+
   {
     name: 'a page loses its :focus-visible ring',
     suite: 'test-design-polish.js',
@@ -7632,9 +7462,10 @@ const FAULTS = [
     name: 'a /signin input is removed, so the pinned count of six no longer holds',
     suite: 'test-design-polish.js',
     apply: () => patch('Signin.dc.html',
-      '<input id="f-invite-code-2" name="invite-code" autocomplete="off" type="{{ googleCodeType }}"',
-      '<span data-was-an-input name="invite-code" autocomplete="off" type="{{ googleCodeType }}"'),
-    expect: ['the page still has six inputs'],
+      '<input id="f-username" name="username" autocomplete="username"',
+      '<span data-was-an-input name="username" autocomplete="username"'),
+    /* Repointed 8 Sep 2026: the Google invite-code input it used to remove is gone; the sign-in username input goes instead. */
+    expect: ['the page still has five inputs'],
   },
 
   /* ---- the two defects found by reviewing the above (8 Aug 2026) ----
@@ -8430,44 +8261,11 @@ const FAULTS = [
     apply: () => patch('Club.dc.html', '7&ndash;8 NOVEMBER 2026', '14&ndash;15 NOVEMBER 2026'),
     expect: ['no page states a day number the layout disagrees with'],
   },
-  {
-    name: 'the Google token audience is no longer pinned to our client id',
-    suite: 'test-google-auth-behaviour.js',
-    apply: () => patch(GOOGLE_V, 'verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID })',
-      'verifyIdToken({ idToken, audience: undefined })'),
-    expect: ['a token for a DIFFERENT client id is refused'],
-  },
-  {
-    name: 'a Google token for an unverified email is accepted',
-    suite: 'test-google-auth-behaviour.js',
-    apply: () => patch(GOOGLE_V, '    if (payload.email_verified === false) return null;', ''),
-    expect: ['an UNVERIFIED email is refused'],
-  },
-  {
-    /* Matching on email would let whoever controls an address take over the
-       account that used it. */
-    name: 'the account lookup matches on EMAIL instead of the Google subject',
-    suite: 'test-google-auth-behaviour.js',
-    apply: () => patch(GOOGLE_F, 'const existing = accounts.find((a) => a.googleSub === identity.sub);',
-      'const existing = accounts.find((a) => a.email === identity.email);'),
-    expect: ['a matching EMAIL with a different Google subject does NOT sign in'],
-  },
-  {
-    name: 'a brand-new Google manager lands APPROVED instead of pending',
-    suite: 'test-google-auth-behaviour.js',
-    apply: () => patch(GOOGLE_F, "      approved: role === 'organizer' ? isFirstOrganizer : false,", '      approved: true,'),
-    expect: ['but it lands PENDING, not signed in'],
-  },
-  {
-    /* ORGANIZER_INVITE_CODE is deleted in Netlify on purpose - its absence is
-       what closes organiser self-signup. */
-    name: 'organiser self-signup reopens when the env var is absent',
-    suite: 'test-google-auth-behaviour.js',
-    apply: () => patch(GOOGLE_F,
-      '      if (!process.env.ORGANIZER_INVITE_CODE || inviteCode !== process.env.ORGANIZER_INVITE_CODE) {',
-      '      if (false) {'),
-    expect: ['an organiser signup is refused while the env var is absent'],
-  },
+
+
+
+
+
 
   /* ==================================================================== */
   /* KEYBOARD ACCESS (Aug 2026) - the tail of the accessibility work.
@@ -9613,6 +9411,16 @@ const FAULTS = [
     apply: () => patch('app.html',
       "  if (a === 'treset') { T.running = false; T.elapsed = 0; }", "  if (a === 'treset') { T.running = false; T.elapsed = 0; clearInterval(T.iv); }"),
     expect: ["never clears an interval"],
+  },
+  {
+    /* Re-homed from the deleted test-google-auth.js (8 Sep 2026): the rule
+       that accounts-admin's listing uses the ONE signInMethodOf() copy. */
+    name: 'accounts-admin.js goes back to deriving signInMethod for itself',
+    suite: 'test-my-account.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      'signInMethod: signInMethodOf({ passwordHash, googleSub, hubSub })',
+      "signInMethod: googleSub ? 'Google' : 'Password'"),
+    expect: ['derives signInMethod from the one copy, NOT locally'],
   },
   {
     name: 'the hub issuer becomes an environment variable',

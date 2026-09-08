@@ -83,8 +83,8 @@ section('/signin plays nicely with password managers');
     /name="username" autocomplete="username"/.test(src));
   check('the password field is announced too',
     /name="password" autocomplete="current-password"/.test(src));
-  check('a failed Google sign-in shows ONE error, not the same sentence twice',
-    !/loginError: res\.error \|\| 'Could not sign in with Google\.'/.test(stripJs(src)));
+  /* The Google sign-in error check that lived here went with Google sign-in
+     itself (8 Sep 2026). */
 }
 
 section('Interaction feedback rules are present on every page');
@@ -498,9 +498,10 @@ section('The sign-in page no longer zooms on focus on iOS');
      and one of the six sits inside a commented region in no version of this
      file — but stripping is pointless here and would only hide a real change. */
   const inputs = SIGNRAW.match(/<input[^>]*>/g) || [];
-  eq('the page still has six inputs', inputs.length, 6);
+  /* Five since 8 Sep 2026: the Google sign-up's invite-code input went with Google sign-in. */
+  eq('the page still has five inputs', inputs.length, 5);
   const at15 = inputs.filter((t) => /font-size:15px/.test(t)).length;
-  eq('all six still declare font-size:15px, which is what the rule overrides', at15, 6);
+  eq('all five still declare font-size:15px, which is what the rule overrides', at15, 5);
   /* Pair the count with the reason it matters: 15 is under the threshold. If
      somebody "fixes" the inline styles to 16px instead, this check tells the
      next reader the media rule became redundant rather than silently passing. */

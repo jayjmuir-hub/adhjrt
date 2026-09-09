@@ -142,6 +142,11 @@ name from `user_metadata`. Then:
 
 ### The suggestion from the club hub (optional, phase 2)
 
+➡️ **Specified 9 Sep 2026 as `spec-hub-auto-approve-sep-2026.md`** — and
+promoted from a suggestion to an approval where the club hub's answer is
+unambiguous (one junior squad as coach or team manager). The paragraph
+below is the original thought and stays as written.
+
 The club hub already knows which squad each manager runs. On first sign-in,
 `hub-auth.js` can call the club hub's REST endpoint **with the person's own
 token** and read their `memberships` rows; row-level security there already

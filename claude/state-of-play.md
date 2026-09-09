@@ -34,7 +34,9 @@ Merged on Jay's yes the same afternoon — 15 credits.
 
 ⏳ **The real fix is still open:** auto-approve on first hub sign-in when the
 club hub says the person coaches a squad that maps to a tournament age group
-(the spec's "ship without this first"). Planned before the October season.
+(the spec's "ship without this first"). **Spec written 9 Sep 2026:**
+`claude/specs/spec-hub-auto-approve-sep-2026.md` — five decisions in its
+§ 10 wait on Jay before code. Planned before the October season.
 
 ⏳ **Open, unexplained: one manager signs in on Android but "not working" on
 an iPad.** No symptom captured yet. Most likely mechanism: either site added

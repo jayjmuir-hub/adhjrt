@@ -1,6 +1,13 @@
 # ADH JRT — state of play, 9 September 2026
 
-## ⏳ 9 Sep 2026 — back-office pages link home as "/" — ON `dev`, NOT YET LIVE
+## ✅ 9 Sep 2026 — back-office pages link home as "/" — LIVE (`3a64727`)
+
+Fast-forward `8d3773a..3a64727`, `dev` level. **Measured live after the
+deploy:** `/organizer` serves two "← Main site" links with `href="/"` and
+zero by file name, with "View manager area" present as the control that it
+is the organizer page; `/signin` serves zero by-name links.
+
+Original entry:
 
 Jay: *"why does my adhjrt site address for the home page sometimes look like
 this"* — `adhjrt.com/quins%20jrt.dc`. **Measured on production, not
@@ -19,7 +26,7 @@ links `/` at least once; proven red by putting one by-name link back into
 `Signin.dc.html` (65/66), green on restore. Two older anchors in
 `test-organizer-manager-link.js` and `test-manager-dc.js` asserted the old
 href and were REPOINTED, not deleted. Suite green with `-NoProve`.
-**Awaiting Jay's yes to fast-forward `main`** — 15 credits. The old address
+Merged on Jay's yes the same afternoon — 15 credits. The old address
 keeps working afterwards; no bookmark breaks.
 
 ## ✅ 8 Sep 2026 — Google sign-in REMOVED and LIVE (`8d3773a`)

@@ -1,6 +1,12 @@
 # ADH JRT — state of play, 9 September 2026
 
-## ⏳ 9 Sep 2026 — Pitch marshals follow the age-group switcher — ON `dev`, NOT YET LIVE
+## ✅ 9 Sep 2026 — Pitch marshals follow the age-group switcher — LIVE (`22d9c88`)
+
+Fast-forward `3a64727..22d9c88`, `dev` level. **Measured live after the
+deploy:** `/manager` serves the refetch line, with the Pitch marshals tab
+label present as the control that it is the manager page.
+
+Original entry:
 
 Jay: *"issued a qr code for an age group, think it was U9 maybe, but when i
 switch in the drop down to another age group, nothing changes"*. A stale
@@ -20,7 +26,7 @@ and the list is refetched when that tab is open. Rot detector:
 the fake names each pitch after the group it was asked for, so a stale list
 shows as the wrong NAME, not a count that happens to match; proven red with
 the refetch line removed (158/161) and again with the state reset removed
-(159/161), green restored. **Awaiting Jay's yes to fast-forward `main`.**
+(159/161), green restored. Merged on Jay's yes the same afternoon — 15 credits.
 
 ## ✅ 9 Sep 2026 — back-office pages link home as "/" — LIVE (`3a64727`)
 

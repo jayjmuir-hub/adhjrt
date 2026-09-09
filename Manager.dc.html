@@ -1504,10 +1504,21 @@ class Component extends DCLogic {
        nobody warned the manager about, so a dirty draft is carried through
        for THAT case — switchAge() clears drawDirty itself first, so this
        carry-through is a no-op when the age group actually changed. */
+    /* ⚠️ marshalLinks AND marshalFresh GO TOO (9 Sep 2026). Jay: "issued a
+       qr code for an age group … when i switch in the drop down to another
+       age group, nothing changes". The marshal list was fetched only by go()
+       and after issue/revoke, so a switch on the Pitch marshals tab left the
+       PREVIOUS group's cards — and its "Live — issued …" status — under the
+       new group's name. marshalFresh is keyed by pitch NAME only, so a QR
+       drawn for one group would have been offered under another group's
+       card with the same pitch; it is per page-load memory and belongs to
+       the group that issued it, so it is dropped here rather than carried.
+       The server was never wrong: every issue and revoke sends ageId. */
     this.setState((s) => ({
       ageId: agId, fixtures: null, standings: null, spiritAward: null, regs: undefined,
       draw: keepDraw ? s.draw : undefined,
       drawLoadedFor: keepDraw ? s.drawLoadedFor : null,
+      marshalLinks: null, marshalDay: '', marshalFresh: {}, marshalError: '',
     }));
     this.clearDrawTransientState();
     const [fx, st] = await Promise.all([api.getFixtures(agId, session), api.getStandings(agId, session)]);
@@ -1515,6 +1526,7 @@ class Component extends DCLogic {
     this.setState({ fixtures: fx, standings: st });
     if (this.state.tab === 'draw' && !this.state.drawDirty) await this.loadDraw(agId);
     if (this.state.tab === 'registrations') await this.loadRegistrations();
+    if (this.state.tab === 'marshals') await this.loadMarshalLinks();
     /* Only fetched where the award actually runs — an unconditional fetch
        would put a request (and an empty card) on every other age group. */
     if (api.supportsSpiritAward(agId)) {

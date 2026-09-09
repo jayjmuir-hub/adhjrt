@@ -806,6 +806,45 @@ section('Parity gap-fills: three old assertions restated for the component build
   check('…and a team box has a sane minimum width', /min-width:120px/.test(html));
 }
 
+section('Pitch marshals follow the age-group switcher (9 Sep 2026)');
+{
+  /* Jay: "issued a qr code for an age group … when i switch in the drop down
+     to another age group, nothing changes". The list was fetched only by
+     go('marshals') and after issue/revoke, so a switch on that tab kept the
+     old group's cards and Live status under the new group's name.
+     The fake records WHICH group every marshalLinks fetch asks for, and
+     answers with a pitch named after it, so a stale list is visible as the
+     wrong name — not as a count that happens to match. */
+  const asked = [];
+  const c = buildManager({
+    marshalLinks: async (agId) => { asked.push(agId); return { ok: true, dayLabel: `${agId} day`, links: [
+      { pitch: `${agId}-pitch`, issuedAt: '2026-09-09T11:21:00Z', issuedBy: 'jayjmuir', revokedAt: null, live: true },
+    ] }; },
+  });
+  await c.boot();
+  c.go('marshals');
+  await new Promise((r) => setTimeout(r, 0));
+  eq('CONTROL: opening the tab fetched the links for u14b', asked.join(','), 'u14b');
+  check('…and the card shown is u14b\'s', (c.state.marshalLinks || []).some((l) => l.pitch === 'u14b-pitch'));
+  c.state.marshalFresh = { 'u14b-pitch': { url: 'https://x/u14b', token: 't', issuedAt: 'now' } };
+
+  await c.load('u16b');
+  eq('switching age group on the Pitch marshals tab fetches THAT group\'s links', asked.join(','), 'u14b,u16b');
+  check('the cards now belong to u16b', (c.state.marshalLinks || []).some((l) => l.pitch === 'u16b-pitch'));
+  check('…and none of u14b\'s cards survive the switch', !(c.state.marshalLinks || []).some((l) => l.pitch === 'u14b-pitch'));
+  eq('the day label followed the group', c.state.marshalDay, 'u16b day');
+  check('the in-memory QR for the old group is dropped — it is keyed by pitch NAME and would be offered under the new group',
+    Object.keys(c.state.marshalFresh || {}).length === 0);
+
+  /* Not on the tab: no marshal fetch, exactly like Draw and Registrations. */
+  asked.length = 0;
+  c.go('fixtures');
+  await c.load('u14b');
+  eq('switching on another tab does not fetch marshal links', asked.length, 0);
+  check('…but the stale list is still cleared, so opening the tab later cannot show the wrong group',
+    c.state.marshalLinks === null);
+}
+
 summary('tests/test-manager-dc.js');
 }
 

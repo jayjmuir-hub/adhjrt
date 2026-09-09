@@ -1,5 +1,27 @@
 # ADH JRT — state of play, 9 September 2026
 
+## ⏳ 9 Sep 2026 — Pitch marshals follow the age-group switcher — ON `dev`, NOT YET LIVE
+
+Jay: *"issued a qr code for an age group, think it was U9 maybe, but when i
+switch in the drop down to another age group, nothing changes"*. A stale
+screen, not a wrong record: `load(agId)` — what the Viewing-as switch runs —
+refreshed Draw and Registrations if you were on them, but never Pitch
+marshals, whose list was fetched only by `go('marshals')` and after
+issue/revoke. So the previous group's cards and "Live — issued …" status sat
+under the new group's name until any action refetched. `marshalFresh` (the
+in-memory QR) is keyed by pitch NAME only, so the old group's QR would have
+been offered under a same-named pitch of the new group. The server was never
+wrong — every issue and revoke sends `ageId`, and records are per group per
+day per pitch.
+
+Fix in `Manager.dc.html` `load()`: the marshal state is reset with the rest,
+and the list is refetched when that tab is open. Rot detector:
+`tests/test-manager-dc.js` "Pitch marshals follow the age-group switcher" —
+the fake names each pitch after the group it was asked for, so a stale list
+shows as the wrong NAME, not a count that happens to match; proven red with
+the refetch line removed (158/161) and again with the state reset removed
+(159/161), green restored. **Awaiting Jay's yes to fast-forward `main`.**
+
 ## ✅ 9 Sep 2026 — back-office pages link home as "/" — LIVE (`3a64727`)
 
 Fast-forward `8d3773a..3a64727`, `dev` level. **Measured live after the

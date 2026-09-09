@@ -175,6 +175,10 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     r = await parse(await post({ hubToken: mint() }));
     eq('first sign-in through the hub is 403 pending', r.status, 403);
     eq('…flagged pending', r.pending, true);
+    /* 9 Sep 2026: the sentence must say what to do next — two people read the
+       old "You're in" as a sign-in page that had not changed. */
+    check('…and the pending sentence names the next step (press the button again once given a role)',
+      /organiser has been told/.test(r.error || '') && /Sign in with Quins Club Hub again/.test(r.error || ''), r.error);
     check('…and a pending account was created', Array.isArray(saved) && saved.length === 1, JSON.stringify(saved));
     const a = (saved || [])[0] || {};
     eq('…keyed by hubSub', a.hubSub, 'hub-sub-not-real-1');

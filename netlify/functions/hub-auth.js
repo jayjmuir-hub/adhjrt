@@ -77,7 +77,18 @@ function uniqueUsername(base, accounts) {
   return `${base}${n}`;
 }
 
-const PENDING = { ok: false, pending: true, error: 'You’re in. A tournament organiser will give you a role shortly.' };
+/* ⚠️ REWORDED 9 Sep 2026. It said "You're in. A tournament organiser will
+   give you a role shortly." Jay, after two people had used the hub door:
+   "the first time they click it … it sends them back to the login page which
+   doesn't look any different, the second time they do it, it seems to work".
+   The panel WAS different — same card, same size, headed "Account created" —
+   but nothing on it said what came next, so people read it as the sign-in
+   page again and tried again. The message now names the next step. */
+const PENDING = {
+  ok: false,
+  pending: true,
+  error: 'Your Club Hub sign-in worked, and a tournament organiser has been told. Once they give you a role — usually the same day — press Sign in with Quins Club Hub again and you will go straight in.',
+};
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };

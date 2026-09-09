@@ -135,6 +135,29 @@ section('Signup: the role picker decides which invite-code gate is called');
   eq('signup can only ever ask for a manager account now', calls[0].role, 'manager');
   check('a pending signup shows the Account created view, not a redirect',
     c.state.signupPending === true && c.renderVals().isSignupPendingView === true);
+  eq('…headed "Account created" — the invite-code form really did create it', c.renderVals().signupPendingTitle, 'Account created');
+}
+{
+  /* The Club Hub door's pending answer (9 Sep 2026). Jay: after two people
+     used it, "it sends them back to the login page which doesn't look any
+     different, the second time they do it, it seems to work". The panel was
+     the same card headed "Account created", which the person had not done;
+     it now says what happens next, in the heading and in the server's
+     sentence. The template must read the heading from state, or the hub
+     path and the invite-code path cannot differ. */
+  const c = build();
+  spy(c);
+  const api = { hubAuth: async () => ({ ok: false, pending: true, message: 'Your Club Hub sign-in worked, and a tournament organiser has been told. Press the button again once they give you a role.' }) };
+  await c.finishHubSignIn(api, 'a.b.c');
+  const vs = c.renderVals();
+  const src = readRepo('Signin.dc.html');
+  check('componentDidMount hands a #hub_token to finishHubSignIn (the seam this test drives)',
+    /const hubToken = this\.hubTokenFromUrl\(\);\s*\n\s*if \(hubToken\) await this\.finishHubSignIn\(api, hubToken\);/.test(src));
+  check('a pending hub sign-in shows the pending panel, not the bare form', vs.isSignupPendingView === true && vs.isLoginMode !== true);
+  eq('…headed "Nearly there", not "Account created"', vs.signupPendingTitle, 'Nearly there');
+  check('…with the server\'s sentence naming the next step', /organiser has been told/.test(vs.signupPendingMessage) && /again/.test(vs.signupPendingMessage));
+  const tpl = readRepo('Signin.dc.html').replace(/<!--[\s\S]*?-->/g, '');
+  check('the template reads the heading from state rather than hard-coding it', /\{\{ signupPendingTitle \}\}/.test(tpl) && !/>Account created</.test(tpl));
 }
 {
   /* The closure, asserted on the page source rather than on state — this is

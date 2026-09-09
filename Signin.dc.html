@@ -155,7 +155,10 @@
     </sc-if>
 
     <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
-      <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">Account created</div>
+      <!-- "Nearly there" for the Club Hub door, "Account created" for the
+           invite-code form (9 Sep 2026). The hub path creates the account
+           silently, so "created" told the person nothing they had done. -->
+      <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">{{ signupPendingTitle }}</div>
       <div style="margin-top:16px;background:rgba(31,157,77,0.1);border:1px solid rgba(31,157,77,0.35);border-radius:10px;padding:14px 16px;color:var(--accent-ink);font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
       <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)"><a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
     </sc-if>
@@ -294,14 +297,18 @@ class Component extends DCLogic {
        which decides between a session, "pending", or a refusal. A pending
        answer reuses the signup-pending panel: same message, same shape. */
     const hubToken = this.hubTokenFromUrl();
-    if (hubToken) {
-      this.setState({ hubBusy: true, hubError: '', loginError: '' });
-      const res = await api.hubAuth(hubToken);
-      if (res.ok) { this.setState({ hubBusy: false }); this.redirect(this.destFor(res.session)); return; }
-      if (res.pending) { this.setState({ hubBusy: false, authMode: 'signup', signupPending: true, signupPendingMessage: res.message }); return; }
-      this.setState({ hubBusy: false, hubError: res.error || 'Could not sign in with the Club Hub.' });
-    }
+    if (hubToken) await this.finishHubSignIn(api, hubToken);
+  }
 
+  /* The three answers hub-auth.js can give, and what each shows. Split out
+     of componentDidMount (9 Sep 2026) so a test can drive it without the
+     dynamic import() of scores-data.js, which Node cannot resolve. */
+  async finishHubSignIn(api, hubToken) {
+    this.setState({ hubBusy: true, hubError: '', loginError: '' });
+    const res = await api.hubAuth(hubToken);
+    if (res.ok) { this.setState({ hubBusy: false }); this.redirect(this.destFor(res.session)); return; }
+    if (res.pending) { this.setState({ hubBusy: false, authMode: 'signup', signupPending: true, signupPendingTitle: 'Nearly there', signupPendingMessage: res.message }); return; }
+    this.setState({ hubBusy: false, hubError: res.error || 'Could not sign in with the Club Hub.' });
   }
 
 
@@ -343,7 +350,7 @@ class Component extends DCLogic {
       username = base + (attempt + 1);
     }
     if (res.ok && res.pending) {
-      this.setState({ signupBusy: false, signupPending: true, signupPendingMessage: res.message, signupPass: '', signupCode: '' });
+      this.setState({ signupBusy: false, signupPending: true, signupPendingTitle: 'Account created', signupPendingMessage: res.message, signupPass: '', signupCode: '' });
     } else if (res.ok) {
       this.setState({ signupBusy: false, signupPass: '', signupCode: '' });
       this.redirect(this.destFor(res.session));
@@ -385,6 +392,7 @@ class Component extends DCLogic {
       signupError: s.signupError, signupBusy: s.signupBusy,
       signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
       signupPendingMessage: s.signupPendingMessage,
+      signupPendingTitle: s.signupPendingTitle || 'Account created',
       onSignupName: (e) => this.setState({ signupName: e.target.value }),
       onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
       onSignupCode: (e) => this.setState({ signupCode: e.target.value }),

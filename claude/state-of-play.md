@@ -1,5 +1,40 @@
 # ADH JRT — state of play, 9 September 2026
 
+## ⏳ 9 Sep 2026 — the hub door's "pending" panel says what happens next — ON `dev`, NOT YET LIVE
+
+Jay, after two people had used Sign in with Quins Club Hub: *"the first time
+they click it then get sent to clubhub and it says ok then it sends them
+back to the login page which doesn't look any different, the second time
+they do it, it seems to work"*. **Not a bug — the designed first-time flow,
+and the live Accounts list proves it:** every hub account's `createdAt`
+(the pending row hub-auth.js creates on a first sign-in) precedes its first
+`lastSignInAt` by minutes, the gap being the organiser's approval. The panel
+WAS different — same card, headed "Account created", green box "You're in.
+A tournament organiser will give you a role shortly" — but nothing on it
+said what came next, so people read it as the sign-in page and tried again.
+
+Cheap reword, Jay: *"do the cheap pending panel reword for now"*. The hub
+path's panel is headed **Nearly there** (the invite-code form keeps "Account
+created" — it really did create one) and hub-auth.js's sentence now names
+the next step: sign-in worked, the organiser has been told, press the button
+again once given a role. The hub handling moved out of componentDidMount
+into `finishHubSignIn(api, token)` so a test can drive it without the
+dynamic import. Rot detectors: `tests/test-signin-page.js` (hub pending →
+"Nearly there", template reads the heading from state; red with the hub path
+headed "Account created" again, 39/40) and `tests/test-hub-auth.js` (the
+sentence names the next step; red with the old sentence back, 104/105).
+**Awaiting Jay's yes to fast-forward `main`.**
+
+⏳ **The real fix is still open:** auto-approve on first hub sign-in when the
+club hub says the person coaches a squad that maps to a tournament age group
+(the spec's "ship without this first"). Planned before the October season.
+
+⏳ **Open, unexplained: one manager signs in on Android but "not working" on
+an iPad.** No symptom captured yet. Most likely mechanism: either site added
+to the iPad home screen runs standalone, and the cross-site hop opens in an
+in-app sheet whose session the home-screen app never sees. Asked Jay for
+what the person sees and whether they use a home-screen icon.
+
 ## ✅ 9 Sep 2026 — Pitch marshals follow the age-group switcher — LIVE (`22d9c88`)
 
 Fast-forward `3a64727..22d9c88`, `dev` level. **Measured live after the

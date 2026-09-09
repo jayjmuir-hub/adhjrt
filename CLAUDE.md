@@ -402,11 +402,21 @@ Working shape:
    lands the code and quietly does not deploy.
 3. To show Jay a change before it goes live, **open a PR from `dev`** — that
    builds a free password-protected preview at
-   `deploy-preview-<N>--adhquins-jrt.netlify.app`. Note an agent
-   **cannot** create the PR: there is no `gh` CLI on either machine and the
-   GitHub connector is read-only. Jay has to click the green **Create pull
-   request** button. `.../pull/new/<branch>` is the FORM, not a PR — never hand
-   over a preview link as though one already exists.
+   `deploy-preview-<N>--adhquins-jrt.netlify.app`.
+   ✅ **`gh pr create --base main --head dev` WORKS, from Claude Code on
+   cafnet — measured 9 Sep 2026** (`gh version 2.97.0`, `gh auth status`:
+   logged in as `jayjmuir-hub`, keyring) and used for PRs #20–#23 that day.
+   ⚠️ **This line said "there is no `gh` CLI on either machine and the
+   GitHub connector is read-only. Jay has to click the green Create pull
+   request button" until 9 Sep 2026.** The connector half is still true
+   (it is OAuth and 403s on writes — never use it for a write); the `gh`
+   half was written before `gh` was installed and nobody re-measured it.
+   ⚠️ **jay-pc is NOT measured for this** — run `gh auth status` there
+   before relying on it, and record the answer here — a machine fact is
+   measured on the machine it is claimed about, never copied across.
+   `.../pull/new/<branch>` is the FORM, not a PR — never hand over a
+   preview link as though one already exists; `gh pr create` prints the
+   real PR URL, and only that is one.
 4. When Jay says merge: `git checkout main && git merge --ff-only dev &&
    git push origin main`. Check the tip commit for `[skip ci]` first. Keep it a
    fast-forward — `main` has no merge commits and the history is linear.

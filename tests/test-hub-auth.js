@@ -30,11 +30,39 @@ const ISSUER = 'https://lusmshimxdcxpnrktlgz.supabase.co/auth/v1';
 
 let jwksKeys = [{ ...GOOD.publicKey.export({ format: 'jwk' }), kid: KID, alg: 'ES256', use: 'sig' }];
 let jwksFetches = 0;
-global.fetch = async (url) => {
+/* The club hub's data API (spec-hub-auto-approve), stubbed: `hubRest` says
+   what the memberships read answers, and every call is recorded so a test can
+   assert WHAT was sent (the person's token as bearer, the publishable key as
+   apikey). Default: no rows — i.e. the person is staff on nothing — which is
+   exactly today's flow, so every older check below keeps its meaning. */
+let hubRest = { mode: 'rows', rows: [] };
+let hubRestCalls = [];
+global.fetch = async (url, opts) => {
+  if (String(url).includes('/rest/v1/memberships')) {
+    hubRestCalls.push({ url: String(url), opts: opts || {} });
+    if (hubRest.mode === 'throw') throw new Error('simulated network failure');
+    if (hubRest.mode === 'hang') {
+      /* Never answers — like the real fetch, it rejects with AbortError only
+         when the caller's own timeout aborts the signal. A stub that ignored
+         the signal would hang the whole suite instead of proving the timeout. */
+      return new Promise((_, reject) => {
+        const sig = opts && opts.signal;
+        if (!sig) return; // no signal passed: genuinely hangs, which is the fault this proves
+        const abort = () => { const e = new Error('aborted'); e.name = 'AbortError'; reject(e); };
+        if (sig.aborted) abort(); else sig.addEventListener('abort', abort, { once: true });
+      });
+    }
+    if (hubRest.mode === 'status') return { ok: false, status: hubRest.status || 500, json: async () => ({}) };
+    if (hubRest.mode === 'notjson') return { ok: true, status: 200, json: async () => ({ message: 'not an array' }) };
+    return { ok: true, status: 200, json: async () => hubRest.rows };
+  }
   jwksFetches += 1;
   if (!String(url).includes('/.well-known/jwks.json')) return { ok: false, status: 404 };
   return { ok: true, status: 200, json: async () => ({ keys: jwksKeys }) };
 };
+/* One club hub membership row, in the shape PostgREST returns for
+   select=role,status,title,is_head_coach,team_id,teams(name,is_senior). */
+const hubRow = (role, teamName, extra = {}) => ({ role, status: 'active', title: null, is_head_coach: false, team_id: `t-${teamName}`, teams: { name: teamName, is_senior: false }, ...extra });
 
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const NOW = Date.now();
@@ -108,6 +136,8 @@ const reset = () => {
   accountsList = []; saved = null; signInsRecorded = []; configStore = makeStore();
   jwksKeys = [{ ...GOOD.publicKey.export({ format: 'jwk' }), kid: KID, alg: 'ES256', use: 'sig' }];
   jwksFetches = 0;
+  hubRest = { mode: 'rows', rows: [] };
+  hubRestCalls = [];
   hubAuth._resetCacheForTests();
 };
 const post = (body, ip = '203.0.113.9') => handler({ httpMethod: 'POST', headers: { 'x-nf-client-connection-ip': ip }, body: JSON.stringify(body) });
@@ -239,6 +269,173 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     for (let i = 0; i < 50; i += 1) await post({ hubToken: 'junk' });
     eq('fifty failures then a good token is refused (429)', (await parse(await post({ hubToken: mint() }))).status, 429);
     eq('…but a different address is unaffected', (await parse(await post({ hubToken: mint() }, '198.51.100.7'))).status, 403);
+  }
+
+  /* ==================================================================== */
+  section('⚠️ Auto-approve from the Club Hub — the squad-name rule (spec-hub-auto-approve § 3)');
+  {
+    const f = hubAuth.ageGroupIdFor;
+    /* Every club team name on the live club hub, 9 Sep 2026, pinned to its
+       tournament id. A renamed squad goes red HERE before it goes wrong live. */
+    const pins = [
+      ['U6 Tag', 'u6'], ['U7 Tag', 'u7'], ['U8 Tag', 'u8'], ['U9 Mixed', 'u9'], ['U10 Mixed', 'u10'],
+      ['U11 Mixed', 'u11'], ['U12 Mixed', 'u12'], ['U12G QR', 'u12g'], ['U13 Mixed', 'u13'], ['U14B', 'u14b'],
+      ['U14G QR', 'u14g'], ['U16B', 'u16b'], ['U16G', 'u16g'], ['U18B', 'u18b'], ['U18G', 'u18g'],
+    ];
+    pins.forEach(([name, id]) => eq(`"${name}" → ${id}`, f(name), id));
+    eq('Senior Men → nothing', f('Senior Men'), null);
+    eq('Senior Women → nothing', f('Senior Women'), null);
+    eq('a bare "U14" (no B/G) is not a tournament group and maps to nothing', f('U14'), null);
+    eq('"U14 B" with a space maps to nothing — the token is the first word', f('U14 B'), null);
+    eq('"u14b-old" maps to nothing', f('u14b-old'), null);
+    eq('"U99B" is not in AGE_GROUPS and maps to nothing', f('U99B'), null);
+    eq('empty maps to nothing', f(''), null);
+    eq('undefined maps to nothing, not a throw', f(undefined), null);
+    eq('lower-case input is fine', f('u16b'), 'u16b');
+  }
+
+  /* ==================================================================== */
+  section('⚠️ Auto-approve from the Club Hub — the door (spec-hub-auto-approve § 4)');
+  {
+    /* § 4.2 — one mapped squad as COACH: approved on the spot, session issued. */
+    reset();
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U14B'), hubRow('parent', 'U9 Mixed')] };
+    const posted = mint(); /* captured: ES256 signatures are randomised, so two mint() calls differ */
+    let r = await parse(await post({ hubToken: posted }));
+    eq('a coach of one junior squad gets a session on the FIRST sign-in', r.status, 200);
+    eq('…as manager of that squad\'s tournament group', r.session && r.session.ageGroupId, 'u14b');
+    let a = (accountsList || [])[0] || {};
+    eq('…the account is approved', a.approved, true);
+    eq('…with role manager', a.role, 'manager');
+    check('…and marked autoApproved with the squads it came from', a.autoApproved && Array.isArray(a.autoApproved.from) && a.autoApproved.from.join() === 'U14B', JSON.stringify(a.autoApproved));
+    eq('…and a sign-in was recorded', signInsRecorded.length, 1);
+    eq('…the parent row on U9 did not count as a second squad', (a.suggestedAgeGroupIds || []).length, 0);
+
+    /* § 8.8 — WHAT was sent to the club hub. */
+    const sent = hubRestCalls[0] || { opts: { headers: {} } };
+    check('the membership read went to the club hub\'s memberships path, active rows only', /\/rest\/v1\/memberships\?/.test(sent.url) && /status=eq\.active/.test(sent.url), sent.url);
+    /* ⚠️ MEASURED 9 Sep 2026: a club ADMIN's token reads the WHOLE club (459
+       rows for Jay's) under the club hub's `memb read` policy, so without this
+       filter an admin who coaches one squad looks like the coach of every
+       squad. The filter is the verified sub, never anything unverified. */
+    check('⚠️ …and is filtered to the verified person\'s own rows by profile_id', /profile_id=eq\.hub-sub-not-real-1(&|$)/.test(sent.url), sent.url);
+    eq('…carrying the PERSON\'S token as the bearer — the very one that was posted, not something we signed', (sent.opts.headers || {}).Authorization, `Bearer ${posted}`);
+    eq('…and the publishable key as apikey', (sent.opts.headers || {}).apikey, hubAuth.HUB_PUBLISHABLE_KEY);
+    check('the publishable key is the sb_publishable_ shape, not a service key', /^sb_publishable_/.test(hubAuth.HUB_PUBLISHABLE_KEY) && !/^sb_secret_/.test(hubAuth.HUB_PUBLISHABLE_KEY));
+
+    /* § 4.1 — team MANAGER counts too; medic / admin / parent / player never do. */
+    reset();
+    hubRest = { mode: 'rows', rows: [hubRow('manager', 'U16G', { title: 'Team Manager/Club Hub Admin' })] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('a team manager of one junior squad is approved the same way', r.status, 200);
+    eq('…for that group', r.session && r.session.ageGroupId, 'u16g');
+    for (const role of ['medic', 'admin', 'parent', 'player']) {
+      reset();
+      hubRest = { mode: 'rows', rows: [hubRow(role, 'U14B', { title: 'Head Coach' })] };
+      r = await parse(await post({ hubToken: mint() }));
+      eq(`⚠️ a ${role} on a squad — even titled Head Coach — is pending, not approved`, r.status, 403);
+      eq(`…with no role`, ((accountsList || [])[0] || {}).role, null);
+    }
+    reset();
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U14B', { status: 'pending' })] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('a coach whose club hub membership is not yet active is pending here too', r.status, 403);
+    reset();
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'Senior Men', { teams: { name: 'Senior Men', is_senior: true } })] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('a senior-only coach is pending — no tournament group', r.status, 403);
+
+    /* § 4.3 — two mapped squads: pending, both suggested, never '*'. */
+    reset();
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U16B'), hubRow('manager', 'U14B'), hubRow('coach', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('⚠️ a coach of TWO junior squads is pending, not approved for either', r.status, 403);
+    a = (accountsList || [])[0] || {};
+    eq('…role stays null', a.role, null);
+    eq('…with both groups suggested, in AGE_GROUPS order and de-duplicated', JSON.stringify(a.suggestedAgeGroupIds), JSON.stringify(['u14b', 'u16b']));
+    eq('…and the squad names for the row to say why', JSON.stringify(a.suggestedFrom), JSON.stringify(['U16B', 'U14B', 'U14B']));
+    check('…and no \'*\' anywhere in the saved account', !JSON.stringify(a).includes('"*"'));
+    eq('…no sign-in recorded', signInsRecorded.length, 0);
+
+    /* § 4.4 — no squads: exactly today. */
+    reset();
+    hubRest = { mode: 'rows', rows: [] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('no squads at all: pending, as before', r.status, 403);
+    check('…and no suggestion on the account', !('suggestedAgeGroupIds' in ((accountsList || [])[0] || {})));
+
+    /* § 8.5 — a pending account from BEFORE this change signs in again. */
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: null, approved: false, source: 'hub', hubSub: 'hub-sub-not-real-1', email: 'nobody.real@example.com', createdAt: '2026-09-08T00:00:00.000Z' }];
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U12G QR')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('an older pending hub account is approved IN PLACE on its next sign-in', r.status, 200);
+    eq('…same username', r.session && r.session.username, 'nobody.real');
+    eq('…no second account', accountsList.length, 1);
+    eq('…for u12g', accountsList[0].ageGroupId, 'u12g');
+
+    /* § 4.5 — organisers are never automatic, and never overridden. */
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: 'organizer', title: 'Organizer', approved: false, source: 'hub', hubSub: 'hub-sub-not-real-1' }];
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('⚠️ a pending ORGANISER account is not turned into a manager by the club hub', r.status, 403);
+    eq('…role untouched', accountsList[0].role, 'organizer');
+    reset();
+    accountsList = [];
+    hubRest = { mode: 'rows', rows: [hubRow('admin', 'U14B'), hubRow('coach', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('a club hub ADMIN who also coaches is approved as a MANAGER only', (accountsList[0] || {}).role, 'manager');
+
+    /* Revoked is the organiser's decision. */
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: 'manager', ageGroupId: 'u14b', approved: false, revokedAt: '2026-09-01T00:00:00.000Z', source: 'hub', hubSub: 'hub-sub-not-real-1' }];
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('⚠️ a REVOKED hub account is never reinstated by the club hub', r.status, 403);
+    eq('…still not approved', accountsList[0].approved, false);
+
+    /* § 4.6 — re-check on every sign-in, auto-approved accounts only. */
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: 'manager', ageGroupId: 'u14b', approved: true, source: 'hub', hubSub: 'hub-sub-not-real-1', autoApproved: { at: '2026-09-09T00:00:00.000Z', from: ['U14B'] } }];
+    hubRest = { mode: 'rows', rows: [hubRow('coach', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('an auto-approved manager still on the squad gets a session', r.status, 200);
+    hubRest = { mode: 'rows', rows: [hubRow('parent', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('⚠️ an auto-approved manager the club hub no longer lists as staff drops back to pending', r.status, 403);
+    eq('…approved false', accountsList[0].approved, false);
+    check('…with autoRevoked stamped', !!(accountsList[0].autoRevoked && accountsList[0].autoRevoked.at));
+    check('…and their old tokens killed', typeof accountsList[0].sessionsValidFrom === 'number');
+    eq('…role kept, so the organiser sees what it was', accountsList[0].role, 'manager');
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: 'manager', ageGroupId: 'u14b', approved: true, source: 'hub', hubSub: 'hub-sub-not-real-1', roleGivenBy: 'orga' }];
+    hubRest = { mode: 'rows', rows: [hubRow('parent', 'U14B')] };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('⚠️ a HAND-approved manager with the same rows still gets a session — the organiser\'s decision stands', r.status, 200);
+    eq('…approved untouched', accountsList[0].approved, true);
+    reset();
+    accountsList = [{ username: 'nobody.real', name: 'Nobody Real', role: 'manager', ageGroupId: 'u14b', approved: true, source: 'hub', hubSub: 'hub-sub-not-real-1', autoApproved: { at: 'x', from: ['U14B'] } }];
+    hubRest = { mode: 'status', status: 500 };
+    r = await parse(await post({ hubToken: mint() }));
+    eq('an auto-approved manager is NOT dropped when the club hub cannot be asked', r.status, 200);
+
+    /* § 4.7 — the club hub cannot be asked: today's flow, never a 500. */
+    for (const mode of [{ mode: 'throw' }, { mode: 'status', status: 500 }, { mode: 'status', status: 401 }, { mode: 'notjson' }]) {
+      reset();
+      hubRest = mode;
+      r = await parse(await post({ hubToken: mint() }));
+      eq(`club hub read ${JSON.stringify(mode)}: pending, not an error`, r.status, 403);
+      eq('…and the account was still created', (accountsList || []).length, 1);
+    }
+    reset();
+    hubRest = { mode: 'hang' };
+    const t0 = Date.now();
+    /* try/catch so a readHubSquads that THROWS (the § 4.7 fault) is a red
+       check here, not a crash that takes every later check with it. */
+    let slow;
+    try { slow = await hubAuth.readHubSquads(mint(), 'hub-sub-not-real-1', { timeoutMs: 50 }); } catch (e) { slow = { ok: 'threw', reason: e && e.message }; }
+    check('a club hub that never answers is given up on at the timeout — and never throws', slow.ok === false && slow.reason === 'timeout' && (Date.now() - t0) < 2000, JSON.stringify(slow));
   }
 
   /* ==================================================================== */
@@ -429,6 +626,48 @@ const v = (token, opts) => hubAuth.verifyHubToken(token, { now: NOW, ...opts });
     check('…and still offers it for an invite-code account', v.acctNeedsRole === false && v.acctCanApproveHere === true);
     check('the card markup carries the pointer sentence', /Choose a role in the Pending list/.test(t));
     check('the pending row markup carries the two selects', /aria-label="Role"/.test(t) && /aria-label="Age group"/.test(t));
+
+    /* spec-hub-auto-approve § 5 — what the organiser sees. */
+    c = fresh();
+    c.state.accounts.push({ username: 'two.squads', name: 'Two Squads', role: null, approved: false, source: 'hub', email: 'two@example.com', signInMethod: 'Club Hub', createdAt: '2026-09-09T00:00:00.000Z', suggestedAgeGroupIds: ['u14b', 'u16b'], suggestedFrom: ['U16B', 'U14B'] });
+    c.state.accounts.push({ username: 'auto.person', name: 'Auto Person', role: 'manager', ageGroupId: 'u12g', approved: true, source: 'hub', signInMethod: 'Club Hub', autoApproved: { at: '2026-09-09T00:00:00.000Z', from: ['U12G QR'] } });
+    v = c.renderVals();
+    const two = v.pendingAccounts.find((x) => x.username === 'two.squads') || {};
+    check('a two-squad coach\'s pending row says which squads and to pick one', /runs U16B and U14B on the Club Hub — pick one/.test(two.roleLabel || ''), two.roleLabel);
+    eq('…and the age picker defaults to the first suggestion', two.ageChoice, 'u14b');
+    check('…with the suggested groups first in the list', Array.isArray(two.ageOptions) && two.ageOptions[0].id === 'u14b' && two.ageOptions[1].id === 'u16b', JSON.stringify((two.ageOptions || []).slice(0, 3)));
+    const plain = v.pendingAccounts.find((x) => x.username === 'hub.person') || {};
+    check('CONTROL: a no-squad hub row is unchanged', plain.roleLabel === 'Club Hub · hub.person@example.com' && plain.ageChoice === '');
+    const auto = v.approvedAccounts.find((x) => x.username === 'auto.person') || {};
+    eq('an auto-approved manager is labelled as from the Club Hub', auto.roleLabel, 'Manager · u12g · from the Club Hub');
+    const hand = v.approvedAccounts.find((x) => x.username === 'orga') || {};
+    check('CONTROL: a hand-approved account is not', !/from the Club Hub/.test(hand.roleLabel || ''));
+  }
+
+  /* ==================================================================== */
+  section('⚠️ accounts-admin: approving by hand takes the auto markers off (spec-hub-auto-approve § 4.6)');
+  {
+    reset();
+    const orgToken = sign({ username: 'orga', role: 'organizer' });
+    const call = (body) => admin.handler({ httpMethod: 'POST', headers: { authorization: `Bearer ${orgToken}` }, body: JSON.stringify(body) });
+    accountsList = [
+      { username: 'orga', name: 'Orga', role: 'organizer', approved: true, passwordHash: 'hashed:x' },
+      { username: 'dropped', name: 'Dropped', role: 'manager', ageGroupId: 'u14b', approved: false, source: 'hub', hubSub: 'hub-sub-not-real-9', autoApproved: { at: 'x', from: ['U14B'] }, autoRevoked: { at: 'y', from: [] }, suggestedAgeGroupIds: ['u14b', 'u16b'], suggestedFrom: ['U14B', 'U16B'] },
+    ];
+    const r = await parse(await call({ action: 'approve', username: 'dropped' }));
+    eq('approve by hand succeeds', r.status, 200);
+    const d = accountsList.find((a) => a.username === 'dropped') || {};
+    eq('…approved', d.approved, true);
+    check('…and autoApproved is gone, so the club hub can never drop this account again', !('autoApproved' in d));
+    check('…autoRevoked gone', !('autoRevoked' in d));
+    check('…suggestions gone', !('suggestedAgeGroupIds' in d) && !('suggestedFrom' in d));
+    const listing = JSON.parse((await admin.handler({ httpMethod: 'GET', headers: { authorization: `Bearer ${orgToken}` } })).body);
+    const row = (listing.accounts || []).find((a) => a.username === 'dropped') || {};
+    check('the listing never leaks hubSub (still)', !('hubSub' in row));
+    accountsList[1].autoApproved = { at: 'z', from: ['U14B'] }; accountsList[1].suggestedAgeGroupIds = ['u14b'];
+    const listing2 = JSON.parse((await admin.handler({ httpMethod: 'GET', headers: { authorization: `Bearer ${orgToken}` } })).body);
+    const row2 = (listing2.accounts || []).find((a) => a.username === 'dropped') || {};
+    check('…but does carry autoApproved and the suggestions for the page', row2.autoApproved && row2.autoApproved.at === 'z' && JSON.stringify(row2.suggestedAgeGroupIds) === '["u14b"]', JSON.stringify(row2));
   }
 
   summary('test-hub-auth.js');

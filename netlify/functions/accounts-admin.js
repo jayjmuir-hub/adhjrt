@@ -229,6 +229,14 @@ exports.handler = async (event) => {
           accounts[idx].roleGivenBy = session.username;
         }
         accounts[idx].approved = true;
+        /* Approving by hand is the organiser's decision, and the marker that
+           lets hub-auth.js re-check (and drop) an account is the ABSENCE of
+           that decision — so the marker comes off here, and the suggestion
+           with it (spec-hub-auto-approve § 4.6). */
+        delete accounts[idx].autoApproved;
+        delete accounts[idx].autoRevoked;
+        delete accounts[idx].suggestedAgeGroupIds;
+        delete accounts[idx].suggestedFrom;
         /* Approving a REVOKED account is a restore, so the mark comes off and
            it goes back to the ordinary list. Their old tokens stay dead:
            sessionsValidFrom is deliberately NOT cleared here. */

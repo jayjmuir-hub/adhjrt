@@ -1,7 +1,9 @@
 # Spec — auto-approve a Club Hub sign-in from the person's squads
 
-**Status: SPEC ONLY, not built. 9 Sep 2026.** Jay: *"go on the spec for the
-auto-approve"*, after *"the first time they click it … it sends them back
+**Status: BUILT 9 Sep 2026, on `dev` — see `state-of-play.md` for whether
+it is live.** Jay: *"all as recommended, build it"*. Every § 8 fault was
+injected and turned the suite red (counts in state-of-play). Originally:
+Jay: *"go on the spec for the auto-approve"*, after *"the first time they click it … it sends them back
 to the login page which doesn't look any different, the second time they do
 it, it seems to work"*. Extends `spec-club-hub-sign-in-sep-2026.md`, whose
 § 2 "The suggestion from the club hub (optional, phase 2)" this is — with one
@@ -32,6 +34,16 @@ nothing about squads. Two ways to learn the squads were considered:
   person's token — the same token we have just verified — can read **that
   person's own membership rows and every team's name**, and nothing else.
   No change on the club hub side. ✅ **This is the route.**
+  ⚠️ **CORRECTED AT BUILD TIME, 9 Sep 2026 — "and nothing else" was wrong
+  for one kind of person.** The policy's other arm, `private.is_admin`,
+  means a CLUB ADMIN's token reads the WHOLE club: Jay's returned 459 rows,
+  every squad's staff included, and an admin who also coaches one squad
+  would have looked like the coach of every squad. Found by running the
+  exact request in Jay's own browser before merging (§ 9.2), not by reading
+  the policy. The request is therefore filtered with
+  `&profile_id=eq.<verified sub>` — the two cases are then identical (5
+  rows for Jay), the policy still stops anyone reading somebody else's rows,
+  and a request with no bearer at all is refused 401 (the control).
 - **Put the squads into the token** via a Supabase custom access-token hook.
   Rejected: a change to the club hub's auth for the tournament's benefit,
   a claim that goes stale the moment a squad changes until the token is

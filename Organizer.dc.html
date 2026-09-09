@@ -4989,19 +4989,29 @@ class Component extends DCLogic {
            lose it. Manager is the default because fourteen of fifteen
            approvals will be one. */
         const needsRole = !a.role;
-        const choice = (s.acctRoleChoice || {})[a.username] || { role: 'manager', ageGroupId: '' };
+        /* A coach of TWO junior squads on the Club Hub arrives pending with
+           both pre-filled (spec-hub-auto-approve § 4.3): the picker defaults
+           to the first and the row says why, so the organiser's job is one
+           click, not a lookup. Never '*' — that is an admin power. */
+        const suggested = Array.isArray(a.suggestedAgeGroupIds) ? a.suggestedAgeGroupIds : [];
+        const choice = (s.acctRoleChoice || {})[a.username] || { role: 'manager', ageGroupId: suggested[0] || '' };
         const setChoice = (patch) => this.setState((p) => ({ acctRoleChoice: { ...(p.acctRoleChoice || {}), [a.username]: { ...choice, ...patch } } }));
+        const suggestedNote = suggested.length
+          ? (' · runs ' + (Array.isArray(a.suggestedFrom) && a.suggestedFrom.length ? a.suggestedFrom.join(' and ') : suggested.join(' and ')) + ' on the Club Hub — pick one')
+          : '';
         return {
           ...a,
           needsRole,
           roleLabel: needsRole
-            ? ('Club Hub · ' + (a.email || 'needs a role'))
+            ? ('Club Hub · ' + (a.email || 'needs a role') + suggestedNote)
             : (a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId)),
           createdAtDisplay: this.fmtDate(a.createdAt),
           roleChoice: choice.role,
           roleIsManager: choice.role === 'manager',
           ageChoice: choice.ageGroupId,
-          ageOptions: MANAGER_AGE_GROUPS,
+          ageOptions: suggested.length
+            ? [...MANAGER_AGE_GROUPS.filter((g) => suggested.includes(g.id)), ...MANAGER_AGE_GROUPS.filter((g) => !suggested.includes(g.id))]
+            : MANAGER_AGE_GROUPS,
           onRoleChoice: (e) => setChoice({ role: e.target.value }),
           onAgeChoice: (e) => setChoice({ ageGroupId: e.target.value }),
           onApprove: () => this.doApprove(a.username),
@@ -5025,7 +5035,10 @@ class Component extends DCLogic {
       /* `a.role` too: a roleless approved account is listed as pending above, not here. */
       approvedAccounts: s.accounts.filter((a) => a.approved && a.role).map((a) => ({
         ...a,
-        roleLabel: a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId),
+        /* "from the Club Hub" tells a hand-approved and an auto-approved
+           manager apart at a glance (spec-hub-auto-approve § 5). */
+        roleLabel: (a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId))
+          + (a.autoApproved ? ' · from the Club Hub' : ''),
         onRevoke: () => this.doRevoke(a.username),
         onResetPassword: () => this.doResetPassword(a.username),
         onOpen: () => this.openOtherAccount(a.username),

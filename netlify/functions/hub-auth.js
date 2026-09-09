@@ -36,7 +36,32 @@
 const { loadAccounts, saveAccounts, sign, blobStore } = require('./_auth');
 const { peekRate, recordFailure, tooManyResponse } = require('./_ratelimit');
 const { recordSignIn } = require('./_signins');
-const { verifyHubToken } = require('./_hubAuth');
+const { verifyHubToken, readHubSquads } = require('./_hubAuth');
+
+/* Applies spec-hub-auto-approve § 4.2–4.4 to one account object, in place.
+   Returns true when the account is now approved with a role (a session may
+   be issued), false when it stays pending. Only ever PROMOTES: it never
+   removes a role or an approval — § 4.6's re-check lives in the handler and
+   applies to auto-approved accounts only. */
+function decideFromSquads(account, squads, stamp) {
+  if (!squads || !squads.ok) return false;
+  if (account.role === 'organizer') return false; // § 4.5 — never automatic, never overridden
+  if (squads.mapped.length === 1) {
+    account.role = 'manager';
+    account.ageGroupId = squads.mapped[0];
+    account.approved = true;
+    account.autoApproved = { at: stamp, from: squads.names };
+    delete account.suggestedAgeGroupIds;
+    delete account.suggestedFrom;
+    delete account.autoRevoked;
+    return true;
+  }
+  if (squads.mapped.length > 1) {
+    account.suggestedAgeGroupIds = squads.mapped;
+    account.suggestedFrom = squads.names;
+  }
+  return false;
+}
 
 const CONNECTION_RATE_OPTS = { max: 50, windowMs: 15 * 60 * 1000 };
 const clientIp = (event) => (event.headers || {})['x-nf-client-connection-ip'] || '';
@@ -110,20 +135,50 @@ exports.handler = async (event) => {
     }
     const identity = verified.payload;
 
+    /* What the club hub says this person runs — spec-hub-auto-approve-sep-2026.
+       Asked with the SAME token we just verified, so it can only ever answer
+       for this person. `ok: false` means "could not ask" and everything below
+       falls back to the pending flow — never a refusal, never a 500. */
+    const squads = await readHubSquads(hubToken, identity.sub);
+    const stamp = new Date().toISOString();
+
     const accounts = await loadAccounts();
     const existing = accounts.find((a) => a.hubSub === identity.sub);
 
     if (existing) {
-      if (!existing.approved || !existing.role) {
-        return { statusCode: 403, body: JSON.stringify(PENDING) };
+      if (existing.approved && existing.role) {
+        /* § 4.6 — re-check on every sign-in, AUTO-approved accounts only. An
+           account the organiser approved by hand carries no autoApproved and
+           is never touched: the organiser's decision stands. Dropping back to
+           pending kills the old tokens the same way revoke does. */
+        if (existing.autoApproved && squads.ok && !squads.mapped.includes(existing.ageGroupId)) {
+          existing.approved = false;
+          existing.autoRevoked = { at: stamp, from: squads.names };
+          existing.sessionsValidFrom = Date.now();
+          await saveAccounts(accounts);
+          return { statusCode: 403, body: JSON.stringify(PENDING) };
+        }
+        await recordSignIn(existing.username);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(existing) }) };
       }
-      await recordSignIn(existing.username);
-      return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(existing) }) };
+      /* ⚠️ A REVOKED account is the organiser's decision too — never
+         reinstated by the club hub. (revokedAt is what accounts-admin stamps.) */
+      if (existing.revokedAt) return { statusCode: 403, body: JSON.stringify(PENDING) };
+      /* Pending from before (or approved-but-roleless): the same rules a new
+         account gets, applied in place — same username, no second account. */
+      const decided = decideFromSquads(existing, squads, stamp);
+      await saveAccounts(accounts);
+      if (decided) {
+        await recordSignIn(existing.username);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(existing) }) };
+      }
+      return { statusCode: 403, body: JSON.stringify(PENDING) };
     }
 
-    /* First time through the hub door: a pending account with NO role. The
-       organiser decides the role at approval — nothing about a club hub login
-       says whether this person runs an age group or the desk. */
+    /* First time through the hub door. With ONE mapped junior squad as coach
+       or team manager the account is approved on the spot (§ 4.2); with two
+       or more it waits with the choice pre-filled (§ 4.3); with none it waits
+       as before (§ 4.4). Organisers are never automatic (§ 4.5). */
     const account = {
       username: uniqueUsername(usernameFromEmail(identity.email), accounts),
       hubSub: identity.sub,
@@ -132,10 +187,15 @@ exports.handler = async (event) => {
       role: null,
       approved: false,
       source: 'hub',
-      createdAt: new Date().toISOString(),
+      createdAt: stamp,
     };
+    const decided = decideFromSquads(account, squads, stamp);
     accounts.push(account);
     await saveAccounts(accounts);
+    if (decided) {
+      await recordSignIn(account.username);
+      return { statusCode: 200, body: JSON.stringify({ ok: true, ...sessionFor(account) }) };
+    }
     return { statusCode: 403, body: JSON.stringify(PENDING) };
   } catch (err) {
     console.error('hub-auth error:', err);

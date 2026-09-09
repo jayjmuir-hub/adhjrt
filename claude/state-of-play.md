@@ -1,5 +1,40 @@
 # ADH JRT — state of play, 9 September 2026
 
+## ⏳ 9 Sep 2026 — auto-approve a Club Hub sign-in from the person's squads — ON `dev`, NOT YET LIVE
+
+Jay: *"all as recommended, build it"* (spec
+`claude/specs/spec-hub-auto-approve-sep-2026.md`, decisions A–E as
+recommended). After the token verifies, `hub-auth.js` reads the person's own
+club hub membership rows with that token, maps squad names to tournament
+groups by rule (`ageGroupIdFor`), and: one junior squad as coach or team
+manager → approved as its manager on the spot, session issued; two or more →
+pending with both pre-filled on the Accounts row; none → pending as before.
+Organisers never automatic. Auto-approved accounts are re-checked at every
+sign-in and drop to pending if the club hub no longer lists them as staff;
+hand-approved accounts are never touched (`autoApproved` is the marker, and
+Approve by hand removes it). A club hub that cannot be asked means pending,
+never a 500.
+
+⚠️ **Found at build time by running the request live in Jay's browser, not
+by reading the policy:** a club ADMIN's token reads the WHOLE club (459
+rows), so the request is filtered to the verified `sub`'s own rows (5 rows
+for Jay); a request with no bearer is refused 401 (the control). The spec's
+§ 2 carries the correction.
+
+Rot detectors, `tests/test-hub-auth.js` (200 → 201 checks): every squad name
+on the live club hub pinned to its id; the door under each § 4 rule; what is
+sent to the club hub. **Nine faults injected, every one red:** prefix match
+197/200, approved flag dropped 199, medic counts 198, two squads approves
+the first 195, older pending branch skipped 197, re-check on every account
+193, club hub error propagates 197, bearer is the publishable key 199, and
+the profile_id filter dropped 200/201. Suite green with `-NoProve`.
+⚠️ **And a lesson re-learned at cost:** the fault-9 command ended with a
+`git checkout -- _hubAuth.js`, which reverts to the last COMMIT and wiped
+every uncommitted addition to that file. Re-applied from the transcript.
+`CLAUDE.md` rule 6 already says "commit before injecting a fault"; it is
+right, and it is now the order for every fault run here.
+**Awaiting Jay's yes to fast-forward `main`.**
+
 ## ✅ 9 Sep 2026 — the hub door's "pending" panel says what happens next — LIVE (`5b3c25f`)
 
 Fast-forward `22d9c88..5b3c25f`, `dev` level. **Measured live after the

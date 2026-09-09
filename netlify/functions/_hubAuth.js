@@ -124,4 +124,96 @@ async function verifyHubToken(token, opts = {}) {
 
 function _resetCacheForTests() { cache = { byKid: new Map(), fetchedAt: 0 }; }
 
-module.exports = { verifyHubToken, HUB_ISSUER, HUB_JWKS_URL, HUB_AUDIENCE, HUB_PROJECT_REF, _resetCacheForTests };
+/* =========================================================================
+   What the club hub says this person RUNS — spec-hub-auto-approve-sep-2026.
+
+   After verifyHubToken() has said yes, hub-auth.js asks the club hub's data
+   API for the person's own membership rows, carrying the SAME token. The
+   club hub's row-level security (read from pg_policies on the live project,
+   9 Sep 2026) lets a token read its own rows and every team's name — and a
+   club admin's token the whole club, which is why the request below is
+   filtered (see hubMembershipsUrl). The club hub needed no change.
+
+   ⚠️ THE PUBLISHABLE KEY IS PUBLIC BY DESIGN. It is in every request the
+   club hub's own front end makes and sits in its deployed bundle; it grants
+   nothing on its own — the bearer token is what the policies gate on. A
+   constant here for the same reason HUB_ISSUER is: one club, nothing to
+   configure, one fewer place to be wrong. Rotate it here if the club hub
+   ever rotates it (Supabase → Project settings → API keys). Read from the
+   dashboard 9 Sep 2026.
+   ========================================================================= */
+const HUB_PUBLISHABLE_KEY = 'sb_publishable_grr3_ko7nK-7EM6COlaFoA_opaOTa71';
+
+/* ⚠️ FILTERED TO THE PERSON'S OWN ROWS BY profile_id — MEASURED 9 Sep 2026,
+   AND THE FIRST VERSION OF THIS URL DID NOT DO IT. The club hub's `memb read`
+   policy is `profile_id = auth.uid() OR private.is_admin(club_id)`, so a
+   coach's token reads their own rows and a CLUB ADMIN's token reads the whole
+   club — 459 rows for Jay's, every squad's staff included. Without the filter
+   an admin who also coaches one squad would have looked like the coach of
+   every squad. The filter makes the two cases identical; the policy is still
+   what stops anyone reading somebody ELSE's rows. `profile_id` is the club
+   hub's auth user id, which is the token's `sub`. */
+const hubMembershipsUrl = (sub) => `https://${HUB_PROJECT_REF}.supabase.co/rest/v1/memberships`
+  + '?select=role,status,title,is_head_coach,team_id,teams(name,is_senior)&status=eq.active'
+  + `&profile_id=eq.${encodeURIComponent(String(sub || ''))}`;
+
+/* Which club hub roles make somebody a tournament manager (spec § 4.1).
+   Title and is_head_coach are ignored on purpose: an assistant coach runs the
+   tournament day as often as the head coach. admin, medic, parent, player
+   never count, whatever their title says. */
+const STAFF_ROLES = ['coach', 'manager'];
+
+const { AGE_GROUPS } = require('./_agegroups');
+const AGE_GROUP_IDS = AGE_GROUPS.map((g) => g.id);
+
+/* A club squad name → a tournament age-group id, or null (spec § 3).
+   A RULE, not a table: every junior club team name starts with the same
+   token as its tournament id — "U14B" → u14b, "U12G QR" → u12g,
+   "U9 Mixed" → u9 — so there is nothing to keep in step with AGE_GROUPS.
+   Seniors ("Senior Men") and anything that does not match map to NOTHING,
+   never to a guess. */
+function ageGroupIdFor(teamName, ids = AGE_GROUP_IDS) {
+  const first = String(teamName || '').trim().split(/\s+/)[0].toLowerCase();
+  if (!/^u\d{1,2}[bg]?$/.test(first)) return null;
+  return ids.includes(first) ? first : null;
+}
+
+/* readHubSquads(token, sub, opts) ->
+     { ok: true,  names: [team names the person is staff on], mapped: [age-group ids, AGE_GROUPS order, de-duplicated] }
+   | { ok: false, reason }
+   `sub` is the verified token's subject — pass the one verifyHubToken returned,
+   never one read from the token unverified. Never throws. A failure means
+   "could not ask", and the caller falls back to today's pending flow
+   (spec § 4.7) — the sign-in itself was already verified; only the
+   convenience failed. Three seconds is the budget. */
+async function readHubSquads(token, sub, opts = {}) {
+  if (!sub) return { ok: false, reason: 'no-sub' };
+  const fetchImpl = opts.fetchImpl || globalThis.fetch;
+  const timeoutMs = typeof opts.timeoutMs === 'number' ? opts.timeoutMs : 3000;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const res = await fetchImpl(hubMembershipsUrl(sub), {
+      headers: { apikey: HUB_PUBLISHABLE_KEY, Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: controller ? controller.signal : undefined,
+    });
+    if (!res || !res.ok) return { ok: false, reason: `http-${res && res.status}` };
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return { ok: false, reason: 'shape' };
+    const staff = rows.filter((r) => r && r.status === 'active' && STAFF_ROLES.includes(r.role) && r.teams && r.teams.name);
+    const names = staff.map((r) => r.teams.name);
+    const ids = new Set(staff.map((r) => ageGroupIdFor(r.teams.name)).filter(Boolean));
+    const mapped = AGE_GROUP_IDS.filter((id) => ids.has(id));
+    return { ok: true, names, mapped };
+  } catch (err) {
+    return { ok: false, reason: err && err.name === 'AbortError' ? 'timeout' : 'error' };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+module.exports = {
+  verifyHubToken, readHubSquads, ageGroupIdFor,
+  HUB_ISSUER, HUB_JWKS_URL, HUB_AUDIENCE, HUB_PROJECT_REF, HUB_PUBLISHABLE_KEY, hubMembershipsUrl, STAFF_ROLES,
+  _resetCacheForTests,
+};

@@ -1,6 +1,16 @@
 # ADH JRT — state of play, 9 September 2026
 
-## ⏳ 9 Sep 2026 — auto-approve a Club Hub sign-in from the person's squads — ON `dev`, NOT YET LIVE
+## ✅ 9 Sep 2026 — auto-approve a Club Hub sign-in from the person's squads — LIVE (`92ce3f3`)
+
+Fast-forward `5b3c25f..92ce3f3`, `dev` level. **Measured live after the
+deploy:** `/organizer` serves the "from the Club Hub" label (two places);
+hub-auth answers a junk token 401, so the function deployed. ⚠️ **The
+end-to-end case — a new single-squad coach landing on the manager page on
+their first press — has not yet happened on the live site.** The next new
+manager is the proof; watch the Accounts tab for a "from the Club Hub" row
+appearing with no click from an organiser.
+
+Original entry:
 
 Jay: *"all as recommended, build it"* (spec
 `claude/specs/spec-hub-auto-approve-sep-2026.md`, decisions A–E as
@@ -33,7 +43,7 @@ the profile_id filter dropped 200/201. Suite green with `-NoProve`.
 every uncommitted addition to that file. Re-applied from the transcript.
 `CLAUDE.md` rule 6 already says "commit before injecting a fault"; it is
 right, and it is now the order for every fault run here.
-**Awaiting Jay's yes to fast-forward `main`.**
+Merged on Jay's yes the same evening — 15 credits.
 
 ## ✅ 9 Sep 2026 — the hub door's "pending" panel says what happens next — LIVE (`5b3c25f`)
 

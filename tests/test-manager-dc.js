@@ -365,7 +365,8 @@ section('Header: an organiser can get back to the organizer area, and sees who t
   let OUTSIDE = src;
   for (const g of gates) OUTSIDE = OUTSIDE.replace(g, '');
   check('no organizer-area link leaks outside the organiser gate', !/href="\/organizer"/.test(OUTSIDE));
-  check('everyone still gets the main-site link', /href="Quins JRT\.dc\.html"[^>]*>← Main site</.test(src));
+  // href="/" since 9 Sep 2026 (was the file name; see test-back-office-links.js §7).
+  check('everyone still gets the main-site link', /href="\/"[^>]*>← Main site</.test(src));
 }
 {
   const c = buildManager({

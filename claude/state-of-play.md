@@ -1,4 +1,26 @@
-# ADH JRT — state of play, 8 September 2026
+# ADH JRT — state of play, 9 September 2026
+
+## ⏳ 9 Sep 2026 — back-office pages link home as "/" — ON `dev`, NOT YET LIVE
+
+Jay: *"why does my adhjrt site address for the home page sometimes look like
+this"* — `adhjrt.com/quins%20jrt.dc`. **Measured on production, not
+inferred:** there is no `index.html`; `/` is a 200 rewrite to
+`Quins JRT.dc.html` and the address bar stays `/`. But ten links on the four
+back-office pages (the logo and "← Main site" on Organizer, Manager, Signin,
+Club) pointed at the FILE by name, and Netlify's Pretty URLs answers any
+`something.html` with a 301 to the same path lowercased with `.html` removed
+— the space becomes `%20`, `.dc` survives. `/Quins%20JRT.dc.html → 301 →
+/quins%20jrt.dc`; `/quins%20jrt.dc → 200`; `/ → 200`. So the ugly address
+appears exactly when somebody comes home by clicking.
+
+Fix: all ten hrefs are `/`. Rot detector: `tests/test-back-office-links.js`
+§7 — no back-office page may link home by file name, with a control that each
+links `/` at least once; proven red by putting one by-name link back into
+`Signin.dc.html` (65/66), green on restore. Two older anchors in
+`test-organizer-manager-link.js` and `test-manager-dc.js` asserted the old
+href and were REPOINTED, not deleted. Suite green with `-NoProve`.
+**Awaiting Jay's yes to fast-forward `main`** — 15 credits. The old address
+keeps working afterwards; no bookmark breaks.
 
 ## ✅ 8 Sep 2026 — Google sign-in REMOVED and LIVE (`8d3773a`)
 

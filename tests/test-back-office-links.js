@@ -259,4 +259,31 @@ check('the bar wraps rather than clipping its last child',
 check('the organiser pill will not break before its arrow', /white-space:\s*nowrap/.test(orgTag));
 check('the manager pill will not break before its arrow', /white-space:\s*nowrap/.test(mgrTag));
 
+/* =========================================================================
+   7. The way BACK to the homepage from the back office
+   ========================================================================= */
+
+section('Back-office pages link home as "/", never by file name');
+
+/* ⚠️ MEASURED ON PRODUCTION, 9 Sep 2026. Jay: "why does my adhjrt site
+   address for the home page sometimes look like this" —
+   adhjrt.com/quins%20jrt.dc. There is no index.html; "/" is a 200 rewrite to
+   "Quins JRT.dc.html" and the address bar stays "/". But the logo and the
+   "← Main site" links on the back-office pages pointed at the FILE by name,
+   and Netlify's Pretty URLs answers any request for something.html with a
+   301 to the same path lowercased and with .html removed: the space becomes
+   %20 and ".dc" survives because only ".html" is stripped. Fetched, not
+   inferred: /Quins%20JRT.dc.html -> 301 -> /quins%20jrt.dc, while "/" -> 200.
+   So the ugly address appears exactly when somebody comes home by clicking,
+   and never when they type it. The fix is a link to "/". This check keeps
+   the file name out of every back-office page's hrefs; the second half is
+   the control that proves the check is looking at real links. */
+
+const BACK_OFFICE_PAGES = ['Organizer.dc.html', 'Manager.dc.html', 'Signin.dc.html', 'Club.dc.html'];
+BACK_OFFICE_PAGES.forEach((file) => {
+  const src = stripComments(readRepo(file).replace(/\r\n/g, '\n'));
+  check(`${file} has no link to the homepage by file name`, !/href="Quins JRT\.dc\.html"/.test(src));
+  check(`${file} links home as "/" at least once (control)`, (src.match(/href="\/"/g) || []).length >= 1);
+});
+
 summary('test-back-office-links.js');

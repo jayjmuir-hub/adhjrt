@@ -36,8 +36,11 @@ section('Organizer dashboard header links to the Manager area');
 
 section('Nothing else in Organizer.dc.html changed');
 {
+  /* href="/" since 9 Sep 2026 — it used to name the file, which Netlify's
+     Pretty URLs turned into /quins%20jrt.dc in the address bar. Repointed,
+     not deleted: test-back-office-links.js §7 holds the reason. */
   check('the existing "← Main site" header link is still there',
-    /href="Quins JRT\.dc\.html"[^>]*>← Main site</.test(header));
+    /href="\/"[^>]*>← Main site</.test(header));
   check('no /manager link was added to the logged-out login card',
     !/href="\/manager"/.test(loginPart));
   check('the five existing dashboard tabs are still present',

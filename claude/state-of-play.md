@@ -1,6 +1,13 @@
 # ADH JRT — state of play, 9 September 2026
 
-## ⏳ 9 Sep 2026 — the hub door's "pending" panel says what happens next — ON `dev`, NOT YET LIVE
+## ✅ 9 Sep 2026 — the hub door's "pending" panel says what happens next — LIVE (`5b3c25f`)
+
+Fast-forward `22d9c88..5b3c25f`, `dev` level. **Measured live after the
+deploy:** `/signin` serves the hub path headed "Nearly there" and no
+hard-coded "Account created"; the hub button is present as the control;
+hub-auth answers a junk token 401, so the function deployed.
+
+Original entry:
 
 Jay, after two people had used Sign in with Quins Club Hub: *"the first time
 they click it then get sent to clubhub and it says ok then it sends them
@@ -23,7 +30,7 @@ dynamic import. Rot detectors: `tests/test-signin-page.js` (hub pending →
 "Nearly there", template reads the heading from state; red with the hub path
 headed "Account created" again, 39/40) and `tests/test-hub-auth.js` (the
 sentence names the next step; red with the old sentence back, 104/105).
-**Awaiting Jay's yes to fast-forward `main`.**
+Merged on Jay's yes the same afternoon — 15 credits.
 
 ⏳ **The real fix is still open:** auto-approve on first hub sign-in when the
 club hub says the person coaches a squad that maps to a tournament age group

@@ -105,7 +105,12 @@ narrative form of `claude/specs/`.
 - `RESTORE.md` not renamed.
 - Source comments citing deleted paths not rewritten.
 - The old repo not deleted.
-- The repo not made private before the fresh one exists.
+- The repo not made private before the fresh one exists. **Jay's decision,
+  10 Sep 2026, made knowing the scan had found one real name in a test
+  fixture, since replaced on `dev` but still present in public history:**
+  *"we will make the repo private when we are done, i'm not worried about
+  it."* Do not raise it again; the cutover (step 6) is what removes the
+  history.
 
 ## Where in the code
 

@@ -1,5 +1,37 @@
 # ADH JRT — state of play, 10 September 2026
 
+## ✅ 10 Sep 2026 — REGISTRATION STORE IS LIVE (`27c5a0a`), rehearsal still pending
+
+Jay: *"merge it"*. Fast-forward `92ce3f3..27c5a0a`, 26 commits, one 15-credit
+production deploy. `dev` and `Compare` both fast-forwarded to match, all three
+level at `0	0`.
+
+**Measured on the deploy, not inferred** (Netlify MCP, deploy
+`6aa2d27e55dc760008923963`):
+
+| | |
+|---|---|
+| state / context / branch | `ready` / `production` / `main` |
+| `commit_ref` | `27c5a0a…` — the merged commit, not an earlier one |
+| `function_schedules` | `[{cron: "@hourly", name: "snapshot-registrations"}]` |
+| functions deployed | 46, including new `_regstore`, `_snapshot`, `snapshot-registrations` |
+| secret scan | 309 files, zero matches |
+| `projectAccessControls` | `requiresPassword: false`, everywhere |
+
+⚠️ **The schedule line is the discriminating check.** A deploy id alone only
+says something built; `function_schedules` naming `snapshot-registrations` at
+`@hourly` proves Netlify read the new `netlify.toml` block, so the snapshot
+mailer is genuinely armed rather than merely uploaded. I did NOT take a
+baseline deploy id before pushing, which is the check this file usually asks
+for — `commit_ref` is what makes the reading discriminate instead.
+
+⚠️ **Google is still fully wired and that is deliberate.** `_sheets.js` is
+still deployed (unused by any function), the five `GOOGLE_*` variables are
+still set, and the three sheets are untouched. The rehearsal in the spec's
+§ 12 is the gate before any of that is removed. **The first snapshot email
+should arrive at 22:00 UTC (02:00 Abu Dhabi) — if none arrives, the mailer is
+not working and there is no backup.**
+
 ## 10 Sep 2026 — REGISTRATION STORE built on `dev`, rehearsal pending
 
 Nine tasks, `92ce3f3..29c3836`: `_regstore.js` (the write-once Blobs store),

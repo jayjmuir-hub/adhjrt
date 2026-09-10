@@ -1,24 +1,28 @@
 # Spec — the supporters grid
 
-**Status:** SHIPPED 5 Aug 2026 — `2f1dfae` → `c1cc033`, six deploys. Live and
-verified live on adhjrt.com. **Eighteen sponsors, in their own colours.**
+**Status:** SHIPPED 5 Aug 2026 — `2f1dfae` → `c1cc033`, six deploys. Live on
+adhjrt.com. **Sixteen supporters** after 3 Sep 2026 (`0ff077a`, squash of
+PR #19) removed The Bottle Store and Sportsman's Arms from the live strip.
+The original ship was eighteen. All live tiles are dark (11 Aug artwork;
+no `light: true`). HSBC stays principal, above the grid.
 **Surface:** `#sponsors` on the homepage (`Quins JRT.dc.html`).
-**Tests:** `tests/test-sponsors.js` (179 checks), faults in `tests/_prove-registration.js`.
+**Tests:** `tests/test-sponsors.js`, faults in `tests/_prove-registration.js`.
 
 ---
 
 ## What it is
 
-A grid of every 2026/27 sponsor, under **With the support of**, sitting **below**
+A grid of every 2026/27 supporter still on the strip, under **With the support of**, sitting **below**
 the HSBC principal-partner card. It replaced the dashed "More partners will be
 announced" placeholder.
 
 The list is **data**, in `SPONSORS` near the top of the script block. Adding a
-sponsor is one line and one file, not a markup edit.
+sponsor is one line and one file, not a markup edit. The live sixteen carry no
+`light` flag:
 
 ```js
 { name: 'Oak View Group',                  file: 'assets/sponsor-oak-view-group.webp',   h: 51 },
-{ name: 'Crompton Partners Estate Agents', file: 'assets/sponsor-crompton-partners.webp', h: 54, light: true },
+{ name: 'Crompton Partners Estate Agents', file: 'assets/sponsor-crompton-partners.webp', h: 52 },
 ```
 
 ---
@@ -38,40 +42,43 @@ Jay's call, 5 Aug: *"put them on the black background, anything that was changed
 can just go in a white box."* This **reversed** the design the first five
 deploys were built on, which recoloured logos white to sit on the dark tile.
 
-Every file is now the sponsor's own artwork in their own colours. A mark that
-does not read on `#151517` carries `light: true` and gets a white box.
+Every file is now the sponsor's own artwork in their own colours. On 5 Aug a
+mark that did not read on `#151517` carried `light: true` and got a white box.
+**No live row carries that flag** — Jay chose all-dark on 11 Aug.
 
-**The split is MEASURED, not chosen** — median WCAG contrast of the ink against
-the tile, white box below 4.5:1:
+**The split was MEASURED, not chosen** — median WCAG contrast of the ink against
+the tile, white box below 4.5:1. That 5 Aug checkerboard is **gone** (11 Aug:
+every tile is dark). The original eighteen split, recorded so it is not
+re-read as the live list:
 
 | | |
 |---|---|
-| **white box (9)** | Brighton College, BEOND, Westminster, Broadway Malyan, The Bottle Store, Align Health, Anderson, Crompton Partners, Recover |
-| **dark tile (9)** | Oak View Group, V&P, Ashurst, Sedbergh, McCafferty's, The Sportsman's Arms, Yas Mena Cycles, Arabian Swim Academy, Bili Boys |
+| **white box then (9)** | Brighton College, BEOND, Westminster, Broadway Malyan, The Bottle Store, Align Health, Anderson, Crompton Partners, Recover |
+| **dark tile then (9)** | Oak View Group, V&P, Ashurst, Sedbergh, McCafferty's, The Sportsman's Arms, Yas Mena Cycles, Arabian Swim Academy, Bili Boys |
 
-**The nine are not the nine anybody would guess** — which is the whole argument
-for measuring. **Re-measure when a file is replaced; never copy the flag from a
-neighbour.**
+**After 3 Sep 2026 (sixteen, all dark):** Crompton Partners, Oak View Group, Brighton College Abu Dhabi, V&P, BEOND, Ashurst Perkins Coie, Westminster, Sedbergh, Broadway Malyan, McCafferty's, Align Health, Yas Mena Cycles, Anderson, Arabian Swim Academy, Recover, Bili Boys. The Bottle Store and Sportsman's Arms are **not** on that list (`0ff077a` / PR #19).
 
-The tile's background and border are **derived from the flag** in
-`renderVals()` — the data says what the ARTWORK is, not what colour to paint a
-box, so the two greys live in one place.
+**The nine were not the nine anybody would guess** — which was the whole
+argument for measuring. That measurement is not live any more.
 
-### ⚠️ Three logos can NEVER take a white box
+The tile's background and border are **derived in one place** in
+`renderVals()` (`bg` / `edge`), not painted per row.
 
-**Oak View Group, V&P and Yas Mena Cycles exist only as white-on-transparent
-files.** A white tile erases them outright. Asserted by name, with a fault that
-adds the flag to Yas Cycles.
+### ⚠️ Three logos could not take a white box (5 Aug constraint)
+
+**Oak View Group, V&P and Yas Mena Cycles existed only as white-on-transparent
+files.** A white tile would have erased them outright. That hazard went with
+the single dark ground; they are still asserted *present*.
 
 This is also why **lightening the whole section — asked for twice — stayed
 rejected both times.** It is not a taste argument; it is three logos that
 disappear.
 
-### Both sides are asserted
+### Both sides of the old split were asserted
 
-"Nine are light" passes on a grid where **every** tile has gone white — exactly
-the failure the request could have produced if taken literally and applied by
-eye. So the dark nine are asserted too.
+"Nine are light" would have passed on a grid where **every** tile had gone
+white. Those checks were **repointed on 11 Aug**, not deleted: they now assert
+no white boxes and every tile dark.
 
 Faults cover: a tenth box appearing, a box being dropped (which hides a dark-ink
 logo with no error anywhere), the tile hardcoding one colour again, the border
@@ -123,7 +130,7 @@ twice:
 1. **It squashes wide marks.** With `height` fixed and only `max-width` clamped,
    a very wide mark renders *distorted*, not smaller. Nothing reports it.
 2. **Equal height is not equal presence.** At 44px the near-square marks —
-   Ashurst, The Sportsman's Arms — read as postage stamps beside a 5:1 wordmark.
+   Ashurst, and then Sportsman's Arms (no longer a live tile) — read as postage stamps beside a 5:1 wordmark.
    A sponsor-relations problem, not a cosmetic one.
 
 The markup uses `max-height` (never `height`) plus `object-fit:contain`, so the

@@ -87,7 +87,27 @@ section('⚠️ Write once — the rule everything else leans on');
       const teams = await R.listRecords(s2, 'team-registration');
       eq('listRecords hides the SUPERSEDED record and keeps the rest, in key order', teams.map((e) => e.key), ['team/b', 'team/c']);
       eq('listRecords is per form', (await R.listRecords(s2, 'player-registration')).map((e) => e.key), ['player/a']);
-      eq('listAll returns EVERY record including superseded (the snapshot needs them)', (await R.listAll(s2)).map((e) => e.key).sort(), ['player/a', 'team/a', 'team/b', 'team/c']);
+      eq('listAll returns EVERY record including superseded (the snapshot needs them)', ((await R.listAll(s2)).entries || []).map((e) => e.key).sort(), ['player/a', 'team/a', 'team/b', 'team/c']);
+
+      /* ⚠️ THE TWO LISTERS DIFFER ON A CORRUPTED RECORD, ON PURPOSE — and
+         that difference is the whole of the first review finding. listAll()
+         (the snapshot's ONLY source) must NAME what it could not read, or the
+         backup silently comes up one short and the subject line just reads a
+         smaller number. listRecords() (the two reader endpoints) must carry
+         on, or one bad record empties an organiser's screen. */
+      const s2b = fakeStore();
+      await R.writeOnce(s2b, 'team/ok', older);
+      await s2b.setJSON('team/corrupt', { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z' });
+      /* `.catch()` and `|| {}` deliberately, the house pattern: a fault that
+         makes either lister THROW on a corrupted record would otherwise kill
+         this file mid-run and every check below it would silently never run —
+         so the fault would look caught while proving nothing. Caught here, the
+         guarding check reports FAIL like a normal assertion and the file
+         carries on. */
+      const listedAll = (await R.listAll(s2b).catch(() => ({}))) || {};
+      eq('⚠️ listAll NAMES a record it could not read instead of dropping it silently', listedAll.dropped, ['team/corrupt']);
+      eq('…and still returns the ones it could read', (listedAll.entries || []).map((e) => e.key), ['team/ok']);
+      eq('listRecords stays forgiving so one bad record cannot empty a reader page', (await R.listRecords(s2b, 'team-registration').catch(() => [])).map((e) => e.key), ['team/ok']);
 
       /* ---- numbering ---- */
       const rows = await R.teamRowsForNumbering(s2);
@@ -134,7 +154,22 @@ section('⚠️ Write once — the rule everything else leans on');
       check('organiser reader still refuses non-organisers', /role !== 'organizer'/.test(org));
       check('organiser reader still answers clubsUnavailable', /clubsUnavailable/.test(org));
       const mine = readRepo('netlify/functions/get-my-registrations.js');
-      check('manager reader still filters by the TOKEN age group, not the request', /session\.ageGroupId/.test(mine) && !/event\.body[\s\S]*ageGroup/.test(mine));
+      /* ⚠️ THE NEGATIVE HALF USED TO BE `!/event\.body[\s\S]*ageGroup/` AND
+         WAS VACUOUS: get-my-registrations.js contains no `event.body` at all,
+         so that half was true of any file, including one that had been
+         rewritten to read the age group from the request in some other way.
+         It is now a POSITIVE assertion that `allowedName` — the one value the
+         filter below uses — is derived from `session.ageGroupId`. The old
+         `/session\.ageGroupId/` half cannot carry the check on its own either:
+         the phrase also appears in the `=== '*'` line just above, so it
+         survives the very fault this label names. */
+      check('manager reader still filters by the TOKEN age group, not the request',
+        /session\.ageGroupId/.test(mine) &&
+        /allowedName\s*=\s*seesEverything\s*\?\s*null\s*:\s*AGE_GROUP_NAME_BY_ID\[session\.ageGroupId\]/.test(mine));
+      /* Comments stripped: the file explains in a comment WHY the club mapper
+         is not imported, and the word has to be allowed to appear there. */
+      check('manager reader does not import the club mapper (a manager is never served club declarations)',
+        !/mapClubRow/.test(mine.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')));
 
       summary('test-regstore.js');
     });

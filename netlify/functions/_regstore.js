@@ -69,33 +69,60 @@ async function writeOnce(store, key, record) {
   await store.setJSON(key, record);
 }
 
+/* ⚠️ A RECORD THAT DOES NOT LOOK LIKE A RECORD IS NEVER SILENTLY FORGOTTEN.
+   Returns BOTH halves: `entries` is what could be read as a record, `dropped`
+   is the key of everything that could not. It used to return only the first
+   half, which meant the snapshot — whose only source is listAll() — quietly
+   left a corrupted record out of the backup and printed a count one lower,
+   while tools/registrations-admin.js treated the identical condition as
+   `unreadable` and refused the whole operation. Two halves of one safety
+   story taking opposite decisions on the same input. The caller decides now;
+   nothing decides by omission. */
 async function listPrefix(store, prefix) {
   const res = await store.list({ prefix: prefix + '/' });
   const keys = ((res && res.blobs) || []).map((b) => b.key).sort();
-  const out = [];
+  const entries = [];
+  const dropped = [];
   for (const key of keys) {
     const record = await store.get(key, { type: 'json' });
-    if (record && typeof record === 'object' && Array.isArray(record.row)) out.push({ key, record });
+    if (record && typeof record === 'object' && Array.isArray(record.row)) entries.push({ key, record });
+    else dropped.push(key);
   }
-  return out;
+  return { entries, dropped };
 }
 
 /* Live records for one form: every record, minus any that a later record
-   names in `supersedes`. */
+   names in `supersedes`.
+   ⚠️ THIS ONE IS FORGIVING ON PURPOSE, AND IT DIFFERS FROM listAll() ON
+   PURPOSE. The two reader endpoints call this to paint an organiser's or a
+   manager's screen, and one corrupted record must not empty that screen — a
+   reader that refuses shows nobody anything, which is worse than showing the
+   rest. The BACKUP has the opposite duty (a snapshot that looks complete and
+   is not is the failure mode this whole build exists to prevent), so listAll()
+   surfaces `dropped` and runSnapshot() shouts about it. If you make one of
+   these behave like the other, you have broken the one whose job you forgot. */
 async function listRecords(store, form) {
   const prefix = PREFIX[form];
   if (!prefix) throw new Error('unknown form: ' + form);
-  const all = await listPrefix(store, prefix);
+  const { entries: all } = await listPrefix(store, prefix);
   const superseded = new Set(all.map((e) => e.record.supersedes).filter(Boolean));
   return all.filter((e) => !superseded.has(e.key));
 }
 
 /* EVERYTHING, superseded included — the snapshot must carry the full history
-   so a restore puts back exactly what was there. */
+   so a restore puts back exactly what was there. Returns `{ entries, dropped }`:
+   `dropped` is every key that exists in the store but could not be read as a
+   record, and runSnapshot() turns a non-empty `dropped` into an INCOMPLETE
+   subject line naming the count. */
 async function listAll(store) {
-  const out = [];
-  for (const prefix of Object.values(PREFIX)) out.push(...(await listPrefix(store, prefix)));
-  return out;
+  const entries = [];
+  const dropped = [];
+  for (const prefix of Object.values(PREFIX)) {
+    const part = await listPrefix(store, prefix);
+    entries.push(...part.entries);
+    dropped.push(...part.dropped);
+  }
+  return { entries, dropped };
 }
 
 /* nextTeamCode() in _teams.js reads rows positionally — club at 1, code at 2,

@@ -12,13 +12,15 @@
 // ---------------------------------------------------------------------
 // THIS FILE CONTAINS NO DECISIONS, DELIBERATELY.
 // ---------------------------------------------------------------------
-// It builds the real Google client, mailer and blob store, hands them to
+// It builds the real mailer and the real blob stores, hands them to
 // handleSubmission() in _intake.js, and turns the answer into an HTTP response.
-// That split is not tidiness: a fresh clone has no node_modules, so anything
-// requiring googleapis cannot be loaded by a test AT ALL. Everything that
-// decides anything lives in _intake.js, which is dependency-free and has 400+
-// checks against it. Keep it that way — a rule added here is a rule nothing can
-// test.
+// That split is not tidiness: everything that decides anything lives in
+// _intake.js, which is dependency-free and has 400+ checks against it. Keep it
+// that way — a rule added here is a rule nothing can test.
+// (It built a Google Sheets client here until Sep 2026, and the split existed
+// because a fresh clone has no node_modules, so anything requiring googleapis
+// could not be loaded by a test AT ALL. The store is Netlify Blobs now and that
+// particular reason is gone, but the rule stands on its own.)
 //
 // ---------------------------------------------------------------------
 // WHAT THIS REPLACED, AND WHAT THAT COST.
@@ -28,9 +30,12 @@
 // Netlify was also, without anybody choosing it, providing spam filtering and
 // throttling, and standing between the public and a Google Sheet.
 //
-// This endpoint is public and unauthenticated. It writes rows into a sheet
-// holding children's names, dates of birth and medical notes, and it sends mail
-// from admin@adhjrt.com to an address taken out of the request body. The three
+// This endpoint is public and unauthenticated. It writes records into a store
+// holding children's names, dates of birth and medical notes (a Google Sheet
+// until Sep 2026; the Netlify Blobs store `registrations` since — RESTORE.md
+// § Registration store), and it sends mail from admin@adhjrt.com to an address
+// taken out of the request body. Nothing about that exposure changed with the
+// store: the data is the same data and the door is the same door. The three
 // guards that replace what Netlify was doing — the allow-list, the validation
 // and the rate limit — are all in _intake.js and all run before any of that.
 // Do not add a path through here that skips them.
@@ -102,10 +107,13 @@ exports.handler = async (event) => {
 
       sendConfirmation,
 
-      /* The dead letter. When the sheet write fails, the submission is kept so
-         it can be replayed by hand rather than simply lost — which is better
-         than the Netlify Forms copy this replaces, because this one can be read
-         programmatically.
+      /* The dead letter. When the STORE write above fails (it was a sheet
+         write until Sep 2026), the submission is kept so it can be replayed by
+         hand rather than simply lost — which is better than the Netlify Forms
+         copy this replaces, because this one can be read programmatically.
+         Note it parks into the `config` store, NOT the `registrations` store:
+         a parked submission is a failure to record, not a registration, and it
+         must never appear on an organiser's screen or in a snapshot.
          ⚠️ THIS BLOB HOLDS CHILDREN'S PERSONAL DATA. It is private to the
          site's Netlify account. Do not widen access to the `config` store, do
          not expose it through any endpoint, and clear it once entries have been

@@ -17,6 +17,25 @@ const entries = [
   e('player/a', 'player-registration', 'Dubai Exiles'),
 ];
 
+/* listAll() answers `{ entries, dropped }` (see _regstore.js). The fakes below
+   answer that shape; `listing()` is the tidy way to say "nothing unreadable". */
+const listing = (rows) => ({ entries: rows, dropped: [] });
+
+/* A store with @netlify/blobs' shape, so a runSnapshot check can drive the
+   REAL _regstore.listAll() instead of handing runSnapshot a pre-built list.
+   That is what makes the malformed-record check below prove anything about
+   the deployed path — snapshot-registrations.js passes exactly this wiring. */
+function fakeStore(seed) {
+  const m = new Map(Object.entries(seed || {}));
+  return {
+    m,
+    async get(key) { return m.has(key) ? JSON.parse(JSON.stringify(m.get(key))) : null; },
+    async setJSON(key, obj) { m.set(key, JSON.parse(JSON.stringify(obj))); },
+    async list({ prefix }) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix || '')).sort().map((key) => ({ key })) }; },
+    async delete(key) { m.delete(key); },
+  };
+}
+
 section('CSV cells are spreadsheet-safe');
 eq('plain', S.csvCell('abc'), '"abc"');
 eq('inner quotes doubled', S.csvCell('a"b'), '"a""b"');
@@ -58,7 +77,7 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
 (async () => {
   const sent = [];
   const mailer = async (m) => { sent.push(m); return { sent: true, count: 1 }; };
-  const r = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  const r = await S.runSnapshot({ listAll: async () => listing(entries), windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('sent', r.sent, true);
   /* `|| {}` deliberately, here and at every other `sent[0]` below: a fault
      that makes runSnapshot swallow a failure and never call the mailer
@@ -74,6 +93,7 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   check('csv attachments named per form', ['team', 'player', 'club'].every((f) => (s0.attachments || []).some((a) => a.name === `registrations-${f}.csv`)));
   check('attachment bytes are base64', (s0.attachments || []).every((a) => /^[A-Za-z0-9+/=]+$/.test(a.contentBytes)));
   check('no registration VALUE in the html body', !/Abu Dhabi Harlequins|Dubai Exiles/.test(s0.html));
+  check('a complete snapshot never says INCOMPLETE', !/INCOMPLETE/.test(String(s0.subject)) && !/INCOMPLETE/.test(String(s0.html)));
 
   sent.length = 0;
   const r2 = await S.runSnapshot({ listAll: async () => { throw new Error('blobs down'); }, windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
@@ -83,17 +103,46 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   check('…and the body carries the error message', /blobs down/.test(s0b.html));
 
   sent.length = 0;
-  const r3 = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  const r3 = await S.runSnapshot({ listAll: async () => listing(entries), windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('closed window at 09:00 UTC → not this hour', r3.sent, false);
   eq('…and nothing was sent', sent.length, 0);
-  const r4 = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com', force: true });
+  /* ⚠️ `force` has NO production caller and there is no way to trigger a
+     snapshot by hand — a Netlify scheduled function is not reachable over
+     HTTP. It exists for this check and for the prover. See the comment at
+     `force` in _snapshot.js, and the closing section of the runbook. */
+  const r4 = await S.runSnapshot({ listAll: async () => listing(entries), windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com', force: true });
   eq('force overrides the cadence (for the rehearsal)', r4.sent, true);
 
+  /* ⚠️ REPOINTED. This fixture used to hand runSnapshot a hand-built list
+     containing the malformed record, which walked straight past the very
+     filter that decides its fate: _regstore.listPrefix() removed such a
+     record before buildSnapshot() could ever see it, so on the DEPLOYED path
+     the record vanished from the backup with no signal, the counts simply
+     read one lower — and this check passed while proving nothing about it.
+     It now drives the real listAll() over a fake store, exactly as
+     snapshot-registrations.js wires it. */
   sent.length = 0;
-  const r5 = await S.runSnapshot({ listAll: async () => [{ key: 'team/bad', record: { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z', rehearsal: false } }], windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  const badStore = fakeStore({
+    'team/a': entries[0].record,
+    'team/bad': { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z', rehearsal: false },
+  });
+  const r5 = await S.runSnapshot({ listAll: () => R.listAll(badStore), windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('a malformed record found AFTER the read → STILL sends', r5.sent, true);
   const s0c = sent[0] || {};
   check('…and that subject says FAILED too', /FAILED/.test(s0c.subject));
+  check('⚠️ …and the subject says INCOMPLETE and names how many it could not read', /INCOMPLETE/.test(String(s0c.subject)) && /\b1 record\(s\) FAILED to read/.test(String(s0c.subject)));
+  check('…and the body says a restore from this file cannot put them back', /cannot put them back/.test(String(s0c.html)) && /team\/bad/.test(String(s0c.html)));
+  eq('…and the readable record is still attached rather than the backup being abandoned', (s0c.attachments || []).length, 4);
+  eq('…and runSnapshot reports the count to its caller for the function log', r5.dropped, 1);
+  check('no registration VALUE in the INCOMPLETE body either', !/Abu Dhabi Harlequins|Dubai Exiles/.test(String(s0c.html)));
+
+  /* listAll()'s old bare-array shape is a contract violation, not data: it
+     would mean `dropped` is unknowable, so it takes the FAILED path rather
+     than being read as "nothing was dropped". */
+  sent.length = 0;
+  const r6 = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  eq('listAll answering the wrong shape → still emails', r6.sent, true);
+  check('…and says FAILED rather than assuming nothing was dropped', /FAILED/.test(String((sent[0] || {}).subject)));
 
   section('restorePlan writes only what is MISSING');
   const machine = S.buildSnapshot(entries, T0).machine;
@@ -105,6 +154,18 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   let threw = null; try { S.restorePlan({ v: 99, records: [] }, new Set()); } catch (err) { threw = err; }
   check('an unknown machine-file version is refused', !!threw);
 
+  /* ⚠️ A KEYLESS RECORD IS NOT "PRESENT". It cannot be looked for and cannot
+     be written back, so counting it in `present` — which
+     `records.length - missing.length` did — reported a fuller restore than
+     happened, in the middle of the one procedure this design exists for. */
+  {
+    const keylessPlan = S.restorePlan({ v: 1, takenAt: '2026-10-03T08:15:42.117Z', records: [{ key: 'team/a', record: entries[0].record }, { record: entries[1].record }] }, new Set(['team/a']));
+    eq('⚠️ a record with no key is counted as keyless, not as present', keylessPlan.keyless, 1);
+    eq('…and present counts only what is genuinely in the store', keylessPlan.present, 1);
+    eq('…and it is never in the missing plan (there is no key to write to)', keylessPlan.missing.length, 0);
+    eq('a clean snapshot reports no keyless records', S.restorePlan(machine, new Set()).keyless, 0);
+  }
+
   section('deletePlan and its gate');
   eq('--rehearsal deletes rehearsal records only', S.deletePlan(entries, { rehearsalOnly: true }), ['team/b']);
   eq('--all deletes everything', S.deletePlan(entries, { rehearsalOnly: false }).sort(), ['player/a', 'team/a', 'team/b']);
@@ -112,6 +173,18 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   eq('canDelete: snapshot OLDER than the newest record → refused', S.canDelete('2026-10-03T08:15:42.116Z', entries).ok, false);
   eq('canDelete: empty store → ok', S.canDelete('2020-01-01T00:00:00.000Z', []).ok, true);
   eq('canDelete: junk stamp → refused', S.canDelete('yesterday', entries).ok, false);
+  /* ⚠️ ONE UNDATED RECORD USED TO SWITCH THE GATE OFF FOR THE WHOLE STORE.
+     `.map(receivedAt).sort().pop()` returned undefined, `newest` came back
+     null, and the "empty store, nothing to lose" branch answered ok — so a
+     stale snapshot could authorise deleting every OTHER record too. */
+  {
+    const undated = entries.concat([{ key: 'team/z', record: { ...entries[0].record, receivedAt: undefined } }]);
+    eq('⚠️ canDelete: a record with NO receivedAt → refused, however new the snapshot', S.canDelete('2099-01-01T00:00:00.000Z', undated).ok, false);
+    eq('…and it says how many records are undated', S.canDelete('2099-01-01T00:00:00.000Z', undated).undated, 1);
+    const unparsable = entries.concat([{ key: 'team/z', record: { ...entries[0].record, receivedAt: 'soon' } }]);
+    eq('canDelete: an unparsable receivedAt → refused too', S.canDelete('2099-01-01T00:00:00.000Z', unparsable).ok, false);
+    eq('canDelete: every record dated and the snapshot newer → still ok', S.canDelete('2099-01-01T00:00:00.000Z', entries).ok, true);
+  }
 
   section('Dependency-free');
   const src = readRepo('netlify/functions/_snapshot.js');

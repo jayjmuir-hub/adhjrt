@@ -30,7 +30,7 @@ exports.handler = async () => {
       mailFrom: process.env.MAIL_FROM,
     });
     /* Counts only. */
-    console.log(`snapshot-registrations: ${result.sent ? 'sent' : 'skipped this hour'}${result.counts ? ` (${result.counts.team}/${result.counts.player}/${result.counts.club})` : ''}${result.error ? ' FAILED: ' + result.error : ''}`);
+    console.log(`snapshot-registrations: ${result.sent ? 'sent' : 'skipped this hour'}${result.counts ? ` (${result.counts.team}/${result.counts.player}/${result.counts.club})` : ''}${result.error ? ' FAILED: ' + result.error : ''}${result.dropped ? ` INCOMPLETE: ${result.dropped} unreadable record(s)` : ''}`);
     return { statusCode: 200, body: JSON.stringify({ ok: true, sent: result.sent }) };
   } catch (err) {
     console.error('snapshot-registrations error:', err && err.message);

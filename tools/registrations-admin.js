@@ -52,6 +52,14 @@ function netlifyIo() {
       try { return JSON.parse(raw); }
       catch (e) { throw new Error(`unparsable record for "${key}": ${e && e.message}`); }
     },
+    /* ⚠️ THE VALUE GOES IN ON STDIN, AND NOTHING HERE HAS EVER RUN AGAINST
+       THE REAL CLI. The Netlify CLI is not a dependency of this repo and the
+       suite drives a fake, so this exact invocation is unproven: if
+       `blobs:set` does not read stdin, a restore writes an empty or malformed
+       blob at precisely the key that was missing — and because restore is
+       add-only, that key then counts as PRESENT for ever and a second, correct
+       restore skips it permanently. runTool() therefore reads every write back
+       and compares it before writing the next one; see the read-back there. */
     async set(store, key, json) { run(['blobs:set', store, key], JSON.stringify(json)); },
     async del(store, key) { run(['blobs:delete', store, key]); },
     readFile(p) { return fs.readFileSync(p, 'utf8'); },
@@ -113,6 +121,13 @@ async function runTool(argv, io) {
       io.out(`snapshot taken: ${machine.takenAt}   records in snapshot: ${machine.records.length}`);
       io.out(`store: ${entries.length} record(s)`);
       io.out(`missing: ${plan.missing.length}   present: ${plan.present}   rehearsal: ${plan.rehearsal} (among missing)`);
+      /* A record in the snapshot file with no key cannot be looked for and
+         cannot be written back. Refusing beats proceeding: the counts above
+         would otherwise describe a restore that quietly leaves it out. */
+      if (plan.keyless > 0) {
+        io.out(`REFUSED: ${plan.keyless} record(s) in the snapshot file have no key, so they can neither be found in the store nor written back. Nothing written — this snapshot file is not intact; use a different one.`);
+        return 2;
+      }
       if (mode === 'check') { io.out('check only — nothing written'); return 0; }
 
       const confirm = flag(argv, '--confirm');
@@ -123,6 +138,20 @@ async function runTool(argv, io) {
       for (const m of plan.missing) {
         /* Add only. A key that exists is never touched, and the plan already excluded them. */
         await io.set(STORE_NAME, m.key, m.record);
+        /* ⚠️ READ IT BACK BEFORE WRITING THE NEXT ONE. The write goes through
+           `netlify blobs:set` with the value on STDIN, and nothing in this
+           repo has ever exercised that against the real CLI (see netlifyIo's
+           set()). A write that silently stores nothing would leave the key
+           PRESENT but empty, and restore's add-only rule then makes it
+           unfixable by a second restore. So: compare, and stop on the FIRST
+           mismatch rather than papering over the rest of the store with the
+           same broken write. Keys and a status only — never a value. */
+        let back = null, readErr = null;
+        try { back = await io.get(STORE_NAME, m.key); } catch (err) { readErr = (err && err.message) || String(err); }
+        if (readErr !== null || JSON.stringify(back) !== JSON.stringify(m.record)) {
+          io.out(`REFUSED: wrote "${m.key}" but reading it back did not return what was written${readErr ? ` (${readErr})` : ''}. STOPPED at this key — nothing further written. The store may now hold a bad record at this key; do NOT re-run restore until someone has looked at it in the Netlify Blobs UI.`);
+          return 2;
+        }
         io.out(`restored ${m.key}`);
       }
       io.out(`done: ${plan.missing.length} record(s) restored`);
@@ -142,6 +171,11 @@ async function runTool(argv, io) {
         return 2;
       }
       const gate = canDelete(machine.takenAt, entries);
+      /* Two different refusals, because they need two different actions. */
+      if (!gate.ok && gate.undated > 0) {
+        io.out(`REFUSED: ${gate.undated} record(s) in the store carry no usable receivedAt, so the freshness gate cannot tell whether this snapshot covers them. Nothing deleted. Investigate those records before deleting anything.`);
+        return 2;
+      }
       if (!gate.ok) { io.out(`REFUSED: snapshot ${machine.takenAt} is older than the newest record ${gate.newest}. Take a fresh snapshot first.`); return 2; }
       if (all && flag(argv, '--confirm') !== 'ALL') { io.out('REFUSED: --all needs --confirm ALL (upper case)'); return 2; }
       const keys = deletePlan(entries, { rehearsalOnly });

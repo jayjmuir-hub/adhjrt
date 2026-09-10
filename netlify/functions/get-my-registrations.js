@@ -12,7 +12,13 @@
 // Reads the registrations store (Sep 2026; it read two Google Sheets before
 // that — see RESTORE.md § Registration store).
 const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
-const { mapTeamRow, mapPlayerRow, mapClubRow } = require('./_intake');
+/* ⚠️ NO mapClubRow HERE, ON PURPOSE. This endpoint answers teams and players
+   only — `clubs` is always the empty array below — and importing the club
+   mapper made it look, to anyone reading the imports, as though a manager
+   could be served club declarations. Removed rather than left unused: the
+   import WAS the misleading part. If clubs are ever wanted here that is a
+   deliberate change to what a manager can see, not a one-word edit. */
+const { mapTeamRow, mapPlayerRow } = require('./_intake');
 const { STORE_NAME, listRecords, shapeForReaders } = require('./_regstore');
 
 // Age-group id -> public name. This MUST mirror AGE_GROUPS in scores-data.js
@@ -52,7 +58,7 @@ exports.handler = async (event) => {
       listRecords(store, 'team-registration'),
       listRecords(store, 'player-registration'),
     ]);
-    const shaped = shapeForReaders({ teams, players, clubs: [] }, { mapTeamRow, mapPlayerRow, mapClubRow });
+    const shaped = shapeForReaders({ teams, players, clubs: [] }, { mapTeamRow, mapPlayerRow });
     const keep = (row) => seesEverything || norm(row.ageGroup) === norm(allowedName);
 
     return {

@@ -9,7 +9,7 @@ const S = require(path.join(repoRoot(), 'netlify/functions/_snapshot.js'));
 const T0 = Date.parse('2026-10-03T08:15:42.117Z');
 const rec = (form, club, nowMs) => R.buildRecord({ form, row: ['x', club], nowMs: nowMs || T0, club });
 
-function fakeIo(seed, files, unreadableKeys) {
+function fakeIo(seed, files, unreadableKeys, corruptWrites) {
   const m = new Map(Object.entries(seed || {}));
   /* ⚠️ TOMBSTONE: the brief's fakeIo defined `out` twice in one object
      literal — once as the array (`out,` shorthand) and once as the
@@ -36,7 +36,11 @@ function fakeIo(seed, files, unreadableKeys) {
       if (badKeys.has(key)) throw new Error('simulated transient read failure: ' + key);
       return m.has(key) ? m.get(key) : null;
     },
-    async set(store, key, json) { m.set(key, json); },
+    /* Optional fourth arg: when true, set() stores something OTHER than what
+       it was handed — the stand-in for `netlify blobs:set` not reading its
+       value from stdin. Every existing call site omits it and stores exactly
+       what it was given, as before. */
+    async set(store, key, json) { m.set(key, corruptWrites ? {} : json); },
     async del(store, key) { m.delete(key); },
     readFile(p) { if (!(p in files)) throw new Error('ENOENT ' + p); return JSON.stringify(files[p]); },
   };
@@ -69,6 +73,50 @@ const snapOld = S.buildSnapshot(Object.entries(full).map(([key, record]) => ({ k
     eq('the two missing were written', [...io.m.keys()].sort(), ['player/a', 'team/a', 'team/b']);
     eq('⚠️ the present record was NOT overwritten', io.m.get('team/a').row, ['KEEP']);
     eq('running it again is harmless (0 missing)', await A.runTool(['restore', 'snap.json', '--confirm', '0'], io), 0);
+  }
+
+  section('⚠️ restore reads every write BACK — the real write path has never run against the real CLI');
+  {
+    /* netlifyIo().set() hands the value to `netlify blobs:set` on STDIN. The
+       Netlify CLI is not a dependency of this repo and the suite drives this
+       fake, so nothing has ever proven the CLI reads stdin at all. If it does
+       not, restore writes an empty blob at exactly the key that was missing —
+       and because restore is add-only, that key counts as PRESENT for ever
+       and a second, correct restore skips it permanently. So the tool reads
+       each write back and stops on the first mismatch. */
+    const io = fakeIo({}, { 'snap.json': snapAll }, [], true);
+    const code = await A.runTool(['restore', 'snap.json', '--confirm', '3'], io);
+    eq('a write that stores something else → refused, exit 2', code, 2);
+    check('…and it names the key it stopped at', io.out.some((l) => /REFUSED.*reading it back did not return what was written/.test(l) && /team\/a/.test(l)));
+    check('…and it STOPPED rather than writing the rest', io.m.size === 1);
+    check('…and no record VALUE was printed', !io.out.some((l) => /Dubai Exiles|Harlequins/.test(l)));
+    check('…and no "restored" line claimed success', !io.out.some((l) => /^restored /.test(l)));
+  }
+
+  section('a snapshot file with a keyless record refuses instead of over-reporting');
+  {
+    /* A record with no key can neither be found in the store nor written
+       back, so folding it into `present` reported a fuller restore than
+       happened — during the exact procedure this tool exists for. */
+    const holed = { ...snapAll, records: snapAll.records.concat([{ record: full['team/a'] }]) };
+    let io = fakeIo(full, { 'holed.json': holed });
+    eq('check refuses, exit 2', await A.runTool(['check', 'holed.json'], io), 2);
+    check('…and says the snapshot file is not intact', io.out.some((l) => /REFUSED.*have no key/.test(l)));
+    io = fakeIo({}, { 'holed.json': holed });
+    eq('restore refuses too', await A.runTool(['restore', 'holed.json', '--confirm', '3'], io), 2);
+    eq('…and nothing was written', io.m.size, 0);
+  }
+
+  section('a record with no receivedAt refuses a delete rather than disabling the freshness gate');
+  {
+    /* The undated record made canDelete() answer "nothing to lose" for the
+       WHOLE store, so a stale snapshot could authorise deleting every other
+       record with it. */
+    const undated = { ...full, 'team/z': { ...full['team/a'], receivedAt: undefined } };
+    const io = fakeIo(undated, { 'snap.json': snapAll });
+    eq('delete refuses, exit 2', await A.runTool(['delete', '--all', '--snapshot', 'snap.json', '--confirm', 'ALL'], io), 2);
+    check('…and says the freshness gate cannot tell', io.out.some((l) => /REFUSED.*no usable receivedAt/.test(l)));
+    eq('…and nothing was deleted', io.m.size, 4);
   }
 
   section('delete: rehearsal scope, ALL word, and the snapshot gate');

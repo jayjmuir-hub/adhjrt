@@ -19,3 +19,6 @@ node_modules/
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 # Anchored to the root: an unanchored `graft/` also swallows .claude/skills/graft.
 /graft/
+
+# Claude working notes for subagent-driven builds — scratch, never part of the site.
+/.superpowers/

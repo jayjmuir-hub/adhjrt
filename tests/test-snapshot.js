@@ -144,6 +144,30 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   eq('listAll answering the wrong shape → still emails', r6.sent, true);
   check('…and says FAILED rather than assuming nothing was dropped', /FAILED/.test(String((sent[0] || {}).subject)));
 
+  /* ⚠️ THE GUARD THIS FILE'S HEADER COMMENT DESCRIBES HAS ITS OWN FIXTURE
+     AGAIN. r5 above proves the shape gate in _regstore.listPrefix() — a
+     record with no `row` array never reaches buildSnapshot() at all, so it
+     cannot exercise the try/catch in runSnapshot() that wraps BOTH the read
+     and the build. This one clears that gate (`row` IS an array, so nothing
+     filters it out) but still makes buildCsv() throw once it gets there:
+     one cell is an object whose toString() throws, so String(v) inside
+     csvCell() throws for real, mid-build, after listAll() already
+     succeeded. If the read and the build were ever pulled back apart —
+     `snap = buildSnapshot(entries, now)` moved outside the try — this is
+     the fixture that would go red while r5 stayed green, because r5's
+     record never reaches buildSnapshot() to begin with. */
+  sent.length = 0;
+  const poisonRow = [{ toString() { throw new Error('poison cell'); } }];
+  const poisonEntries = [{
+    key: 'team/poison',
+    record: { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z', rehearsal: false, row: poisonRow },
+  }];
+  const r7 = await S.runSnapshot({ listAll: async () => listing(poisonEntries), windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  eq('a record that survives the shape gate but breaks the build → STILL sends', r7.sent, true);
+  const s0d = sent[0] || {};
+  check('…and that subject says FAILED (the build-time guard, not the read-time one)', /FAILED/.test(String(s0d.subject)));
+  check('…and the body carries the error message from inside buildCsv', /poison cell/.test(String(s0d.html)));
+
   section('restorePlan writes only what is MISSING');
   const machine = S.buildSnapshot(entries, T0).machine;
   const plan = S.restorePlan(machine, new Set(['team/a']));

@@ -103,7 +103,11 @@ $tests = @(
   # Pitch marshals (Sep 2026) - spec claude/specs/spec-pitch-marshals-sep-2026.md.
   # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the
   # whole registration.
-  'test-pitch-marshals.js'
+  'test-pitch-marshals.js',
+  # The registration store (Sep 2026) - spec-registration-store-sep-2026.md.
+  'test-regstore.js',
+  'test-snapshot.js',
+  'test-registrations-admin.js'
 )
 
 Write-Host ''

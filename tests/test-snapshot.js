@@ -60,18 +60,27 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   const mailer = async (m) => { sent.push(m); return { sent: true, count: 1 }; };
   const r = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('sent', r.sent, true);
-  eq('to the tournament mailbox ONLY', sent[0].to, 'registrations@adhjrt.com');
-  eq('two attachments per form set: 3 csv + 1 machine', sent[0].attachments.length, 4);
-  check('machine attachment is JSON named registrations-<stamp>.json', sent[0].attachments.some((a) => /^registrations-.*\.json$/.test(a.name) && a.contentType === 'application/json'));
-  check('csv attachments named per form', ['team', 'player', 'club'].every((f) => sent[0].attachments.some((a) => a.name === `registrations-${f}.csv`)));
-  check('attachment bytes are base64', sent[0].attachments.every((a) => /^[A-Za-z0-9+/=]+$/.test(a.contentBytes)));
-  check('no registration VALUE in the html body', !/Abu Dhabi Harlequins|Dubai Exiles/.test(sent[0].html));
+  /* `|| {}` deliberately, here and at every other `sent[0]` below: a fault
+     that makes runSnapshot swallow a failure and never call the mailer
+     leaves `sent` empty, and `sent[0].anything` would then throw and kill
+     the whole file before the checks after it ever ran — the exact trap
+     this repo's rule against a test file falling over on a fault describes.
+     `s0` is `{}` in that case, so every property read below is undefined
+     and the `eq`/`check` reports FAIL like a normal assertion instead. */
+  const s0 = sent[0] || {};
+  eq('to the tournament mailbox ONLY', s0.to, 'registrations@adhjrt.com');
+  eq('two attachments per form set: 3 csv + 1 machine', (s0.attachments || []).length, 4);
+  check('machine attachment is JSON named registrations-<stamp>.json', (s0.attachments || []).some((a) => /^registrations-.*\.json$/.test(a.name) && a.contentType === 'application/json'));
+  check('csv attachments named per form', ['team', 'player', 'club'].every((f) => (s0.attachments || []).some((a) => a.name === `registrations-${f}.csv`)));
+  check('attachment bytes are base64', (s0.attachments || []).every((a) => /^[A-Za-z0-9+/=]+$/.test(a.contentBytes)));
+  check('no registration VALUE in the html body', !/Abu Dhabi Harlequins|Dubai Exiles/.test(s0.html));
 
   sent.length = 0;
   const r2 = await S.runSnapshot({ listAll: async () => { throw new Error('blobs down'); }, windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('store unreadable → STILL sends', r2.sent, true);
-  check('…and the subject says FAILED', /FAILED/.test(sent[0].subject));
-  check('…and the body carries the error message', /blobs down/.test(sent[0].html));
+  const s0b = sent[0] || {};
+  check('…and the subject says FAILED', /FAILED/.test(s0b.subject));
+  check('…and the body carries the error message', /blobs down/.test(s0b.html));
 
   sent.length = 0;
   const r3 = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
@@ -83,7 +92,8 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   sent.length = 0;
   const r5 = await S.runSnapshot({ listAll: async () => [{ key: 'team/bad', record: { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z', rehearsal: false } }], windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
   eq('a malformed record found AFTER the read → STILL sends', r5.sent, true);
-  check('…and that subject says FAILED too', /FAILED/.test(sent[0].subject));
+  const s0c = sent[0] || {};
+  check('…and that subject says FAILED too', /FAILED/.test(s0c.subject));
 
   section('restorePlan writes only what is MISSING');
   const machine = S.buildSnapshot(entries, T0).machine;

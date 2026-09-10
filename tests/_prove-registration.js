@@ -216,6 +216,19 @@ const NEEDED = [
      on 3 Aug 2026. Do not add them back to satisfy a check — the check that
      asserts they are GONE is satisfied by their absence from this list too,
      and the fault that proves it CREATES one in the damaged copy. */
+  /* The registration store (Sep 2026). NINTH TIME a new module has had to be
+     added here — same symptom as every time before: the suite dies on
+     MODULE_NOT_FOUND undamaged, the clean baseline does not rise, and every
+     fault reports "caught" while proving nothing. test-regstore.js,
+     test-snapshot.js and test-registrations-admin.js REQUIRE these; the
+     scheduled function and the toml are read as text.
+     _intake.js, _teams.js, _agegroups.js, _registration.js, _ratelimit.js,
+     submit-registration.js, get-registrations.js, get-my-registrations.js
+     and _email.js are already listed above. */
+  path.join('netlify', 'functions', '_regstore.js'),
+  path.join('netlify', 'functions', '_snapshot.js'),
+  path.join('netlify', 'functions', 'snapshot-registrations.js'),
+  path.join('tools', 'registrations-admin.js'),
 ];
 
 /* ⚠️ THE ABOUT-SECTION PHOTO BOARD (5 Aug 2026). test-about-board.js asserts
@@ -253,6 +266,8 @@ function seed() {
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(path.join(TMP, 'netlify', 'functions'), { recursive: true });
   fs.mkdirSync(path.join(TMP, 'assets'), { recursive: true });
+  /* The registration-store CLI tool lives outside netlify/functions. */
+  fs.mkdirSync(path.join(TMP, 'tools'), { recursive: true });
   /* assets/board holds the About-section photos — the folder has to exist
      before NEEDED's entries for it can be written. */
   fs.mkdirSync(path.join(TMP, 'assets', 'board'), { recursive: true });
@@ -2626,13 +2641,17 @@ const FAULTS = [
     expect: ['and only that club'],
   },
   {
-    /* ⚠️ The clubs sheet made fail-HARD like the other two, so a missing
-       GOOGLE_SHEET_ID_CLUBS costs an organiser their Teams and Players tables
-       as well. The "why is this one different?" tidy-up. */
+    /* ⚠️ Re-anchored Sep 2026 — the registration-store build (Task 3,
+       commit 83a2206) rewrote get-registrations.js to read the store
+       instead of Google Sheets and reworded the console.error from "clubs
+       sheet unreadable" to "clubs unreadable", so the old anchor silently
+       stopped matching. The property is unchanged: the clubs sheet made
+       fail-HARD like the other two, so a missing/broken clubs read costs an
+       organiser their Teams and Players tables as well. */
     name: 'the clubs sheet is made fail-hard, taking Teams and Players with it',
     suite: 'test-organizer-clubs.js',
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      '        console.error(\'get-registrations: clubs sheet unreadable -\', err && err.message);\n        return null;                                     // null = could not read',
+      "        console.error('get-registrations: clubs unreadable -', err && err.message);\n        return null;",
       '        throw err;'),
     expect: ['does not take Teams and Players with it'],
   },
@@ -2829,10 +2848,20 @@ const FAULTS = [
     expect: ['every reply is no-store'],
   },
   {
-    name: 'the append goes back to USER_ENTERED, making a typed "=" a live formula',
-    suite: 'test-intake.js',
-    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "          valueInputOption: 'RAW',", "          valueInputOption: 'USER_ENTERED',"),
-    expect: ['the append is RAW', 'USER_ENTERED has not crept back'],
+    /* ⚠️ Re-anchored Sep 2026 — submit-registration.js's Google Sheets
+       append (`valueInputOption: 'RAW'`) was deleted outright by Task 2 of
+       the registration-store build: writes go to Netlify Blobs now, which
+       has no "treat this as a live formula" mode to turn on by accident.
+       But the PROPERTY this fault guarded — a registrant-typed leading
+       =/+/-/@ must never become a live spreadsheet formula — is still very
+       much alive: it moved to the CSV the snapshot emails out, neutralised
+       by csvCell() in _snapshot.js and asserted in test-snapshot.js's "CSV
+       cells are spreadsheet-safe" section. Repointed there. */
+    name: 'the formula-injection guard is dropped from the emailed CSV, making a typed "=" a live formula',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'),
+      "  if (/^[=+\\-@]/.test(s)) s = \"'\" + s;\n", ''),
+    expect: ['leading = is neutralised'],
   },
   {
     name: 'the catch-all logs the whole event',
@@ -2854,6 +2883,32 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "⚠️ THIS BLOB HOLDS CHILDREN'S PERSONAL DATA.", 'Note:'),
     expect: ['says out loud what that blob contains'],
   },
+  /* ⚠️ KNOWN RED, PENDING THE GOOGLE CUTOVER (Task 8 fix pass, Sep 2026) —
+     'a reader is given the WRITING scope' below cannot be injected and is
+     LEFT FAILING ON PURPOSE.
+
+     Its find string, `    const auth = getReadAuth();`, was deleted from
+     get-registrations.js by Task 3 of the registration-store build (commit
+     83a2206, "The two readers read the store"), which replaced the whole
+     Google Sheets read with a Netlify Blobs read via _regstore.js. The
+     property this fault guarded — a reader must use a narrow, read-only
+     Google credential rather than the writer's read-write one — has no
+     equivalent under Blobs: Blobs has no read-only/read-write scope split
+     at all, so there is nothing to widen and nothing to repoint this fault
+     at. (test-intake.js's own checks were already repointed the same way,
+     Task 3 — see the TOMBSTONE comment above 'there is a read-only auth as
+     well as a writing one' a few lines up — to a more general "readers
+     don't call ANY Google auth" pair of checks. That pair is not currently
+     exercised by any fault either; making a fault for it would mean
+     authoring a new fault, not repointing this one, and is out of this
+     pass's scope.)
+
+     DO NOT delete this fault to make the count green. It retires only when
+     `netlify/functions/_sheets.js` itself is deleted (it still exists on
+     disk, unused by anything as of this pass — confirmed by grepping every
+     file under netlify/functions/ for `require('./_sheets')` and finding
+     none). When that deletion happens, retire this fault WITH A TOMBSTONE
+     comment here saying so — do not just drop it silently. */
   {
     name: 'a reader is given the WRITING scope',
     suite: 'test-intake.js',
@@ -2978,11 +3033,37 @@ const FAULTS = [
     /* Re-anchored Aug 2026 — the import became resolveSession when the door
        started re-reading the account. Still the same fault: drop the require
        and the handler throws a ReferenceError, which becomes a 500, which
-       looks exactly like "there is no data". */
+       looks exactly like "there is no data".
+       Re-anchored AGAIN Sep 2026 — Task 3 of the registration-store build
+       added `blobStore` to this same destructure (get-registrations.js now
+       reads the store, not just checks a session), so the two-name anchor
+       stopped matching. Same fault, same require line, one more name in it. */
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      "const { resolveSession, sessionRefusal } = require('./_auth');\n", ''),
+      "const { resolveSession, sessionRefusal, blobStore } = require('./_auth');\n", ''),
     expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
   },
+  /* ⚠️ KNOWN RED, PENDING THE GOOGLE CUTOVER (Task 8 fix pass, Sep 2026) —
+     'a reader loses a function its handler calls (the other half of it)'
+     below cannot be injected and is LEFT FAILING ON PURPOSE.
+
+     Its find string patched the start of `async function readRows(auth,
+     spreadsheetId, columns) { const sheets = sheetsClient(auth); ...`, a
+     whole function that Task 3 of the registration-store build (commit
+     83a2206) deleted along with the rest of the Google Sheets read path in
+     get-registrations.js — the handler now calls `listRecords` and
+     `shapeForReaders` from _regstore.js instead. The property this fault
+     guarded — a handler survives being called after a function it depends
+     on silently disappears — is a real, general property that COULD in
+     principle be re-tested against one of those two new calls, but doing
+     that is authoring a new fault against a different function, not
+     repointing this one to an equivalent. That is out of this pass's scope
+     (this pass repoints anchors that moved; it does not design new faults).
+
+     DO NOT delete this fault to make the count green. It retires only when
+     `netlify/functions/_sheets.js` itself is deleted (it still exists on
+     disk, unused by anything as of this pass). When that deletion happens,
+     retire this fault WITH A TOMBSTONE comment here saying so — do not just
+     drop it silently. */
   {
     name: 'a reader loses a function its handler calls (the other half of it)',
     suite: 'test-functions-load.js',
@@ -8967,10 +9048,18 @@ const FAULTS = [
     expect: ['a matching EMAIL on a password account does not sign in'],
   },
   {
+    /* ⚠️ Re-anchored Sep 2026 — NOT a registration-store fault; caught during
+       Task 8's clean-up. Commit 92ce3f3 ("Auto-approve a Club Hub sign-in
+       from the person's squads"), already on this branch before Task 8
+       started, inverted the pending check from `if (!existing.approved ||
+       !existing.role) { ...pending... }` to `if (existing.approved &&
+       existing.role) { ...signed in... } else { ...pending... }`, so the
+       negated find string stopped matching. Same property: a pending
+       account must still be refused with 403 on a second sign-in. */
     name: 'hub-auth signs in a pending account',
     suite: 'test-hub-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
-      '      if (!existing.approved || !existing.role) {', '      if (false) {'),
+      '      if (existing.approved && existing.role) {', '      if (true) {'),
     expect: ['a second sign-in while pending is still 403'],
   },
   {
@@ -9429,6 +9518,92 @@ const FAULTS = [
       "const HUB_PROJECT_REF = 'lusmshimxdcxpnrktlgz';",
       "const HUB_PROJECT_REF = process.env.HUB_PROJECT_REF || 'lusmshimxdcxpnrktlgz';"),
     expect: ['does not come from an environment variable'],
+  },
+
+  /* ---- the registration store (Sep 2026) ---- */
+  {
+    name: 'writeOnce is made to overwrite an existing key',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'), "  if (existing !== null && existing !== undefined) throw new Error('exists: ' + key);", '  // overwrite'),
+    expect: ['a second write to the same key is REFUSED'],
+  },
+  {
+    name: 'the rehearsal prefix test is dropped',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'), "  return /^\\s*rehearsal\\b/i.test(String(club || ''));", '  return false;'),
+    expect: ['"Rehearsal Quins" is a rehearsal'],
+  },
+  {
+    name: 'superseded records are shown',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'), '  return all.filter((e) => !superseded.has(e.key));', '  return all;'),
+    expect: ['hides the SUPERSEDED record'],
+  },
+  {
+    name: 'team numbering counts player records instead',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'), "  const live = await listRecords(store, 'team-registration');\n  return live.map((e) => e.record.row);", "  const live = await listRecords(store, 'player-registration');\n  return live.map((e) => e.record.row);"),
+    expect: ['numbering rows are live team rows only'],
+  },
+  {
+    name: 'the front door appends to a sheet again',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), 'await writeOnce(store, makeKey(form, nowMs), buildRecord({ form, row, nowMs, club }));', 'await sheets.spreadsheets.values.append({});'),
+    expect: ['appendRow writes through writeOnce'],
+  },
+  {
+    name: 'the manager reader filters by the request instead of the token',
+    suite: 'test-regstore.js',
+    apply: () => patch(path.join('netlify', 'functions', 'get-my-registrations.js'), 'const allowedName = seesEverything ? null : AGE_GROUP_NAME_BY_ID[session.ageGroupId];', 'const allowedName = seesEverything ? null : AGE_GROUP_NAME_BY_ID[JSON.parse(event.body || "{}").ageGroup];'),
+    expect: ['filters by the TOKEN age group'],
+  },
+  {
+    name: 'the snapshot skips the last record',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), 'records: entries.map((e) => ({ key: e.key, record: e.record })) },', 'records: entries.slice(0, -1).map((e) => ({ key: e.key, record: e.record })) },'),
+    expect: ['machine file carries EVERY entry'],
+  },
+  {
+    name: 'a store failure is swallowed and no email goes',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), "  if (failure !== null) {", "  if (failure !== null) { return { sent: false, subject: '', error: failure }; }\n  if (false) {"),
+    expect: ['store unreadable → STILL sends'],
+  },
+  {
+    name: 'the snapshot recipient is taken from the entries',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), 'await deps.sendMail({ to: deps.mailFrom, subject: snap.subject, html, attachments });', "await deps.sendMail({ to: (entries[0] && entries[0].record.row[1]) || deps.mailFrom, subject: snap.subject, html, attachments });"),
+    expect: ['to the tournament mailbox ONLY'],
+  },
+  {
+    name: 'restorePlan includes present keys (would overwrite)',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), '  const missing = machine.records.filter((r) => r && r.key && !existingKeys.has(r.key));', '  const missing = machine.records.filter((r) => r && r.key);'),
+    expect: ['a present key is never in the plan'],
+  },
+  {
+    name: 'canDelete lets an older snapshot through',
+    suite: 'test-snapshot.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), '  return { ok: t >= Date.parse(newest), newest };', '  return { ok: true, newest };'),
+    expect: ['snapshot OLDER than the newest record → refused'],
+  },
+  {
+    name: 'the CLI restores without the confirm count',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), '      if (confirm === undefined || Number(confirm) !== plan.missing.length) {', '      if (false) {'),
+    expect: ['no --confirm → refused'],
+  },
+  {
+    name: 'the CLI deletes without a snapshot',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), "      if (!snapPath) { io.out('REFUSED: --snapshot <file> is required — a delete needs a copy first'); return 2; }\n      const machine = readSnapshot(io, snapPath);", "      const machine = snapPath ? readSnapshot(io, snapPath) : { takenAt: '9999-01-01T00:00:00.000Z', records: [] };"),
+    expect: ['no --snapshot → refused'],
+  },
+  {
+    name: '--rehearsal deletes a real record too',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('netlify', 'functions', '_snapshot.js'), '  return entries.filter((e) => !rehearsalOnly || e.record.rehearsal === true).map((e) => e.key);', '  return entries.map((e) => e.key);'),
+    expect: ['only the rehearsal record is gone'],
   },
 
 ];

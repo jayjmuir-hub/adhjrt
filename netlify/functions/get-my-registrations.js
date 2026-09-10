@@ -9,19 +9,11 @@
 // like get-registrations.js. This endpoint simply applies the same
 // own-age-group rule the rest of the backend already uses.
 //
-// Reuses the same GOOGLE_* / SESSION_SECRET environment variables as
-// get-registrations.js and submission-created.js, and is read-only on the
-// sheets (spreadsheets.readonly scope).
-
-const { resolveSession, sessionRefusal } = require('./_auth');
-/* Service-account auth and the private-key repair, in one place — they used
-   to be written out in this file and two others. See _sheets.js. */
-const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
-
-/* The sheet column order, the field names /organizer expects, and the two row
-   mappers. All three used to be written out by hand in this file AND in the
-   other reader AND in submission-created.js — see _intake.js. */
-const { mapTeamRow, mapPlayerRow, TEAM_RANGE, PLAYER_RANGE } = require('./_intake');
+// Reads the registrations store (Sep 2026; it read two Google Sheets before
+// that — see RESTORE.md § Registration store).
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
+const { mapTeamRow, mapPlayerRow, mapClubRow } = require('./_intake');
+const { STORE_NAME, listRecords, shapeForReaders } = require('./_regstore');
 
 // Age-group id -> public name. This MUST mirror AGE_GROUPS in scores-data.js
 // and AGE_GROUP_INFO in "Quins JRT.dc.html". The registration form submits
@@ -40,50 +32,35 @@ const AGE_GROUP_NAME_BY_ID = {
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-async function readRows(auth, spreadsheetId, columns) {
-  const sheets = sheetsClient(auth);
-  const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const [, ...rows] = res.data.values || [[]]; // skip header row
-  return rows;
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    /* `sess`, not `auth` — getReadAuth() below already owns that name here. */
     const sess = await resolveSession(event);
-    if (!sess.ok) {
-      return sessionRefusal(sess);
-    }
+    if (!sess.ok) return sessionRefusal(sess);
     const session = sess.session;
 
-    // Decide what this session may see, from the TOKEN only. Organizers and
-    // the "*" admin-manager see every group; an ordinary manager sees exactly
-    // one, resolved to the age-group NAME stored in the sheet.
+    // From the TOKEN only. Organizers and the "*" admin-manager see every
+    // group; an ordinary manager sees exactly one, by age-group NAME.
     const seesEverything = session.role === 'organizer' || session.ageGroupId === '*';
     const allowedName = seesEverything ? null : AGE_GROUP_NAME_BY_ID[session.ageGroupId];
     if (!seesEverything && !allowedName) {
-      // Manager token with no / unknown age group — fail closed, show nothing.
       return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'No age group is set on this account.' }) };
     }
 
-    const auth = getReadAuth();
-    const [teamRows, playerRows] = await Promise.all([
-      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
-      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),
+    const store = blobStore(STORE_NAME);
+    const [teams, players] = await Promise.all([
+      listRecords(store, 'team-registration'),
+      listRecords(store, 'player-registration'),
     ]);
-
+    const shaped = shapeForReaders({ teams, players, clubs: [] }, { mapTeamRow, mapPlayerRow, mapClubRow });
     const keep = (row) => seesEverything || norm(row.ageGroup) === norm(allowedName);
-    const teams = teamRows.map(mapTeamRow).filter(keep);
-    const players = playerRows.map(mapPlayerRow).filter(keep);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ ok: true, scope: allowedName || 'all', teams, players }),
+      body: JSON.stringify({ ok: true, scope: allowedName || 'all', teams: shaped.teams.filter(keep), players: shaped.players.filter(keep) }),
     };
   } catch (err) {
-    console.error('get-my-registrations error:', err);
+    console.error('get-my-registrations error:', err && err.message);
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Server error.' }) };
   }
 };

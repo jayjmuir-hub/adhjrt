@@ -121,6 +121,21 @@ section('⚠️ Write once — the rule everything else leans on');
       check('no sheet read remains on the front door', !/values\.get/.test(door));
       check('the dead letter (parkFailed) is untouched', /parkFailed:[\s\S]*?failed-submissions\//.test(door));
 
+      section('The readers read the store, in the same shape');
+      for (const f of ['get-registrations.js', 'get-my-registrations.js']) {
+        const src = readRepo('netlify/functions/' + f);
+        check(`${f} requires _regstore`, /require\(['"]\.\/_regstore['"]\)/.test(src));
+        check(`${f} lists live records`, /listRecords\(/.test(src));
+        check(`${f} shapes through the shared mappers`, /shapeForReaders\(/.test(src));
+        check(`${f} no longer reads a sheet`, !/sheetsClient|firstSheetName|GOOGLE_SHEET_ID/.test(src));
+        check(`${f} still resolves the session first`, /resolveSession\(event\)/.test(src));
+      }
+      const org = readRepo('netlify/functions/get-registrations.js');
+      check('organiser reader still refuses non-organisers', /role !== 'organizer'/.test(org));
+      check('organiser reader still answers clubsUnavailable', /clubsUnavailable/.test(org));
+      const mine = readRepo('netlify/functions/get-my-registrations.js');
+      check('manager reader still filters by the TOKEN age group, not the request', /session\.ageGroupId/.test(mine) && !/event\.body[\s\S]*ageGroup/.test(mine));
+
       summary('test-regstore.js');
     });
   })();

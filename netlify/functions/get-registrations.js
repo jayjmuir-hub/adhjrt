@@ -1,89 +1,56 @@
 // netlify/functions/get-registrations.js
 //
-// Returns the live team & player registrations from the two Google
-// Sheets, for a signed-in Organizer. Requires an Authorization: Bearer
-// <token> header minted by login.js, google-auth.js or organizer-signup.js
-// — the
-// token is verified here (see _auth.js), so the sheets themselves never
-// need to be public.
-//
-// Setup: the same GOOGLE_SERVICE_ACCOUNT_* / GOOGLE_SHEET_ID_* vars as
-// submission-created.js, plus SESSION_SECRET (see organizer-signup.js).
-const { resolveSession, sessionRefusal } = require('./_auth');
-
-/* Service-account auth and the private-key repair, in one place — they used
-   to be written out in this file and two others. See _sheets.js. */
-const { getReadAuth, firstSheetName, sheetsClient } = require('./_sheets');
-
-/* The sheet column order, the field names /organizer expects, and the two row
-   mappers. All three used to be written out by hand in this file AND in the
-   other reader AND in submission-created.js — see _intake.js. */
-const { mapTeamRow, mapPlayerRow, mapClubRow, TEAM_RANGE, PLAYER_RANGE, CLUB_RANGE } = require('./_intake');
-
-
-async function readRows(auth, spreadsheetId, columns) {
-  const sheets = sheetsClient(auth);
-  const range = `${await firstSheetName(sheets, spreadsheetId)}!${columns}`;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const [, ...rows] = res.data.values || [[]]; // skip header row
-  return rows;
-}
+// Returns every team, player and club registration for a signed-in
+// ORGANIZER. Reads the registrations store (Sep 2026; it read three Google
+// Sheets before that — see RESTORE.md § Registration store). The token is
+// verified here (_auth.js), so the store is never exposed.
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
+const { mapTeamRow, mapPlayerRow, mapClubRow } = require('./_intake');
+const { STORE_NAME, listRecords, shapeForReaders } = require('./_regstore');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method not allowed' };
   try {
-    /* `sess`, not `auth` — getReadAuth() below already owns that name here. */
     const sess = await resolveSession(event);
-    if (!sess.ok) {
-      return sessionRefusal(sess);
-    }
+    if (!sess.ok) return sessionRefusal(sess);
     if (sess.session.role !== 'organizer') {
       return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Only tournament organisers can see every age group’s registrations.' }) };
     }
 
-    const auth = getReadAuth();
+    const store = blobStore(STORE_NAME);
 
-    /* ⚠️ THE CLUBS SHEET IS READ SEPARATELY AND FAILS SOFT, unlike the other
-       two. Club declarations are a planning nicety; teams and players are the
-       tournament. GOOGLE_SHEET_ID_CLUBS is the newest of the three variables
-       and the club feature has already been added, removed and restored once —
-       if that sheet is missing, renamed or unshared, an organiser must still
-       get their Teams and Players tables rather than an empty dashboard and a
-       500. Everything else here stays fail-hard on purpose. */
+    /* Clubs FAIL SOFT, as they always have: a declaration is a planning
+       nicety; teams and players are the tournament. null = could not read,
+       told apart from "nobody has declared yet" by clubsUnavailable. */
     const readClubs = async () => {
-      try {
-        if (!process.env.GOOGLE_SHEET_ID_CLUBS) return [];
-        return await readRows(auth, process.env.GOOGLE_SHEET_ID_CLUBS, CLUB_RANGE);
-      } catch (err) {
-        /* The message only, and never a row — this sheet holds contact details. */
-        console.error('get-registrations: clubs sheet unreadable -', err && err.message);
-        return null;                                     // null = could not read
+      try { return await listRecords(store, 'club-registration'); } catch (err) {
+        console.error('get-registrations: clubs unreadable -', err && err.message);
+        return null;
       }
     };
 
-    const [teamRows, playerRows, clubRows] = await Promise.all([
-      readRows(auth, process.env.GOOGLE_SHEET_ID_TEAMS, TEAM_RANGE),
-      readRows(auth, process.env.GOOGLE_SHEET_ID_PLAYERS, PLAYER_RANGE),
+    const [teams, players, clubs] = await Promise.all([
+      listRecords(store, 'team-registration'),
+      listRecords(store, 'player-registration'),
       readClubs(),
     ]);
 
+    const shaped = shapeForReaders({ teams, players, clubs: clubs || [] }, { mapTeamRow, mapPlayerRow, mapClubRow });
     return {
       statusCode: 200,
       body: JSON.stringify({
         ok: true,
-        teams: teamRows.map(mapTeamRow),
-        players: playerRows.map(mapPlayerRow),
-        clubs: (clubRows || []).map(mapClubRow),
+        ...shaped,
         /* ⚠️ Told apart from "no club has declared yet". An empty list and a
-           broken sheet look identical on screen, and the Clubs tab would
+           broken store look identical on screen, and the Clubs tab would
            cheerfully report "0 declared" for a tournament where twenty clubs
-           had declared — the loading-vs-empty trap the dataError banner exists
-           for, one level down. */
-        clubsUnavailable: clubRows === null,
+           had declared — the loading-vs-empty trap the dataError banner
+           exists for, one level down. */
+        clubsUnavailable: clubs === null,
       }),
     };
   } catch (err) {
-    console.error('get-registrations error:', err);
+    console.error('get-registrations error:', err && err.message);
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Server error.' }) };
   }
 };

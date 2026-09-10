@@ -255,10 +255,15 @@ async function callIt(f, mod, method) {
       String(res && res.body).slice(0, 200));
     check(`${f} returns a list of teams`, !!parsed && Array.isArray(parsed.teams));
     check(`${f} returns a list of players`, !!parsed && Array.isArray(parsed.players));
-    /* The stub sheet has a header row and nothing under it, so the honest
-       answer is two empty lists — not undefined, and not a crash. */
-    eq(`${f}: an empty sheet gives no teams`, parsed && parsed.teams && parsed.teams.length, 0);
-    eq(`${f}: an empty sheet gives no players`, parsed && parsed.players && parsed.players.length, 0);
+    /* ⚠️ TOMBSTONE — until Task 3 (Sep 2026) this comment said "the stub sheet
+       has a header row and nothing under it". The two readers no longer read
+       a sheet at all; they list the registrations store (_regstore.js), and
+       the @netlify/blobs stub above answers list() with {blobs: []} for any
+       prefix. Same honest answer either way — two empty lists, not undefined
+       and not a crash — so the assertion survives unchanged; only what makes
+       it true has moved. */
+    eq(`${f}: an empty store gives no teams`, parsed && parsed.teams && parsed.teams.length, 0);
+    eq(`${f}: an empty store gives no players`, parsed && parsed.players && parsed.players.length, 0);
   }
 
   /* The organiser-only endpoints must still refuse a MANAGER, and that branch

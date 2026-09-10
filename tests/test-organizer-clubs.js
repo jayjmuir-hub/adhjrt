@@ -426,9 +426,12 @@ section('The declarations reach the page at all');
      rather than trusted: the function returns clubs, the data layer passes
      them through, and loadData stores them. */
   const fn = readRepo('netlify/functions/get-registrations.js');
-  check('the function reads the clubs sheet', /GOOGLE_SHEET_ID_CLUBS/.test(fn));
-  check('…through the shared range and mapper, not a hand-written copy',
-    /CLUB_RANGE/.test(fn) && /mapClubRow/.test(fn));
+  /* ⚠️ TOMBSTONE — until Task 3 (Sep 2026) this checked the sheet read:
+     GOOGLE_SHEET_ID_CLUBS and CLUB_RANGE. The clubs reader now lists the
+     registration store, so those two names are gone from the file on
+     purpose, not by accident. Repointed, not deleted — see _regstore.js. */
+  check('the function reads the club records from the store', /listRecords\(store, 'club-registration'\)/.test(fn));
+  check('…through the shared mapper, not a hand-written copy', /mapClubRow/.test(fn));
   check('…and returns them', /clubs:/.test(fn));
   /* ⚠️ FAILS SOFT, alone among the three sheets. Club declarations are a
      planning nicety; teams and players are the tournament. A missing or

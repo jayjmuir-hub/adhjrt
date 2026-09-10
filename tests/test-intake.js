@@ -1808,9 +1808,12 @@ section('The Google client lives in one place now');
     check(`${f} has no copy of getAuth()`, !/function getAuth\(/.test(code));
     check(`${f} has no copy of firstSheetName()`, !/async function firstSheetName\(/.test(code));
     check(`${f} does not reach for googleapis directly`, !/require\('googleapis'\)/.test(code));
-    /* submit-registration.js uses _regstore.js (Sep 2026), the readers use _sheets.js. */
-    const expect = f === 'submit-registration.js' ? /require\('\.\/_regstore'\)/ : /require\('\.\/_sheets'\)/;
-    check(`${f} asks the right module`, expect.test(code));
+    /* ⚠️ TOMBSTONE — until Task 3 (Sep 2026) this expected the two readers to
+       require './_sheets' and only submit-registration.js to require
+       './_regstore'. The readers now read the registrations store too (see
+       get-registrations.js, get-my-registrations.js), so all three ask the
+       same module. Repointed, not deleted. */
+    check(`${f} asks the right module`, /require\('\.\/_regstore'\)/.test(code));
   });
 
   const sheets = readRepo(path.join('netlify', 'functions', '_sheets.js')).replace(/\r\n/g, '\n');
@@ -1821,11 +1824,19 @@ section('The Google client lives in one place now');
   check('there is a read-only auth as well as a writing one', /function getReadAuth\(/.test(sheets));
   check('…and it really is read-only', /spreadsheets\.readonly/.test(sheets));
   check('…while the writer is not', /'https:\/\/www\.googleapis\.com\/auth\/spreadsheets'/.test(sheets));
+  /* ⚠️ TOMBSTONE — until Task 3 (Sep 2026) this checked that the two readers
+     called _sheets.js's getReadAuth() and never its getAuth(), because they
+     used to read Google Sheets through it. The readers no longer touch
+     _sheets.js at all — they list the registrations store (_regstore.js) —
+     so the read-only-vs-writing split this guarded is moot for them;
+     _sheets.js itself is untouched, only unused by these two now. Repointed
+     to the regression this protects against today: a reader reaching for
+     ANY Google auth would be a step backwards. */
   const readers = ['get-registrations.js', 'get-my-registrations.js'];
   readers.forEach((f) => {
     const code = readRepo(path.join('netlify', 'functions', f)).replace(/\r\n/g, '\n');
-    check(`${f} uses the read-only auth`, /getReadAuth\(\)/.test(code));
-    check(`…and not the writing one`, !/[^d]getAuth\(\)/.test(code));
+    check(`${f} does not call getReadAuth() any more`, !/getReadAuth\(\)/.test(code));
+    check(`${f} does not call getAuth() either`, !/[^d]getAuth\(\)/.test(code));
   });
   /* The private-key repair itself. Both breakages were real. */
   check('the quote-stripping repair survived the move', /k\.slice\(1, -1\)/.test(sheets));

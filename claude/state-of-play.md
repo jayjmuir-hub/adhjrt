@@ -389,7 +389,8 @@ spec makes stripping them part of the change.
 
 Jay asked Sportsman's Arms and The Bottle Store off the homepage supporters
 grid. Brighton College Abu Dhabi was already a sponsor and is untouched.
-HSBC stays principal. Not merged.
+HSBC stays principal. **Merged and live** as `0ff077a` (squash of PR #19) on
+3 Sep 2026. Sixteen supporters remain. Do not re-implement the product change.
 
 ## 3 Sep 2026 — tournament dates restored to 7–8 November 2026
 

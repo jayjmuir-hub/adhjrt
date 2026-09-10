@@ -392,9 +392,11 @@ dates ever change, this image carries them and must be re-rendered.
 ## HSBC — the principal partner
 
 HSBC are the tournament's **principal partner**. ⚠️ **They are no longer the
-only confirmed sponsor** — eighteen supporters shipped in the grid on
-5 Aug 2026 (this sentence said otherwise until 7 Aug, contradicting the
-supporters-grid section below it in this same file). HSBC stays ABOVE and
+only confirmed sponsor** — sixteen supporters sit in the live grid (eighteen
+shipped on 5 Aug 2026; The Bottle Store and Sportsman's Arms came off on
+3 Sep 2026 in squash-merge `0ff077a`, PR #19). This sentence said HSBC were
+the only confirmed sponsor until 7 Aug, contradicting the supporters-grid
+section below it in this same file. HSBC stays ABOVE and
 SEPARATE from that grid; do not demote them into a row of equals.
 ⚠️ **FIVE PLACES ON THE HOMEPAGE SINCE 8 AUG 2026, NOT THREE.** This sentence
 said three until then, and it was already wrong when the mobile hero lockup
@@ -521,45 +523,53 @@ supporters. Folding the two into one wall is the obvious visual tidy-up and it
 demotes the tournament's only confirmed partner. Asserted three ways, with a
 fault that injects exactly that merge.
 
-### ⚠️ NOTHING IN THIS GRID IS RECOLOURED
+### ⚠️ EVERY TILE IS DARK — the white-box / checkerboard split is gone
 
-Jay: *"put them on the black background, anything that was changed can just go
-in a white box."* Every file is the sponsor's own artwork in their own colours.
-A mark that does not read on the dark tile gets a **white box** rather than
-being repainted.
-
-**The split is MEASURED, not chosen** — median WCAG contrast of the ink against
-`#151517`, white box below 4.5:1. That is why it is **nine and nine**, and why
-the nine are not the nine anybody would guess. **Re-measure when a file is
-replaced; never copy the flag from a neighbour.**
+Jay supplied dark-mode artwork and chose all-dark on 11 Aug 2026. **No row
+carries `light: true`.** The live sixteen, in list order:
 
 | | |
 |---|---|
-| **White box** (`light: true`) | Brighton College, BEOND, Westminster, Broadway Malyan, The Bottle Store, Align Health, Anderson, Crompton Partners, Recover |
-| **Dark tile** | Oak View Group, V&P, Ashurst, Sedbergh, McCafferty's, The Sportsman's Arms, Yas Mena Cycles, Arabian Swim Academy, Bili Boys |
+| **White box** (`light: true`) | none |
+| **Dark tile** | Crompton Partners, Oak View Group, Brighton College Abu Dhabi, V&P, BEOND, Ashurst Perkins Coie, Westminster, Sedbergh, Broadway Malyan, McCafferty's, Align Health, Yas Mena Cycles, Anderson, Arabian Swim Academy, Recover, Bili Boys |
 
-The tile's background and border are **derived from the flag** in
-`renderVals()` — the data says what the ARTWORK is, not what colour to paint a
-box, so the two greys live in one place.
+Do not put The Bottle Store or Sportsman's Arms back into that table. They
+were two of the original eighteen and came off on 3 Sep 2026 (`0ff077a`,
+PR #19).
 
-### ⚠️ THE TILES ALTERNATE, AND THE ORDER OF THE LIST IS WHAT DOES IT
+The tile background and border are **derived in one place** in
+`renderVals()` (`bg` / `edge`), not painted per row.
 
-Jay, 5 Aug: *"can we do them every other is dark, every other is white."* The
-checkerboard is achieved by **ORDERING `SPONSORS` so `light` alternates**, NOT
-by an `:nth-child` rule on the markup.
+### ⚠️ TOMBSTONE — the 5 Aug white-box checkerboard (do not restore it)
 
-**The difference is the whole safety of it.** A positional CSS rule paints every
-other tile white regardless of what is in it, so adding ONE sponsor flips nine
-logos onto the wrong ground — and the three that exist only as white files
-VANISH, reporting no error anywhere. Ordering keeps the colour following the
-ARTWORK; the alternation is a property of the list. Both are asserted.
+Until 11 Aug the tiles alternated dark/white. Jay, 5 Aug: *"can we do them
+every other is dark, every other is white."* Nine rows carried `light: true`
+because a mark that did not read on `#151517` got a **white box** rather than
+being repainted — measured (median WCAG contrast of the ink against the tile,
+white box below 4.5:1), not guessed, which is why that split came out **nine
+and nine** and why the nine were not the nine anybody would guess.
 
-⚠️ **It only works because it is exactly nine and nine**, which the measurement
-happened to produce. **A nineteenth sponsor breaks the alternation**, and the
-fix is NOT to flip its tile: measure it, put it in its half, and accept one
-repeat. There is a fault that regroups the list to prove the check fires.
+The original eighteen split was:
 
-**Crompton Partners leads** at Jay's request (5 Aug), so the run starts WHITE.
+| | |
+|---|---|
+| **White box then** | Brighton College, BEOND, Westminster, Broadway Malyan, The Bottle Store, Align Health, Anderson, Crompton Partners, Recover |
+| **Dark tile then** | Oak View Group, V&P, Ashurst, Sedbergh, McCafferty's, The Sportsman's Arms, Yas Mena Cycles, Arabian Swim Academy, Bili Boys |
+
+The checkerboard came from **ORDERING `SPONSORS` so `light` alternated**, NOT
+from an `:nth-child` rule. A positional CSS rule paints every other tile
+white regardless of what is in it, so adding ONE sponsor flipped nine logos
+onto the wrong ground — and three logos that existed only as white files
+(Oak View Group, V&P, Yas Mena Cycles) would have vanished with no error.
+It only worked because the measurement happened to be exactly nine and nine;
+a nineteenth sponsor broke the alternation. **Crompton Partners led** at
+Jay's request, so that run started WHITE.
+
+That design is gone: all-dark artwork removed the flag, the measurement, and
+the order-is-load-bearing rule. Adding a sponsor is one row and one file,
+anywhere in the list. Tests were **repointed, not deleted** — they now assert
+`light: true` is absent and every tile is dark. Without this note, the next
+session restores the checkerboard because it was Jay's own request.
 
 ### ⚠️ FLEX, NOT GRID — because of the last row
 
@@ -572,19 +582,17 @@ time a sponsor signs. The 260px cap stops a short last row stretching into three
 enormous tiles; `.spon-tile` lifts it below 640px, where there is only one tile
 per row anyway.
 
-⚠️ **THREE LOGOS CAN NEVER TAKE A WHITE BOX**: Oak View Group, V&P and Yas Mena
-Cycles exist **only** as white-on-transparent files, so a white tile would erase
-them outright. Asserted by name, with a fault that adds the flag to Yas Cycles.
+⚠️ **THREE LOGOS USED TO BE UNABLE TO TAKE A WHITE BOX** (the 5 Aug
+constraint; historical). Oak View Group, V&P and Yas Mena Cycles existed
+**only as white-on-transparent files**, so a white tile would erase them
+outright. That hazard went with the single dark ground. They are still
+asserted *present*, because the risk left behind is a logo quietly dropping
+out of the grid.
 
 ⚠️ **Lightening the WHOLE section was asked for and rejected**, twice, for the
-same reason — those three would vanish. Per-tile is the only version that cannot
-break something that already works.
-
-**Both sides of the split are asserted**, or "nine are light" would pass on a
-grid where every tile had gone white. Faults cover a tenth box appearing, a box
-being dropped (which hides a dark-ink logo with no error anywhere), the tile
-hardcoding one colour again, the border not following the background, and the
-written rule being deleted.
+same reason — those three would vanish. The live answer is all-dark artwork,
+not a white wash over the section. The old "both sides of the split" checks
+were repointed: they now assert no white boxes, not nine-and-nine.
 
 ⚠️ **The "no hardcoded tile colour" check is SCOPED TO THE `sc-for` BLOCK.** The
 HSBC card above it is legitimately `background:#151517`, so a section-wide
@@ -629,11 +637,11 @@ Transparent background, trimmed to the ink, **never upscaled** — a file smalle
 than the house 160px tall is stored at native size rather than padded up, so a
 better file can replace it later with no stretch baked in. Saved as `.webp`.
 
-⚠️ **Bili Boys is the one file with an OPAQUE ground** — a cream badge with a
-printed border. It stays on the dark tile because it is already a box; putting a
-cream rectangle inside a white one is worse. It is also the one logo the
-contrast measurement gets wrong (it reads the ground as ink), so it is pinned by
-hand with the reason written beside it.
+⚠️ **Bili Boys used to be the one file with an OPAQUE ground** — a cream badge
+with a printed border, pinned on the dark half because a cream rectangle
+inside a white one is worse, and because the contrast measurement read the
+ground as ink. That exception went with their dark-mode file (11 Aug). It is
+an ordinary dark-tile row now.
 
 **The recipe for a logo that arrives on a white ground:** key the white out with
 `alpha = 255 - min(r,g,b)`, un-multiply so the ink keeps its true colour, crop
@@ -655,14 +663,17 @@ it.** It is wrong twice:
 
 1. **A fixed height with a clamped width SQUASHES a wide mark** — height fixed,
    width clamped, so it distorts rather than shrinks. Nothing reports it.
-2. **Equal height is not equal presence.** The near-square marks (Ashurst, The
-   Sportsman's Arms, ~1.1:1) read as postage stamps beside a 5:1 wordmark. That
-   is a sponsor-relations problem, not a cosmetic one.
+2. **Equal height is not equal presence.** The near-square marks on the
+   original eighteen (Ashurst, and then Sportsman's Arms, ~1.1:1) read as
+   postage stamps beside a 5:1 wordmark. That is a sponsor-relations problem,
+   not a cosmetic one. Sportsman's Arms is no longer a live tile (3 Sep 2026);
+   the lesson about square vs wordmark still holds for whoever is in the grid.
 
 It was found by looking at a render. **The sizing checks therefore have to
-DISCRIMINATE** — "every row has an `h`" passes against `h:44` on all eighteen,
-i.e. against the bug — so they assert the widest mark ends up SMALLER than
-mid-pack and the squarest end up LARGER, with faults that level each back.
+DISCRIMINATE** — "every row has an `h`" passed against `h:44` on all eighteen
+of the original grid, i.e. against the bug — so they assert the widest mark
+ends up SMALLER than mid-pack and the squarest end up LARGER, with faults
+that level each back.
 
 ⚠️ **And the render that found it was nearly wrong the other way.** The first
 screenshot looked faded, which read as a broken reveal animation. It was an

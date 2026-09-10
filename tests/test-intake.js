@@ -281,10 +281,18 @@ section('The three copies are down to one');
     !/const \[submittedAt, playerFirst/.test(reader1 + reader2 + writer));
   check('the writer uses the store, not the range', /STORE_NAME|writeOnce/.test(writer));
 
-  /* The record is written through writeOnce with no update path. Write-once
-     semantics and the rejection of duplicate keys make it impossible to
-     overwrite a child's registration by accident. */
-  check('the record is written through writeOnce', /writeOnce\(/.test(writer));
+  /* ⚠️ TOMBSTONE — THE `valueInputOption: 'RAW'` CHECK LIVED HERE until Sep 2026.
+     It stopped a registrant's text beginning with = + - or @ becoming a live
+     formula in a sheet holding children's data. Records now go to a Netlify
+     Blobs store as plain strings, where nothing evaluates a formula, so the
+     check could no longer be injected here — its ANCHOR ROTTED. The risk did
+     not go away; it moved to CSV-render time, and it is asserted there:
+     tests/test-organizer-grouping.js, section 'CSV export does not let a
+     leading "+" turn a phone number into a formula', against csvSafe() in
+     Organizer.dc.html. A csvCell() in netlify/functions/_snapshot.js gets the
+     same treatment when the snapshot lands. Do not delete this note without
+     checking both of those still assert it. */
+  check('the writer stores the record through writeOnce', /writeOnce\(/.test(writer));
   check('…and USER_ENTERED has been removed', !/USER_ENTERED'/.test(writer.replace(/\/\*[\s\S]*?\*\//g, '')));
 }
 
@@ -1756,9 +1764,18 @@ section('The function itself stays thin');
   check('there is no CORS header — same origin only',
     !/Access-Control-Allow/i.test(code));
 
-  /* Write-once semantics guarantee no overwrites. The record is stored
-     in the blob, not appended to a sheet. */
-  check('the record is written through writeOnce', /writeOnce\(/.test(code));
+  /* ⚠️ TOMBSTONE — THE `valueInputOption: 'RAW'` CHECK LIVED HERE until Sep 2026.
+     It stopped a registrant's text beginning with = + - or @ becoming a live
+     formula in a sheet holding children's data. Records now go to a Netlify
+     Blobs store as plain strings, where nothing evaluates a formula, so the
+     check could no longer be injected here — its ANCHOR ROTTED. The risk did
+     not go away; it moved to CSV-render time, and it is asserted there:
+     tests/test-organizer-grouping.js, section 'CSV export does not let a
+     leading "+" turn a phone number into a formula', against csvSafe() in
+     Organizer.dc.html. A csvCell() in netlify/functions/_snapshot.js gets the
+     same treatment when the snapshot lands. Do not delete this note without
+     checking both of those still assert it. */
+  check('the thin function stores the record through writeOnce', /writeOnce\(/.test(code));
   check('…and USER_ENTERED has not crept back', !/USER_ENTERED/.test(code));
 
   /* The dead letter has to be namespaced and flagged, because of what is in it. */

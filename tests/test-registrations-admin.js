@@ -9,7 +9,7 @@ const S = require(path.join(repoRoot(), 'netlify/functions/_snapshot.js'));
 const T0 = Date.parse('2026-10-03T08:15:42.117Z');
 const rec = (form, club, nowMs) => R.buildRecord({ form, row: ['x', club], nowMs: nowMs || T0, club });
 
-function fakeIo(seed, files) {
+function fakeIo(seed, files, unreadableKeys) {
   const m = new Map(Object.entries(seed || {}));
   /* ⚠️ TOMBSTONE: the brief's fakeIo defined `out` twice in one object
      literal — once as the array (`out,` shorthand) and once as the
@@ -24,10 +24,18 @@ function fakeIo(seed, files) {
   const lines = [];
   const out = (line) => { lines.push(String(line)); };
   out.some = (pred) => lines.some(pred);
+  /* Optional third arg: keys whose get() throws, simulating a transient CLI
+     failure (expired login, network blip, a non-JSON line of output) rather
+     than a genuinely missing key. Every existing call site omits this and
+     keeps behaving exactly as before. */
+  const badKeys = new Set(unreadableKeys || []);
   return {
     m, out,
     async list(store) { return [...m.keys()].sort(); },
-    async get(store, key) { return m.has(key) ? m.get(key) : null; },
+    async get(store, key) {
+      if (badKeys.has(key)) throw new Error('simulated transient read failure: ' + key);
+      return m.has(key) ? m.get(key) : null;
+    },
     async set(store, key, json) { m.set(key, json); },
     async del(store, key) { m.delete(key); },
     readFile(p) { if (!(p in files)) throw new Error('ENOENT ' + p); return JSON.stringify(files[p]); },
@@ -79,6 +87,62 @@ const snapOld = S.buildSnapshot(Object.entries(full).map(([key, record]) => ({ k
     eq('--all --confirm ALL → exit 0', await A.runTool(['delete', '--all', '--snapshot', 'snap.json', '--confirm', 'ALL'], io), 0);
     eq('empty', io.m.size, 0);
     eq('neither scope flag → refused', await A.runTool(['delete', '--snapshot', 'snap.json'], fakeIo(full, { 'snap.json': snapAll })), 2);
+  }
+
+  section('an unreadable record refuses instead of proceeding on a partial picture');
+  {
+    /* team/b exists (it is in list()) but its get() throws — a stand-in for
+       an expired CLI login, a network blip, or a non-JSON line of CLI
+       output. The old code caught that inside get() and returned null,
+       which made loadEntries() build a store picture with team/b silently
+       missing. */
+    let io = fakeIo(full, { 'snap.json': snapAll }, ['team/b']);
+    let code = await A.runTool(['check', 'snap.json'], io);
+    eq('an unreadable record makes check refuse, exit 2', code, 2);
+    check('…and says how many it could not read', io.out.some((l) => /REFUSED.*\b1\b.*could not be read/.test(l) && l.includes('team/b')));
+
+    io = fakeIo(full, { 'snap.json': snapAll }, ['team/b']);
+    const before = JSON.stringify([...io.m.entries()].sort());
+    code = await A.runTool(['restore', 'snap.json', '--confirm', '0'], io);
+    eq('an unreadable record makes restore refuse rather than overwrite', code, 2);
+    const after = JSON.stringify([...io.m.entries()].sort());
+    eq('…and nothing was written', after, before);
+
+    io = fakeIo(full, { 'snap.json': snapAll }, ['team/b']);
+    code = await A.runTool(['delete', '--rehearsal', '--snapshot', 'snap.json'], io);
+    eq('an unreadable record makes delete refuse', code, 2);
+  }
+
+  section('a key that failed to read still counts as existing — discriminates against building the existing-set from `entries`');
+  {
+    /* team/a is transiently unreadable on this one call: it is in `keys`
+       (from list()) but NOT in `entries` (loadEntries() could not read it).
+       The bug this guards: an existing-set built from `entries` would call
+       team/a MISSING and let a restore write over a live record. */
+    const io = fakeIo(full, { 'snap.json': snapAll }, ['team/a']);
+    const { keys, entries, unreadable } = await A.loadEntries(io);
+    check('team/a is in keys (list() saw it)', keys.includes('team/a'));
+    check('team/a is NOT in entries (the read failed)', !entries.some((e) => e.key === 'team/a'));
+    check('team/a is reported unreadable', unreadable.includes('team/a'));
+
+    const fixedPlan = S.restorePlan(snapAll, new Set(keys));
+    const buggyPlan = S.restorePlan(snapAll, new Set(entries.map((e) => e.key)));
+    /* This label must fail if runTool is put back to building its existing-set
+       from `entries` instead of `keys` — so it asserts BOTH the correct
+       outcome (using keys) AND that runTool's own source is actually wired
+       that way, not just that _snapshot.js's restorePlan works when fed the
+       right input by hand. */
+    const wiredFromKeys = /restorePlan\(machine,\s*new Set\(keys\)\)/.test(readRepo('tools/registrations-admin.js'));
+    check('a key that failed to read still counts as existing', !fixedPlan.missing.some((r) => r.key === 'team/a') && wiredFromKeys);
+    check('…proof: an existing-set built from entries instead would wrongly call it missing', buggyPlan.missing.some((r) => r.key === 'team/a'));
+  }
+
+  section('a snapshot that is not v1 refuses uniformly, exit 2');
+  {
+    const io = fakeIo(full, { 'bad.json': { v: 2, records: [] } });
+    const code = await A.runTool(['check', 'bad.json'], io);
+    eq('a snapshot file that is not v1 refuses with 2, not 1', code, 2);
+    check('message wording is unchanged', io.out.some((l) => /not a v1 snapshot file: bad\.json/.test(l)));
   }
 
   section('The real io shells out to the Netlify CLI — no token anywhere');

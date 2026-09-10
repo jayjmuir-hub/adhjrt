@@ -145,7 +145,7 @@ async function runTool(argv, io) {
       if (!gate.ok) { io.out(`REFUSED: snapshot ${machine.takenAt} is older than the newest record ${gate.newest}. Take a fresh snapshot first.`); return 2; }
       if (all && flag(argv, '--confirm') !== 'ALL') { io.out('REFUSED: --all needs --confirm ALL (upper case)'); return 2; }
       const keys = deletePlan(entries, { rehearsalOnly });
-      io.out(`deleting ${keys.length} ${rehearsalOnly ? 'rehearsal' : ''} record(s)`);
+      io.out(`deleting ${keys.length}${rehearsalOnly ? ' rehearsal' : ''} record(s)`);
       for (const k of keys) { await io.del(STORE_NAME, k); io.out(`deleted ${k}`); }
       io.out(`done: ${keys.length} deleted`);
       return 0;

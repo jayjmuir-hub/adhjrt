@@ -118,10 +118,9 @@ are missing, and you have a snapshot `.json` from before they went missing.
      folder is not linked on this PC. Go back to step 2 of **Before you
      start** and repeat `netlify login` / `netlify link`, then start again
      from step 1 above.
-   - `ERROR: not a v1 snapshot file: <path>` printed as `REFUSED: not a v1
-     snapshot file: <path>` — the file you pointed at is not a snapshot
-     `.json` at all (wrong file, or a `.csv` was given by mistake). Go back to
-     Outlook and re-save the correct `.json` attachment.
+   - `REFUSED: not a v1 snapshot file: <path>` — the file you pointed at is
+     not a snapshot `.json` at all (wrong file, or a `.csv` was given by
+     mistake). Go back to Outlook and re-save the correct `.json` attachment.
 
 ---
 
@@ -206,23 +205,48 @@ when someone runs it.
    line per record, ending `done: K deleted`, where `K` is every record that
    was in the store.
 
-5. **Verify:** `/organizer` → Registrations tab is empty — no rows of any
+5. **If it fails:**
+   - `REFUSED: snapshot <timestamp> is older than the newest record
+     <timestamp>. Take a fresh snapshot first.` — a record was written to the
+     store after the snapshot you gave it was taken. The tool refuses to
+     delete against a stale snapshot, because an old snapshot might not be a
+     true copy of what is about to be deleted — and for this procedure that
+     copy is the only record of the data left once the delete runs. Wait for
+     the next scheduled snapshot (see the closing section below) or trigger
+     one, save the new `.json`, and try again from step 2.
+   - `REFUSED: N record(s) in the store could not be read: <keys>. Nothing
+     deleted — an unreadable newest record could let a stale snapshot through
+     the freshness gate.` — same underlying problem as Procedure A step 3.
+     Nothing is deleted. Re-run once; if it persists, stop and get a person
+     who can read Netlify Blobs directly to look at the named keys.
+   - `REFUSED: --all needs --confirm ALL (upper case)` — the command was
+     missing `--confirm ALL`, or it was typed some other way (lower case
+     `all`, or `--confirm all`). The word must be exactly `ALL`, upper case,
+     nothing else. This check exists so the season's entire dataset cannot be
+     deleted by clicking through a prompt or by a slightly-wrong command that
+     happens to run — re-type the command exactly as shown in step 3, with
+     `--confirm ALL` at the end.
+   - `ERROR: <message>` — same meaning as Procedure A step 6: the CLI is
+     probably not signed in or linked. Redo **Before you start**, step 2, then
+     start again from step 2 above.
+
+6. **Verify:** `/organizer` → Registrations tab is empty — no rows of any
    kind, real or rehearsal.
 
-6. **In Outlook:** delete every email whose subject starts `ADH JRT
+7. **In Outlook:** delete every email whose subject starts `ADH JRT
    registrations snapshot` (including any `FAILED` or `REHEARSAL` ones — they
    carry the same underlying data or describe it), then empty Deleted Items so
    they are not merely hidden. They hold exactly the same personal data as the
    store you just deleted, so leaving them in the mailbox defeats the point of
    deleting the store.
 
-7. **On this PC (and any other PC or folder where a snapshot was ever saved):**
+8. **On this PC (and any other PC or folder where a snapshot was ever saved):**
    delete every downloaded `.json` and `.csv` attachment from step 2 of
    **Before you start** and from any earlier restore/clear you have done.
    Check `Downloads` and anywhere else a snapshot was ever saved to, on every
    PC that has been used for this runbook.
 
-8. Record the date this was done in the season tracker (outside this repo —
+9. Record the date this was done in the season tracker (outside this repo —
    see `claude/state-of-play.md`'s guidance on where "currently" facts belong;
    this runbook itself carries no dates).
 

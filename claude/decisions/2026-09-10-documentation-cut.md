@@ -98,6 +98,43 @@ narrative form of `claude/specs/`.
    unmerged commits exist nowhere else. Rename the old repo `*-archive`,
    make it private, never delete it.
 
+## Cutover hazards — carried from the Club Hub cut, checked here
+
+The Club Hub cut ran first (squash `35ffbf5b`) and hit two things worth
+knowing before step 6 is attempted here. Both were re-measured against this
+repo rather than assumed.
+
+⚠️ **THE RENAME/RECREATE WINDOW IS THE DANGEROUS PART, AND IT IS WORSE HERE
+THAN IT WAS THERE.** GitHub redirects a renamed repository, so every existing
+clone's `origin` keeps working — right up until a new repo claims the old
+name, at which point those origins silently point at the NEW repo. A stale
+clone can then push into the wrong repository, or fetch and read the result
+as "everything was deleted".
+
+This repo has more ways to be caught by that than Club Hub did:
+
+| | |
+|---|---|
+| Clones | two PCs — `jay-pc` (`C:\Users\jayjm\GitHub\adhjrt`) and `cafnet` (`C:\Users\Jay\GitHub\adhjrt`) |
+| Worktrees | at least one lives INSIDE the clone, under `.claude/worktrees/`, and shares its `origin` |
+| Already stale | measured 10 Sep 2026: cafnet's main checkout sat on `dev` at `15afb13` while `origin/dev` had moved on. A stale clone is the normal state here, not the exception |
+| Unique local work | the `club-manager-page` branch exists on `jay-pc` and nowhere else — thirteen finished, unmerged commits. Bundle it BEFORE anything is renamed |
+
+**So the order is: warn every clone and every running session BEFORE the new
+repo is created, not after, with the re-point command already written out.**
+Do not create the new repository while any clone still has the old `origin`.
+
+✅ **ACTIONS SECRETS DO NOT APPLY HERE — MEASURED, WITH A CONTROL.** GitHub
+never shows a stored secret's value again, so on a fresh repo each has to be
+re-entered by hand, and a workflow that treats a missing secret as fatal
+breaks at the cutover rather than degrading. Club Hub had three, all written
+to skip cleanly when empty. **This repo has none to re-enter: there is no
+`.github` directory at all, and `git ls-files` matches zero paths under
+`.github/` against a control of 309 tracked files.** There is no CI here —
+the local suite is the gate, which is why `CONTRIBUTING.md` has to say so.
+If a workflow is ever added, get any load-bearing secret's value in hand
+BEFORE a cutover, never after.
+
 ## Not done, deliberately
 
 - No denylist of real names in any checker — it would put the names in the

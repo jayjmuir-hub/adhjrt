@@ -1,4 +1,58 @@
-# ADH JRT — state of play, 9 September 2026
+# ADH JRT — state of play, 10 September 2026
+
+## 10 Sep 2026 — REGISTRATION STORE built on `dev`, rehearsal pending
+
+Nine tasks, `92ce3f3..29c3836`: `_regstore.js` (the write-once Blobs store),
+the front door (`submit-registration.js`) writing a record instead of a
+sheet row, both readers (`get-registrations.js`, `get-my-registrations.js`)
+reading the store instead of Google Sheets, the scheduled snapshot
+(`_snapshot.js` + `snapshot-registrations.js`, CSVs plus a machine `.json`,
+emailed to `MAIL_FROM`), `tools/registrations-admin.js` (check/restore/
+delete, each gated), its runbook, thirteen new registration-store faults in
+`tests/_prove-registration.js`, and this pair of docs. Behaviour: `RESTORE.md`
+§ Registration store. Spec: `claude/specs/spec-registration-store-sep-2026.md`.
+
+⚠️ **Commit `9dde5f9`'s message describes only its final fix pass, but the
+commit carries the whole of Task 8** — the thirteen new faults, the three
+suites (`test-regstore.js`, `test-snapshot.js`, `test-registrations-admin.js`)
+added to `runall.ps1`, the matching `NEEDED` additions in
+`tests/_prove-registration.js`, and the `seed()` fix that creates `tools/` in
+the prover's temp copy — not just the fault-anchor repoint its subject line
+names. Anyone searching `git log` for when those faults arrived should look
+at `9dde5f9`, not a separate commit; there isn't one.
+
+**Prover, read from `.superpowers/sdd/task-8-report.md`'s final output:**
+`999/1001 faults caught by the named check; 52 suite(s) clean on an
+undamaged copy.` M (suites clean undamaged) rose from 48 to 52 — **four, not
+three.** Three are the new registration-store suites; the fourth is
+`test-functions-load.js`, which had been failing UNDAMAGED since the Task 2
+commit that made `submit-registration.js` `require('./_regstore.js')`,
+because `_regstore.js` (and `_snapshot.js`) were not yet in the prover's
+`NEEDED` list — a pre-existing hole, not counted in the old 48, and the
+exact trap `_prove-registration.js`'s own comments record having happened
+eight times before this build (`_regstore.js`'s entry there is marked the
+NINTH). Adding the two files to `NEEDED` in Task 8 fixed it as a side effect.
+
+⚠️ **Two faults are KNOWN RED, on purpose:** #279 (a reader given the
+WRITING Google-Sheets scope) and #294 (a reader loses the `readRows`
+function its handler calls) both guard properties of the old Google Sheets
+read path that this build deleted — `get-registrations.js` no longer touches
+`_sheets.js` at all, and Netlify Blobs has no read-only/read-write scope
+distinction to test in its place. They are registered in
+`tests/_prove-registration.js` with a comment naming each, their dead `find`
+string, and the retirement obligation: when `netlify/functions/_sheets.js`
+is deleted, both retire WITH A TOMBSTONE in the same commit, never silently.
+Until then the prover cannot read 1001/1001, and that is expected — it is
+not an unnoticed regression.
+
+**What is NOT done.** Google is still wired: `_sheets.js` still exists
+(unused by any function — confirmed nothing under `netlify/functions/`
+requires it any more), the five `GOOGLE_*` environment variables are still
+set in Netlify, and the three registration sheets are untouched. The live
+rehearsal (spec § 12) has not happened and is the gate before any of that
+is removed. Nothing has been deployed; nothing has been merged to `main`.
+`powershell tests/runall.ps1 -NoProve` (the prover was not re-run this pass —
+its numbers above are unchanged from `9dde5f9`): last line `All green.`
 
 ## ✅ 9 Sep 2026 — auto-approve a Club Hub sign-in from the person's squads — LIVE (`92ce3f3`)
 

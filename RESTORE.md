@@ -2200,6 +2200,27 @@ is the PUBLISHED copy and the only thing the public sees.
   `teamNamesFromRegistrations()` is the single source of the naming rule and the
   import review table reads it too, so the two cannot drift.
 
+## Registration store (Sep 2026)
+
+Every accepted registration is ONE record in the Netlify Blobs store
+`registrations`, key `<team|player|club>/<stamp>-<rand>`, holding `row` in
+the sheet column order plus `receivedAt`, `rehearsal` and an optional
+`supersedes`. `_regstore.js` has no update: a correction is a new record and
+the old one is hidden from readers, kept for the snapshot (`listRecords()`
+filters out anything another record names in `supersedes`; `listAll()`, used
+only by the snapshot, keeps everything). Team numbering counts live team
+records — a corrected team does not keep its old code alive for numbering.
+The two readers answer the shapes they always did, plus `rehearsal:
+true|false` per row.
+
+A scheduled function emails a snapshot to `MAIL_FROM` — hourly while the
+registration window is open, 22:00 UTC otherwise — as CSVs plus one `.json`
+machine file. The machine file is the only thing restore reads.
+`tools/registrations-admin.js` restores (adds only), clears rehearsal
+records, or deletes everything, each gated; procedure in
+`claude/runbooks/runbook-registrations-restore-and-delete.md`. Retention is
+manual. Spec: `claude/specs/spec-registration-store-sep-2026.md`.
+
 ## The sheet columns — one copy, at last
 
 `netlify/functions/_intake.js` holds the column order for both registration

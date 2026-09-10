@@ -74,8 +74,17 @@ async function runSnapshot(deps) {
   try { open = !!(await deps.windowOpen()); } catch (err) { open = false; }
   if (!deps.force && !shouldSend(now, open)) return { sent: false, subject: '' };
 
-  let entries = null, failure = null;
-  try { entries = await deps.listAll(); } catch (err) { failure = err && err.message ? err.message : String(err); }
+  /* ⚠️ THE READ AND THE BUILD ARE GUARDED TOGETHER, ON PURPOSE. This used to
+     wrap only listAll(), which made the "always emails" promise above narrower
+     than it claimed: a store that READ fine but held one malformed record threw
+     out of buildCsv and sent nothing — the exact corruption this backup exists
+     to survive. Anything that goes wrong before there is a snapshot to attach
+     must end up on the FAILED path below, not thrown. */
+  let entries = null, snap = null, failure = null;
+  try {
+    entries = await deps.listAll();
+    snap = buildSnapshot(entries, now);
+  } catch (err) { failure = err && err.message ? err.message : String(err); }
 
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const fileStamp = new Date(now).toISOString().replace(/[:.]/g, '-');
@@ -89,8 +98,6 @@ async function runSnapshot(deps) {
     });
     return { sent: true, subject, error: failure };
   }
-
-  const snap = buildSnapshot(entries, now);
   const attachments = [
     { name: `registrations-${fileStamp}.json`, contentType: 'application/json', contentBytes: b64(JSON.stringify(snap.machine)) },
     { name: 'registrations-team.csv', contentType: 'text/csv', contentBytes: b64(snap.csv.team) },

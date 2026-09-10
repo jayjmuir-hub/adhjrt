@@ -80,6 +80,11 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   const r4 = await S.runSnapshot({ listAll: async () => entries, windowOpen: async () => false, now: Date.parse('2026-10-03T09:05:00Z'), sendMail: mailer, mailFrom: 'registrations@adhjrt.com', force: true });
   eq('force overrides the cadence (for the rehearsal)', r4.sent, true);
 
+  sent.length = 0;
+  const r5 = await S.runSnapshot({ listAll: async () => [{ key: 'team/bad', record: { v: 1, form: 'team-registration', receivedAt: '2026-10-03T08:15:42.117Z', rehearsal: false } }], windowOpen: async () => true, now: T0, sendMail: mailer, mailFrom: 'registrations@adhjrt.com' });
+  eq('a malformed record found AFTER the read → STILL sends', r5.sent, true);
+  check('…and that subject says FAILED too', /FAILED/.test(sent[0].subject));
+
   section('restorePlan writes only what is MISSING');
   const machine = S.buildSnapshot(entries, T0).machine;
   const plan = S.restorePlan(machine, new Set(['team/a']));

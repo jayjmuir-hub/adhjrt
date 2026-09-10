@@ -121,6 +121,22 @@ are missing, and you have a snapshot `.json` from before they went missing.
    - `REFUSED: not a v1 snapshot file: <path>` — the file you pointed at is
      not a snapshot `.json` at all (wrong file, or a `.csv` was given by
      mistake). Go back to Outlook and re-save the correct `.json` attachment.
+   - `REFUSED: N record(s) in the snapshot file have no key…` — the snapshot
+     file itself is damaged: it holds records the tool can neither look for in
+     the store nor write back, so any count it printed would describe a
+     restore that quietly leaves them out. Nothing is written. Re-save the
+     attachment from Outlook in case the download was truncated; if it says
+     the same thing again, use an earlier snapshot email instead and treat the
+     damaged one as unusable.
+   - `REFUSED: wrote "<key>" but reading it back did not return what was
+     written. STOPPED at this key…` — the tool wrote a record and then read it
+     straight back, and got something different. It stops at the FIRST such
+     key rather than writing the rest the same broken way. **Do not re-run
+     restore.** The store may now hold a bad record at that key, and because
+     restore only ever *adds*, a later restore would treat that key as already
+     present and skip it for good. Get a person who can open the Netlify Blobs
+     UI to look at that key and delete it if it is empty or malformed; then
+     start again from step 1.
 
 ---
 
@@ -130,11 +146,16 @@ Use after a rehearsal registration has gone through the real form using a
 club name starting `Rehearsal`, and you want those test records removed
 before real registrations arrive.
 
-1. Wait for, or trigger, a snapshot email sent **after** the last rehearsal
-   record was written. Its subject line will end `— REHEARSAL` (the tool adds
-   that suffix automatically whenever any record in the store is marked as a
-   rehearsal record). Save its `.json` attachment as in **Before you start**,
-   step 3.
+1. **Wait for** a snapshot email sent **after** the last rehearsal record was
+   written. Its subject line will end `— REHEARSAL` (the tool adds that suffix
+   automatically whenever any record in the store is marked as a rehearsal
+   record). Save its `.json` attachment as in **Before you start**, step 3.
+
+   ⚠️ **There is no way to trigger a snapshot by hand.** See *"When the next
+   snapshot arrives"* at the end of this runbook. While registration is open
+   one arrives every hour; when it is closed the only one is the **22:00 UTC**
+   run, which is **02:00 in Abu Dhabi** — so if the store is closed, this step
+   means waiting until tomorrow morning. Plan the rehearsal around that.
 
 2. Run:
 
@@ -160,13 +181,20 @@ before real registrations arrive.
      otherwise) was written to the store after the snapshot you gave it was
      taken. The tool refuses to delete against a stale snapshot, because an
      old snapshot might not be a true copy of what is about to be deleted.
-     Wait for the next scheduled snapshot (see the closing section below) or
-     trigger one, save the new `.json`, and try again from step 2.
+     **Wait for the next scheduled snapshot** — there is no way to trigger one
+     by hand; see *"When the next snapshot arrives"* at the end of this
+     runbook — then save the new `.json` and try again from step 2.
    - `REFUSED: N record(s) in the store could not be read: <keys>. Nothing
      deleted — an unreadable newest record could let a stale snapshot through
      the freshness gate.` — same underlying problem as Procedure A step 3.
      Nothing is deleted. Re-run once; if it persists, stop and get a person
      who can read Netlify Blobs directly to look at the named keys.
+   - `REFUSED: N record(s) in the store carry no usable receivedAt…` — a
+     record in the store does not say when it arrived, so the tool cannot tell
+     whether your snapshot was taken after it. Rather than let one undated
+     record switch the freshness check off for every other record, it refuses.
+     Nothing is deleted. Get a person who can read the Netlify Blobs UI to look
+     at what is in the store before deleting anything.
    - `REFUSED: say exactly one of --rehearsal or --all` or `REFUSED:
      --snapshot <file> is required — a delete needs a copy first` — a typo in
      the command. Re-type it exactly as shown in step 2.
@@ -187,9 +215,11 @@ when someone runs it.
    tool — it is a human check because the next step is not reversible from
    inside the tool.
 
-2. Save the newest snapshot `.json` (repeat **Before you start**, step 3, or
-   trigger a fresh snapshot so it covers every record currently in the
-   store).
+2. Save the newest snapshot `.json` (repeat **Before you start**, step 3). It
+   must have been sent **after** the last record was written, so that it covers
+   every record currently in the store. If it was not, **wait for the next
+   scheduled one** — there is no way to trigger a snapshot by hand; see *"When
+   the next snapshot arrives"* at the end of this runbook.
 
 3. Run:
 
@@ -211,14 +241,21 @@ when someone runs it.
      store after the snapshot you gave it was taken. The tool refuses to
      delete against a stale snapshot, because an old snapshot might not be a
      true copy of what is about to be deleted — and for this procedure that
-     copy is the only record of the data left once the delete runs. Wait for
-     the next scheduled snapshot (see the closing section below) or trigger
-     one, save the new `.json`, and try again from step 2.
+     copy is the only record of the data left once the delete runs. **Wait for
+     the next scheduled snapshot** — there is no way to trigger one by hand;
+     see *"When the next snapshot arrives"* at the end of this runbook — then
+     save the new `.json` and try again from step 2.
    - `REFUSED: N record(s) in the store could not be read: <keys>. Nothing
      deleted — an unreadable newest record could let a stale snapshot through
      the freshness gate.` — same underlying problem as Procedure A step 3.
      Nothing is deleted. Re-run once; if it persists, stop and get a person
      who can read Netlify Blobs directly to look at the named keys.
+   - `REFUSED: N record(s) in the store carry no usable receivedAt…` — a
+     record in the store does not say when it arrived, so the tool cannot tell
+     whether your snapshot was taken after it. Rather than let one undated
+     record switch the freshness check off for every other record, it refuses.
+     Nothing is deleted. Get a person who can read the Netlify Blobs UI to look
+     at what is in the store before deleting anything.
    - `REFUSED: --all needs --confirm ALL (upper case)` — the command was
      missing `--confirm ALL`, or it was typed some other way (lower case
      `all`, or `--confirm all`). The word must be exactly `ALL`, upper case,
@@ -252,6 +289,33 @@ when someone runs it.
 
 ---
 
+## ⚠️ When the next snapshot arrives — there is no way to trigger one
+
+**A snapshot cannot be triggered by hand. Not from a page, not from a URL,
+not from the command line.** `snapshot-registrations.js` is a Netlify
+*scheduled* function: Netlify invokes it on a timer, and a scheduled function
+is not reachable over HTTP, so there is no address anyone could visit to make
+one happen. (`_snapshot.js` has a `force` option; it exists for the test suite
+and has no production caller. The comment beside it says why adding a trigger
+would be a bad idea: it would be a way to make the site email every
+registration on demand, and the mailbox is the only copy of that data there
+is.)
+
+So the only question is **when the next one arrives**:
+
+| Registration window | Snapshots |
+|---|---|
+| **Open** | one every hour |
+| **Closed** | **one a day, at the 22:00 UTC run — 02:00 in Abu Dhabi** |
+
+⚠️ **Plan a rehearsal around that.** The rehearsal in the spec's § 12 needs a
+snapshot at two separate steps (once to `check`/`restore` from, and once more
+before the second `delete --rehearsal`). Outside the registration window that
+means **the rehearsal spans more than one day** — do the steps up to the first
+snapshot on day one, and finish the next morning once the 22:00 UTC email has
+landed. It is not a rehearsal that can be done in one sitting on a closed
+store, and finding that out halfway through is a bad afternoon.
+
 ## Verify a snapshot is arriving at all
 
 The registrations mailbox should be receiving one snapshot email per hour
@@ -261,6 +325,15 @@ registrations snapshot 2026-09-01 02:00 UTC — 12 teams, 84 players, 3 clubs`;
 a subject ending `FAILED <time> UTC` means the store could not be read at
 send time — the snapshot itself failed, not just this runbook, and needs
 investigating on its own before you trust any procedure above.
+
+⚠️ **A subject that says `INCOMPLETE` is the half-way case, and it is the
+dangerous one.** It means the store read, but some of its records could not
+be — so the email *does* carry attachments, they *are* usable, and they are
+**short**. The subject names how many records are missing from the backup and
+the body names their keys. **Do not restore or delete from an `INCOMPLETE`
+snapshot**: a restore from it cannot put those records back, and a delete
+against it would remove records the file does not contain. Get a person who
+can read the Netlify Blobs UI to look at the named keys first.
 
 **If no snapshot email has arrived in the last two days:** in **Netlify**, go
 to the site → **Functions** → `snapshot-registrations`, and read its recent

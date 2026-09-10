@@ -45,6 +45,19 @@ is deleted, both retire WITH A TOMBSTONE in the same commit, never silently.
 Until then the prover cannot read 1001/1001, and that is expected — it is
 not an unnoticed regression.
 
+**OPEN ITEM — the rehearsal MARKER in the spec's § 5 was never built.** Every
+row both readers return carries `rehearsal: true|false` and the suite asserts
+it, but **no page reads it**, so an organiser currently sees a rehearsal row
+exactly as they see a real one. Deferred on purpose — the marker means editing
+`Organizer.dc.html`, one of the large page files this build set out not to
+touch before the rehearsal — but it was deferred without being written down
+anywhere until the final review pass, and § 12 step 2 was still telling the
+rehearsal to go looking for it. Both documents now say so (see the boxed note
+in § 5 of `claude/specs/spec-registration-store-sep-2026.md`). **Until it is
+built, a rehearsal record is identified by its club name beginning
+`Rehearsal`.** Decide after the rehearsal whether to build it; the argument
+for is in that boxed note.
+
 **What is NOT done.** Google is still wired: `_sheets.js` still exists
 (unused by any function — confirmed nothing under `netlify/functions/`
 requires it any more), the five `GOOGLE_*` environment variables are still

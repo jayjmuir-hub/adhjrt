@@ -89,6 +89,32 @@ Superseded records are hidden but kept. Rehearsal records are shown to
 organisers with a visible marker so a rehearsal is never mistaken for a
 real club.
 
+> ⚠️ **NOT BUILT — the visible marker is DEFERRED, deliberately.** The data
+> is there: every row the two readers return carries `rehearsal: true|false`,
+> `_regstore.js`'s `shapeForReaders()` puts it there, and `test-regstore.js`
+> asserts it. **No page reads it.** Nothing renders a marker, so as things
+> stand an organiser sees a rehearsal row exactly as they see a real one.
+>
+> **Why:** the marker means editing `Organizer.dc.html`, which is one of the
+> large page files this build set out not to touch before the rehearsal — the
+> whole point of keeping `row` in the sheet column order was that the pages
+> did not have to change, and reopening them is where a late regression would
+> come from. That was a reasonable call. It was an *unrecorded* one until
+> this note, which is the actual defect: a spec requirement quietly not built,
+> with the § 12 rehearsal still sending someone to look for it.
+>
+> **What holds in the meantime:** a rehearsal record is identifiable without
+> any marker, because its club name begins with `Rehearsal` (§ 10 G) — that is
+> the same self-declaration the `rehearsal` flag and the delete tool's
+> `--rehearsal` scope are derived from, so reading the club column and reading
+> the flag can never disagree. The snapshot subject also ends `— REHEARSAL`
+> whenever any rehearsal record is in the store.
+>
+> **The argument for building it anyway**, so nobody has to make it again: an
+> organiser scanning a list should not have to parse a club name to know what
+> is real, and "starts with Rehearsal" is a convention a tired person breaks.
+> Open item in `claude/state-of-play.md`.
+
 **Export**: a button on the organiser page's registrations tab calls a new
 organiser-only function that returns plain CSV, one file per form, which
 Excel and Sheets open directly. It contains exactly what the organiser page
@@ -261,9 +287,17 @@ off:**
 
 1. Register a team and a player through the real forms for club
    `Rehearsal Quins`.
-2. See both on the organiser page with the rehearsal marker; see the team in
-   a manager view for its age group.
-3. Receive a snapshot email; open both attachments.
+2. See both on the organiser page — identified by the club name `Rehearsal
+   Quins`, **not** by a marker: the visible marker is deferred and does not
+   exist, see the note in § 5. Do not go looking for one. See the team in a
+   manager view for its age group.
+3. Receive a snapshot email; open both attachments. ⚠️ **A snapshot cannot be
+   triggered by hand** — a Netlify scheduled function is not reachable over
+   HTTP. While registration is open one arrives every hour; when it is closed
+   the only one is the 22:00 UTC run (02:00 Abu Dhabi). Step 6 needs a second
+   snapshot, so **on a closed store this rehearsal spans more than one day** —
+   plan it that way. Detail in the runbook's *"When the next snapshot
+   arrives"*.
 4. Export from the organiser page; open the CSV.
 5. `delete --rehearsal`; confirm the organiser page is empty.
 6. `check` then `restore` from the snapshot; confirm both records are back

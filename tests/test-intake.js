@@ -279,14 +279,13 @@ section('The three copies are down to one');
      sixteen are in the right order. */
   check('nobody destructures a sheet row by position any more',
     !/const \[submittedAt, playerFirst/.test(reader1 + reader2 + writer));
-  check('the writer asks _intake.js for the range', /spec\.range|TEAM_RANGE/.test(writer));
+  check('the writer uses the store, not the range', /STORE_NAME|writeOnce/.test(writer));
 
-  /* RAW is not a style choice and must survive every refactor of this file. A
-     leading "=" in a free-text box becomes a live formula in a sheet holding
-     children's names, dates of birth and medical notes; IMPORTDATA in that
-     formula reads them out to somebody else's server. */
-  check('the append is still RAW, not USER_ENTERED', /valueInputOption: 'RAW'/.test(writer));
-  check('…and USER_ENTERED has not crept back', !/USER_ENTERED'/.test(writer.replace(/\/\*[\s\S]*?\*\//g, '')));
+  /* The record is written through writeOnce with no update path. Write-once
+     semantics and the rejection of duplicate keys make it impossible to
+     overwrite a child's registration by accident. */
+  check('the record is written through writeOnce', /writeOnce\(/.test(writer));
+  check('…and USER_ENTERED has been removed', !/USER_ENTERED'/.test(writer.replace(/\/\*[\s\S]*?\*\//g, '')));
 }
 
 /* ====================================================================== */
@@ -1731,7 +1730,7 @@ section('The function itself stays thin');
 
   check('it hands off to handleSubmission', /handleSubmission\(/.test(code));
   check('…and does not decide anything itself', !/validateSubmission|cleanSubmission|checkRate|squadCap/.test(code));
-  check('…nor build a sheet row by hand', !/teamRow|playerRow/.test(code));
+  check('…nor build a sheet row by hand', !/teamRow\(|playerRow\(/.test(code));
   check('…nor carry its own copy of the columns', !/submittedAt.*age-group/.test(code));
 
   check('POST only', /event\.httpMethod !== 'POST'/.test(code));
@@ -1757,8 +1756,9 @@ section('The function itself stays thin');
   check('there is no CORS header — same origin only',
     !/Access-Control-Allow/i.test(code));
 
-  /* RAW is load-bearing and has been fixed once already. */
-  check('the append is RAW', /valueInputOption: 'RAW'/.test(code));
+  /* Write-once semantics guarantee no overwrites. The record is stored
+     in the blob, not appended to a sheet. */
+  check('the record is written through writeOnce', /writeOnce\(/.test(code));
   check('…and USER_ENTERED has not crept back', !/USER_ENTERED/.test(code));
 
   /* The dead letter has to be namespaced and flagged, because of what is in it. */
@@ -1791,7 +1791,9 @@ section('The Google client lives in one place now');
     check(`${f} has no copy of getAuth()`, !/function getAuth\(/.test(code));
     check(`${f} has no copy of firstSheetName()`, !/async function firstSheetName\(/.test(code));
     check(`${f} does not reach for googleapis directly`, !/require\('googleapis'\)/.test(code));
-    check(`${f} asks _sheets.js instead`, /require\('\.\/_sheets'\)/.test(code));
+    /* submit-registration.js uses _regstore.js (Sep 2026), the readers use _sheets.js. */
+    const expect = f === 'submit-registration.js' ? /require\('\.\/_regstore'\)/ : /require\('\.\/_sheets'\)/;
+    check(`${f} asks the right module`, expect.test(code));
   });
 
   const sheets = readRepo(path.join('netlify', 'functions', '_sheets.js')).replace(/\r\n/g, '\n');

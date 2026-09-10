@@ -3,7 +3,7 @@
 // THE FRONT DOOR for team and player registrations.
 //
 // POST { form: 'team-registration' | 'player-registration', data: { … } }
-//   200 { ok: true, teamCode? }   accepted, row written, confirmation sent
+//   200 { ok: true, teamCode? }   accepted, record stored, confirmation sent
 //   400 { ok: false, error, field }  refused, with a sentence written for a coach
 //   403 { ok: false, error }      registration is not open
 //   429 { ok: false, error, retryAfterSecs }
@@ -37,9 +37,9 @@
 
 const { blobStore } = require('./_auth');
 const { sendConfirmation } = require('./_email');
-const { getAuth, firstSheetName, sheetsClient } = require('./_sheets');
 const { loadRegistration, registrationState } = require('./_registration');
 const { FORMS, handleSubmission } = require('./_intake');
+const { STORE_NAME, makeKey, buildRecord, writeOnce, teamRowsForNumbering } = require('./_regstore');
 
 /* The squad list is the only large field and it is capped at 8000 characters
    in _intake.js. 64 KB is far past any real submission and stops a megabyte
@@ -81,36 +81,23 @@ exports.handler = async (event) => {
       loadRegistration: () => loadRegistration(blobStore),
       registrationState,
 
-      /* Read for the team numbering only. A failure here costs the tidy number,
-         never the registration — handleSubmission catches it. */
-      readTeamsSheet: async () => {
-        const sheets = sheetsClient(getAuth());
-        const id = process.env.GOOGLE_SHEET_ID_TEAMS;
-        const name = await firstSheetName(sheets, id);
-        const res = await sheets.spreadsheets.values.get({ spreadsheetId: id, range: `${name}!${FORMS['team-registration'].range}` });
-        const [, ...rows] = res.data.values || [[]];   // drop the header
-        return rows;
-      },
+      /* Team numbering reads the STORE (Sep 2026; it used to read the teams
+         sheet). Live team records only — a superseded team must not keep its
+         old code alive. A failure here REFUSES the submission, see _intake.js
+         step 5: numbering from an empty list mints a duplicate code. */
+      readTeamsSheet: async () => teamRowsForNumbering(blobStore(STORE_NAME)),
 
+      /* THE RECORD (Sep 2026; it used to append a sheet row). One key per
+         submission, write-once — _regstore.js refuses an existing key and has
+         no update. The row keeps the sheet column order, so the readers'
+         mappers are unchanged. The club is read out of the row by position so
+         the rehearsal flag can be set without _intake.js knowing about it. */
       appendRow: async (form, row) => {
         const spec = FORMS[form];
-        const sheets = sheetsClient(getAuth());
-        const id = process.env[spec.sheetEnv];
-        const name = await firstSheetName(sheets, id);
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: id,
-          range: `${name}!${spec.range}`,
-          /* RAW, never USER_ENTERED. USER_ENTERED parses each value as if a
-             human had typed it, which did two bad things: a leading "+" starts
-             a formula, so "+971501234567" was stored as a number and the
-             country code silently vanished; and anything a registrant typed
-             beginning with "=" landed as a LIVE formula in a sheet holding
-             children's names, dates of birth and medical notes — IMPORTDATA in
-             a free-text box could read them out to somebody else's server.
-             This was found and fixed once already. Do not change it. */
-          valueInputOption: 'RAW',
-          requestBody: { values: [row] },
-        });
+        const club = row[spec.columns.indexOf('club')];
+        const store = blobStore(STORE_NAME);
+        const nowMs = Date.now();
+        await writeOnce(store, makeKey(form, nowMs), buildRecord({ form, row, nowMs, club }));
       },
 
       sendConfirmation,

@@ -110,6 +110,17 @@ section('⚠️ Write once — the rule everything else leans on');
       check('requires no package (only ./ siblings and node built-ins)',
         !/require\(['"](?!\.\/|crypto|path|fs|os)[^'"]+['"]\)/.test(src));
 
+      section('The front door writes the store, not a sheet');
+      const door = readRepo('netlify/functions/submit-registration.js');
+      check('requires _regstore', /require\(['"]\.\/_regstore['"]\)/.test(door));
+      check('opens the registrations store by name', /blobStore\(STORE_NAME\)/.test(door));
+      check('appendRow writes through writeOnce', /appendRow:[\s\S]*?writeOnce\(/.test(door));
+      check('appendRow builds the record with the club for the rehearsal flag', /buildRecord\(\{[^}]*club/.test(door));
+      check('readTeamsSheet counts store records', /readTeamsSheet:[\s\S]*?teamRowsForNumbering\(/.test(door));
+      check('no sheet write remains on the front door', !/values\.append/.test(door));
+      check('no sheet read remains on the front door', !/values\.get/.test(door));
+      check('the dead letter (parkFailed) is untouched', /parkFailed:[\s\S]*?failed-submissions\//.test(door));
+
       summary('test-regstore.js');
     });
   })();

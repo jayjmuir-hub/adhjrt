@@ -207,12 +207,12 @@ section('A club sub-header row is rendered before each club\'s block (added 28 J
     ...c.state,
     teams: [
       team('Abu Dhabi Harlequins', 'U14B Contact', 'Mike Yohotu', '2026-01-01'),
-      team('Abu Dhabi Harlequins', 'U16B Contact', 'Tyler Muir', '2026-01-02'),
+      team('Abu Dhabi Harlequins', 'U16B Contact', 'Rowan Voss', '2026-01-02'),
       team('Dubai Exiles', 'U16B Contact', 'Joe Mama', '2026-01-03'),
     ],
     players: [
       player('Abu Dhabi Harlequins', 'U14B Contact', 'Mike Yohotu', '2026-01-01'),
-      player('Abu Dhabi Harlequins', 'U16B Contact', 'Tyler Muir', '2026-01-02'),
+      player('Abu Dhabi Harlequins', 'U16B Contact', 'Rowan Voss', '2026-01-02'),
       player('Dubai Exiles', 'U16B Contact', 'Joe Mama', '2026-01-03'),
     ],
     clubFilter: '', ageFilter: '',
@@ -223,7 +223,7 @@ section('A club sub-header row is rendered before each club\'s block (added 28 J
   eq('the first group carries a count of the rows inside it',
     vals.teamGroups[0].count, 2);
   eq('each group\'s rows are the matching, still-sorted rows',
-    vals.teamGroups[0].rows.map((r) => r.teamName), ['Mike Yohotu', 'Tyler Muir']);
+    vals.teamGroups[0].rows.map((r) => r.teamName), ['Mike Yohotu', 'Rowan Voss']);
   eq('the same grouping applies to players, not just teams',
     vals.playerGroups.map((g) => `${g.club}:${g.count}`), ['Abu Dhabi Harlequins:2', 'Dubai Exiles:1']);
 

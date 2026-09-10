@@ -129,6 +129,32 @@ function installStubs() {
 
 const restore = installStubs();
 
+/* WHY THIS STUB EXISTS — Task 5, Sep 2026. This file invokes every handler,
+   including snapshot-registrations.js, a SCHEDULED function that calls the
+   real Microsoft Graph mailer over the network whenever its own cadence
+   (_snapshot.js shouldSend()) decides this run should send: every hour while
+   the registration window is open, and once a night at 22:00 UTC regardless.
+   Without something standing in for the network, this file's result depends
+   on the WALL CLOCK — run it during the 22:00 UTC hour, or any hour once
+   registration opens in October, and the handler reaches a real fetch(),
+   fails, is caught by its own try/catch, and returns 500. The suite would
+   then be red not because anything is broken but because of what time it
+   happened to run, and green the rest of the day for the same non-reason.
+   That is not a test result, it is a coin flip with a calendar attached.
+
+   The stub answers plausibly rather than throwing — same reasoning as the
+   googleapis and google-auth-library stubs above: a throwing stub turns
+   every call into a 500 and hides exactly the faults this file exists to
+   catch. This is what makes the "no 500" checks below actually mean
+   something, instead of being a statement about the hour they were run. */
+const realFetch = global.fetch;
+global.fetch = async () => ({
+  ok: true,
+  status: 200,
+  json: async () => ({ access_token: 'stub-not-a-real-token', expires_in: 3600 }),
+  text: async () => '',
+});
+
 /* Env vars must EXIST or a function may fail for a reason that has nothing to
    do with the code. Obvious non-values — nothing here is a real secret and
    nothing reaches a real service. */
@@ -211,6 +237,17 @@ async function callIt(f, mod, method) {
     }
   }
 
+  /* The sweep above already proves snapshot-registrations.js does not return
+     500 when called — but that result is only trustworthy because the fetch
+     stub is what stands between its handler and a real Graph call. Assert the
+     half the sweep cannot: that the module ran under this file's watch AND
+     that the network it would otherwise reach is the stub, not the real
+     thing. This is the check that would go red if the stub above were ever
+     deleted or short-circuited. */
+  check('snapshot-registrations.js is under test and reaches no network',
+    'snapshot-registrations.js' in loaded && global.fetch !== realFetch,
+    `in loaded: ${'snapshot-registrations.js' in loaded}, fetch stubbed: ${global.fetch !== realFetch}`);
+
   /* ==================================================================== */
   section('The two readers can actually read');
 
@@ -284,6 +321,7 @@ async function callIt(f, mod, method) {
       String(res2 && res2.statusCode));
   }
 
+  global.fetch = realFetch;
   restore();
   summary('test-functions-load.js');
 })();

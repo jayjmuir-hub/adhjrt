@@ -291,3 +291,11 @@
   to = "/404.html"
   status = 404
   force = true
+
+# --- registrations snapshot (Sep 2026) -----------------------------------
+# Hourly. The function itself decides whether THIS hour sends: every hour
+# while the registration window is open, otherwise only 22:00 UTC (02:00 Abu
+# Dhabi). See netlify/functions/_snapshot.js shouldSend() and the spec,
+# claude/specs/spec-registration-store-sep-2026.md § 6.
+[functions."snapshot-registrations"]
+  schedule = "@hourly"

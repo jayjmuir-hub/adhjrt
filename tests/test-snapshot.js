@@ -107,5 +107,18 @@ section('⚠️ runSnapshot ALWAYS emails — a silent failure is not a snapshot
   const src = readRepo('netlify/functions/_snapshot.js');
   check('requires no package', !/require\(['"](?!\.\/|crypto|path|fs|os)[^'"]+['"]\)/.test(src));
 
+  section('The scheduled function and the mailer');
+  const fn = readRepo('netlify/functions/snapshot-registrations.js');
+  check('handler calls runSnapshot', /runSnapshot\(\{/.test(fn));
+  check('lists the registrations store', /listAll\(blobStore\(STORE_NAME\)\)/.test(fn));
+  check('window comes from _registration', /registrationState\(await loadRegistration\(blobStore\)/.test(fn));
+  check('recipient is MAIL_FROM, from the environment', /mailFrom:\s*process\.env\.MAIL_FROM/.test(fn));
+  check('never reads a recipient from the request', !/event\.body/.test(fn) && !/JSON\.parse\(/.test(fn));
+  const mail = readRepo('netlify/functions/_email.js');
+  check('sendMail accepts attachments', /async function sendMail\(\{[^}]*attachments/.test(mail));
+  check('…as Graph fileAttachments', /#microsoft\.graph\.fileAttachment/.test(mail));
+  const toml = readRepo('netlify.toml');
+  check('netlify.toml schedules the function hourly', /\[functions\."snapshot-registrations"\][\s\S]{0,80}schedule\s*=\s*"@hourly"/.test(toml));
+
   summary('test-snapshot.js');
 })();

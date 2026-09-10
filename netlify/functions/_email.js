@@ -76,7 +76,7 @@ async function getToken() {
 
 /* ---------------- send ---------------- */
 
-async function sendMail({ to, replyTo, subject, html }) {
+async function sendMail({ to, replyTo, subject, html, attachments }) {
   const recipients = (Array.isArray(to) ? to : [to])
     .map((addr) => (addr || '').trim())
     .filter((addr) => addr.includes('@'));
@@ -93,6 +93,16 @@ async function sendMail({ to, replyTo, subject, html }) {
   };
   if (replyTo) {
     message.replyTo = [{ emailAddress: { address: replyTo } }];
+  }
+  /* Snapshot attachments (Sep 2026). Graph inline fileAttachment, base64
+     bytes, well under its 3 MB inline limit for a few hundred records. */
+  if (Array.isArray(attachments) && attachments.length) {
+    message.attachments = attachments.map((a) => ({
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: a.name,
+      contentType: a.contentType || 'application/octet-stream',
+      contentBytes: a.contentBytes,
+    }));
   }
 
   const res = await fetch(

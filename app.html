@@ -564,8 +564,9 @@ tr.me td{background:#fffdf4;font-weight:800}
    scores, standings, publishing and permissions behave identically — there is
    no second source of truth to keep in step. */
 const api = await import('/scores-data.js');
-/* Managers and organisers authenticate against different endpoints and store
-   their sessions under different keys — see signIn(). */
+/* Used only by sign-out, which also clears the organiser module's old
+   pre-Aug-2026 session keys. Sign-in is api.login() alone: both roles use the
+   one unified endpoint now — see signIn(). */
 const orgApi = await import('/organizer-data.js');
 
 /* ---------------- tournament facts ----------------
@@ -1428,8 +1429,12 @@ function signIn(){
     const u = $('lu').value.trim(), p = $('lp').value;
     if (!u || !p) { $('loginErr').innerHTML = '<div class="err">Enter your username and password.</div>'; return; }
     const doneLogin = busy('lgo', 'Signing in…');
-    let r = await api.login(u, p);
-    if (!r.ok) { const o = await orgApi.login(u, p); if (o.ok) r = o; }
+    /* ONE call: login.js decides the role from the account itself. There used
+       to be a retry through the organiser data layer here, left over from the
+       retired two-endpoint chain. That module has no login function, so the
+       retry threw and a wrong password never showed its message (JRT-29,
+       removed 11 Sep 2026; tests/test-app-signin.js). Do not add a retry back. */
+    const r = await api.login(u, p);
     if (r.ok) {
       S.session = resolveSession(); closeSheet();
       const ag = S.session && S.session.ageGroupId;

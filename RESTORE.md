@@ -997,11 +997,11 @@ Anton + Barlow.
   unified `login.js` through `api.login()`; the session is stored under
   `adhjrt_session_v2`. There are still three historical session shapes, so
   test a role with `isOrganizerSession()` in `scores-data.js`.
-  ⚠️ **`signIn()` in `app.html` still retries a failed sign-in through
-  `orgApi.login()`, and `organizer-data.js` exports no `login`.** A wrong
-  password on `/app` therefore throws a `TypeError` instead of showing the
-  refusal. The retry is a leftover of the retired two-endpoint chain and should
-  go (see "One sign-in for everything").
+  A refused password shows the refusal, and there is no retry. Until JRT-29
+  (11 Sep 2026), `signIn()` retried a failure through `orgApi.login()`, which
+  `organizer-data.js` does not export. So a wrong password threw a `TypeError`
+  and no message appeared. `test-app-signin.js` runs the handler against that
+  module's real list of exports (see "One sign-in for everything").
 - Managers enter scores for their own age group; organisers for all.
 - The fixture editor and publishing are NOT in the app. The More tab's "Full
   manager tools" row links to `/manager`.
@@ -1354,8 +1354,9 @@ own `.catch()` swallows the `TypeError` and the screen looks like success.
 **`test-accounts.js` checks every `api.X` a page calls against what
 `organizer-data.js` exports**, and every action the data layer posts against
 what `accounts-admin.js` handles. Add a UI call and its data-layer function in
-the same commit. (`app.html` is outside that sweep — see its `orgApi.login`
-call above.)
+the same commit. (`app.html` is outside that sweep. Its sign-in handler is
+run against `organizer-data.js`'s real exports by `test-app-signin.js`,
+added after the `orgApi.login` call above.)
 
 ---
 

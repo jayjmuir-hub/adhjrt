@@ -2546,6 +2546,19 @@ production, so a stale branch site serves old code against live data. The
 it — the throttle was bypassable by changing the hostname. Restricting branch
 deploys to `dev` stops the NEXT one; it does not retract one already published.
 
+⚠️ **AND EVERY DEPLOY KEEPS ITS OWN ADDRESS.** This is not just about branches.
+Every deploy Netlify has ever built stays reachable at
+`<deploy-id>--adhquins-jrt.netlify.app`, and runs its own old code against the
+same live variables and stores. Measured on 11 Sep 2026 (JRT-35): there were
+602 deploys and 551 of them answered. 335 were from before `c5df5fa` and had a
+reachable `manager-signup`, while `MANAGER_INVITE_CODES` was set. All but six
+were deleted with
+`tools/delete-old-deploys.ps1` (it keeps the live deploy, four production
+rollback targets and the newest `dev` build), and every deleted address went
+from 200 to 404. **New previews and `dev` builds age into the same problem**,
+so old deploys are pruned at every landing (`runbook-merge-dev-to-main.md`,
+step 8). Ruling: `claude/decisions/2026-09-11-old-deploys-are-pruned.md`.
+
 ⚠️ **AND DO NOT REPEAT THE MISTAKE THAT FOUND THIS.** A `404` on a branch
 subdomain was read as "my delete worked" when a branch name that never existed
 returns 404 too. **A 404 with no before-reading proves nothing.** Take the

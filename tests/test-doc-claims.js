@@ -185,6 +185,15 @@ check('…and the false "dev only since 6 Aug" claim keeps its tombstone',
   /"Deploy all branches pushed to the repository"/.test(RDOC)
   && /THAT WAS\nFALSE until 11 Sep 2026/.test(RDOC));
 
+/* JRT-35, 11 Sep 2026. Not just branches: every deploy keeps its own address
+   running old code against live data. The warning, the tool that clears them,
+   and the rule that they are pruned at every landing are pinned together,
+   because the warning without the rule is how 551 of them piled up. */
+check('every deploy keeping its own address is recorded, with the prune rule',
+  /AND EVERY DEPLOY KEEPS ITS OWN ADDRESS\./.test(RDOC)
+  && /`tools\/delete-old-deploys\.ps1`/.test(RDOC)
+  && /pruned at every landing/.test(RDOC));
+
 /* =========================================================================
    4. The measurement lesson that found all of the above
    ========================================================================= */

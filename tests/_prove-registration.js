@@ -9606,6 +9606,33 @@ const FAULTS = [
     expect: ['blobs:delete passes --force'],
   },
 
+  /* ---- /app sign-in (JRT-29, 11 Sep 2026) --------------------------------
+     test-app-signin.js runs the Sign in button's handler against a stub built
+     from organizer-data.js's REAL exports. The first fault puts back the exact
+     line that shipped: a retry through a function that module does not have. */
+  {
+    name: 'the dead orgApi.login retry comes back, so a wrong password throws',
+    suite: 'test-app-signin.js',
+    apply: () => patch('app.html', '    const r = await api.login(u, p);',
+      '    let r = await api.login(u, p);\n    if (!r.ok) { const o = await orgApi.login(u, p); if (o.ok) r = o; }'),
+    expect: ['a wrong password does not throw out of the handler'],
+  },
+  {
+    name: 'a refusal leaves the Sign in button stuck on "Signing in…"',
+    suite: 'test-app-signin.js',
+    apply: () => patch('app.html', '      doneLogin();\n', ''),
+    expect: ['a refusal releases the Sign in button'],
+  },
+  {
+    /* The control's fault: a handler that refuses everything would pass every
+       "wrong password" check above, so the correct-password path is proved too. */
+    name: 'a correct password is treated as a refusal',
+    suite: 'test-app-signin.js',
+    apply: () => patch('app.html', '    if (r.ok) {\n      S.session = resolveSession(); closeSheet();',
+      '    if (false) {\n      S.session = resolveSession(); closeSheet();'),
+    expect: ['a correct password signs in'],
+  },
+
 ];
 
 /* ------------------------------------------------------------------------ */

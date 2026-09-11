@@ -107,7 +107,11 @@ $tests = @(
   # The registration store (Sep 2026) - spec-registration-store-sep-2026.md.
   'test-regstore.js',
   'test-snapshot.js',
-  'test-registrations-admin.js'
+  'test-registrations-admin.js',
+  # /app sign-in: a wrong password must show the refusal (JRT-29, 11 Sep 2026).
+  # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
+  # registration.
+  'test-app-signin.js'
 )
 
 Write-Host ''

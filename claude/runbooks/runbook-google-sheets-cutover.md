@@ -59,7 +59,11 @@ and a Google service-account key. Why:
    registration has gone through: Site configuration → Environment variables,
    then delete `GOOGLE_SERVICE_ACCOUNT_EMAIL`,
    `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, `GOOGLE_SHEET_ID_TEAMS`,
-   `GOOGLE_SHEET_ID_PLAYERS` and `GOOGLE_SHEET_ID_CLUBS`.
+   `GOOGLE_SHEET_ID_PLAYERS` and `GOOGLE_SHEET_ID_CLUBS`. Also delete
+   `GOOGLE_CLIENT_ID` if it is still there. It is not a Sheets variable. It
+   belonged to the Google sign-in button that was removed earlier
+   (see `runbook-hub-accounts.md`, and its tombstone in `RESTORE.md`), and it was
+   deleted alongside the other five when JRT-2 closed.
 8. **In Google Cloud** (the maintainer): delete the service account's key.
 9. **In Google Drive** (the maintainer, when they choose): archive or delete
    the team, player and club registration sheets.

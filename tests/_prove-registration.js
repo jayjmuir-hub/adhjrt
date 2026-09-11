@@ -31,6 +31,8 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'adhjrt-prove-'));
    node_modules and assets for no gain. */
 const NEEDED = [
   'CLAUDE.md',
+  /* test-doc-claims.js reads the Netlify evidence out of RESTORE.md. */
+  'RESTORE.md',
   /* test-back-office-links.js asserts the /organizer rewrite still exists, so
      the fault that removes it needs this file in the temp copy. */
   'netlify.toml',
@@ -6442,7 +6444,7 @@ const FAULTS = [
        both pass here and only the position check catches it. */
     name: 'the false "look at branch builds for credits" advice is restored as live text',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'THIS PARAGRAPH USED TO END', 'Worth remembering'),
+    apply: () => patch('RESTORE.md', 'THIS PARAGRAPH USED TO END', 'Worth remembering'),
     expect: ['sits INSIDE its tombstone, not standing as advice'],
   },
   {
@@ -6451,7 +6453,7 @@ const FAULTS = [
        re-derives the wrong answer from the same true premise. */
     name: 'the tombstone keeps the verdict but loses the reason',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'A branch build\ncannot move the credit number, because it does not cost any.',
+    apply: () => patch('RESTORE.md', 'A branch build\ncannot move the credit number, because it does not cost any.',
       'This is no longer accurate.'),
     expect: ['with the reason, not just the verdict'],
   },
@@ -6459,7 +6461,7 @@ const FAULTS = [
     /* The figure itself going wrong. */
     name: 'a branch deploy is documented as costing credits after all',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', '| **Branch deploy / Deploy Preview** | **0 — free** |',
+    apply: () => patch('RESTORE.md', '| **Branch deploy / Deploy Preview** | **0 — free** |',
       '| **Branch deploy / Deploy Preview** | **15 each** |'),
     expect: ['recorded as costing ZERO, explicitly'],
   },
@@ -6470,7 +6472,7 @@ const FAULTS = [
        the other copy and report green while the file contradicted itself. */
     name: 'the two copies of the production deploy cost drift apart',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', '| **Production deploy** | **15 each** |',
+    apply: () => patch('RESTORE.md', '| **Production deploy** | **15 each** |',
       '| **Production deploy** | **10 each** |'),
     expect: ['two copies of the production cost agree'],
   },
@@ -6480,7 +6482,7 @@ const FAULTS = [
        overstates its case is the next thing somebody has to correct. */
     name: 'the credit correction drops the meters that are NOT free',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'Compute is 10 credits per GB-hour, bandwidth 20 per GB',
+    apply: () => patch('RESTORE.md', 'Compute is 10 credits per GB-hour, bandwidth 20 per GB',
       'Nothing else is metered'),
     expect: ['so "free" is not overclaimed'],
   },
@@ -6488,7 +6490,7 @@ const FAULTS = [
     /* The security half. Losing this turns a live finding back into tidiness. */
     name: 'the warning that a branch deploy outlives its branch is tidied away',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'AND A BRANCH DEPLOY OUTLIVES ITS BRANCH', 'A note on branch deploys'),
+    apply: () => patch('RESTORE.md', 'AND A BRANCH DEPLOY OUTLIVES ITS BRANCH', 'A note on branch deploys'),
     expect: ['warning is recorded'],
   },
   {
@@ -6497,7 +6499,7 @@ const FAULTS = [
        bypassable by changing the hostname". */
     name: 'the branch-deploy warning loses the fact that it reads production data',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'read the SAME environment variables and the SAME Blobs stores as\nproduction',
+    apply: () => patch('RESTORE.md', 'read the SAME environment variables and the SAME Blobs stores as\nproduction',
       'run in their own context'),
     expect: ['same env vars and the same stores as production'],
   },
@@ -6505,7 +6507,7 @@ const FAULTS = [
     /* Recording a partial fix as a fix is how the next person stops looking. */
     name: 'restricting branch deploys to dev is written up as if it closed the hole',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published.',
+    apply: () => patch('RESTORE.md', 'Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published.',
       'Restricting branch deploys to `dev` fixes this.'),
     expect: ['not retracting what is published'],
   },
@@ -6514,7 +6516,7 @@ const FAULTS = [
        gets reported again. */
     name: 'the no-baseline lesson is dropped from the doc',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', '**A 404 with no before-reading proves nothing.**',
+    apply: () => patch('RESTORE.md', '**A 404 with no before-reading proves nothing.**',
       'Check the URL afterwards.'),
     expect: ['no-baseline trap is recorded'],
   },
@@ -6523,7 +6525,7 @@ const FAULTS = [
        the password being switched off. */
     name: 'the credit figures lose their source link',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', 'https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/',
+    apply: () => patch('RESTORE.md', 'https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/how-credits-work/',
       '(from the Netlify pricing page)'),
     expect: ['cite Netlify'],
   },
@@ -7260,9 +7262,18 @@ const FAULTS = [
        host mentioned" check passes. Only the per-mention flag test catches it. */
     name: 'the dead preview host creeps back as a live instruction',
     suite: 'test-doc-claims.js',
-    apply: () => patch('CLAUDE.md', '### 5. The tests',
-      'Preview a branch at https://<branch>--serene-gingersnap-1d0eb6.netlify.app\n\n### 5. The tests'),
+    apply: () => patch('RESTORE.md', '### Three kinds of preview URL',
+      'Preview a branch at https://<branch>--serene-gingersnap-1d0eb6.netlify.app\n\n### Three kinds of preview URL'),
     expect: ['every mention of the dead host is flagged as dead'],
+  },
+  {
+    /* The line budget. CLAUDE.md sits AT the budget, so one added line is
+       enough — which is exactly how it grew to 800 lines in the first place. */
+    name: 'CLAUDE.md grows past its line budget by a single line',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('CLAUDE.md', 'genuinely free — 0 credits, not "cheap".',
+      'genuinely free — 0 credits, not "cheap".\nOne more reasonable paragraph.'),
+    expect: ['CLAUDE.md is at most 160 lines'],
   },
 
   /* ---- managers and organisers can see an unpublished draw (8 Aug 2026) ----

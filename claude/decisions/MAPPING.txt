@@ -1,0 +1,79 @@
+# Every removed file under claude/, and where its content lives now.
+# Format: removed path -> card(s) in claude/decisions/, or DROPPED (reason),
+# or NOTES (its rules went to /CLAUDE.md, its procedures to claude/runbooks/).
+
+claude/specs/spec-club-registration.md -> claude/decisions/2026-08-02-club-registration-removed-then-restored.md
+claude/specs/spec-registration-window.md -> claude/decisions/2026-07-27-registration-window-server-decides.md, claude/decisions/2026-07-27-registration-gateway-refuses-before-it-writes.md
+claude/specs/spec-age-validation.md -> claude/decisions/2026-07-28-team-form-age-check-flags-play-up.md
+claude/specs/spec-import-registered-teams.md -> claude/decisions/2026-07-25-draw-teams-are-codes-with-published-names.md, claude/decisions/2026-08-01-clubs-request-pool-a-b-or-c.md
+claude/specs/spec-registration-store-sep-2026.md -> claude/decisions/2026-09-10-registrations-live-in-a-write-once-store.md, claude/decisions/2026-09-10-registration-restore-and-delete-are-command-line-only.md, claude/decisions/2026-07-28-registration-export-is-organiser-only-and-formula-safe.md
+claude/specs/spec-club-invite-link.md -> claude/decisions/2026-08-11-club-invite-link-is-organiser-only.md
+claude/specs/spec-age-group-selector.md -> claude/decisions/2026-08-06-age-group-picker-derives-the-day.md
+claude/plans/plan-submission-gateway.md -> claude/decisions/2026-07-27-registration-gateway-refuses-before-it-writes.md, claude/decisions/2026-08-01-clubs-request-pool-a-b-or-c.md
+claude/plans/registration-window-build.md -> claude/decisions/2026-07-27-registration-window-server-decides.md
+claude/plans/plan-age-validation.md -> claude/decisions/2026-07-28-team-form-age-check-flags-play-up.md
+claude/plans/plan-registration-store.md -> claude/decisions/2026-09-10-registration-restore-and-delete-are-command-line-only.md, claude/decisions/2026-07-28-registration-export-is-organiser-only-and-formula-safe.md (build steps dropped; its CSV formula rule and tool gates carded)
+claude/decisions/2026-08-02-club-registration-removed-then-restored.md -> claude/decisions/2026-08-02-club-registration-removed-then-restored.md
+claude/specs/spec-unified-login.md -> claude/decisions/2026-08-02-one-login-one-session.md
+claude/specs/spec-my-account.md -> claude/decisions/2026-08-03-my-account-acts-on-the-token.md
+claude/specs/spec-session-refusal-aug-2026.md -> claude/decisions/2026-08-11-session-ended-marker.md, claude/decisions/2026-08-11-revoked-is-not-pending.md
+claude/specs/spec-club-hub-sign-in-sep-2026.md -> claude/decisions/2026-09-08-club-hub-is-the-identity.md, claude/decisions/2026-09-08-organiser-password-break-glass.md
+claude/specs/spec-hub-auto-approve-sep-2026.md -> claude/decisions/2026-09-09-hub-auto-approve.md
+claude/specs/spec-manager-dashboard.md -> claude/decisions/2026-07-31-manager-dashboard-own-page.md
+claude/specs/spec-manager-dashboard-expansion.md -> claude/decisions/2026-07-31-manager-draw-tab-pitches-and-clashes.md, claude/decisions/2026-07-31-manager-score-sheet-draws-cards-spirit.md, claude/decisions/2026-07-31-manager-registrations-read-only-scoped.md
+claude/specs/spec-manager-dashboard-rebuild.md -> claude/decisions/2026-07-31-manager-dashboard-own-page.md
+claude/plans/plan-manager-dashboard.md -> DROPPED (build steps for Manager.html, since removed; rulings carded from spec)
+claude/plans/plan-manager-dashboard-expansion.md -> DROPPED (build steps superseded by code; rulings carded from spec)
+claude/plans/plan-manager-dashboard-rebuild.md -> DROPPED (build steps superseded by code; rulings carded from spec)
+claude/specs/spec-uniform-draw-editor.md -> claude/decisions/2026-07-31-draw-editor-tap-to-select.md
+claude/plans/plan-uniform-draw-editor.md -> DROPPED (build plan; its target editor on /scores was later deleted)
+claude/specs/spec-draw-rights-sep-2026.md -> claude/decisions/2026-09-08-draw-rights.md
+claude/specs/spec-draft-visibility-aug-2026.md -> claude/decisions/2026-08-08-staff-see-unpublished-draw.md
+claude/specs/spec-scores-manager-removal.md -> claude/decisions/2026-08-02-scores-page-public-only.md
+claude/specs/spec-pitches-and-clash-detection.md -> claude/decisions/2026-07-26-venue-layout-is-configuration.md
+claude/specs/spec-pitch-marshals-sep-2026.md -> claude/decisions/2026-09-08-pitch-marshal-links.md, claude/decisions/2026-09-08-marshal-token-reaches-one-pitch-only.md, claude/decisions/2026-09-08-public-results-carry-no-names.md
+claude/specs/spec-documents.md -> claude/decisions/2026-08-07-documents-shelf.md
+claude/specs/spec-club-manager-page.md -> claude/decisions/2026-08-02-club-sign-in-decided-against.md
+claude/plans/plan-club-manager-page.md -> DROPPED (build plan for a parked feature; the decision card covers it)
+claude/specs/spec-about-coverflow.md -> claude/decisions/2026-08-06-about-section-motion-is-plain-css.md
+claude/specs/spec-backoffice-retheme.md -> claude/decisions/2026-08-22-backoffice-wears-club-brand-tokens.md
+claude/specs/spec-bat-offset-path-and-wings.md -> claude/decisions/2026-08-06-about-section-motion-is-plain-css.md, claude/decisions/2026-08-07-crest-bat-rests-on-the-static-crest.md
+claude/specs/spec-hover-sweep-all-pages.md -> claude/decisions/2026-08-06-hover-motion-behind-pointer-gate.md
+claude/specs/spec-mobile-hero-and-hsbc-ratio.md -> claude/decisions/2026-08-05-hsbc-principal-partner-stays-separate-and-visible.md
+claude/specs/spec-mobile-scaling-aug-2026.md -> claude/decisions/2026-08-08-home-page-phone-layout.md, claude/decisions/2026-08-05-hsbc-principal-partner-stays-separate-and-visible.md, claude/decisions/2026-08-05-supporter-logos-own-artwork-sized-by-ratio.md
+claude/specs/spec-sponsors-grid.md -> claude/decisions/2026-08-05-supporter-logos-own-artwork-sized-by-ratio.md, claude/decisions/2026-08-05-hsbc-principal-partner-stays-separate-and-visible.md
+claude/specs/design-audit-aug-2026.md -> claude/decisions/2026-08-06-hover-motion-behind-pointer-gate.md
+claude/decisions/2026-08-22-dc-html-stays.md -> claude/decisions/2026-08-22-dc-html-stays.md
+claude/decisions/2026-08-07-rules-page-deferred.md -> claude/decisions/2026-08-07-rules-page-deferred.md
+claude/lessons.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/writing-to-github-from-claude.md -> claude/decisions/2026-07-25-git-on-the-pc-is-the-only-write-path.md
+claude/changelog.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/changelog-2026-08-05.md -> DROPPED (session diary; its lessons already in lessons.md)
+claude/changelog-2026-08-06.md -> claude/decisions/2026-07-27-work-batches-on-a-branch-and-lands-once.md, claude/decisions/2026-08-06-doc-claims-are-tested.md, claude/decisions/2026-08-06-reduced-motion-stops-movement-not-fades.md
+claude/changelog-2026-08-07.md -> claude/decisions/2026-08-06-reduced-motion-stops-movement-not-fades.md, claude/decisions/2026-08-07-crest-bat-rests-on-the-static-crest.md
+claude/changelog-2026-08-07b.md -> DROPPED (session diary; verification lesson in notes)
+claude/handoff-2026-08-06.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/handoff-2026-08-08.md -> DROPPED (pointer page; its four traps are in lessons.md)
+claude/handoff-2026-08-08b.md -> claude/decisions/2026-08-07-volatile-settings-are-read-live.md
+claude/archive/code-review-jul-27.md -> DROPPED (one-off review; its lesson is in notes)
+claude/archive/design-refresh-status.md -> DROPPED (superseded pointer)
+claude/archive/github-bridge-limits-and-fix.md -> claude/decisions/2026-07-25-git-on-the-pc-is-the-only-write-path.md
+claude/archive/on-computer-git-setup.md -> claude/decisions/2026-07-25-git-on-the-pc-is-the-only-write-path.md
+claude/archive/pr11-status.md -> DROPPED (status of a merged PR)
+claude/archive/project-instructions-and-memory.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/archive/project-instructions.md -> DROPPED (superseded draft of project instructions)
+claude/archive/project-memory.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/archive/qa-review-jul-2026-verification.md -> DROPPED (one-off QA pass, items shipped)
+claude/archive/qa-review-jul-2026.md -> DROPPED (one-off QA review, items shipped)
+claude/archive/simulated-tournament-findings.md -> DROPPED (rehearsal findings, fixes shipped)
+claude/archive/simulated-tournament-progress.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/archive/simulated-tournament-test-plan.md -> NOTES (rules in /CLAUDE.md, procedures in claude/runbooks/, reasons in claude/decisions/)
+claude/runbooks/runbook-clearing-the-rehearsal-data.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-registrations-restore-and-delete.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-git-bundle-between-pcs.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-merge-dev-to-main.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-new-pc-setup.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-preview-a-change-for-free.md -> REWRITE (step-only runbook, unit 4)
+claude/runbooks/runbook-verify-netlify-toml-rule.md -> REWRITE (step-only runbook, unit 4)
+claude/state-of-play.md -> LINEAR (JRT tickets) + cards for standing rulings
+claude/parked-requests.md -> LINEAR (JRT tickets) + cards for standing rulings

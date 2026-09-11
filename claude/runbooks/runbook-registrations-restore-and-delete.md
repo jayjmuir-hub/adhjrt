@@ -5,8 +5,8 @@
 copy is the snapshot email sent to the tournament's own mailbox. This runbook
 is how a person — not an AI session — puts records back, removes rehearsal
 records, or deletes everything after the tournament, using
-`tools/registrations-admin.js` on a PC. Spec:
-`claude/specs/spec-registration-store-sep-2026.md` § 7.
+`tools/registrations-admin.js` on a PC. Ruling:
+`claude/decisions/2026-09-10-registration-restore-and-delete-are-command-line-only.md`.
 
 **When to use.**
 - **Restore (A):** records are missing from the organiser page's Registrations
@@ -15,7 +15,7 @@ records, or deletes everything after the tournament, using
 - **Clear a rehearsal (B):** after a rehearsal has been run through the real
   registration form, using a club name starting `Rehearsal`, and you want
   those records gone before the site goes live for real clubs.
-- **Season end (C):** when Jay decides the season's data is no longer needed.
+- **Season end (C):** when the maintainer decides the season's data is no longer needed.
   Nothing about this is automatic — **retention is entirely manual.** No
   schedule, no expiry, no scheduled function deletes anything. It happens only
   when a person runs the command below.
@@ -35,7 +35,7 @@ records, or deletes everything after the tournament, using
    attachment (named `registrations-<timestamp>.json`) and three `.csv`
    attachments (`registrations-team.csv`, `registrations-player.csv`,
    `registrations-club.csv`). Save the **`.json`** attachment to a folder
-   **OUTSIDE the repo** — for example `C:\Users\Jay\Downloads\snap.json`. Never
+   **OUTSIDE the repo** — for example `C:\Users\<you>\Downloads\snap.json`. Never
    save it inside the `adhjrt` folder: the repo root is the deployed website,
    and anything committed there gets served publicly. The `.csv` files are for
    reading in a spreadsheet only; none of the three procedures below reads
@@ -55,7 +55,7 @@ are missing, and you have a snapshot `.json` from before they went missing.
 1. Run a dry check first — it writes nothing:
 
    ```
-   node tools/registrations-admin.js check C:\Users\Jay\Downloads\snap.json
+   node tools/registrations-admin.js check C:\Users\<you>\Downloads\snap.json
    ```
 
 2. Read the printed lines. Good output looks like:
@@ -91,7 +91,7 @@ are missing, and you have a snapshot `.json` from before they went missing.
    the tool will not add records unless you name the count you expect):
 
    ```
-   node tools/registrations-admin.js restore C:\Users\Jay\Downloads\snap.json --confirm 16
+   node tools/registrations-admin.js restore C:\Users\<you>\Downloads\snap.json --confirm 16
    ```
 
    Good output is one `restored <key>` line per record added, ending with
@@ -160,7 +160,7 @@ before real registrations arrive.
 2. Run:
 
    ```
-   node tools/registrations-admin.js delete --rehearsal --snapshot C:\Users\Jay\Downloads\snap.json
+   node tools/registrations-admin.js delete --rehearsal --snapshot C:\Users\<you>\Downloads\snap.json
    ```
 
    (The `--snapshot` flag is required for every delete — the tool refuses to
@@ -205,12 +205,12 @@ before real registrations arrive.
 
 ## C · Season-end delete (everything)
 
-Use only when Jay has decided the season's registration data is no longer
+Use only when the maintainer has decided the season's registration data is no longer
 needed. This removes **every** record in the store — real and rehearsal
 alike. There is no scheduled or automatic version of this; it only happens
 when someone runs it.
 
-1. Get confirmation from Jay in writing (email or a message you can point
+1. Get confirmation from the maintainer in writing (email or a message you can point
    back to) that the data is to be deleted. This step is not enforced by the
    tool — it is a human check because the next step is not reversible from
    inside the tool.
@@ -224,7 +224,7 @@ when someone runs it.
 3. Run:
 
    ```
-   node tools/registrations-admin.js delete --all --snapshot C:\Users\Jay\Downloads\snap.json --confirm ALL
+   node tools/registrations-admin.js delete --all --snapshot C:\Users\<you>\Downloads\snap.json --confirm ALL
    ```
 
    `--confirm ALL` must be typed in upper case exactly as shown — this is
@@ -284,7 +284,7 @@ when someone runs it.
    PC that has been used for this runbook.
 
 9. Record the date this was done in the season tracker (outside this repo —
-   see `claude/state-of-play.md`'s guidance on where "currently" facts belong;
+   as a comment on the Linear ticket, team "ADH JRT Team";
    this runbook itself carries no dates).
 
 ---

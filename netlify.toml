@@ -201,6 +201,27 @@
   status = 404
   force = true
 
+# README.md and CONTRIBUTING.md were added at the repo root in the
+# documentation cut (10 Sep 2026), alongside CLAUDE.md and RESTORE.md above.
+# Same reasoning: the root IS the deployed site, so without a rule these
+# would be served as plain 200s. Nothing in either is secret — the repo is
+# public and both are readable on github.com regardless — this is only about
+# not serving internal/contributor documentation as part of the website.
+# `to` is "/404.html", NOT the file's own path — a redirect pointing at
+# itself is silently DROPPED by Netlify rather than applied. See the tests/
+# block above, where exactly that mistake sat unnoticed for months.
+[[redirects]]
+  from = "/README.md"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/CONTRIBUTING.md"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # --- PWA ---------------------------------------------------------------
 # The service worker must never be cached, or a stale copy can pin the site
 # to an old version long after a deploy.

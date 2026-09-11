@@ -59,6 +59,12 @@ const { readRepo, section, check, eq, summary } = require('./_lib');
    nothing and the checks pass by looking at nothing at all. */
 const DOC = readRepo('CLAUDE.md').replace(/\r\n/g, '\n');
 
+/* The evidence — the credit table, the preview-URL history, the branch-deploy
+   warning and the baseline lesson — lives in RESTORE.md. CLAUDE.md keeps only
+   the rule and the two money sentences, so each check reads the file its
+   anchor is in. The derived check below compares ACROSS the two files. */
+const RDOC = readRepo('RESTORE.md').replace(/\r\n/g, '\n');
+
 /* =========================================================================
    1. What a deploy actually costs
    ========================================================================= */
@@ -74,26 +80,26 @@ check('a production deploy is recorded as costing credits',
    deploys cost 15 and left branch builds undescribed except by a sentence
    implying they cost something. Silence is what let the wrong inference in. */
 check('a branch deploy is recorded as costing ZERO, explicitly',
-  /\*\*Branch deploy \/ Deploy Preview\*\* \| \*\*0 — free\*\*/.test(DOC));
-check('a failed deploy is recorded as free', /\| Failed deploy \| 0 \|/.test(DOC));
-check('a rollback is recorded as free', /\| Rolling back production \| 0 \|/.test(DOC));
+  /\*\*Branch deploy \/ Deploy Preview\*\* \| \*\*0 — free\*\*/.test(RDOC));
+check('a failed deploy is recorded as free', /\| Failed deploy \| 0 \|/.test(RDOC));
+check('a rollback is recorded as free', /\| Rolling back production \| 0 \|/.test(RDOC));
 check('the rule is stated in words as well as a table',
-  /\*\*Only a successful production deploy spends credits\.\*\*/.test(DOC));
+  /\*\*Only a successful production deploy spends credits\.\*\*/.test(RDOC));
 
 /* Not zero, and saying so keeps the correction honest rather than tidy. */
 check('the non-build meters are recorded too, so "free" is not overclaimed',
-  /Compute is 10 credits per GB-hour, bandwidth 20 per GB/.test(DOC));
+  /Compute is 10 credits per GB-hour, bandwidth 20 per GB/.test(RDOC));
 
 /* The claim is dated and sourced. A figure with no source is a figure nobody
    can re-check, which is how the 401 test survived the password being removed. */
 check('the credit figures cite Netlify\'s own docs',
-  /docs\.netlify\.com\/manage\/accounts-and-billing\/billing\/billing-for-credit-based-plans\/how-credits-work/.test(DOC));
+  /docs\.netlify\.com\/manage\/accounts-and-billing\/billing\/billing-for-credit-based-plans\/how-credits-work/.test(RDOC));
 
 /* ⚠️ DERIVED, NOT PINNED. The production cost appears in the credit table AND
    in the outstanding-work list. Pinning "15" twice would pass happily while
    the two drifted; this requires them to be the same number, whatever it is.
    Two copies of one rule drift invisibly — this repo's most-repeated lesson. */
-const tableCost = (DOC.match(/\| \*\*Production deploy\*\* \| \*\*(\d+) each\*\* \|/) || [])[1];
+const tableCost = (RDOC.match(/\| \*\*Production deploy\*\* \| \*\*(\d+) each\*\* \|/) || [])[1];
 const listCost = (DOC.match(/production deploy costs (\d+) Netlify credits/) || [])[1];
 check('the production cost was found in the credit table', !!tableCost, tableCost);
 check('the production cost was found in the outstanding-work list', !!listCost, listCost);
@@ -118,18 +124,18 @@ const RETRACTION = 'THAT IS FALSE and was corrected on 6 Aug 2026';
    Somebody will reach the same wrong conclusion from the same true premise
    ("branch deploys are enabled") unless the argument against it is sitting
    there. */
-check('the retracted sentence is still recorded', DOC.includes(FALSE_CLAIM));
-check('…and is explicitly marked false', DOC.includes(RETRACTION));
+check('the retracted sentence is still recorded', RDOC.includes(FALSE_CLAIM));
+check('…and is explicitly marked false', RDOC.includes(RETRACTION));
 check('…with the reason, not just the verdict',
-  /A branch build\ncannot move the credit number, because it does not cost any/.test(DOC));
+  /A branch build\ncannot move the credit number, because it does not cost any/.test(RDOC));
 
 /* ⚠️ POSITION, which is the check that actually discriminates. The retracted
    sentence and a restored one are the SAME STRING. Presence cannot tell them
    apart and neither can absence. What tells them apart is whether the words
    "USED TO END" come before it — i.e. whether it is being quoted or asserted. */
-const usedToEnd = DOC.indexOf('THIS PARAGRAPH USED TO END');
-const claimAt = DOC.indexOf(FALSE_CLAIM);
-const retractAt = DOC.indexOf(RETRACTION);
+const usedToEnd = RDOC.indexOf('THIS PARAGRAPH USED TO END');
+const claimAt = RDOC.indexOf(FALSE_CLAIM);
+const retractAt = RDOC.indexOf(RETRACTION);
 check('the tombstone marker was found', usedToEnd > -1, String(usedToEnd));
 check('the retracted sentence sits INSIDE its tombstone, not standing as advice',
   usedToEnd > -1 && claimAt > usedToEnd && retractAt > claimAt,
@@ -140,7 +146,7 @@ check('the retracted sentence sits INSIDE its tombstone, not standing as advice'
    would slip past it entirely. Same shape as the stuck-hover sweep, which had
    to count occurrences rather than compare text for exactly this reason. */
 eq('the retracted sentence appears exactly once',
-  DOC.split(FALSE_CLAIM).length - 1, 1);
+  RDOC.split(FALSE_CLAIM).length - 1, 1);
 
 /* =========================================================================
    3. A branch deploy outlives its branch
@@ -151,23 +157,23 @@ section('CLAUDE.md warns that deleting a branch does not take its site down');
 /* ⚠️ MEASURED, NOT ASSUMED. `club-manager-page` was deleted from origin on
    6 Aug 2026 and its branch site was still answering 200 — with its functions
    running — minutes later, confirmed against Netlify's own support. */
-check('the warning is recorded', /A BRANCH DEPLOY OUTLIVES ITS BRANCH/.test(DOC));
+check('the warning is recorded', /A BRANCH DEPLOY OUTLIVES ITS BRANCH/.test(RDOC));
 check('…with the mechanism, so it is not read as a Netlify glitch',
-  /Deleting the git branch does\nNOT take the `<branch>--adhquins-jrt\.netlify\.app` site down/.test(DOC));
+  /Deleting the git branch does\nNOT take the `<branch>--adhquins-jrt\.netlify\.app` site down/.test(RDOC));
 
 /* This is the part that makes it a security note rather than tidiness: a
    branch deploy's functions are not sandboxed from production's data. */
 check('…and why it matters — the same env vars and the same stores as production',
-  /read the SAME environment variables and the SAME Blobs stores as\nproduction/.test(DOC));
+  /read the SAME environment variables and the SAME Blobs stores as\nproduction/.test(RDOC));
 check('…with the concrete instance, so the severity is not left abstract',
-  /no rate limiting on `manager-signup`/.test(DOC));
+  /no rate limiting on `manager-signup`/.test(RDOC));
 
 /* The setting change is recorded as a PARTIAL fix, because writing it down as
    a fix is how the next person stops looking. */
 check('the branch-deploy restriction is recorded as not retracting what is published',
-  /Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published/.test(DOC));
+  /Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published/.test(RDOC));
 check('the current branch-deploy setting is recorded',
-  /branch deploys are enabled \*\*for `dev` only\*\* as of\n6 Aug 2026/.test(DOC));
+  /branch deploys are enabled \*\*for `dev` only\*\* as of\n6 Aug 2026/.test(RDOC));
 
 /* =========================================================================
    4. The measurement lesson that found all of the above
@@ -180,9 +186,9 @@ section('The baseline lesson is recorded, because it cost a false all-clear');
    check that fails for the wrong reason proves nothing; that is this repo's
    own written rule, and it was broken by the person who wrote it. */
 check('the no-baseline trap is recorded',
-  /\*\*A 404 with no before-reading proves nothing\.\*\*/.test(DOC));
+  /\*\*A 404 with no before-reading proves nothing\.\*\*/.test(RDOC));
 check('…including the transient-failure half of it',
-  /a single `000` from a\ntransient connection failure reads exactly like "the site is gone"/.test(DOC));
+  /a single `000` from a\ntransient connection failure reads exactly like "the site is gone"/.test(RDOC));
 
 /* =========================================================================
    5. The claims that were corrected BEFORE this file existed
@@ -199,17 +205,30 @@ section('The earlier doc corrections have not drifted back');
    dead within the 400 characters before it; the live host must appear. */
 const DEAD_HOST = 'serene-gingersnap-1d0eb6';
 const deadMentions = [];
-for (let i = DOC.indexOf(DEAD_HOST); i > -1; i = DOC.indexOf(DEAD_HOST, i + 1)) deadMentions.push(i);
+for (let i = RDOC.indexOf(DEAD_HOST); i > -1; i = RDOC.indexOf(DEAD_HOST, i + 1)) deadMentions.push(i);
 const deadUnflagged = deadMentions.filter((i) =>
-  !/not the old|which 404s|no longer|dead|→ \*\*404\*\*|USED TO/i.test(DOC.slice(Math.max(0, i - 400), i)));
-check('the live preview host is documented', /--adhquins-jrt\.netlify\.app/.test(DOC));
+  !/not the old|which 404s|no longer|dead|→ \*\*404\*\*|USED TO/i.test(RDOC.slice(Math.max(0, i - 400), i)));
+check('the live preview host is documented', /--adhquins-jrt\.netlify\.app/.test(RDOC));
 check('the dead preview host is mentioned at all, so the rename stays recorded',
   deadMentions.length > 0, String(deadMentions.length));
 eq('every mention of the dead host is flagged as dead', deadUnflagged.length, 0);
-check('the dead 401 test is marked dead', /AND THE 401 TEST IS DEAD TOO/.test(DOC));
+check('the dead 401 test is marked dead', /AND THE 401 TEST IS DEAD TOO/.test(RDOC));
 check('…and replaced with what an existing deploy actually answers',
-  /\*\*200 means it is there, 404 means it is not\.\*\*/.test(DOC));
+  /\*\*200 means it is there, 404 means it is not\.\*\*/.test(RDOC));
 check('the master invite key is documented as the asterisk the code requires',
-  !/`"admin"`/.test(DOC) || /NOT `"admin"`|not `"admin"`/.test(DOC));
+  !/`"admin"`/.test(DOC + RDOC) || /NOT `"admin"`|not `"admin"`/.test(DOC + RDOC));
+
+/* =========================================================================
+   6. CLAUDE.md stays a rules file
+   ========================================================================= */
+
+section('CLAUDE.md stays within its line budget');
+
+/* Every session reads CLAUDE.md in full, so its length is a cost paid on every
+   task. It grew past 800 lines by accretion, one reasonable paragraph at a
+   time. The ruling is claude/decisions/2026-09-10-documentation-cut.md: rules
+   here, behaviour in RESTORE.md, reasons in claude/decisions/. */
+const CLAUDE_LINES = DOC.replace(/\n$/, '').split('\n').length;
+check('CLAUDE.md is at most 160 lines', CLAUDE_LINES <= 160, String(CLAUDE_LINES));
 
 summary('test-doc-claims.js');

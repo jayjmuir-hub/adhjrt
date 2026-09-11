@@ -15,7 +15,7 @@ rather than trusting that the config file says what you think it says.
 
 ## Before you start
 
-- Do this on a **branch deploy** (`dev` or `Compare`), never by pushing
+- Do this on the **`dev` branch deploy**, never by pushing
   straight to `main` to test a redirect — a branch deploy is free, a
   production deploy costs 15 credits.
 - Pick an **unruled sibling path** before you start — a file that is not
@@ -31,13 +31,12 @@ rather than trusting that the config file says what you think it says.
    This is your **before** reading — take it before the change goes anywhere,
    not after.
 2. **In PowerShell:** push the branch carrying the `netlify.toml` change to
-   `dev` or `Compare`.
+   `dev`.
 3. **Wait for the branch deploy to finish** — check its status in the
    Netlify MCP or the Deploys page for site
    `8bb8cade-864f-416d-a4b8-eadda5f1997e`.
 4. **In a browser or via a URL fetch, against the branch deploy URL**
-   (`https://dev--adhquins-jrt.netlify.app` or
-   `https://compare--adhquins-jrt.netlify.app`): request the same path from
+   (`https://dev--adhquins-jrt.netlify.app`): request the same path from
    step 1.
 5. **On the same branch deploy, in the same moment:** request the unruled
    sibling path you picked in "Before you start".

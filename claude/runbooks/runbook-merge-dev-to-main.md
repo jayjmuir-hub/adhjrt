@@ -82,24 +82,23 @@ time, whatever its size.
 
    The two must match exactly.
 
-7. **In PowerShell:** bring `dev` and `Compare` back level with `main`, in
-   the same sitting.
+7. **In PowerShell:** bring `dev` back level with `main`, in the same
+   sitting.
 
    ```
    git checkout dev
    git merge --ff-only main
    git push origin dev
-   git checkout Compare
-   git merge --ff-only main
-   git push origin Compare
    ```
+
+   (Until 11 Sep 2026 this step also fast-forwarded `Compare`. That branch
+   was retired: see `claude/decisions/2026-07-27-work-batches-on-a-branch-and-lands-once.md`.)
 
 ## How to verify
 
 - The Netlify deploy for site `8bb8cade-864f-416d-a4b8-eadda5f1997e` shows
   state `ready` and its commit SHA equals `git rev-parse main` from step 6.
-- `git rev-list --count origin/Compare..origin/main` and
-  `git rev-list --count origin/dev..origin/main` both print `0`.
+- `git rev-list --count origin/dev..origin/main` prints `0`.
 - The live site (`adhjrt.com`) reflects the change that was merged — check
   the actual page, not just the deploy dashboard.
 
@@ -115,7 +114,7 @@ time, whatever its size.
   one, Netlify skipped the build entirely and `main` is now merged but
   undeployed. Fix with **Deploys → Trigger deploy** in the Netlify UI on the
   correct commit; do not push an empty commit to work around it.
-- **`git merge --ff-only` refuses on `dev`, `main`, `Compare`, or the final
+- **`git merge --ff-only` refuses on `dev`, `main`, or the final
   sync step:** the target branch has commits the source doesn't. Do not
   force a merge commit — fetch again, look at what diverged, and resolve it
   deliberately (usually re-running this same runbook once more from a clean

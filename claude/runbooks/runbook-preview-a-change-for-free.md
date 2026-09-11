@@ -12,26 +12,26 @@ of URL for the same site and it is easy to grab the wrong one.
 
 ## Before you start
 
-- Know that only `dev` and `Compare` are in this project's branch-deploy
-  allow-list — a branch outside that list needs a pull request to get a
-  preview URL at all.
+- Know that only `dev` is in this project's branch-deploy allow-list. Any
+  other branch needs a pull request to get a preview URL at all. (`Compare`
+  was on the list too, until it was retired on 11 Sep 2026: see
+  `claude/decisions/2026-07-27-work-batches-on-a-branch-and-lands-once.md`.)
 - Know the site's Netlify subdomain is **`adhquins-jrt`** — not any other
   name a stale doc might have used.
 
 ## Steps
 
-1. **In PowerShell:** push your change to `dev` (or `Compare`) — a branch
-   push is a build, and branch builds are free.
+1. **In PowerShell:** push your change to `dev`. A branch push is a build,
+   and branch builds are free.
 
    ```
    git push origin dev
    ```
 
-2. **In a browser:** open the stable branch URL for whichever branch you
-   pushed. This URL never changes, so it is the one worth bookmarking:
+2. **In a browser:** open the stable branch URL. It never changes, so it is
+   the one worth bookmarking:
 
    - `https://dev--adhquins-jrt.netlify.app`
-   - `https://compare--adhquins-jrt.netlify.app`
 
 3. **To review one specific pull request instead** (rarely needed day to
    day — prefer the stable branch URL above): open a PR from `dev`,
@@ -62,8 +62,8 @@ of URL for the same site and it is easy to grab the wrong one.
 
 - **The branch URL 404s:** either the deploy hasn't finished yet (wait and
   reload), or that branch isn't in the branch-deploy allow-list. Only `dev`
-  and `Compare` are — anything else needs a pull request (step 3) to get any
-  preview URL at all.
+  is. Anything else needs a pull request (step 3) to get any preview URL at
+  all.
 - **You're not sure whether "404" means the deploy doesn't exist, or "200"
   really proves it does:** don't rely on either one alone. Whether a missing
   deploy 401s or 404s, and whether an existing one 200s or 401s, depends
@@ -73,7 +73,7 @@ of URL for the same site and it is easy to grab the wrong one.
 - **You bookmarked a `<deploy-id>--adhquins-jrt.netlify.app` link and it now
   shows something stale:** that link format is a permalink to one frozen
   build, not the live branch — it will never update. Use the stable
-  `dev--` / `compare--` URL instead for anything you plan to revisit.
+  `dev--` URL instead for anything you plan to revisit.
 - **You deleted a branch and the old preview URL still loads:** a branch
   deploy outlives the git branch it was built from. Deleting the branch does
   not take the site down, and it keeps running against the same live

@@ -6467,6 +6467,23 @@ const FAULTS = [
     expect: ['not retracting what is published'],
   },
   {
+    /* JRT-34, 11 Sep 2026. The sentence this check used to pin was false:
+       Netlify built every pushed branch. Putting it back as the current
+       setting is exactly the regression, so it must fail the repointed check. */
+    name: 'the false "dev only since 6 Aug" sentence comes back as the current setting',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('RESTORE.md', 'Branch deploys are enabled **for `dev` only**, so a push to `dev` triggers a\nbuild.',
+      'Consequence worth knowing: branch deploys are enabled **for `dev` only** as of\n6 Aug 2026, so a push to `dev` triggers a build.'),
+    expect: ['the current branch-deploy setting is recorded'],
+  },
+  {
+    /* The tombstone is what stops the next person trusting an unread setting. */
+    name: 'the tombstone for the false branch-deploy allow-list is tidied away',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('RESTORE.md', '"Deploy all branches pushed to the repository"', 'a broader setting'),
+    expect: ['keeps its tombstone'],
+  },
+  {
     /* The measurement lesson. Deleting this is how the same false all-clear
        gets reported again. */
     name: 'the no-baseline lesson is dropped from the doc',

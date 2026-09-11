@@ -172,8 +172,18 @@ check('…with the concrete instance, so the severity is not left abstract',
    a fix is how the next person stops looking. */
 check('the branch-deploy restriction is recorded as not retracting what is published',
   /Restricting branch\ndeploys to `dev` stops the NEXT one; it does not retract one already published/.test(RDOC));
+/* Repointed 11 Sep 2026 (JRT-34). This used to pin "enabled for `dev` only
+   as of 6 Aug 2026". That sentence was FALSE: Netlify was set to "Deploy all
+   branches pushed to the repository", and this check kept a claim nobody had
+   read back. It now pins the corrected sentence, with the command that reads
+   the setting back, and a second check keeps the tombstone for the false
+   claim from being quietly dropped. */
 check('the current branch-deploy setting is recorded',
-  /branch deploys are enabled \*\*for `dev` only\*\* as of\n6 Aug 2026/.test(RDOC));
+  /Branch deploys are enabled \*\*for `dev` only\*\*, so a push to `dev` triggers a\nbuild/.test(RDOC)
+  && /`build_settings\.allowed_branches` is\n`\["main","dev"\]`/.test(RDOC));
+check('…and the false "dev only since 6 Aug" claim keeps its tombstone',
+  /"Deploy all branches pushed to the repository"/.test(RDOC)
+  && /THAT WAS\nFALSE until 11 Sep 2026/.test(RDOC));
 
 /* =========================================================================
    4. The measurement lesson that found all of the above

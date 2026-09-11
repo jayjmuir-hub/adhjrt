@@ -1,4 +1,4 @@
-# ADH JRT — state of play, 10 September 2026
+# ADH JRT — state of play, 11 September 2026
 
 ## ✅ 10 Sep 2026 — REGISTRATION STORE IS LIVE (`27c5a0a`), rehearsal still pending
 
@@ -28,9 +28,20 @@ for — `commit_ref` is what makes the reading discriminate instead.
 ⚠️ **Google is still fully wired and that is deliberate.** `_sheets.js` is
 still deployed (unused by any function), the five `GOOGLE_*` variables are
 still set, and the three sheets are untouched. The rehearsal in the spec's
-§ 12 is the gate before any of that is removed. **The first snapshot email
-should arrive at 22:00 UTC (02:00 Abu Dhabi) — if none arrives, the mailer is
-not working and there is no backup.**
+§ 12 is the gate before any of that is removed.
+
+✅ **THE FIRST SNAPSHOT ARRIVED — measured 11 Sep 2026.** Jay read the
+registrations mailbox: subject *"ADH JRT registrations snapshot 2026-09-10
+22:00 UTC — 0 teams, 0 players, 0 clubs"*. No FAILED, no INCOMPLETE. That is
+the scheduled run firing, the store being read, and Microsoft Graph sending
+from `MAIL_FROM` — end to end, on production. ⚠️ **Arrival alone would not
+have proved it:** the mailer deliberately sends a FAILED email too, so the
+subject line is the check, not the email's existence.
+
+It survived a second production deploy the same afternoon (`a8983ae`, PR #24,
+deploy `6aa2dc41352c9c0007cc3bd1`, a docs-only change merged through GitHub
+without `[skip ci]` — 15 credits); that deploy still lists
+`snapshot-registrations` at `@hourly`.
 
 ## 10 Sep 2026 — REGISTRATION STORE built on `dev`, rehearsal pending
 

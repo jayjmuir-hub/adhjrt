@@ -9606,6 +9606,40 @@ const FAULTS = [
     expect: ['only the rehearsal record is gone'],
   },
 
+  /* ---- the admin tool against the REAL CLI (found on the first live run) ---
+     Every check above drives a fake io, so these five are the only faults
+     that touch how the tool actually starts the Netlify CLI. */
+  {
+    name: 'the admin tool calls plain "netlify" on Windows again (spawnSync ENOENT)',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), "  if (platform !== 'win32') return", '  if (true) return'),
+    expect: ['on Windows it goes through cmd.exe to netlify.cmd'],
+  },
+  {
+    name: 'the cmd.exe argument allowlist is dropped',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), '  for (const a of args) if (!SAFE_ARG.test(a))', '  for (const a of args) if (false)'),
+    expect: ['an argument cmd.exe could re-parse is refused'],
+  },
+  {
+    name: 'blobs:set goes back to sending the value on stdin, which the CLI ignores',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), "        run(['blobs:set', store, key, '--input', file, '--force']);", "        run(['blobs:set', store, key, '--force'], JSON.stringify(json));"),
+    expect: ['blobs:set passes the value through --input, not stdin'],
+  },
+  {
+    name: "restore's temp file (a family's details) is left on disk",
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), '      finally { fs.rmSync(dir, { recursive: true, force: true }); }', '      finally { }'),
+    expect: ['temp file is gone afterwards'],
+  },
+  {
+    name: 'blobs:delete loses --force and stops at a prompt nobody answers',
+    suite: 'test-registrations-admin.js',
+    apply: () => patch(path.join('tools', 'registrations-admin.js'), "run(['blobs:delete', store, key, '--force'])", "run(['blobs:delete', store, key])"),
+    expect: ['blobs:delete passes --force'],
+  },
+
 ];
 
 /* ------------------------------------------------------------------------ */

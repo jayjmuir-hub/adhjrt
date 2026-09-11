@@ -6,7 +6,7 @@
    claude/runbooks/runbook-registrations-restore-and-delete.md.
 
    CREDENTIALS. This talks to the store through the Netlify CLI
-   (`netlify blobs:…`), which uses the login Jay primed once in a browser.
+   (`netlify blobs:…`), which uses the login the maintainer primed once in a browser.
    There is NO token in this file, in the environment it reads, or in any
    argument. If `netlify` is not signed in or the folder is not linked, the
    CLI says so and this tool stops.
@@ -23,6 +23,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { STORE_NAME } = require(path.join(__dirname, '..', 'netlify', 'functions', '_regstore.js'));
@@ -31,9 +32,35 @@ const { restorePlan, deletePlan, canDelete } = require(path.join(__dirname, '..'
 function flag(argv, name) { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; }
 function has(argv, name) { return argv.indexOf(name) >= 0; }
 
-/* The real io: every call is one Netlify CLI invocation. */
-function netlifyIo() {
-  const run = (args, input) => execFileSync('netlify', args, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'], windowsHide: true });
+/* How to start the Netlify CLI on this machine.
+
+   ⚠️ WINDOWS. npm installs the CLI as `netlify.cmd`, a batch file, and Node
+   will not run a batch file without a shell — `execFileSync('netlify', …)`
+   fails with "spawnSync netlify ENOENT" before anything happens. That is how
+   this tool behaved on both of the project's PCs until its first real run.
+   So on Windows the call goes through cmd.exe. cmd.exe re-parses its command
+   line, which is where an argument could turn into a second command, so every
+   argument is checked against a strict allowlist first and refused if it
+   fails. Only store names, keys, flags and a temp-file path are ever passed;
+   a record's VALUE never travels as an argument (see set()).
+   `verbatim` stops Node re-escaping the quotes cmd.exe needs. */
+const SAFE_ARG = /^[A-Za-z0-9 ._:\\/~()+-]+$/;
+function cliInvocation(args, platform) {
+  if (platform !== 'win32') return { file: 'netlify', argv: args, verbatim: false };
+  for (const a of args) if (!SAFE_ARG.test(a)) throw new Error(`refusing to pass an argument cmd.exe could re-parse: ${JSON.stringify(a)}`);
+  const line = ['netlify.cmd', ...args].map((a) => `"${a}"`).join(' ');
+  return { file: process.env.ComSpec || 'cmd.exe', argv: ['/d', '/s', '/c', `"${line}"`], verbatim: true };
+}
+
+function realRun(args, input) {
+  const c = cliInvocation(args, process.platform);
+  return execFileSync(c.file, c.argv, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'], windowsHide: true, windowsVerbatimArguments: c.verbatim });
+}
+
+/* The real io: every call is one Netlify CLI invocation. `runner` exists for
+   the tests, which check the exact arguments without a real CLI. */
+function netlifyIo(runner) {
+  const run = runner || realRun;
   return {
     async list(store) {
       const raw = run(['blobs:list', store, '--json']);
@@ -52,16 +79,28 @@ function netlifyIo() {
       try { return JSON.parse(raw); }
       catch (e) { throw new Error(`unparsable record for "${key}": ${e && e.message}`); }
     },
-    /* ⚠️ THE VALUE GOES IN ON STDIN, AND NOTHING HERE HAS EVER RUN AGAINST
-       THE REAL CLI. The Netlify CLI is not a dependency of this repo and the
-       suite drives a fake, so this exact invocation is unproven: if
-       `blobs:set` does not read stdin, a restore writes an empty or malformed
-       blob at precisely the key that was missing — and because restore is
-       add-only, that key then counts as PRESENT for ever and a second, correct
-       restore skips it permanently. runTool() therefore reads every write back
-       and compares it before writing the next one; see the read-back there. */
-    async set(store, key, json) { run(['blobs:set', store, key], JSON.stringify(json)); },
-    async del(store, key) { run(['blobs:delete', store, key]); },
+    /* ⚠️ THE VALUE GOES IN THROUGH --input, NEVER STDIN. `netlify blobs:set`
+       takes its value as an argument or from a file; it does not read stdin,
+       and this tool used to send it there — which would have written an EMPTY
+       blob at precisely the key that was missing. Restore is add-only, so that
+       key would then count as PRESENT for ever and a second, correct restore
+       would skip it. An argument is no better: it would put a family's details
+       on a command line. So: a private temp file OUTSIDE the repo (the repo
+       root is the served website), removed again whatever happens. runTool()
+       still reads every write back before the next one; see the read-back.
+       --force because the CLI can otherwise stop at a prompt nobody answers. */
+    async set(store, key, json) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'adhjrt-restore-'));
+      const file = path.join(dir, 'record.json');
+      try {
+        fs.writeFileSync(file, JSON.stringify(json), { mode: 0o600 });
+        run(['blobs:set', store, key, '--input', file, '--force']);
+      }
+      finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    },
+    /* --force: without it blobs:delete asks "are you sure?" and, with no one
+       to answer, stops. */
+    async del(store, key) { run(['blobs:delete', store, key, '--force']); },
     readFile(p) { return fs.readFileSync(p, 'utf8'); },
     out(line) { console.log(line); },
   };
@@ -139,9 +178,9 @@ async function runTool(argv, io) {
         /* Add only. A key that exists is never touched, and the plan already excluded them. */
         await io.set(STORE_NAME, m.key, m.record);
         /* ⚠️ READ IT BACK BEFORE WRITING THE NEXT ONE. The write goes through
-           `netlify blobs:set` with the value on STDIN, and nothing in this
-           repo has ever exercised that against the real CLI (see netlifyIo's
-           set()). A write that silently stores nothing would leave the key
+           `netlify blobs:set --input` (see netlifyIo's set()), and the
+           suite can only check the arguments, not the CLI itself. A write
+           that silently stores nothing would leave the key
            PRESENT but empty, and restore's add-only rule then makes it
            unfixable by a second restore. So: compare, and stop on the FIRST
            mismatch rather than papering over the rest of the store with the
@@ -194,7 +233,7 @@ async function runTool(argv, io) {
   }
 }
 
-module.exports = { runTool, netlifyIo, loadEntries };
+module.exports = { runTool, netlifyIo, loadEntries, cliInvocation };
 
 if (require.main === module) {
   runTool(process.argv.slice(2), netlifyIo()).then((code) => process.exit(code));

@@ -196,10 +196,56 @@ const snapOld = S.buildSnapshot(Object.entries(full).map(([key, record]) => ({ k
   section('The real io shells out to the Netlify CLI — no token anywhere');
   {
     const src = readRepo('tools/registrations-admin.js');
-    check('uses execFileSync("netlify", …)', /execFileSync\(\s*['"]netlify['"]/.test(src));
+    check('starts the CLI through cliInvocation()', /execFileSync\(c\.file, c\.argv/.test(src));
     check('blobs:list / get / set / delete', ['blobs:list', 'blobs:get', 'blobs:set', 'blobs:delete'].every((c) => src.includes(c)));
     check('never reads a token from the environment or a file', !/BLOBS_TOKEN|NETLIFY_AUTH_TOKEN|token/i.test(src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')));
     check('store name comes from _regstore', /STORE_NAME/.test(src));
   }
+  section('The real io works on Windows, and uses the CLI the way the CLI works');
+  {
+    /* Found on the first real run: every call failed "spawnSync netlify
+       ENOENT" on Windows, because npm installs the CLI as netlify.cmd;
+       blobs:set takes its value from --input or an argument, never stdin; and
+       blobs:delete prompts unless given --force. The rest of this file drives
+       a fake io, so none of the three could ever show up in it. */
+    const lin = A.cliInvocation(['blobs:list', 'registrations', '--json'], 'linux');
+    eq('off Windows the CLI is run directly, with no shell', lin.file, 'netlify');
+    eq('…and the arguments untouched', JSON.stringify(lin.argv), JSON.stringify(['blobs:list', 'registrations', '--json']));
+
+    const key = 'club/2026-09-11T03-19-28-069Z-f758f5';
+    const win = A.cliInvocation(['blobs:get', 'registrations', key], 'win32');
+    const line = win.argv[win.argv.length - 1];
+    check('on Windows it goes through cmd.exe to netlify.cmd', /cmd(\.exe)?$/i.test(win.file) && line.includes('"netlify.cmd"'), win.file);
+    check('…with every argument quoted', line.includes('"blobs:get"') && line.includes(`"${key}"`), line);
+    check('…passed verbatim, so Node does not re-escape the quotes', win.verbatim === true);
+    let threw = false;
+    try { A.cliInvocation(['blobs:get', 'registrations', 'x" & calc & "'], 'win32'); } catch (e) { threw = true; }
+    check('an argument cmd.exe could re-parse is refused, not passed', threw);
+
+    const fs = require('fs');
+    const calls = [];
+    let seenValue = null, seenPath = null;
+    const io = A.netlifyIo((args, input) => {
+      calls.push({ args, input });
+      const i = args.indexOf('--input');
+      if (i >= 0) { seenPath = args[i + 1]; seenValue = fs.readFileSync(seenPath, 'utf8'); }
+      return '';
+    });
+    const value = { v: 1, form: 'club-registration', row: ['a', 'Rehearsal X'], rehearsal: true };
+    await io.set('registrations', 'club/k1', value);
+    const set = calls[0] || { args: [] };
+    check('blobs:set passes the value through --input, not stdin',
+      set.args[0] === 'blobs:set' && set.args.includes('--input') && set.input === undefined);
+    eq('…and that file holds exactly the record', seenValue, JSON.stringify(value));
+    check('…and the temp file is gone afterwards', !!seenPath && !fs.existsSync(seenPath), String(seenPath));
+    check('…and it was written outside the repo',
+      !!seenPath && !path.resolve(seenPath).toLowerCase().startsWith(path.resolve(repoRoot()).toLowerCase()), String(seenPath));
+    check('…and the value is never on the command line',
+      !set.args.some((a) => a.includes('Rehearsal X')));
+    await io.del('registrations', 'club/k1');
+    const del = calls[1] || { args: [] };
+    check('blobs:delete passes --force, so it cannot stop at a prompt', del.args[0] === 'blobs:delete' && del.args.includes('--force'));
+  }
+
   summary('test-registrations-admin.js');
 })();

@@ -1632,6 +1632,23 @@ Fixtures are draft-first. The `schedules` blob store keeps two copies for each a
 The same store also holds `review:<id>` and `hist:<id>:<ISO>` (see Draw rights).
 
 - `save-schedule-override.js` writes the draft only. It never makes anything public.
+- ⚠️ **No save may strand a recorded score** (JRT-6 and JRT-26, 11 Sep 2026).
+  Results are stored under the match id and carry no team codes. So
+  `save-schedule-override.js` refuses (409) any save, organisers' included,
+  that would remove a slot with a recorded result or change a team that slot
+  named.
+  - A scored slot's time and pitch may still change, and a blank side (a
+    knockout placeholder) may be filled in.
+  - It refuses (503) when it cannot read the results.
+  - It only checks against a stored draft.
+  - The Draw tab's rebuild keeps each existing pairing's slot id and sides
+    (`regeneratePoolSlots`). It refuses before offering if a scored match
+    would still be dropped.
+  - To drop a played match on purpose, clear its score first.
+
+  **Until 11 Sep 2026 every rebuild minted new ids, and a pool's scores
+  dropped out of the standings.** Ruling:
+  `claude/decisions/2026-09-11-draw-edits-keep-results.md`.
 - `publish-schedule.js` copies the draft to the published copy, or deletes the published copy.
 - `get-schedule-override.js` serves the published copy to the public. It serves the draft only to a caller who asks with `?draft=1`, has a valid session, and has access to that age group. A bad or missing token quietly gets the published view rather than an error.
 - **Only organisers publish** (`publishDenialReason` in `_publish.js`). Every manager is refused with *"Only tournament organisers can publish fixtures. Send your draft for review instead."* `_publish.js` still exports `isTournamentWindow()` because `_drawRights.js` uses it.

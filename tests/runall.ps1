@@ -111,7 +111,11 @@ $tests = @(
   # /app sign-in: a wrong password must show the refusal (JRT-29, 11 Sep 2026).
   # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
   # registration.
-  'test-app-signin.js'
+  'test-app-signin.js',
+  # A draw edit must never strand a recorded score (JRT-6 and JRT-26, 11 Sep 2026).
+  # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
+  # registration.
+  'test-draw-keeps-results.js'
 )
 
 Write-Host ''

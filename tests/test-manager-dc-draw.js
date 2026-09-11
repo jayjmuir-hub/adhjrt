@@ -71,7 +71,10 @@ function drawApi(overrides) {
     unpublishDraw: async () => ({ ok: true, published: false }),
     canPublishNow: () => false,
     autoKnockoutSlots: async () => [],
-    regeneratePoolSlots: (agId, poolId, teams) => (teams || []).slice(0, -1).map((t, i) => ({
+    /* `existingSlots` joined the real signature for JRT-6 (a rebuild keeps a
+       scored pairing's id and sides). This fake ignores it; the real function
+       is driven in test-draw-keeps-results.js. */
+    regeneratePoolSlots: (agId, poolId, teams, existingSlots) => (teams || []).slice(0, -1).map((t, i) => ({
       id: `${agId}:${poolId}:regen${i}`, poolId, home: t, away: teams[i + 1] || '', startMins: 8 * 60 + i * 20, pitch: 'TBD',
     })),
     pitchesForAgeGroup: () => ['A1', 'A2'],
@@ -531,7 +534,9 @@ section('Match-slot editor');
   const c = buildDraw();
   c.regeneratePool('A');
   check('regenerating a pool asks first', !!c.state.modal && c.state.modal.kind === 'confirm');
-  check('…warning that scores go with the old slots', /scores already entered/i.test(c.state.modal.title));
+  /* JRT-6: this used to check for "scores already entered" (the rebuild
+     dropped them). A rebuild now keeps a scored match; the wording says so. */
+  check('…saying a match that already has a score keeps it', /already have a score keep it/i.test(c.state.modal.title));
   check('…and changes nothing until confirmed', !!slot(c, 'sA1'));
   c.submitModal();
   check('confirming replaces that pool\'s slots', !slot(c, 'sA1') && c.state.draw.slots.some((sl) => sl.poolId === 'A'));

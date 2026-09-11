@@ -1774,8 +1774,36 @@ export async function autoKnockoutSlots(agId, session) {
   return JSON.parse(JSON.stringify(computeAutoKnockout(ag, draw, tables, store)));
 }
 
-export function regeneratePoolSlots(agId, poolId, teams) {
-  return poolSlots(`${agId}:${poolId}:new${Date.now()}`, teams, FESTIVAL_AGE_IDS.includes(agId)).map((s) => ({ ...s, poolId }));
+/* Rebuilds one pool's match slots from its team list (the Draw tab's
+   "Regenerate"). `existingSlots` is the draw's current slot list; only this
+   pool's slots are used from it.
+
+   ⚠️ A PAIRING THAT ALREADY HAS A SLOT KEEPS ITS ID AND ITS HOME/AWAY SIDES
+   (JRT-6, 11 Sep 2026). Only its place in the order and its time change.
+   Results are stored under the match id (_results.js) and carry no team
+   codes, so:
+     - a new id strands the score already entered: it drops out of the table;
+     - keeping the id but flipping A-v-B to B-v-A hands A's score to B.
+   Until then every rebuild minted fresh ids from the clock, and the pool's
+   recorded scores silently vanished from the standings. Only a genuinely new
+   pairing gets a new id. A pair that meets twice (festival format) is matched
+   old-to-new in order, one old slot per new one. The server refuses any save
+   that would still strand a score (_drawRights.js, strandedResults). */
+export function regeneratePoolSlots(agId, poolId, teams, existingSlots = []) {
+  const fresh = poolSlots(`${agId}:${poolId}:new${Date.now()}`, teams, FESTIVAL_AGE_IDS.includes(agId)).map((s) => ({ ...s, poolId }));
+  const pairKey = (a, b) => JSON.stringify([String(a), String(b)].sort());
+  const waiting = new Map(); // pairing -> this pool's old slots for it, in order
+  (existingSlots || []).forEach((sl) => {
+    if (!sl || sl.poolId !== poolId || !sl.home || !sl.away) return;
+    const k = pairKey(sl.home, sl.away);
+    if (!waiting.has(k)) waiting.set(k, []);
+    waiting.get(k).push(sl);
+  });
+  return fresh.map((s) => {
+    const queue = waiting.get(pairKey(s.home, s.away));
+    const old = queue && queue.shift();
+    return old ? { ...s, id: old.id, home: old.home, away: old.away } : s;
+  });
 }
 
 export function timeToMinutes(hhmm) { return parseTime24(hhmm); }

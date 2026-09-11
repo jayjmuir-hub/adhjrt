@@ -9665,6 +9665,90 @@ const FAULTS = [
     expect: ['a correct password signs in'],
   },
 
+  /* ---- a draw edit never strands a recorded score (JRT-6 + JRT-26) ------
+     test-draw-keeps-results.js drives the real rebuild, the real save handler
+     and the real Draw tab. Each fault below is one plausible way to lose or
+     swap a score, and must be caught by the check that names it. */
+  {
+    name: 'the rebuild ignores the existing slots and mints new ids again',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch('scores-data.js', '    return old ? { ...s, id: old.id, home: old.home, away: old.away } : s;', '    return s;'),
+    expect: ['a rebuild with the same teams keeps every slot id'],
+  },
+  {
+    /* The subtle one: the id survives, so a check on ids alone passes, but
+       the score now belongs to the other team. */
+    name: 'the rebuild keeps the id but takes the new home/away, swapping the score',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch('scores-data.js', '    return old ? { ...s, id: old.id, home: old.home, away: old.away } : s;', '    return old ? { ...s, id: old.id } : s;'),
+    expect: ['keeps its OLD home and away'],
+  },
+  {
+    name: 'the server no longer refuses a save that strands a score',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-schedule-override.js'), '      if (stranded.length) {', '      if (false) {'),
+    expect: ['an organiser save that drops a scored match is refused'],
+  },
+  {
+    name: 'a failed results read is treated as "nothing recorded"',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-schedule-override.js'),
+      "        recorded = await readGroup(blobStore('results'), ageGroupId);",
+      "        recorded = await readGroup(blobStore('results'), ageGroupId).catch(() => ({}));"),
+    expect: ['a results read that fails refuses the save'],
+  },
+  {
+    name: 'the rule checks ids only, so a team swap on a scored slot is let through',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', '_drawRights.js'),
+      "      const moved = !keep\n        || (sl.home && (keep.home || '') !== sl.home)\n        || (sl.away && (keep.away || '') !== sl.away);",
+      '      const moved = !keep;'),
+    expect: ['swapping its teams is refused'],
+  },
+  {
+    name: 'saved knockout slots are not checked',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', '_drawRights.js'), "  sweep(stored && stored.knockout, incoming && incoming.knockout, 'knockout');", ''),
+    expect: ['dropping a scored saved knockout slot is refused'],
+  },
+  {
+    /* Over-strict is a failure too: the desk could no longer save a bracket
+       once standings fill a scored placeholder. */
+    name: 'a blank knockout placeholder is compared strictly, refusing an ordinary save',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', '_drawRights.js'), "(sl.home && (keep.home || '') !== sl.home)", "((keep.home || '') !== (sl.home || ''))"),
+    expect: ['a scored knockout placeholder may have its teams filled in'],
+  },
+  {
+    name: 'reset is exempt from the rule',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-schedule-override.js'),
+      '      const stranded = strandedResults(stored, reset ? null : schedule, recorded);',
+      '      const stranded = reset ? [] : strandedResults(stored, schedule, recorded);'),
+    expect: ['clearing the draft (reset) while a match has a score is refused'],
+  },
+  {
+    name: 'the Draw tab offers a rebuild that would drop a scored match',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch('Manager.dc.html', '    if (lost.length) { this.refuseRebuild(lost); return; }', ''),
+    expect: ['a rebuild that would drop a scored match is refused before it is offered', 'Regenerate all refuses the same way'],
+  },
+  {
+    name: 'the Draw tab stops passing the current slots to the rebuild',
+    suite: 'test-draw-keeps-results.js',
+    apply: () => patch('Manager.dc.html',
+      'const fresh = api.regeneratePoolSlots(ageId, poolId, (q && q.teams) || [], s.draw.slots || [])',
+      'const fresh = api.regeneratePoolSlots(ageId, poolId, (q && q.teams) || [])'),
+    expect: ["the Draw tab's rebuild keeps the scored match's id and teams"],
+  },
+  {
+    name: 'the per-pool rebuild goes back to promising to drop the scores',
+    suite: 'test-manager-dc-draw.js',
+    apply: () => patch('Manager.dc.html', 'Matches that already have a score keep it; only the order and kickoff times change',
+      "This replaces all of this pool's match slots, and any scores already entered for them"),
+    expect: ['a match that already has a score keeps it'],
+  },
+
 ];
 
 /* ------------------------------------------------------------------------ */

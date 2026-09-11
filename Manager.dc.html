@@ -1824,13 +1824,54 @@ class Component extends DCLogic {
     }));
   }
 
+  /* Which match ids already have a recorded score, read from the fixtures this
+     page loaded (the same draft the editor works on). JRT-6. */
+  scoredIds() {
+    const f = this.state.fixtures;
+    const out = new Set();
+    if (!f) return out;
+    [...(f.pool || []), ...(f.knockout || [])].forEach((m) => {
+      if (m && m.id != null && m.result && m.result.homeScore != null) out.add(String(m.id));
+    });
+    return out;
+  }
+
+  /* The scored slots a rebuild would drop: in `before`, missing from `after`. */
+  lostByRebuild(before, after) {
+    const scored = this.scoredIds();
+    const kept = new Set((after || []).map((sl) => String(sl.id)));
+    return (before || []).filter((sl) => scored.has(String(sl.id)) && !kept.has(String(sl.id)));
+  }
+
+  /* Refused before it is even offered, naming the matches, so the desk knows
+     which scores to clear if dropping them really is intended. */
+  refuseRebuild(lost) {
+    const { api } = this.state;
+    const names = lost.slice(0, 5).map((sl) => `${sl.home || 'TBD'} v ${sl.away || 'TBD'} at ${api.minutesToDisplay(sl.startMins)}`).join('; ');
+    const more = lost.length > 5 ? ` and ${lost.length - 5} more` : '';
+    const what = lost.length === 1 ? 'a match that already has a score' : `${lost.length} matches that already have scores`;
+    this.setState({ drawMsg: `Not regenerated: that would remove ${what} (${names}${more}). If that is really intended, clear those scores first, then regenerate.` });
+  }
+
   regeneratePool(poolId) {
     const { api, ageId } = this.state;
-    this.confirmModal("Regenerate this pool's match schedule from its current team list? This replaces all of this pool's match slots, and any scores already entered for them.", () => {
+    /* ⚠️ JRT-6, 11 Sep 2026. A rebuild keeps every pairing that already has a
+       slot (its id and its sides, so a recorded score stays attached; see
+       regeneratePoolSlots in scores-data.js). Only a pairing that no longer
+       exists is dropped. If one of those has a score, the rebuild is refused
+       here before it is offered, and the server refuses the same save anyway.
+       Until then this replaced every slot and said so: "and any scores
+       already entered for them". */
+    const draw = this.state.draw || {};
+    const p = (draw.pools || []).find((x) => x.id === poolId);
+    const before = (draw.slots || []).filter((sl) => sl.poolId === poolId);
+    const lost = this.lostByRebuild(before, api.regeneratePoolSlots(ageId, poolId, (p && p.teams) || [], draw.slots || []));
+    if (lost.length) { this.refuseRebuild(lost); return; }
+    this.confirmModal("Regenerate this pool's match schedule from its current team list? Matches that already have a score keep it; only the order and kickoff times change, and new pairings get new slots.", () => {
       this.setState((s) => {
-        const p = (s.draw.pools || []).find((x) => x.id === poolId);
+        const q = (s.draw.pools || []).find((x) => x.id === poolId);
         const keepPitch = this.poolPitchOf(poolId, s.draw);
-        const fresh = api.regeneratePoolSlots(ageId, poolId, (p && p.teams) || [])
+        const fresh = api.regeneratePoolSlots(ageId, poolId, (q && q.teams) || [], s.draw.slots || [])
           .map((sl) => (keepPitch ? { ...sl, pitch: keepPitch } : sl));
         return {
           draw: { ...s.draw, slots: [...(s.draw.slots || []).filter((sl) => sl.poolId !== poolId), ...fresh] },
@@ -1979,10 +2020,17 @@ class Component extends DCLogic {
   resetDraw() {
     if (!this.mayEdit('times')) return;
     const { api, ageId, session } = this.state;
-    this.confirmModal('Regenerate match times and the knockout bracket from the current teams and pools? Your teams and pool assignments are kept — only match pairings, times, and the bracket are rebuilt.', async () => {
+    /* JRT-6: as regeneratePool, for every pool at once. The old wording said
+       only "pairings, times, and the bracket" were rebuilt while every pool's
+       recorded scores were silently stranded. */
+    const current = this.state.draw || {};
+    const rebuilt = (current.pools || []).reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [], current.slots || [])), []);
+    const lost = this.lostByRebuild(current.slots || [], rebuilt);
+    if (lost.length) { this.refuseRebuild(lost); return; }
+    this.confirmModal('Regenerate match times and the knockout bracket from the current teams and pools? Your teams and pool assignments are kept, and matches that already have a score keep it; only match order, times and the bracket are rebuilt.', async () => {
       this.setState({ drawBusy: true, drawMsg: '' });
       const draw = this.state.draw;
-      const freshSlots = (draw.pools || []).reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [])), []);
+      const freshSlots = (draw.pools || []).reduce((acc, p) => acc.concat(api.regeneratePoolSlots(ageId, p.id, p.teams || [], draw.slots || [])), []);
       const freshKnockout = await api.autoKnockoutSlots(ageId, session);
       await this.ensureRegsForNames();
       const next = this.withTeamNames({ ...draw, slots: freshSlots, knockout: freshKnockout });

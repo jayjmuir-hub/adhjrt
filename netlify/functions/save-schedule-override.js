@@ -19,7 +19,8 @@
 
 const { resolveSession, sessionRefusal, hasAgeGroupAccess, blobStore } = require('./_auth');
 const { draftKey } = require('./_publish');
-const { saveDenialReason } = require('./_drawRights');
+const { saveDenialReason, strandedResults, strandedMessage } = require('./_drawRights');
+const { readGroup } = require('./_results');
 const { loadVenue, DEFAULT_VENUE } = require('./_venue');
 const { fileHistory } = require('./_drawHistory');
 
@@ -63,6 +64,31 @@ exports.handler = async (event) => {
       try { venue = await loadVenue(blobStore); } catch (e) { /* fall back to the code's layout */ }
       const denied = saveDenialReason(session, ageGroupId, { stored, incoming: schedule, reset: !!reset, venue });
       if (denied) return { statusCode: 403, body: JSON.stringify({ ok: false, error: denied }) };
+    }
+
+    /* ⚠️ NO SAVE MAY STRAND A RECORDED RESULT (JRT-6 and JRT-26, 11 Sep 2026).
+       Results live under the match id and carry no team codes. So a save that
+       drops a scored slot, or keeps its id but changes its teams, loses or
+       mis-attributes that score. That is true whether it comes from a pool
+       rebuild, an import in replace mode, or a hand-built request, so the rule
+       is enforced HERE, for organisers too; the Draw tab's own checks close no
+       door. The deliberate route is to clear the score first, which result
+       history records. A failed read REFUSES the save: "could not check" must
+       never be read as "nothing recorded".
+       Only checked against a stored draft. With none there is no saved
+       pairing to compare against; see the decision card for that gap. */
+    if (stored) {
+      let recorded;
+      try {
+        recorded = await readGroup(blobStore('results'), ageGroupId);
+      } catch (e) {
+        console.warn('save-schedule-override: could not read results -', e && e.message);
+        return { statusCode: 503, body: JSON.stringify({ ok: false, error: 'Could not check the scores already recorded for this group, so nothing was saved. Try again in a moment.' }) };
+      }
+      const stranded = strandedResults(stored, reset ? null : schedule, recorded);
+      if (stranded.length) {
+        return { statusCode: 409, body: JSON.stringify({ ok: false, error: strandedMessage(stranded), stranded: stranded.map((s) => s.id) }) };
+      }
     }
 
     /* Saves go to the DRAFT only. Nothing here changes what the public sees —

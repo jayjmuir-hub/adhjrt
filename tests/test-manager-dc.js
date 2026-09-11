@@ -125,7 +125,8 @@ function fakeApi(overrides) {
     },
     slotLengthMins: () => 20,
     dayStartMins: () => 8 * 60,
-    regeneratePoolSlots: (agId, poolId, teams) => (teams || []).slice(0, -1).map((t, i) => ({
+    /* `existingSlots` joined the real signature for JRT-6; ignored by this fake. */
+    regeneratePoolSlots: (agId, poolId, teams, existingSlots) => (teams || []).slice(0, -1).map((t, i) => ({
       id: `${agId}:${poolId}:regen${i}`, poolId, home: t, away: teams[i+1] || '', startMins: 8*60 + i*20, pitch: 'TBD',
     })),
     autoKnockoutSlots: async () => [],

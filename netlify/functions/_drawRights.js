@@ -20,8 +20,11 @@
 //
 // THE FREEZE. From 00:00 Gulf time on a group's own tournament day until the
 // tournament ends, a manager cannot save that group's draw at all; the desk
-// can. Editing pools on match day mints new match ids and orphans the results
-// already entered (RESTORE.md § Draft visibility), and a manager cannot see
+// can. Editing pools on match day used to mint new match ids and orphan the
+// results already entered. That was fixed on 11 Sep 2026 (JRT-6): see
+// strandedResults below and claude/decisions/2026-09-11-draw-edits-keep-results.md.
+// (This line used to cite "RESTORE.md § Draft visibility", a section that never
+// existed.) The freeze stays because a manager also cannot see
 // the other fourteen groups' pitches. Midnight rather than first kickoff:
 // one comparison against DEFAULT_VENUE, the same source as the countdown, and
 // a draft with no slots has no kickoff to compare against.
@@ -106,6 +109,59 @@ function poolsChanged(stored, incoming) {
   return false;
 }
 
+/* strandedResults(stored, incoming, recorded) -> the stored slots that have a
+   recorded result and would not survive `incoming` (JRT-6 and JRT-26,
+   11 Sep 2026).
+
+   Results are stored under the match id and carry NO team codes, so a scored
+   slot survives only if `incoming` still has a slot with the SAME id, and
+   keeps every team the stored slot already named. Its time and pitch may
+   change. A side that was blank in the stored slot (a knockout placeholder
+   waiting for standings) may be filled in. Pool slots and saved knockout
+   slots are both checked.
+     - `incoming` null means the draft is being cleared (reset).
+     - A knockout list missing from `incoming` drops the saved one, so a
+       scored saved knockout slot counts as stranded.
+     - `recorded` is readGroup()'s map; cleared results are already absent.
+   It applies to organisers too: this is data loss, not permission. The
+   deliberate route is to clear the score first (result history keeps it). */
+function strandedResults(stored, incoming, recorded) {
+  const has = (id) => !!recorded && Object.prototype.hasOwnProperty.call(recorded, String(id));
+  const index = (list) => {
+    const m = new Map();
+    for (const sl of Array.isArray(list) ? list : []) if (sl && sl.id != null) m.set(String(sl.id), sl);
+    return m;
+  };
+  const out = [];
+  const sweep = (was, nowList, kind) => {
+    const now = index(nowList);
+    for (const sl of Array.isArray(was) ? was : []) {
+      if (!sl || sl.id == null || !has(sl.id)) continue;
+      const keep = now.get(String(sl.id));
+      const moved = !keep
+        || (sl.home && (keep.home || '') !== sl.home)
+        || (sl.away && (keep.away || '') !== sl.away);
+      if (moved) out.push({ id: String(sl.id), kind, home: sl.home || '', away: sl.away || '', startMins: sl.startMins });
+    }
+  };
+  sweep(stored && stored.slots, incoming && incoming.slots, 'pool');
+  sweep(stored && stored.knockout, incoming && incoming.knockout, 'knockout');
+  return out;
+}
+
+const hhmm = (m) => (Number.isFinite(m) ? `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` : '');
+
+/* The sentence the Draw tab shows. Names up to five matches by team code and
+   kickoff so the desk knows which scores to clear. */
+function strandedMessage(list) {
+  const named = list.slice(0, 5)
+    .map((s) => `${s.home || 'TBD'} v ${s.away || 'TBD'}${hhmm(s.startMins) ? ' at ' + hhmm(s.startMins) : ''}`)
+    .join('; ');
+  const more = list.length > 5 ? ` and ${list.length - 5} more` : '';
+  const what = list.length === 1 ? 'a match that already has a score' : `${list.length} matches that already have scores`;
+  return `Nothing was saved: this would remove or change ${what} (${named}${more}). If that is really intended, clear those scores first, then save again.`;
+}
+
 /* saveDenialReason(session, ageGroupId, { stored, incoming, reset, now, venue })
    -> null when the save may proceed, else the sentence to show. Organisers
    are never refused here (hasAgeGroupAccess is the caller's job). */
@@ -142,4 +198,4 @@ async function rightsView(session, ageGroupId, now = Date.now()) {
   return { pools: r.pools, times: r.times, frozen: !!frozen, frozenNote: frozen || '' };
 }
 
-module.exports = { rightsFor, freezeReason, saveDenialReason, rightsView, timesChanged, poolsChanged, NO_RIGHTS, POOLS_ONLY, TIMES_ONLY, FIRST_DRAFT };
+module.exports = { rightsFor, freezeReason, saveDenialReason, rightsView, timesChanged, poolsChanged, strandedResults, strandedMessage, NO_RIGHTS, POOLS_ONLY, TIMES_ONLY, FIRST_DRAFT };

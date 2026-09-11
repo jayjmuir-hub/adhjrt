@@ -158,9 +158,10 @@ global.fetch = async () => ({
 /* Env vars must EXIST or a function may fail for a reason that has nothing to
    do with the code. Obvious non-values — nothing here is a real secret and
    nothing reaches a real service. */
-['SESSION_SECRET', 'GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY',
-  'GOOGLE_SHEET_ID_TEAMS', 'GOOGLE_SHEET_ID_PLAYERS', 'MS_TENANT_ID', 'MS_CLIENT_ID',
-  'MS_CLIENT_SECRET', 'MAIL_FROM', 'GOOGLE_CLIENT_ID'].forEach((k) => { if (!process.env[k]) process.env[k] = 'test-not-a-real-value'; });
+/* The GOOGLE_* names left this list with the Google Sheets path (JRT-2) and
+   the Google sign-in before it: no function reads any of them. */
+['SESSION_SECRET', 'MS_TENANT_ID', 'MS_CLIENT_ID',
+  'MS_CLIENT_SECRET', 'MAIL_FROM'].forEach((k) => { if (!process.env[k]) process.env[k] = 'test-not-a-real-value'; });
 
 /* ====================================================================== */
 section('Every function file loads');

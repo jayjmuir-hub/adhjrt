@@ -53,7 +53,6 @@ eq('team columns', I.TEAM_COLUMNS, [
   'num-players', 'notes', 'players', 'preferred-pool',
 ]);
 eq('fourteen of them', I.TEAM_COLUMNS.length, 14);
-eq('…which is what A:N means', I.TEAM_RANGE, 'A:N');
 
 eq('player columns', I.PLAYER_COLUMNS, [
   'submittedAt', 'player-first-name', 'player-last-name', 'dob',
@@ -63,14 +62,10 @@ eq('player columns', I.PLAYER_COLUMNS, [
   'medical-notes', 'consent', 'play-up-consent',
 ]);
 eq('sixteen of them', I.PLAYER_COLUMNS.length, 16);
-eq('…which is what A:P means', I.PLAYER_RANGE, 'A:P');
 
-/* The range and the column count have to agree or the append writes past the
-   end of the range and Google silently drops the overflow. Derived here rather
-   than eyeballed, so adding a column and forgetting the range is caught. */
-const widthOf = (range) => range.charCodeAt(2) - 'A'.charCodeAt(0) + 1;
-eq('the team range is exactly as wide as the team columns', widthOf(I.TEAM_RANGE), I.TEAM_COLUMNS.length);
-eq('the player range is exactly as wide as the player columns', widthOf(I.PLAYER_RANGE), I.PLAYER_COLUMNS.length);
+/* ⚠️ TOMBSTONE (JRT-2) — checks that each A1 range was exactly as wide as its
+   column list stood here: a narrower range made Google Sheets drop the overflow
+   silently. The ranges are gone with the sheets; the store keeps the whole row. */
 
 /* The dashboard's field names, in the same order, so mapTeamRow is a zip
    rather than fourteen positional guesses. */
@@ -494,11 +489,14 @@ section('The allow-list and the columns cannot drift apart');
     !/'form-name':/.test(home) && !/'form-name':/.test(clubPage));
 }
 
-/* Each form knows which sheet it belongs to, by env var NAME. Never a value. */
-eq('teams go to the teams sheet', I.FORMS['team-registration'].sheetEnv, 'GOOGLE_SHEET_ID_TEAMS');
-eq('players go to the players sheet', I.FORMS['player-registration'].sheetEnv, 'GOOGLE_SHEET_ID_PLAYERS');
-check('the two are not the same sheet',
-  I.FORMS['team-registration'].sheetEnv !== I.FORMS['player-registration'].sheetEnv);
+/* ⚠️ TOMBSTONE (JRT-2) — each form used to name its Google sheet (`sheetEnv`,
+   an env var NAME) and an A1 `range`, and these checks kept teams and players
+   apart. The registrations store replaced the sheets, so both are gone; this
+   now guards against either creeping back. */
+Object.keys(I.FORMS).forEach((f) => {
+  check(`${f} names no Google sheet`, !('sheetEnv' in I.FORMS[f]));
+  check(`${f} carries no A1 range`, !('range' in I.FORMS[f]));
+});
 
 /* ====================================================================== */
 section('Validation — the rules, server side for the first time');
@@ -758,11 +756,8 @@ check('neither is silently dropped', !V('team-registration', goodTeam()).drop
   eq('a short row from Sheets still has every field', typeof shortClub.notes, 'string');
   eq('…and the missing ones are blank', shortClub.notes, '');
 
-  /* The A1 range is derived, and colLetter() only reaches Z. */
-  eq('the club range is derived from the column count', I.CLUB_RANGE, 'A:U');
-  [I.TEAM_RANGE, I.PLAYER_RANGE, I.CLUB_RANGE].forEach((r) => {
-    check(`range ${r} stays inside A-Z (colLetter breaks past 26 columns)`, /^A:[A-Z]$/.test(r));
-  });
+  /* ⚠️ TOMBSTONE (JRT-2) — the club A1 range and the A-Z limit of colLetter()
+     were checked here. Both went with the Google Sheets path. */
 
   /* The rule must not leak onto the other two forms. */
   check('the team form is unaffected by the declaration rules',
@@ -1816,14 +1811,23 @@ section('The Google client lives in one place now');
     check(`${f} asks the right module`, /require\('\.\/_regstore'\)/.test(code));
   });
 
-  const sheets = readRepo(path.join('netlify', 'functions', '_sheets.js')).replace(/\r\n/g, '\n');
-  check('_sheets.js is where they live', /function privateKey\(/.test(sheets)
-    && /function getAuth\(/.test(sheets) && /async function firstSheetName\(/.test(sheets));
-  /* The readers get a narrower scope than the writer, so a bug in a reader
-     cannot write to a sheet full of children's data. */
-  check('there is a read-only auth as well as a writing one', /function getReadAuth\(/.test(sheets));
-  check('…and it really is read-only', /spreadsheets\.readonly/.test(sheets));
-  check('…while the writer is not', /'https:\/\/www\.googleapis\.com\/auth\/spreadsheets'/.test(sheets));
+  /* ⚠️ TOMBSTONE (JRT-2, Sep 2026) — this block used to read _sheets.js and
+     check it held privateKey(), getAuth() and firstSheetName(), a read-only
+     getReadAuth() beside the writing auth, and both private-key repairs.
+     _sheets.js is DELETED: the registrations store replaced Google Sheets and
+     nothing had called it since. What it guarded is now: nothing may bring it
+     back, and no function may read a GOOGLE_ variable, which is what makes
+     deleting those variables in Netlify safe. */
+  const fsx = require('fs');
+  const fnDir = path.join(repoRoot(), 'netlify', 'functions');
+  check('_sheets.js is gone', !fsx.existsSync(path.join(fnDir, '_sheets.js')));
+  const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const fnCode = fsx.readdirSync(fnDir).filter((n) => n.endsWith('.js'))
+    .map((n) => [n, stripComments(fsx.readFileSync(path.join(fnDir, n), 'utf8'))]);
+  eq('no function requires ./_sheets',
+    fnCode.filter(([, c]) => /require\(\s*['"]\.\/_sheets['"]\s*\)/.test(c)).map(([n]) => n).join(', '), '');
+  eq('no function reads a GOOGLE_ variable',
+    fnCode.filter(([, c]) => /process\.env\.GOOGLE_|process\.env\[\s*['"]GOOGLE_/.test(c)).map(([n]) => n).join(', '), '');
   /* ⚠️ TOMBSTONE — until Task 3 (Sep 2026) this checked that the two readers
      called _sheets.js's getReadAuth() and never its getAuth(), because they
      used to read Google Sheets through it. The readers no longer touch
@@ -1838,9 +1842,7 @@ section('The Google client lives in one place now');
     check(`${f} does not call getReadAuth() any more`, !/getReadAuth\(\)/.test(code));
     check(`${f} does not call getAuth() either`, !/[^d]getAuth\(\)/.test(code));
   });
-  /* The private-key repair itself. Both breakages were real. */
-  check('the quote-stripping repair survived the move', /k\.slice\(1, -1\)/.test(sheets));
-  check('the newline repair survived too', /replace\(\/\\\\n\/g, '\\n'\)/.test(sheets));
+
 }
 
 /* ======================================================================

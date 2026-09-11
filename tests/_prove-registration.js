@@ -186,7 +186,7 @@ const NEEDED = [
   path.join('netlify', 'functions', '_agegroups.js'),
   'qr.js',
   path.join('netlify', 'functions', '_teams.js'),
-  path.join('netlify', 'functions', '_sheets.js'),
+  /* _sheets.js left this list when the file was deleted (JRT-2). */
   path.join('netlify', 'functions', 'submit-registration.js'),
   path.join('netlify', 'functions', '_email.js'),
   path.join('netlify', 'functions', '_results.js'),
@@ -1531,25 +1531,11 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'), '    .filter(Boolean).join(\' \');', "    .join(' ');"),
     expect: ['a name built from nothing is blank', 'first name only', 'last name only'],
   },
-  {
-    name: 'a column is added but the A1 range is left behind (Sheets drops the overflow)',
-    suite: 'test-intake.js',
-    /* THE FAULT HAS TO BE THE ACTUAL MISTAKE. Hardcoding the range to 'A:N' on
-       its own changes nothing — A:N IS fourteen columns today, so the first
-       version of this fault was a no-op and was correctly not caught. The real
-       mistake is adding a column and leaving the range behind: the row is then
-       fifteen wide, the range is fourteen, and Sheets silently drops the
-       fifteenth with no error anywhere. */
-    apply: () => {
-      patch(path.join('netlify', 'functions', '_intake.js'),
-        "const TEAM_RANGE = `A:${colLetter(TEAM_COLUMNS.length)}`;      // A:N",
-        "const TEAM_RANGE = 'A:N';");
-      patch(path.join('netlify', 'functions', '_intake.js'),
-        "  'num-players', 'notes', 'players', 'preferred-pool',\n];",
-        "  'num-players', 'notes', 'players', 'preferred-pool', 'new-field',\n];");
-    },
-    expect: ['exactly as wide as the team columns'],
-  },
+  /* ⚠️ TOMBSTONE (JRT-2) — fault 'a column is added but the A1 range is left
+     behind (Sheets drops the overflow)' stood here. It hardcoded TEAM_RANGE and
+     added a column. The ranges were deleted with the Google Sheets path, and the
+     store keeps the whole row, so the failure it modelled cannot happen. Retired,
+     not repointed: there is nothing left for it to break. */
   {
     name: 'the submitted body is allowed to supply its own team code',
     suite: 'test-intake.js',
@@ -1648,12 +1634,15 @@ const FAULTS = [
       "      'medical-notes', 'consent', 'play-up-consent', 'head-coach-name',"),
     expect: ['has a column to go in', 'a TEAM field on the player form is dropped'],
   },
+  /* ⚠️ TOMBSTONE (JRT-2) — fault 'the two forms are pointed at the same sheet'
+     stood here (it swapped the players' sheetEnv to the teams sheet). sheetEnv
+     is gone; its replacement is the fault below: a form names a sheet again. */
   {
-    name: 'the two forms are pointed at the same sheet',
+    name: 'a form is pointed at a Google sheet again',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', '_intake.js'),
-      "    sheetEnv: 'GOOGLE_SHEET_ID_PLAYERS',", "    sheetEnv: 'GOOGLE_SHEET_ID_TEAMS',"),
-    expect: ['players go to the players sheet', 'the two are not the same sheet'],
+      "    columns: PLAYER_COLUMNS,\n", "    columns: PLAYER_COLUMNS,\n    sheetEnv: 'GOOGLE_SHEET_ID_PLAYERS',\n"),
+    expect: ['player-registration names no Google sheet'],
   },
 
   /* ---- validation -------------------------------------------------------
@@ -2885,52 +2874,47 @@ const FAULTS = [
     apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'), "⚠️ THIS BLOB HOLDS CHILDREN'S PERSONAL DATA.", 'Note:'),
     expect: ['says out loud what that blob contains'],
   },
-  /* ⚠️ KNOWN RED, PENDING THE GOOGLE CUTOVER (Task 8 fix pass, Sep 2026) —
-     'a reader is given the WRITING scope' below cannot be injected and is
-     LEFT FAILING ON PURPOSE.
-
-     Its find string, `    const auth = getReadAuth();`, was deleted from
-     get-registrations.js by Task 3 of the registration-store build (commit
-     83a2206, "The two readers read the store"), which replaced the whole
-     Google Sheets read with a Netlify Blobs read via _regstore.js. The
-     property this fault guarded — a reader must use a narrow, read-only
-     Google credential rather than the writer's read-write one — has no
-     equivalent under Blobs: Blobs has no read-only/read-write scope split
-     at all, so there is nothing to widen and nothing to repoint this fault
-     at. (test-intake.js's own checks were already repointed the same way,
-     Task 3 — see the TOMBSTONE comment above 'there is a read-only auth as
-     well as a writing one' a few lines up — to a more general "readers
-     don't call ANY Google auth" pair of checks. That pair is not currently
-     exercised by any fault either; making a fault for it would mean
-     authoring a new fault, not repointing this one, and is out of this
-     pass's scope.)
-
-     DO NOT delete this fault to make the count green. It retires only when
-     `netlify/functions/_sheets.js` itself is deleted (it still exists on
-     disk, unused by anything as of this pass — confirmed by grepping every
-     file under netlify/functions/ for `require('./_sheets')` and finding
-     none). When that deletion happens, retire this fault WITH A TOMBSTONE
-     comment here saying so — do not just drop it silently. */
+  /* ⚠️ TOMBSTONE (JRT-2) — fault 'a reader is given the WRITING scope' stood
+     here, KNOWN RED since the registration store: its anchor
+     (`const auth = getReadAuth();` in get-registrations.js) went when the
+     readers stopped reading Google Sheets, and it was kept failing on purpose
+     until _sheets.js was deleted. It now is. Retired with this note, as its own
+     comment asked. The live risk it pointed at — a reader reaching for Google
+     auth at all — gets a real fault instead: */
   {
-    name: 'a reader is given the WRITING scope',
+    name: 'a reader reaches for Google auth again',
     suite: 'test-intake.js',
     apply: () => patch(path.join('netlify', 'functions', 'get-registrations.js'),
-      '    const auth = getReadAuth();', '    const auth = getAuth();'),
-    expect: ['uses the read-only auth', 'not the writing one'],
+      'exports.handler = async (event) => {',
+      'exports.handler = async (event) => {\n  const auth = getReadAuth();'),
+    expect: ['get-registrations.js does not call getReadAuth() any more'],
+  },
+  /* ⚠️ TOMBSTONE (JRT-2) — faults 'the read-only scope is widened to
+     read-write' and 'the private-key quote repair is dropped' stood here. Both
+     patched _sheets.js, which is deleted. Replaced by faults that try to bring
+     the sheets path back: */
+  {
+    name: '_sheets.js is restored to the functions folder',
+    suite: 'test-intake.js',
+    apply: () => fs.writeFileSync(path.join(TMP, 'netlify', 'functions', '_sheets.js'),
+      "// netlify/functions/_sheets.js\nmodule.exports = {};\n"),
+    expect: ['_sheets.js is gone'],
   },
   {
-    name: 'the read-only scope is widened to read-write',
+    name: 'the submission path requires _sheets again',
     suite: 'test-intake.js',
-    apply: () => patch(path.join('netlify', 'functions', '_sheets.js'),
-      "    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],",
-      "    scopes: ['https://www.googleapis.com/auth/spreadsheets'],"),
-    expect: ['it really is read-only'],
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "const { FORMS, handleSubmission } = require('./_intake');",
+      "const { FORMS, handleSubmission } = require('./_intake');\nconst sheets = require('./_sheets');"),
+    expect: ['no function requires ./_sheets'],
   },
   {
-    name: 'the private-key quote repair is dropped',
+    name: 'a function reads a Google sheet variable again',
     suite: 'test-intake.js',
-    apply: () => patch(path.join('netlify', 'functions', '_sheets.js'), '    k = k.slice(1, -1);', ''),
-    expect: ['quote-stripping repair survived'],
+    apply: () => patch(path.join('netlify', 'functions', 'submit-registration.js'),
+      "const { FORMS, handleSubmission } = require('./_intake');",
+      "const { FORMS, handleSubmission } = require('./_intake');\nconst SHEET = process.env.GOOGLE_SHEET_ID_TEAMS;"),
+    expect: ['no function reads a GOOGLE_ variable'],
   },
   {
     name: 'a reader grows its own copy of getAuth again',
@@ -3044,42 +3028,13 @@ const FAULTS = [
       "const { resolveSession, sessionRefusal, blobStore } = require('./_auth');\n", ''),
     expect: ['refuses cleanly rather than returning 500', 'answers an unauthenticated read with 401'],
   },
-  /* ⚠️ KNOWN RED, PENDING THE GOOGLE CUTOVER (Task 8 fix pass, Sep 2026) —
-     'a reader loses a function its handler calls (the other half of it)'
-     below cannot be injected and is LEFT FAILING ON PURPOSE.
-
-     Its find string patched the start of `async function readRows(auth,
-     spreadsheetId, columns) { const sheets = sheetsClient(auth); ...`, a
-     whole function that Task 3 of the registration-store build (commit
-     83a2206) deleted along with the rest of the Google Sheets read path in
-     get-registrations.js — the handler now calls `listRecords` and
-     `shapeForReaders` from _regstore.js instead. The property this fault
-     guarded — a handler survives being called after a function it depends
-     on silently disappears — is a real, general property that COULD in
-     principle be re-tested against one of those two new calls, but doing
-     that is authoring a new fault against a different function, not
-     repointing this one to an equivalent. That is out of this pass's scope
-     (this pass repoints anchors that moved; it does not design new faults).
-
-     DO NOT delete this fault to make the count green. It retires only when
-     `netlify/functions/_sheets.js` itself is deleted (it still exists on
-     disk, unused by anything as of this pass). When that deletion happens,
-     retire this fault WITH A TOMBSTONE comment here saying so — do not just
-     drop it silently. */
-  {
-    name: 'a reader loses a function its handler calls (the other half of it)',
-    suite: 'test-functions-load.js',
-    apply: () => {
-      const f = path.join('netlify', 'functions', 'get-registrations.js');
-      patch(f, 'async function readRows(auth, spreadsheetId, columns) {\n  const sheets = sheetsClient(auth);',
-        'async function unusedReadRows(auth, spreadsheetId, columns) {\n  const sheets = sheetsClient(auth);');
-    },
-    /* NOT caught by anything unauthenticated: a 401 comes back long before
-       readRows is reached. What catches it is the signed-in section, which is
-       the only reason that section exists. */
-    expect: ['does not throw when it is actually allowed to run', 'answers a signed-in read with 200'],
-
-  },
+  /* ⚠️ TOMBSTONE (JRT-2) — fault 'a reader loses a function its handler calls
+     (the other half of it)' stood here, KNOWN RED since the registration store:
+     it patched readRows()/sheetsClient() in get-registrations.js, which went when
+     the readers moved to the store, and it was kept failing on purpose until
+     _sheets.js was deleted. It now is. Retired with this note, as its own
+     comment asked. The general property (a handler survives losing a function
+     it calls) is still covered by 'a reader loses its _auth require'. */
   {
     name: 'a shared module loses a require, taking every caller down with it',
     suite: 'test-functions-load.js',

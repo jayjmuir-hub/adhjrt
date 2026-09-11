@@ -238,7 +238,7 @@ the same table. Do not move that logic server-side without a good reason.
 | `get-my-registrations.js` | manager: own age group only (medical notes included); organiser or `*` manager: all groups. The group always comes from the signed token |
 | `snapshot-registrations.js` / `_snapshot.js` | scheduled (`@hourly` in `netlify.toml`); emails registration snapshots to `MAIL_FROM` |
 | `club-link.js` | the club invite link box on `/organizer`. GET is organiser-only because the link carries `CLUB_FORM_KEY`; the key itself is never returned |
-| `_sheets.js` | the Google Sheets client. No function calls it any more |
+| ~~`_sheets.js`~~ | **Tombstone.** The Google Sheets client, deleted when the registration store replaced the sheets (JRT-2) |
 | `_teams.js` | club prefixes and team-code generation |
 | `_email.js` | email via Microsoft Graph |
 | `_ratelimit.js` | the shared IP buckets, keyed on `x-nf-client-connection-ip`, **not** `x-forwarded-for` |
@@ -271,10 +271,11 @@ Read by the functions: `SESSION_SECRET`, `MANAGER_INVITE_CODES`,
   is what closes organiser self-signup. Do not "fix" the missing variable.
   Setting it re-opens self-signup, which is the recovery path and nothing else.
 - `MANAGER_INVITE_CODES` — the master key is `"*"`, not `"admin"`.
-- `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` — read
-  only by `_sheets.js`, which nothing calls.
-- `GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`, `GOOGLE_SHEET_ID_CLUBS` —
-  named as `sheetEnv` strings in `_intake.js` but read by no code.
+- ~~`GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`,
+  `GOOGLE_SHEET_ID_TEAMS`, `GOOGLE_SHEET_ID_PLAYERS`, `GOOGLE_SHEET_ID_CLUBS`~~ —
+  tombstone. No code reads them since the Google Sheets path was removed, and
+  `test-intake.js` fails if any function reads a `GOOGLE_` variable again.
+  Delete them in Netlify: `claude/runbooks/runbook-google-sheets-cutover.md`.
 - ~~`GOOGLE_CLIENT_ID`~~ — tombstone; gated the removed Google sign-in button.
 
 **Never commit a value for any of these.** A fix that seems to need a secret in
@@ -935,8 +936,8 @@ the account that used it.
   forms post to `netlify/functions/submit-registration.js`, which writes to
   the Blobs store `registrations`. Ruling:
   `claude/decisions/2026-09-10-registrations-live-in-a-write-once-store.md`.
-  `_sheets.js` (service-account auth, first-tab lookup, private-key repair) is
-  still in the repo but no function requires it.
+  `_sheets.js` (service-account auth, first-tab lookup, private-key repair)
+  and the A1 ranges in `_intake.js` are deleted.
 - **Date of birth is stored as `yyyy-mm-dd`, and that shape is load-bearing.**
   Rosters are reconciled against player registrations on an exact match of
   name + DOB. The player form uses three dropdowns (day / month by NAME / year)
@@ -1668,7 +1669,7 @@ Every accepted registration is ONE record in the Netlify Blobs store `registrati
 
 **Restore and delete.** `tools/registrations-admin.js` offers `check`, `restore` (adds ONLY the missing records, and needs `--confirm <N>` where N is the missing count `check` printed), `delete --rehearsal`, and `delete --all --confirm ALL`. Both deletes require a snapshot. The tool refuses if any record in the store cannot be read, and it reads every write back. Deleting at the end of the season is a manual step. Procedure: `claude/runbooks/runbook-registrations-restore-and-delete.md`.
 
-**Google Sheets is no longer used.** `_sheets.js` is still in the repo, but only tests load it. The `sheetEnv` entries in `_intake.js` are left over too. Removing both is tracked separately.
+**Tombstone: Google Sheets.** The sheets were the registration store until the Blobs store replaced them. `_sheets.js` (the service-account sign-in, the private-key repair and the first-tab lookup) and the A1 ranges and `sheetEnv` names in `_intake.js` were deleted once the live rehearsal passed (JRT-1, JRT-2). Nothing may bring them back: `test-intake.js` fails if a function requires `./_sheets` or reads a `GOOGLE_` variable. The `googleapis` and `google-auth-library` packages are still in `package.json`; removing them is its own change.
 
 ## The sheet columns — one copy, at last
 

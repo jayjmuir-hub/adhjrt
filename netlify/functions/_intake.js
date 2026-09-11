@@ -173,18 +173,12 @@ function clubKeyOk(supplied) {
   return String(supplied || '') === expected;
 }
 
-/* A1 ranges, derived from the column counts rather than typed, so adding a
-   column and forgetting the range cannot happen. A range narrower than the row
-   makes Sheets drop the overflow without an error.
-
-   ⚠️ colLetter() ONLY GOES UP TO Z. At 27 columns it produces '[' and Sheets
-   drops the overflow silently. The clubs sheet at 21 is the closest any of
-   these has come; test-intake.js asserts every range stays inside A-Z so the
-   next person to add a column finds out immediately instead of losing data. */
-const colLetter = (n) => String.fromCharCode('A'.charCodeAt(0) + n - 1);
-const TEAM_RANGE = `A:${colLetter(TEAM_COLUMNS.length)}`;      // A:N
-const PLAYER_RANGE = `A:${colLetter(PLAYER_COLUMNS.length)}`;  // A:P
-const CLUB_RANGE = `A:${colLetter(CLUB_COLUMNS.length)}`;      // A:U
+/* ⚠️ TOMBSTONE (JRT-2) — the A1 ranges (TEAM_RANGE, PLAYER_RANGE, CLUB_RANGE)
+   and colLetter() lived here, derived from the column counts so a Google Sheets
+   append could not drop a row's overflow. Each form also named its sheet by env
+   var (`sheetEnv`). The registrations store replaced the sheets and keeps the
+   whole row, so none of it has anything left to protect. The COLUMN LISTS
+   above stay: the stored record keeps their order. */
 
 /* ============================================================
    THE ALLOW-LIST — what a submission may contain at all.
@@ -240,8 +234,6 @@ const POOL_OPTIONS = ['A', 'B', 'C'];
 const FORMS = {
   'team-registration': {
     columns: TEAM_COLUMNS,
-    range: TEAM_RANGE,
-    sheetEnv: 'GOOGLE_SHEET_ID_TEAMS',
     fields: [
       'club', 'age-group', 'preferred-pool',
       'head-coach-name', 'head-coach-email', 'head-coach-phone',
@@ -251,8 +243,6 @@ const FORMS = {
   },
   'player-registration': {
     columns: PLAYER_COLUMNS,
-    range: PLAYER_RANGE,
-    sheetEnv: 'GOOGLE_SHEET_ID_PLAYERS',
     fields: [
       'player-first-name', 'player-last-name', 'dob', 'club', 'age-group',
       'parent-first-name', 'parent-last-name', 'parent-email', 'parent-phone',
@@ -262,8 +252,6 @@ const FORMS = {
   },
   'club-registration': {
     columns: CLUB_COLUMNS,
-    range: CLUB_RANGE,
-    sheetEnv: 'GOOGLE_SHEET_ID_CLUBS',
     /* Derived from CLUB_COLUMNS rather than written out a second time: the
        allow-list and the columns must agree, and the only two entries that
        differ are the generated ones. `submittedAt` is generated server-side
@@ -882,7 +870,6 @@ async function handleSubmission(body, deps) {
 module.exports = {
   TEAM_COLUMNS, TEAM_OUT, PLAYER_COLUMNS,
   CLUB_COLUMNS, CLUB_OUT, CLUB_COUNT_PREFIX, clubCountKey, MAX_TEAMS_PER_GROUP,
-  TEAM_RANGE, PLAYER_RANGE, CLUB_RANGE,
   FORMS, HONEYPOT, POOL_OPTIONS, cleanSubmission,
   validateSubmission, MAX_FIELD_CHARS, MAX_NOTES_CHARS, MAX_PLAYERS_CHARS,
   handleSubmission, NOT_SAVED,

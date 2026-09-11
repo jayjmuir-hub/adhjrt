@@ -94,11 +94,28 @@ time, whatever its size.
    (Until 11 Sep 2026 this step also fast-forwarded `Compare`. That branch
    was retired: see `claude/decisions/2026-07-27-work-batches-on-a-branch-and-lands-once.md`.)
 
+8. **In PowerShell (the maintainer), after the deploy is verified:** prune
+   the old deploys. Every deploy keeps its own address and runs its old code
+   against live data (`RESTORE.md`, "every deploy keeps its own address").
+   Start with the dry run, which only lists:
+
+   ```
+   powershell -NoProfile -ExecutionPolicy Bypass -File tools/delete-old-deploys.ps1
+   ```
+
+   Check the keep list: the new live deploy, four rollback targets, and the
+   newest `dev` build. Then run the same command again with `-Delete` added,
+   and type the count it asks for. Deleting is permanent, which is why this
+   step is the maintainer's. The `-ExecutionPolicy Bypass` switch applies to
+   that one run only; do not change the machine's policy.
+
 ## How to verify
 
 - The Netlify deploy for site `8bb8cade-864f-416d-a4b8-eadda5f1997e` shows
   state `ready` and its commit SHA equals `git rev-parse main` from step 6.
 - `git rev-list --count origin/dev..origin/main` prints `0`.
+- After step 8, `netlify api listSiteDeploys` lists only the kept deploys,
+  and adhjrt.com and `dev--` still answer 200.
 - The live site (`adhjrt.com`) reflects the change that was merged — check
   the actual page, not just the deploy dashboard.
 

@@ -6484,6 +6484,21 @@ const FAULTS = [
     expect: ['keeps its tombstone'],
   },
   {
+    /* JRT-35. The warning itself going. */
+    name: 'the "every deploy keeps its own address" warning is tidied away',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('RESTORE.md', 'AND EVERY DEPLOY KEEPS ITS OWN ADDRESS.', 'A NOTE ON OLD DEPLOYS.'),
+    expect: ['every deploy keeping its own address is recorded'],
+  },
+  {
+    /* The warning kept but the rule dropped: exactly how 551 old deploys
+       piled up while the branch warning above sat in this file. */
+    name: 'the warning stays but the prune-at-every-landing rule is dropped',
+    suite: 'test-doc-claims.js',
+    apply: () => patch('RESTORE.md', 'pruned at every landing', 'pruned now and then'),
+    expect: ['every deploy keeping its own address is recorded'],
+  },
+  {
     /* The measurement lesson. Deleting this is how the same false all-clear
        gets reported again. */
     name: 'the no-baseline lesson is dropped from the doc',

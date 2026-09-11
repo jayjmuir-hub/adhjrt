@@ -44,7 +44,10 @@ in `RESTORE.md`.
    maintainer runs it, because the deletion is permanent. Every permalink and
    the alias went from 200 to 404, while `dev--` and the previews stayed
    open. The Netlify UI also offers **Options → Delete deploy**, one deploy
-   at a time.
+   at a time. To clear every old deploy at once, not just one branch's, use
+   `tools/delete-old-deploys.ps1` (JRT-35). It is the same guarded approach,
+   and it keeps the live deploy, four rollback targets and the newest `dev`
+   build.
 4. **In PowerShell:** list every deploy id for the branch. This is read-only:
 
    ```

@@ -65,8 +65,7 @@ invite paths. Why: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`,
 **D · Test hub sign-in, and prove the membership read**
 
 1. **In a browser:** test the full loop on
-   `https://dev--adhquins-jrt.netlify.app` or
-   `https://compare--adhquins-jrt.netlify.app`. **Not on a deploy preview.**
+   `https://dev--adhquins-jrt.netlify.app`. **Not on a deploy preview.**
    Preview origins are not on the hub's list of allowed origins, so the hub
    will not send a token back to one.
 2. **To prove the squad read after changing it:** in a browser signed in to
@@ -114,7 +113,7 @@ invite paths. Why: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`,
 - **An auto-approved coach lands as pending again:** their hub squad changed
   or was renamed. Approve them by hand. A renamed squad also means checking
   the name mapping in `_hubAuth.js`.
-- **Hub sign-in fails only on a preview URL:** expected. Use `dev--` or
-  `compare--`.
+- **Hub sign-in fails only on a preview URL:** expected. Use `dev--`.
+  (`compare--` was retired on 11 Sep 2026.)
 - **The no-token control does not return 401:** step D2's result proves
   nothing. Find out what answered before believing either reading.

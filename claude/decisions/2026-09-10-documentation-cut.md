@@ -92,7 +92,8 @@ narrative form of `claude/specs/`.
    unattended.** Push the curated tree as ONE commit to a new repository.
    Fold in the publish-directory move (site files under one folder, functions
    outside it, most `netlify.toml` 404 rules removed). Repoint Netlify;
-   recreate the `dev` and `Compare` branch-deploy allow-list; env vars live
+   recreate the `dev` branch-deploy allow-list (`Compare` was retired on 11
+   Sep 2026, so it is not recreated); env vars live
    on the Netlify site and are untouched. Repoint both clones. Preserve the
    local-only `club-manager-page` branch as a bundle first — thirteen
    unmerged commits exist nowhere else. Rename the old repo `*-archive`,

@@ -1071,7 +1071,9 @@ Ruling: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`.
   under `adhjrt_session_v2`. **Fragment, never query string** — it must not
   reach a log. The hub's allowed return origins are adhjrt.com,
   www.adhjrt.com, dev--adhquins-jrt.netlify.app,
-  compare--adhquins-jrt.netlify.app and localhost:8888.
+  compare--adhquins-jrt.netlify.app and localhost:8888. The `compare--`
+  entry is left over: the `Compare` branch was retired on 11 Sep 2026 (JRT-34),
+  and removing it is a change in the Club Hub's settings, not in this repo.
 - `_hubAuth.js` verifies the token with Node's built-in crypto against the
   hub's JWKS (ES256). **No dependency, no secret, no environment variable**:
   the issuer is a constant, and a test fails if it becomes `process.env.…`.
@@ -2500,9 +2502,17 @@ now answers 200.** Both live checks, 5 Aug 2026:
 matters, read the deploy id from the Netlify MCP rather than inferring
 existence from a status code.
 
-Consequence worth knowing: branch deploys are enabled **for `dev` only** as of
-6 Aug 2026, so a push to `dev` triggers a build. That is what makes the stable
-URL work, and it is free.
+Branch deploys are enabled **for `dev` only**, so a push to `dev` triggers a
+build. That is what makes the stable URL work, and it is free. Read the
+setting back with `netlify api getSite`: `build_settings.allowed_branches` is
+`["main","dev"]` (Netlify always counts the production branch).
+
+⚠️ **THIS PARAGRAPH USED TO SAY "for `dev` only as of 6 Aug 2026". THAT WAS
+FALSE until 11 Sep 2026.** On 11 Sep the Netlify setting turned out to be
+"Deploy all branches pushed to the repository". `Compare` had built 48 deploys
+from 6 Aug onwards, and six feature branches each had their own live site
+(JRT-34, JRT-35). The sentence described a setting nobody had read back. It
+was set to `dev` only that day, and `getSite` confirmed it.
 
 ⚠️ **THIS PARAGRAPH USED TO END: "If Netlify credits ever look higher than
 expected, that is the first place to look — `main` is not the only branch

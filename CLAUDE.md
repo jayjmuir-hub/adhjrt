@@ -139,9 +139,9 @@ in a new markdown file. When the maintainer gives a job a date, that is an answe
   (`runbook-git-bundle-between-pcs.md`), never re-emitted through the model. Bundle
   sandbox-only work before tidying; name a sandbox branch after its remote branch.
 - **Branches:** work on `dev`; feature branches come off `dev`. `main` holds PR merge
-  commits; a land from `dev` is `--ff-only` (`runbook-merge-dev-to-main.md`). `Compare`
-  is kept on purpose and never lags `main`: fast-forward it and `dev` after every
-  land. Do not raise the parked, local-only `club-manager-page` branch.
+  commits; a land from `dev` is `--ff-only` (`runbook-merge-dev-to-main.md`); fast-forward
+  `dev` after every land. `Compare` was retired on 11 Sep 2026 (its decision card). Do
+  not raise the parked, local-only `club-manager-page` branch.
 - **GitHub:** the dead GitHub MCP token is intended; ignore those tools. The account
   connector is read-only; `gh auth status` before relying on `gh`. `raw.githubusercontent.com`
   serves stale copies. Site-password state: the Netlify MCP, never a file.
@@ -156,5 +156,5 @@ Every production deploy costs 15 Netlify credits, whatever its size: batch on `d
 and land once. Branch deploys and deploy previews are genuinely free — 0 credits, not "cheap".
 Warn before a cosmetic change's third deploy.
 `[skip ci]` goes only on a docs-only commit pushed straight to `main` alone, never on
-`dev` or `Compare` (it survives a fast-forward and silences the production build);
+`dev` (it survives a fast-forward and silences the production build);
 Netlify reads the whole message. Verify by the deploy id moving, or not moving.

@@ -8,7 +8,7 @@ in `RESTORE.md`.
 
 ## When to use
 
-- A branch deploy other than `dev` or `Compare` is still answering.
+- A branch deploy other than `dev` is still answering.
 - Before deleting a branch that has ever been deployed.
 
 ## Before you start
@@ -28,20 +28,34 @@ in `RESTORE.md`.
    baseline. Without it a later 404 proves nothing, because a branch that
    never existed also answers 404.
 2. **In Netlify** (the maintainer): make sure branch deploys are limited to
-   the branches that should build (`dev`, `Compare`). This stops **future**
+   the branches that should build (`dev` only). This stops **future**
    builds only. It does not take down anything already published.
 3. **In Netlify** (the maintainer): close the published deploy. The method
    that has been measured to work is password protection scoped to
    **non-production** deploys, set in the UI. The password never goes into a
    chat or a tool call.
-   ⚠️ This gates `dev--` and `compare--` too.
-   ⚠️ Not yet worked out: deleting the branch's individual deploys instead has
-   never been done on this project, and its UI path and effect are not
-   recorded.
-4. **In Netlify → Deploys, filtered to the branch:** list every deploy id for
-   it. The Netlify MCP has had no operation that lists deploys, so the ids
-   come from this page. Reading them out of the page with JavaScript in a
-   driven browser works.
+   ⚠️ This gates `dev--` and every deploy preview too.
+   **Or delete the branch's deploys instead.** This was measured on
+   11 Sep 2026 on `Compare`'s 48 deploys (JRT-34). Run
+   `netlify api deleteSiteDeploy` once per deploy, oldest first, so the
+   deploy the alias points to goes last. Do it through a script that refuses
+   anything that is not a branch deploy of that branch, or that has ever been
+   published, and that asks for the exact count before deleting. The
+   maintainer runs it, because the deletion is permanent. Every permalink and
+   the alias went from 200 to 404, while `dev--` and the previews stayed
+   open. The Netlify UI also offers **Options → Delete deploy**, one deploy
+   at a time.
+4. **In PowerShell:** list every deploy id for the branch. This is read-only:
+
+   ```
+   netlify api listSiteDeploys --data '{"site_id":"8bb8cade-864f-416d-a4b8-eadda5f1997e","branch":"<branch>","per_page":100}'
+   ```
+
+   Check the count against Netlify → Deploys, filtered to the branch. The
+   Netlify MCP has no operation that lists deploys. Reading the ids out of
+   the Deploys page with JavaScript in a driven browser stopped working on
+   11 Sep 2026: the Chrome extension blanks 24-character ids as "Base64
+   encoded data".
 5. **In PowerShell:** probe **every** deploy permalink
    (`https://<deploy-id>--adhquins-jrt.netlify.app` and its function), not
    only the newest. As controls, probe the production deploy's permalink and a

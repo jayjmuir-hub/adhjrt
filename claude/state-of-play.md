@@ -43,6 +43,40 @@ deploy `6aa2dc41352c9c0007cc3bd1`, a docs-only change merged through GitHub
 without `[skip ci]` — 15 credits); that deploy still lists
 `snapshot-registrations` at `@hourly`.
 
+## ⏳ 11 Sep 2026 — REHEARSAL, first half done; restore test waits for tonight's snapshot
+
+**Why the club form, not the team and player forms.** Registration is
+force-closed on production (measured: `registration-window` answered
+`mode: "closed"`, no dates, `open: false`), and the front door refuses team
+and player submissions while it is closed. Jay chose the private club
+declaration link, which is exempt from the window and gated by
+`CLUB_FORM_KEY` instead, over force-opening registration on the live site.
+It exercises everything new — store write, snapshot, restore, delete — with
+no public exposure. ⚠️ **Not rehearsed live yet:** the team and player forms,
+team numbering from store records, and the manager reader. Those are unchanged
+front-door logic with suite coverage, and get checked when registration opens
+or in a short force-open later.
+
+**Measured, in order:**
+
+| Step | Result |
+|---|---|
+| Baseline before submitting | `netlify blobs:list registrations` → 0 blobs; control store `config` listed its keys, proving the CLI was linked to the right site |
+| Jay submits club `Rehearsal Quins` via the private link | page: "We have your declaration for Rehearsal Quins" |
+| Store after | 1 blob, key `club/2026-09-11T03-19-28-069Z-f758f5`; record `v: 1`, `form: club-registration`, **`rehearsal: true`**, 21-column row, no `supersedes` (read as shape only — no values printed) |
+| Organiser page, Clubs tab | Rehearsal Quins shown (Jay) |
+| Confirmation email | function log `confirmation sent (1 recipient(s))`; copy in the registrations mailbox's Sent Items (Jay). Jay had typed a made-up address, so it did not arrive anywhere — not a fault |
+
+⚠️ **One risk retired that no test could reach:** the Netlify CLI lists keys
+like `club/…` as individual blobs, not folded into `directories`.
+`tools/registrations-admin.js`'s `netlifyIo().list()` depends on that and had
+only ever run against a fake until today.
+
+**Next (Jay):** tonight's 22:00 UTC snapshot should read `0 teams, 0 players,
+1 clubs — REHEARSAL`. Save its `.json` attachment outside the repo, then:
+`check` → `delete --rehearsal` → `check` → `restore --confirm 1` → confirm the
+record came back identical → `delete --rehearsal` again.
+
 ## 10 Sep 2026 — REGISTRATION STORE built on `dev`, rehearsal pending
 
 Nine tasks, `92ce3f3..29c3836`: `_regstore.js` (the write-once Blobs store),

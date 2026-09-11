@@ -22,3 +22,9 @@ node_modules/
 
 # Claude working notes for subagent-driven builds — scratch, never part of the site.
 /.superpowers/
+
+# The Netlify CLI's link folder (Sep 2026). `netlify link` writes .netlify/state.json
+# into whatever folder it runs in, and tools/registrations-admin.js needs the
+# clone linked. The repo root IS the deployed site, so this must never be
+# committed. Anchored to the root, like /graft/ above.
+/.netlify/

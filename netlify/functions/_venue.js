@@ -18,8 +18,8 @@
 //
 // ⚠️ KEEP IN STEP WITH scores-data.js's DEFAULT_VENUE. The front end needs the
 // same table for its offline/local fallback path, so the default exists in two
-// files. test-venue.js asserts they are identical — if you change one and not
-// the other, that test fails.
+// files. test-venue-splits.js asserts they are identical — if you change one
+// and not the other, that test fails.
 
 /* Read off Pitch maps_Final.pdf (Saturday 25 / Sunday 26 October 2025), which
    Jay confirmed on 26 July 2026 is the same running order for 2026.

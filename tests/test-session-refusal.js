@@ -53,7 +53,7 @@ const stubs = {
       list: async () => ({ blobs: [] }), delete: async () => {},
     }),
   },
-  'google-auth-library': { OAuth2Client: function () { return { verifyIdToken: async () => ({ getPayload: () => ({}) }) }; } },
+  /* google-auth-library stub retired with the package (JRT-33) — nothing here requires it. */
   bcryptjs: {
     hashSync: (s) => 'hashed:' + s, compareSync: (a, b) => b === 'hashed:' + a,
     compare: async (a, b) => b === 'hashed:' + a, hash: async (s) => 'hashed:' + s,

@@ -7,8 +7,8 @@
 // hasAgeGroupAccess in _auth.js). Never trust the client for this
 // check; it's re-verified here from the signed token.
 //
-// Results are stored in Netlify Blobs, one JSON object per AGE GROUP,
-// keyed by matchId inside it — see _results.js for the storage layout and
+// Results are stored in Netlify Blobs, one JSON object per MATCH (keyed
+// `m:<matchId>`) — see _results.js for the storage layout and
 // why it is split that way. Requires the same SESSION_SECRET as the other
 // auth functions.
 

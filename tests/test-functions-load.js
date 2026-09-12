@@ -15,7 +15,7 @@
 
    HOW IT RUNS FILES THAT NEED node_modules. A fresh clone has none, which is
    the whole reason the logic lives in dependency-free modules. So this stubs
-   the three packages just enough to load: the stubs do nothing and are never
+   the packages just enough to load: the stubs do nothing and are never
    expected to be reached, because every call below is expected to be REFUSED
    at the auth or method check, long before any network client is used.
 
@@ -34,31 +34,15 @@ const { repoRoot, section, check, eq, summary } = require('./_lib');
 const FN_DIR = path.join(repoRoot(), 'netlify', 'functions');
 
 /* ------------------------------------------------------------------ */
-/* The stubs. They stand in for the three packages a fresh clone does not have.
-   They answer plausibly rather than throwing — see the note on `sheets` below. */
+/* The stubs. They stand in for the packages a fresh clone does not have
+   (@netlify/blobs and bcryptjs; the Google ones went with JRT-33). They answer
+   plausibly rather than throwing — see the accounts-store note below. */
 function installStubs() {
   const stubs = {
-    googleapis: {
-      google: {
-        auth: { JWT: function JWT() { return {}; } },
-        /* Answers with a plausible EMPTY sheet — a tab called Sheet1 and a
-           header row and nothing else. It returns rather than throws because
-           of what that makes possible: an authenticated call can run the
-           handler all the way through, which is the only way to reach code
-           that sits behind the auth check. A throwing stub would turn every
-           authenticated call into a 500 and hide exactly the faults this file
-           exists to catch. */
-        sheets: () => ({
-          spreadsheets: {
-            get: async () => ({ data: { sheets: [{ properties: { title: 'Sheet1' } }] } }),
-            values: {
-              get: async () => ({ data: { values: [['header']] } }),
-              append: async () => ({ data: {} }),
-            },
-          },
-        }),
-      },
-    },
+    /* googleapis + google-auth-library stubs RETIRED (JRT-33, 12 Sep 2026): the
+       Google Sheets registration path (JRT-2) and Google sign-in (8 Sep 2026)
+       are gone, and both packages were removed from package.json — nothing in
+       netlify/functions/ requires them, so there is nothing left to stub. */
     '@netlify/blobs': {
       /* list() included because get-results.js calls it and warns loudly when
          it is missing. A stub gap that prints a warning on every run is noise,
@@ -96,22 +80,6 @@ function installStubs() {
       hashSync: () => 'stub', compareSync: () => false,
       hash: async () => 'stub', compare: async () => false,
     },
-    /* google-auth-library — added with Google sign-in support. verifyIdToken
-       answers with a plausible-but-fake identity rather than throwing, for
-       the same reason the sheets stub above returns instead of throws: a
-       throwing stub would turn every call into a 500 and hide exactly the
-       faults this file exists to catch. Nothing here is a real Google
-       identity — google-auth.js's OWN checks (googleSub match, invite code)
-       are what this file is verifying survive being called at all. */
-    'google-auth-library': {
-      OAuth2Client: function OAuth2Client() {
-        return {
-          verifyIdToken: async () => ({
-            getPayload: () => ({ sub: 'stub-sub', email: 'stub@example.com', name: 'Stub Name', email_verified: true }),
-          }),
-        };
-      },
-    },
   };
 
   const realResolve = Module._resolveFilename;
@@ -143,7 +111,7 @@ const restore = installStubs();
    That is not a test result, it is a coin flip with a calendar attached.
 
    The stub answers plausibly rather than throwing — same reasoning as the
-   googleapis and google-auth-library stubs above: a throwing stub turns
+   blob-store stub above: a throwing stub turns
    every call into a 500 and hides exactly the faults this file exists to
    catch. This is what makes the "no 500" checks below actually mean
    something, instead of being a statement about the hour they were run. */

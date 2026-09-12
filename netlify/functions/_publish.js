@@ -17,14 +17,13 @@
 //
 // WHO CAN PUBLISH
 //   Organisers          any age group, any time.
-//   Managers            their own age group, but ONLY on the tournament days.
-//                       The idea is that fixtures are released centrally
-//                       beforehand, and once the weekend starts the people at
-//                       the pitch can push changes out themselves without
-//                       chasing an organiser.
-//
-// Times are Gulf Standard Time (UTC+4, no daylight saving), so the window is
-// simply the two tournament dates in local terms.
+//   Managers            no longer publish at all. Until 8 Sep 2026 a manager
+//                       could publish their own group on the two tournament
+//                       days; that was removed (spec-draw-rights § 2 — see the
+//                       tombstone in publishDenialReason below). Publishing is
+//                       the one act that changes what a parent sees, so it is an
+//                       organiser's; a manager edits the draft and sends it for
+//                       review instead.
 
 const { DEFAULT_VENUE } = require('./_venue');
 

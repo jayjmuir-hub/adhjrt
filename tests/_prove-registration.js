@@ -9829,6 +9829,17 @@ const FAULTS = [
       'if (accounts[idx].hubSub) {', 'if (false) {'),
     expect: ['the password reset refuses a Club Hub login'],
   },
+  {
+    /* JRT-39: documents.js decides organiser-ness by the live role, not a dead
+       session.isOrganizer flag (always undefined on a token). Re-adding the
+       disjunct is caught. */
+    name: 'the dead session.isOrganizer disjunct comes back to documents.js',
+    suite: 'test-documents.js',
+    apply: () => patch(path.join('netlify', 'functions', 'documents.js'),
+      "const isOrganizer = session.role === 'organizer';",
+      "const isOrganizer = !!session.isOrganizer || session.role === 'organizer';"),
+    expect: ['organiser-ness is the live role, with no dead session.isOrganizer disjunct'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

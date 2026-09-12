@@ -116,6 +116,7 @@ $tests = @(
   # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
   # registration.
   'test-app-signin.js',
+  'test-signin-storage.js',
   # A draw edit must never strand a recorded score (JRT-6 and JRT-26, 11 Sep 2026).
   # A NEW TEST FILE DOES NOT JOIN THE SUITE BY ITSELF; this line is the whole
   # registration.

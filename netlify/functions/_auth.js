@@ -185,6 +185,19 @@ async function resolveSession(event) {
          and a forged payload claiming a right is ignored. See _drawRights.js. */
       drawPools: account.role === 'manager' && account.drawPools === true,
       drawTimes: account.role === 'manager' && account.drawTimes === true,
+      /* Dual-role (JRT-37, 2026-09-12): the age groups this account is the
+         named MANAGER of, read LIVE from the stored account exactly as drawPools
+         is above. Meaningful only on an organiser account (a plain manager's
+         group is its ageGroupId), so it is gated on role the same way.
+         ⚠️ IDENTITY ONLY — this is NEVER an access decision. A dual account's
+         access comes entirely from role:'organizer' (an organiser is a superset;
+         see hasAgeGroupAccess). Do NOT OR `manages` into any grant check.
+         test-dual-role.js proves "a manager whose manages names another group
+         still cannot access it". A stale / non-string / '*' id is dropped here
+         (coerce on read); real validation is on the write path (accounts-admin). */
+      manages: account.role === 'organizer' && Array.isArray(account.manages)
+        ? account.manages.filter((id) => typeof id === 'string' && id && id !== '*')
+        : [],
     },
   };
 }
@@ -241,14 +254,40 @@ async function optionalSession(event) {
 }
 
 // True if a decoded session token may edit/submit for the given age group.
-// Organizers (full access to everything) and the special "admin" manager
-// invite code (ageGroupId === '*') can act on any age group; an ordinary
-// manager only on their own.
+// Organizers have full access to every group; an ordinary manager only to
+// their own; a legacy all-groups manager (ageGroupId === '*', from the retired
+// master invite code — JRT-30) to any.
+// ⚠️ DUAL-ROLE (JRT-37): a dual account is a genuine role:'organizer' and is
+// granted every group by the organizer branch below — it needs no special case.
+// Its `manages` list is IDENTITY ONLY and MUST NOT be read here: never OR
+// session.manages into this function or into any other grant. That is the whole
+// safety guarantee of the feature; test-dual-role.js proves a manager whose
+// `manages` names another group still cannot access it.
 function hasAgeGroupAccess(session, ageGroupId) {
   if (!session) return false;
   if (session.role === 'organizer') return true;
   if (session.role === 'manager') return session.ageGroupId === '*' || session.ageGroupId === ageGroupId;
   return false;
+}
+
+// IDENTITY ONLY — who is the named manager of a group, for the Accounts-tab
+// labels, the per-group roster and the /manager default group. NEVER an access
+// decision (see hasAgeGroupAccess above and the ⚠️ on `manages` in
+// resolveSession). "Manages U16B" has two legitimate homes: a plain manager's
+// single ageGroupId, and a dual organiser's `manages` list. This is the ONE
+// place that unions them, so a roster can never silently omit one kind — a
+// drift test (test-dual-role.js) asserts nothing else reconstructs the union.
+// '*' is the legacy all-groups sentinel, not the named manager of any one
+// group, so it is dropped.
+function managedGroupsOf(account) {
+  if (!account) return [];
+  if (account.role === 'manager') {
+    return account.ageGroupId && account.ageGroupId !== '*' ? [account.ageGroupId] : [];
+  }
+  if (account.role === 'organizer') {
+    return Array.isArray(account.manages) ? account.manages.filter((id) => id && id !== '*') : [];
+  }
+  return [];
 }
 
 /* How an account can sign in, as one word, for display only.
@@ -271,6 +310,6 @@ function signInMethodOf(account) {
   return 'Password';
 }
 
-module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, blobStore,
+module.exports = { loadAccounts, saveAccounts, hashPassword, verifyPassword, sign, verify, getBearerToken, hasAgeGroupAccess, managedGroupsOf, blobStore,
   resolveSession, optionalSession, sessionRefusal,
   MIN_PASSWORD_LENGTH, MAX_PASSWORD_BYTES, PASSWORD_TOO_SHORT, PASSWORD_TOO_LONG, passwordProblem, signInMethodOf };

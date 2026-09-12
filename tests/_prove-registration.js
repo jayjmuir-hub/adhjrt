@@ -4037,8 +4037,8 @@ const FAULTS = [
     name: 'the organizer session shape drifts (loses _role), breaking isOrganiserSession downstream',
     suite: 'test-unified-login.js',
     apply: () => patch(path.join('netlify', 'functions', 'login.js'),
-      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },",
-      "session: { username: account.username, name: account.name, role: account.title || 'Organizer' },"),
+      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer', manages: account.manages || [] },",
+      "session: { username: account.username, name: account.name, role: account.title || 'Organizer', manages: account.manages || [] },"),
     expect: ['with the organizer session shape', 'the organizer session literal is exactly the shape downstream reads'],
   },
 
@@ -9099,8 +9099,8 @@ const FAULTS = [
     name: "hub-auth's sessionFor drifts from login.js's",
     suite: 'test-hub-auth.js',
     apply: () => patch(path.join('netlify', 'functions', 'hub-auth.js'),
-      "role: account.title || 'Organizer', _role: 'organizer' },\n      token: sign({ username: account.username, role: 'organizer' }),",
-      "role: 'Organizer', _role: 'organizer' },\n      token: sign({ username: account.username, role: 'organizer' }),"),
+      "role: account.title || 'Organizer', _role: 'organizer', manages: account.manages || [] },\n      token: sign({ username: account.username, role: 'organizer' }),",
+      "role: 'Organizer', _role: 'organizer', manages: account.manages || [] },\n      token: sign({ username: account.username, role: 'organizer' }),"),
     expect: ["sessionFor is character-for-character login.js's"],
   },
   {
@@ -9731,6 +9731,94 @@ const FAULTS = [
     expect: ['a match that already has a score keeps it'],
   },
 
+
+  /* ---- dual-role accounts (test-dual-role.js, JRT-37) --------------------
+     `manages` is IDENTITY ONLY. The load-bearing fault is 'hasAgeGroupAccess
+     ORs manages' — that is the line between an identity label and a grant. The
+     marker-cleanup fault reproduces the one bug the design review caught: a
+     promoted auto-approved hub manager auto-revoked on his next sign-in. */
+  {
+    name: 'resolveSession returns an empty manages, so a live change is never seen',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "account.role === 'organizer' && Array.isArray(account.manages)", 'false'),
+    expect: ['resolveSession reads manages live from the stored account'],
+  },
+  {
+    name: 'resolveSession stops gating manages on the organiser role, leaking a manager list',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "manages: account.role === 'organizer' && Array.isArray(account.manages)",
+      'manages: Array.isArray(account.manages)'),
+    expect: ['a manager account\u2019s session carries no manages, whatever the record holds'],
+  },
+  {
+    name: 'hasAgeGroupAccess ORs `manages` into the grant, turning identity into access',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
+      "if (session.role === 'manager') return session.ageGroupId === '*' || session.ageGroupId === ageGroupId;",
+      "if (session.role === 'manager') return session.ageGroupId === '*' || session.ageGroupId === ageGroupId || (Array.isArray(session.manages) && session.manages.indexOf(ageGroupId) >= 0);"),
+    expect: ['a manager whose manages names another group still cannot access it'],
+  },
+  {
+    name: 'managerGroups drops its organiser-only guard, so a manager target is accepted',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "accounts[idx].role !== 'organizer'", 'false'),
+    expect: ['managerGroups refuses a manager target'],
+  },
+  {
+    name: 'managerGroups stops validating the ids, so * and unknown groups are stored',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "list.some((id) => id === '*' || !VALID_AGE_GROUP_IDS.has(id))", 'false'),
+    expect: ['an unknown age group is refused'],
+  },
+  {
+    name: 'setRole promotion stops folding the age group into manages',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "accounts[idx].manages = wasGroup && wasGroup !== '*' ? [wasGroup] : [];",
+      'accounts[idx].manages = [];'),
+    expect: ['promotion folds the age group into manages'],
+  },
+  {
+    /* ⚠️ THE BUG THE REVIEW CAUGHT. Omit setRole's marker cleanup and an
+       auto-approved hub manager promoted to organiser is auto-revoked on his
+       next hub sign-in (hub-auth.js:154 fires on the surviving autoApproved
+       with the deleted ageGroupId). The 10-space find hits ONLY setRole's
+       cleanup, not approve's identical 8-space block. */
+    name: 'setRole promotion omits the hub auto-approve marker cleanup',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "          delete accounts[idx].autoApproved;\n          delete accounts[idx].autoRevoked;\n          delete accounts[idx].suggestedAgeGroupIds;\n          delete accounts[idx].suggestedFrom;\n",
+      ''),
+    expect: ['promotion clears the hub auto-approve markers so the club hub will not auto-revoke'],
+  },
+  {
+    name: 'setRole demotion keeps the manages list instead of dropping it',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      "          accounts[idx].ageGroupId = ageGroupId;\n          delete accounts[idx].manages;\n          delete accounts[idx].title;",
+      '          accounts[idx].ageGroupId = ageGroupId;'),
+    expect: ['demotion sets the age group and drops manages'],
+  },
+  {
+    name: 'sessionFor stops putting manages on the organiser session',
+    suite: 'test-dual-role.js',
+    apply: () => patch(path.join('netlify', 'functions', 'login.js'),
+      "_role: 'organizer', manages: account.manages || [] }",
+      "_role: 'organizer' }"),
+    expect: ['login.js sessionFor puts manages on the organiser session'],
+  },
+  {
+    name: 'the client managedGroupsOf drifts from the server copy',
+    suite: 'test-dual-role.js',
+    apply: () => patch('organizer-data.js',
+      "return Array.isArray(account.manages) ? account.manages.filter((id) => id && id !== '*') : [];",
+      'return Array.isArray(account.manages) ? account.manages : [];'),
+    expect: ['the client managedGroupsOf matches the server copy'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

@@ -41,6 +41,7 @@ $tests = @(
   'test-intake.js',
   'test-functions-load.js',
   'test-accounts.js',
+  'test-dual-role.js',
   'test-unified-login.js',
   'test-signup-ratelimit.js',
   'test-login-ratelimit.js',

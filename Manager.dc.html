@@ -1232,7 +1232,18 @@ class Component extends DCLogic {
        Awaiting-review strip lands on that group. Organisers only — a manager
        has one group and no switcher — and only a group that exists. */
     const wanted = api.isOrganiserSession(session) ? this.requestedAgeId() : '';
-    const ageId = (wanted && ageGroups.some((a) => a.id === wanted) ? wanted : null) || agId || (session.ageGroupId === '*'
+    /* Dual-role (JRT-37): an organiser who is ALSO the named manager of a group
+       defaults to that group — after an explicit ?ag= deep link, which still
+       wins so an organiser can roam every group. Read `manages` LIVE via
+       api.liveAccount() so a group an organiser was just given shows without a
+       re-login; fall back to the cached session's manages, else null (a plain
+       manager has no `manages`). */
+    const live = (api.isOrganiserSession(session) && api.liveAccount) ? await api.liveAccount() : null;
+    const managed = (live && Array.isArray(live.manages)) ? live.manages : (Array.isArray(session.manages) ? session.manages : []);
+    const firstManaged = api.isOrganiserSession(session) ? (managed.find((id) => ageGroups.some((a) => a.id === id)) || null) : null;
+    const ageId = (wanted && ageGroups.some((a) => a.id === wanted) ? wanted : null)
+      || firstManaged
+      || agId || (session.ageGroupId === '*'
       ? ((ageGroups.find((a) => a.hasStandings) || ageGroups[0] || {}).id)
       : session.ageGroupId);
     this.setState({ session, ageGroups, ageId });

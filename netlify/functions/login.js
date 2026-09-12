@@ -80,7 +80,7 @@ const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 function sessionFor(account) {
   if (account.role === 'organizer') {
     return {
-      session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },
+      session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer', manages: account.manages || [] },
       token: sign({ username: account.username, role: 'organizer' }),
     };
   }

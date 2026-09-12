@@ -471,6 +471,36 @@ export async function clearClubLink() {
   return { ok: false, error: 'Clearing the club link needs the deployed site (not available in local preview).' };
 }
 
+/* The organiser's official club names (JRT-7). The server keys the map by the
+   normalised declared name, so nothing here normalises; club is the raw declared
+   name and the server does the rest. rev carries the optimistic-concurrency
+   stamp back on Save so a stale write is caught. */
+export async function clubOfficialNames() {
+  const r = await tryFetchJson('/.netlify/functions/save-club-names', { headers: authHeaders() });
+  if (r.real && r.json) return r.json;
+  return { ok: false, error: 'Could not load the club names.' };
+}
+
+export async function saveClubOfficialName(club, officialName, rev) {
+  const r = await tryFetchJson('/.netlify/functions/save-club-names', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ club, officialName, rev }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Saving a club name needs the deployed site (not available in local preview).' };
+}
+
+export async function clearClubOfficialName(club, rev) {
+  const r = await tryFetchJson('/.netlify/functions/save-club-names', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ club, clear: true, rev }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Clearing a club name needs the deployed site (not available in local preview).' };
+}
+
 export async function saveRegistrationWindow(settings) {
   const r = await tryFetchJson('/.netlify/functions/registration-window', {
     method: 'POST',

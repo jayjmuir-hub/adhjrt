@@ -84,6 +84,12 @@ const NEEDED = [
      fails UNDAMAGED, and every fault aimed at it reporting "caught" while
      proving nothing. */
   'netlify/functions/club-link.js',
+  /* JRT-7: the public club-list read and the organiser official-name write.
+     test-registered-clubs.js and test-save-club-names.js REQUIRE these; leaving
+     them out reads as MODULE_NOT_FOUND, the suite fails undamaged, and every
+     fault reports "caught" while proving nothing. */
+  'netlify/functions/registered-clubs.js',
+  'netlify/functions/save-club-names.js',
   'netlify/functions/get-registrations.js',
   'netlify/functions/get-my-registrations.js',
   'netlify/functions/registration-window.js',
@@ -1174,7 +1180,7 @@ const FAULTS = [
     name: 'the homepage stops gating the Register buttons',
     suite: 'test-registration-panel.js',
     apply: () => patch('Quins JRT.dc.html',
-      "    if (this.regState().open) this.openTeamModal();\n    else this.flashToast(this.closedToast('team'));",
+      "    if (this.regState().open) { this.refreshClubs(); this.openTeamModal(); }\n    else this.flashToast(this.closedToast('team'));",
       '    this.openTeamModal();'),
     expect: ['Register a team'],
   },
@@ -8926,7 +8932,7 @@ const FAULTS = [
     name: 'the club link is fetched on every page load rather than on the tab',
     suite: 'test-club-link.js',
     apply: () => patch('Organizer.dc.html',
-      "showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); },",
+      "showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); this.loadClubOfficialNames(); },",
       "showClubs: () => this.setState({ tab: 'clubs' }),"),
     expect: ['it loads when the tab is opened'],
   },
@@ -9902,6 +9908,129 @@ const FAULTS = [
       "const isOrganizer = session.role === 'organizer';",
       "const isOrganizer = !!session.isOrganizer || session.role === 'organizer';"),
     expect: ['organiser-ness is the live role, with no dead session.isOrganizer disjunct'],
+  },
+
+  /* ---- JRT-7: the club dropdown from registrations + official-name curation.
+     The public join (registered-clubs.js + publicClubNames in _regstore.js), the
+     organiser write (save-club-names.js), the shared normaliser drift, the
+     removed free-text option, and the Clubs-tab binding. */
+  {
+    name: 'the public join falls back to the DECLARED name for an unnamed club',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'),
+      'const official = names[normaliseClubName(declared)];',
+      'const official = names[normaliseClubName(declared)] || declared;'),
+    expect: ['an unnamed registered club (City Rugby) is HIDDEN'],
+  },
+  {
+    name: 'the connector returns the whole record row, leaking PII',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', 'registered-clubs.js'),
+      'publicClubNames(records, names)', 'records.map((e) => e.record.row)'),
+    expect: ['no contact name / email / phone'],
+  },
+  {
+    name: 'the rehearsal filter is dropped from the public join',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'),
+      'if (!e || !e.record || e.record.rehearsal === true) continue;',
+      'if (!e || !e.record) continue;'),
+    expect: ['a rehearsal (Falcons) is HIDDEN'],
+  },
+  {
+    name: 'the join keys on the raw declared name, not the normalised one',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'),
+      'const official = names[normaliseClubName(declared)];',
+      'const official = names[declared];'),
+    expect: ['only registered AND named clubs appear, sorted'],
+  },
+  {
+    name: 'the public club list is returned unsorted',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'),
+      'return [...seen.values()].sort((a, b) => a.localeCompare(b));',
+      'return [...seen.values()];'),
+    expect: ['only registered AND named clubs appear, sorted'],
+  },
+  {
+    name: 'the sign-up dropdown is re-pointed back at the hardcoded CLUB_NAMES',
+    suite: 'test-registered-clubs.js',
+    apply: () => patch(HOME,
+      'clubOptions: (this.state.clubs && this.state.clubs.length) ? this.state.clubs : CLUB_NAMES,',
+      'clubOptions: CLUB_NAMES,'),
+    expect: ['binds the fetched state.clubs'],
+  },
+  {
+    name: 'save-club-names drops its organiser gate, so a manager can write',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      "if (auth.session.role !== 'organizer') {", 'if (false) {'),
+    expect: ['a MANAGER cannot read'],
+  },
+  {
+    name: 'the wrong-role refusal is routed through sessionRefusal, logging a manager out',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      "refusal: json(403, { ok: false, error: 'Only tournament organisers can name clubs.' })",
+      "refusal: json(403, { ok: false, sessionEnded: true, error: 'Only tournament organisers can name clubs.' })"),
+    expect: ['does NOT carry sessionEnded'],
+  },
+  {
+    name: 'the officialName type check is dropped, so a non-string is coerced',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      "if (typeof body.officialName !== 'string') {", 'if (false) {'),
+    expect: ['a numeric officialName is refused'],
+  },
+  {
+    name: 'the optimistic rev guard is removed, so a stale write clobbers',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      "if (typeof body.rev === 'number' && body.rev !== current.rev) {", 'if (false) {'),
+    expect: ['a stale rev is refused'],
+  },
+  {
+    name: 'the save replaces the whole map instead of merging one key',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      'const names = { ...current.names };', 'const names = {};'),
+    expect: ['both survive'],
+  },
+  {
+    name: 'a blank Save is treated as valid instead of refused',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      "if (!official) return json(400, { ok: false, error: 'Type the official name, or use Clear to remove it.' });",
+      "if (false) return json(400, { ok: false, error: 'Type the official name, or use Clear to remove it.' });"),
+    expect: ['a blank Save is refused'],
+  },
+  {
+    name: 'the formula-injection guard is disabled on the official name',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      'if (/^[=+@-]/.test(official))', 'if (false && /^[=+@-]/.test(official))'),
+    expect: ['a leading = (formula) is refused'],
+  },
+  {
+    name: 'a rehearsal club is allowed to be named',
+    suite: 'test-save-club-names.js',
+    apply: () => patch(path.join('netlify', 'functions', 'save-club-names.js'),
+      'if (isRehearsal(body.club)) {', 'if (false) {'),
+    expect: ['a rehearsal club is never named'],
+  },
+  {
+    name: 'the Node copy of normaliseClubName drifts from the browser copy (rfc dropped)',
+    suite: 'test-club-name-drift.js',
+    apply: () => patch(path.join('netlify', 'functions', '_regstore.js'),
+      'rufc|rfc|rc|fc)$/;', 'rufc|rc|fc)$/;'),
+    expect: ['the trailing suffix is stripped'],
+  },
+  {
+    name: 'clubRows stops returning officialDraft, so the input never shows the saved name',
+    suite: 'test-organizer-clubs.js',
+    apply: () => patch(ORG, 'officialDraft: draft,', 'officialDraft: undefined,'),
+    expect: ['its input shows the saved official name'],
   },
 ];
 

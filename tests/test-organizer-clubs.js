@@ -470,6 +470,39 @@ section('Nothing here invents a second copy of anything');
     !/['"]u12g['"]/.test(recBody) && !/['"]u16b['"]/.test(recBody));
 }
 
+section('JRT-7 — the official-name control and the hidden-until-named badge');
+{
+  const clubs = [decl('Dubai Sharks', { u12g: '2' }), decl('City Rugby', { u16b: '1' })];
+  const teams = [team('Dubai Sharks', 'U12G QR'), team('City Rugby', 'U16B Contact')];
+  /* Sharks is named by the organiser; City is not. */
+  const v = vals({ tab: 'clubs', clubs, teams, clubOfficialNames: { 'dubai sharks': 'Dubai Sharks' } });
+  const by = Object.fromEntries(v.clubRows.map((r) => [r.club, r]));
+
+  check('a named club is flagged isNamed', by['Dubai Sharks'].isNamed === true);
+  eq('…with the "in the list" badge', by['Dubai Sharks'].namedBadge, 'In the sign-up list');
+  eq('…and its input shows the saved official name', by['Dubai Sharks'].officialDraft, 'Dubai Sharks');
+
+  /* ⚠️ The gate as the organiser sees it: an unnamed registered club is not in
+     the dropdown, and the row says so rather than looking done. */
+  check('an unnamed registered club is NOT flagged', by['City Rugby'].isNamed === false);
+  eq('…and reads Hidden — not named yet', by['City Rugby'].namedBadge, 'Hidden — not named yet');
+  eq('…with an empty input to fill', by['City Rugby'].officialDraft, '');
+
+  /* An unsaved edit shows over the saved value, keyed by the NORMALISED name so
+     it survives the row re-rendering. */
+  const v2 = vals({ tab: 'clubs', clubs, teams, clubOfficialNames: { 'dubai sharks': 'Dubai Sharks' }, clubNameDrafts: { 'dubai sharks': 'Sharks (edited)' } });
+  eq('an unsaved edit shows in the input over the saved name',
+    v2.clubRows.find((r) => r.club === 'Dubai Sharks').officialDraft, 'Sharks (edited)');
+
+  const src = readRepo('Organizer.dc.html');
+  check('the clubs table has a Sign-up name column', /<th[^>]*>Sign-up name<\/th>/.test(src));
+  check('the row input binds officialDraft (rendered as {{ }} text, so a hostile name is inert)',
+    /value="\{\{ c\.officialDraft \}\}"/.test(src));
+  check('the badge renders through {{ }} text', /\{\{ c\.namedBadge \}\}/.test(src));
+  /* The new column widened the expanded age-group row from 6 to 7. */
+  check('the expanded age-group row spans all 7 columns now', /<td colspan="7"/.test(src));
+}
+
 summary('test-organizer-clubs.js');
 }
 

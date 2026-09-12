@@ -1461,6 +1461,7 @@
                     <th style="background:var(--surface-sunk);text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap">Declared</th>
                     <th style="background:var(--surface-sunk);text-align:center;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap">Registered</th>
                     <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Status</th>
+                    <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap">Sign-up name</th>
                     <th style="background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Contact</th>
                     <th style="background:var(--surface-sunk);padding:12px 14px"></th>
                   </tr>
@@ -1472,6 +1473,20 @@
                       <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.declaredTotal }}</td>
                       <td style="padding:12px 14px;font-size:16px;text-align:center;font-weight:700">{{ c.registeredTotal }}</td>
                       <td style="padding:12px 14px"><span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span></td>
+                      <!-- JRT-7: the official name for the public sign-up list. A club is
+                           hidden from the dropdown until this is filled in. Both the input
+                           value and the badge render through {{ }} text, so a hostile
+                           declared/typed name is inert. -->
+                      <td style="padding:12px 14px;white-space:nowrap">
+                        <div style="display:flex;align-items:center;gap:6px">
+                          <input value="{{ c.officialDraft }}" aria-label="Official name for the public sign-up list" onInput="{{ c.onOfficialNameInput }}" placeholder="Type the sign-up name" style="width:170px;background:#FFFFFF;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:13px">
+                          <button onClick="{{ c.onSaveOfficialName }}" style="background:var(--brand);color:#fff;border:none;font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">{{ c.officialSaveLabel }}</button>
+                          <sc-if value="{{ c.isNamed }}" hint-placeholder-val="{{ false }}">
+                            <button onClick="{{ c.onClearOfficialName }}" style="background:transparent;color:var(--ink-muted);border:1px solid var(--line-strong);font-weight:700;font-size:12px;padding:8px 10px;border-radius:8px;cursor:pointer">Clear</button>
+                          </sc-if>
+                        </div>
+                        <div style="margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:{{ c.namedColor }}">{{ c.namedBadge }}</div>
+                      </td>
                       <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted)">{{ c.contactName }}<br>{{ c.contactEmail }}<br>{{ c.contactPhone }}</td>
                       <td style="padding:12px 14px;text-align:right">
                         <button onClick="{{ c.onToggle }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap">{{ c.toggleLabel }}</button>
@@ -1479,7 +1494,7 @@
                     </tr>
                     <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
                       <tr>
-                        <td colspan="6" style="padding:0 14px 16px;background:var(--surface-mute)">
+                        <td colspan="7" style="padding:0 14px 16px;background:var(--surface-mute)">
                           <sc-if value="{{ c.hasNotes }}" hint-placeholder-val="{{ false }}">
                             <p style="margin:12px 0 0;font-size:13px;color:var(--ink-faint);line-height:1.5"><b style="color:var(--ink-muted)">They said:</b> {{ c.notes }}</p>
                           </sc-if>
@@ -2248,6 +2263,11 @@ class Component extends DCLogic {
        is the chase-list filter, off by default so the tab opens showing
        everything and narrows on request rather than hiding rows by surprise. */
     clubs: [], clubsUnavailable: false, expandedClub: '', clubsOnlyFlagged: false,
+    /* JRT-7: the organiser's official names for the public sign-up dropdown.
+       clubOfficialNames is the saved map (normalised declared name -> official
+       name); clubNameDrafts holds unsaved edits, keyed the same way; clubNamesRev
+       is the optimistic-concurrency stamp; clubNamesBusy is the key mid-save. */
+    clubOfficialNames: {}, clubNameDrafts: {}, clubNamesRev: 0, clubNamesBusy: '', clubNamesError: '',
     /* The Club invite link box. `clubLinkStatus` is the SERVER's verdict —
        empty / off / working / stale — never computed here, because only the
        server knows the real CLUB_FORM_KEY and sending it to the browser to
@@ -2934,7 +2954,16 @@ class Component extends DCLogic {
          "no declarations at all". */
       clubsNoneFlagged: s.clubsOnlyFlagged && rec.rows.length > 0 && shown.length === 0,
 
-      clubRows: shown.map((r) => ({
+      clubRows: shown.map((r) => {
+        /* JRT-7 — the official name for the public sign-up list. Keyed by the
+           NORMALISED declared name, the same key the public join (publicClubNames
+           in _regstore.js) uses, so what an organiser types here is exactly what
+           gates the dropdown. draft/saved/isnamed all-lowercase per encodeCase. */
+        const k = normaliseClubName(r.club);
+        const saved = (s.clubOfficialNames && s.clubOfficialNames[k]) || '';
+        const isnamed = !!saved;
+        const draft = (s.clubNameDrafts && Object.prototype.hasOwnProperty.call(s.clubNameDrafts, k)) ? s.clubNameDrafts[k] : saved;
+        return {
         club: r.club,
         contactName: r.contactName,
         contactEmail: r.contactEmail,
@@ -2953,6 +2982,16 @@ class Component extends DCLogic {
         /* Keyed by club NAME because that is what the row carries and it is
            unique per declaration row. Toggling the open one closes it. */
         onToggle: () => this.setState((p) => ({ expandedClub: p.expandedClub === r.club ? '' : r.club })),
+        /* The official-name control. isNamed drives the badge and whether the
+           club is in the public dropdown; the draft feeds the input. */
+        officialDraft: draft,
+        isNamed: isnamed,
+        namedBadge: isnamed ? 'In the sign-up list' : 'Hidden — not named yet',
+        namedColor: isnamed ? 'var(--accent-ink)' : 'var(--ink-faint)',
+        officialSaveLabel: s.clubNamesBusy === k ? 'Saving…' : 'Save',
+        onOfficialNameInput: (e) => this.onClubNameInput(r.club, e.target.value),
+        onSaveOfficialName: () => this.onSaveClubName(r.club),
+        onClearOfficialName: () => this.onClearClubName(r.club),
         groups: r.groups.map((g) => ({
           name: g.name,
           declared: g.declared,
@@ -2961,7 +3000,8 @@ class Component extends DCLogic {
             ? 'border-top:1px solid var(--line);background:rgba(163,13,37,0.05)'
             : 'border-top:1px solid var(--line)',
         })),
-      })),
+        };
+      }),
 
       /* ⚠️ Registered but never declared. This is where a club whose name did
          not normalise to a declaration lands, so a failed match reads as an
@@ -4617,6 +4657,74 @@ class Component extends DCLogic {
     this.setState({ clubLink: r.link || '', clubLinkStatus: r.status || 'empty', clubLinkError: '' });
   }
 
+  /* ===== THE OFFICIAL CLUB NAMES (JRT-7) ================================
+     The organiser types an official name per registered club; only NAMED clubs
+     appear in the public sign-up dropdown (the gate is enforced server-side in
+     registered-clubs.js). Same all-lowercase-locals rule as the club-link block
+     above — encodeCase() would kebab-case a camelCase local before `=`. */
+  async loadClubOfficialNames() {
+    const api = this.state.api;
+    if (!api || !api.clubOfficialNames) return;
+    const r = await api.clubOfficialNames();
+    if (!r || !r.ok) {
+      /* Fails soft — the tab's real job is the declared-vs-registered table. */
+      this.setState({ clubNamesError: (r && r.error) || 'Could not load the club names.' });
+      return;
+    }
+    this.setState({ clubOfficialNames: r.names || {}, clubNamesRev: r.rev || 0, clubNamesError: '' });
+  }
+
+  /* Keyed by the NORMALISED declared name — the same key the server and the
+     public join use — so a draft survives the row re-rendering. */
+  onClubNameInput(club, val) {
+    const key = normaliseClubName(club);
+    this.setState((p) => ({ clubNameDrafts: { ...p.clubNameDrafts, [key]: val }, clubNamesError: '' }));
+  }
+
+  async onSaveClubName(club) {
+    const key = normaliseClubName(club);
+    const draft = this.state.clubNameDrafts[key] !== undefined ? this.state.clubNameDrafts[key] : (this.state.clubOfficialNames[key] || '');
+    /* An empty box is not a clear — Clear is its own button, and the server
+       refuses an empty save as well. */
+    if (!String(draft).trim()) {
+      this.setState({ clubNamesError: 'Type the official name, or press Clear to remove it.' });
+      return;
+    }
+    this.setState({ clubNamesBusy: key, clubNamesError: '' });
+    let r = await this.state.api.saveClubOfficialName(club, draft, this.state.clubNamesRev);
+    /* Optimistic-concurrency retry: if someone else saved first, take their
+       latest map and rev and re-apply this one change once. */
+    if (r && r.conflict) {
+      this.setState({ clubOfficialNames: r.names || {}, clubNamesRev: r.rev || 0 });
+      r = await this.state.api.saveClubOfficialName(club, draft, r.rev);
+    }
+    this.afterClubNameSave(key, r);
+  }
+
+  async onClearClubName(club) {
+    const key = normaliseClubName(club);
+    this.setState({ clubNamesBusy: key, clubNamesError: '' });
+    let r = await this.state.api.clearClubOfficialName(club, this.state.clubNamesRev);
+    if (r && r.conflict) {
+      this.setState({ clubOfficialNames: r.names || {}, clubNamesRev: r.rev || 0 });
+      r = await this.state.api.clearClubOfficialName(club, r.rev);
+    }
+    this.afterClubNameSave(key, r);
+  }
+
+  afterClubNameSave(key, r) {
+    if (!r || !r.ok) {
+      this.setState({ clubNamesBusy: '', clubNamesError: (r && r.error) || 'Could not save that name.' });
+      return;
+    }
+    /* Drop this club's draft (now saved) and take the server's fresh map + rev. */
+    this.setState((p) => {
+      const drafts = { ...p.clubNameDrafts };
+      delete drafts[key];
+      return { clubOfficialNames: r.names || {}, clubNamesRev: r.rev || 0, clubNameDrafts: drafts, clubNamesBusy: '', clubNamesError: '' };
+    });
+  }
+
   onEditClubLink() {
     this.setState({ clubLinkEditing: true, clubLinkDraft: this.state.clubLink, clubLinkError: '' });
   }
@@ -5091,7 +5199,7 @@ class Component extends DCLogic {
          read of a secret; fetching it on every /organizer load would put the
          club key on the wire for organisers who never go near this tab.
          Not awaited — the tab must switch instantly, and the card fails soft. */
-      showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); },
+      showClubs: () => { this.setState({ tab: 'clubs' }); this.loadClubLink(); this.loadClubOfficialNames(); },
       showRegistration: () => { this.setState({ tab: 'registration', regNow: Date.now() }); this.loadRegistrationWindow(); },
       showTournament: () => this.openTournament(),
       showFixturesView: () => this.openFixturesView(),

@@ -732,6 +732,23 @@ export async function loadRegistrationWindow() {
   return LIVE_REGISTRATION;
 }
 
+/* The clubs shown in the sign-up dropdowns come from registered-clubs.js — the
+   official names of clubs that have registered AND been named by an organiser
+   (JRT-7). Cached only once a NON-EMPTY list has arrived, so a failed or
+   not-yet-built list leaves LIVE_CLUBS null and a later call can try again; the
+   sign-up page falls back to its own bundled CLUB_NAMES until then, so the
+   dropdown is never empty and blocking. Names only — no personal data crosses. */
+let LIVE_CLUBS = null;
+export async function loadClubs() {
+  if (LIVE_CLUBS) return LIVE_CLUBS;
+  const r = await tryFetchJson('/.netlify/functions/registered-clubs');
+  const list = (r.real && r.json && r.json.ok && Array.isArray(r.json.clubs))
+    ? r.json.clubs.filter((c) => typeof c === 'string' && c.trim())
+    : [];
+  if (list.length) LIVE_CLUBS = list;
+  return LIVE_CLUBS; // null until a non-empty list lands, so callers keep their fallback
+}
+
 /* The current answer, for callers that would rather not pass a clock in. The
    pure function is still the one under test; this is a two-line convenience and
    nothing but display should use it. */

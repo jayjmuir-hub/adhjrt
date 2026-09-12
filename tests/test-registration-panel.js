@@ -417,9 +417,9 @@ try {
   {
     const src = readRepo(HOME);
     check('Register a team is gated on the window being open',
-      /onClickRegisterTeam\(\)\s*\{\s*if \(this\.regState\(\)\.open\) this\.openTeamModal\(\);/.test(src));
+      /onClickRegisterTeam\(\)\s*\{\s*if \(this\.regState\(\)\.open\)[^}]*this\.openTeamModal\(\);/.test(src));
     check('Register a player is gated on the window being open',
-      /onClickRegisterPlayer\(\)\s*\{\s*if \(this\.regState\(\)\.open\) this\.openPlayerModal\(\);/.test(src));
+      /onClickRegisterPlayer\(\)\s*\{\s*if \(this\.regState\(\)\.open\)[^}]*this\.openPlayerModal\(\);/.test(src));
 
     /* Driven, not just read: a shut page must not open the modal, and an open
        page must. */

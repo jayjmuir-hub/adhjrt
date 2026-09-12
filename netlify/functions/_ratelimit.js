@@ -114,9 +114,9 @@ async function checkRate(store, address, now, opts) {
 /* ---------------------------------------------------------------------- *
    SIGNUP ATTEMPTS (added 3 Aug 2026).
 
-   organizer-signup.js, manager-signup.js and google-auth.js's signup branch
-   all check an INVITE CODE with a plain string compare, and until now none of
-   them counted attempts at all — so the codes took unlimited guesses from
+   organizer-signup.js checks an INVITE CODE with a plain string compare, and
+   until this shipped it counted no attempts at all — so the code took
+   unlimited guesses from
    anyone, and an organiser account reads every registrant's name, date of
    birth and medical notes. The site-wide Netlify password hid this, but that
    comes off about 20 days before the tournament.

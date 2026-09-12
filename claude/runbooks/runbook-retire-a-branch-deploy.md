@@ -17,7 +17,7 @@ in `RESTORE.md`.
   history first (`runbook-git-bundle-between-pcs.md`) and keep the bundle
   outside the repo.
 - Pick your probes now: the branch root and one function on it (for example
-  `/.netlify/functions/manager-signup`). You also need three controls:
+  `/.netlify/functions/get-results`). You also need three controls:
   production (`https://adhjrt.com`), a branch name that has never existed
   (`https://nosuchbranch--adhquins-jrt.netlify.app`), and `dev--`.
 

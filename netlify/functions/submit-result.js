@@ -1,11 +1,10 @@
 // netlify/functions/submit-result.js
 //
 // Records one match result. Requires an Authorization: Bearer <token>
-// header minted by login.js, google-auth.js or manager-signup.js, OR an
-// Organizer token from the same places — organizers can
-// submit for any age group; a manager only for their own (the special
-// "admin" manager invite code's accounts can act on any group too —
-// see hasAgeGroupAccess in _auth.js). Never trust the client for this
+// header minted by login.js (password desk sign-in) or hub-auth.js (Quins
+// Club Hub) — organizers can submit for any age group; a manager only for
+// their own (a legacy all-groups '*' manager can act on any group too — see
+// hasAgeGroupAccess in _auth.js). Never trust the client for this
 // check; it's re-verified here from the signed token.
 //
 // Results are stored in Netlify Blobs, one JSON object per AGE GROUP,

@@ -3,12 +3,13 @@
    ------------------------------------------------------------
    Every read/write the UI needs goes through the async functions
    exported at the bottom. Manager accounts, match results, and
-   sessions are real — accounts self-signup via manager-signup.js
-   (gated by an invite code per age group) and are stored server-side
-   in Netlify Blobs; results are written via submit-result.js and read
-   back (by anyone, including the public Standings page) via
-   get-results.js. See those files in netlify/functions/ for the
-   one-time setup (MANAGER_INVITE_CODES + SESSION_SECRET env vars).
+   sessions are real — managers arrive through the Quins Club Hub and
+   are given a role in the back office (manager self-signup was retired
+   12 Sep 2026, JRT-30); accounts are stored server-side in Netlify
+   Blobs; results are written via submit-result.js and read back (by
+   anyone, including the public Standings page) via get-results.js. See
+   those files in netlify/functions/ for the one-time setup
+   (SESSION_SECRET env var).
 
    THE DRAW (which teams are in which pool, and each match's home/away
    teams + kickoff time + pitch) starts out auto-generated from the
@@ -1963,22 +1964,19 @@ export async function login(username, password) {
   return { ok: false, error: json.error || 'Incorrect username or password.' };
 }
 
-// Self-signup, either role (the /signin page's Create-account flows). A
-// manager's age group is decided entirely by which invite code was entered
-// (see manager-signup.js); an organizer signup takes the admin invite code
-// and an optional free-text title. The signup ENDPOINTS stay per-role — the
-// invite-code semantics genuinely differ — this just picks the right one.
-export async function signup({ role = 'manager', name, title, username, password, inviteCode }) {
-  const endpoint = role === 'organizer' ? 'organizer-signup' : 'manager-signup';
-  const r = await tryFetchJson('/.netlify/functions/' + endpoint, {
+// Organiser self-signup — the dormant RECOVERY path only (see the card
+// 2026-08-03-organiser-signup-is-a-dormant-recovery-path). It posts to
+// organizer-signup.js, which refuses every request while ORGANIZER_INVITE_CODE
+// is unset — its normal state. Manager self-signup was retired on 12 Sep 2026
+// (JRT-30); managers arrive through the club hub. Nothing in the UI reaches
+// this now; it is kept so the recovery procedure (set the code, sign up, unset
+// it) still has its client plumbing.
+export async function signup({ name, title, username, password, inviteCode }) {
+  const r = await tryFetchJson('/.netlify/functions/organizer-signup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(role === 'organizer'
-      ? { name, title, username, password, inviteCode }
-      : { name, username, password, inviteCode }),
+    body: JSON.stringify({ name, title, username, password, inviteCode }),
   });
-  const json = r.real ? r.json : (role === 'organizer'
-    ? (await local()).organizerSignup({ name, title, username, password, inviteCode })
-    : (await local()).managerSignup({ name, username, password, inviteCode }));
+  const json = r.real ? r.json : (await local()).organizerSignup({ name, title, username, password, inviteCode });
   if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
   if (json.ok) {
     const session = { ...json.session, token: json.token };

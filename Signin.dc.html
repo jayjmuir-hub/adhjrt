@@ -147,7 +147,12 @@
       </div>
       <sc-if value="{{ loginError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:14px;font-weight:600;margin-bottom:14px">{{ loginError }}</div></sc-if>
       <button onClick="{{ onLogin }}" disabled="{{ loginBusy }}" style="width:100%;background:var(--brand);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ loginLabel }}</button>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)">New here? <a onClick="{{ onShowSignup }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Create an account</a></div>
+
+      <!-- The "New here? Create an account" link (a manager self-signup form)
+           was removed on 12 Sep 2026 (JRT-30). Managers arrive through the
+           Quins Club Hub above and are given a role by an organiser; there is
+           no self-serve account creation on this page. Break-glass manager
+           logins are minted in the back office (/organizer -> Accounts). -->
 
       <!-- Google sign-in lived here until 8 Sep 2026 (a button drawn by
            Google's script, then a role + invite-code step). Removed once the
@@ -155,51 +160,23 @@
     </sc-if>
 
     <sc-if value="{{ isSignupPendingView }}" hint-placeholder-val="{{ false }}">
-      <!-- "Nearly there" for the Club Hub door, "Account created" for the
-           invite-code form (9 Sep 2026). The hub path creates the account
-           silently, so "created" told the person nothing they had done. -->
+      <!-- The pending panel. Since 12 Sep 2026 (JRT-30) it serves ONLY the
+           Quins Club Hub door's "pending" answer: a hub sign-in that worked but
+           has no role yet, waiting on an organiser. Its heading and message are
+           read from state (finishHubSignIn sets "Nearly there" + the server's
+           sentence) — the manager invite-code form that used to reuse this
+           panel with "Account created" was retired with manager self-signup. -->
       <div style="font-family:'Anton';font-size:24px;text-transform:uppercase;margin-top:14px">{{ signupPendingTitle }}</div>
       <div style="margin-top:16px;background:rgba(31,157,77,0.1);border:1px solid rgba(31,157,77,0.35);border-radius:10px;padding:14px 16px;color:var(--accent-ink);font-size:14px;line-height:1.6">{{ signupPendingMessage }}</div>
       <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)"><a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Back to sign in</a></div>
     </sc-if>
 
-    <!-- Creating an account starts with the one question the server cannot
-         answer for a brand-new signup: which KIND of invite code you hold. -->
-    <sc-if value="{{ isSignupFormView }}" hint-placeholder-val="{{ false }}">
-      <div style="font-family:'Anton';font-size:28px;text-transform:uppercase;margin-top:14px">Create an account</div>
-      <p style="color:var(--ink-muted);font-size:14px;margin-top:6px">For age-group managers. Requires your age group's invite code, and new accounts need approval before signing in. Organisers are set up in the back office — ask one of them.</p>
-
-      <!-- ⚠️ THE ROLE PICKER IS GONE, Aug 2026, and this is the whole reason:
-           ORGANIZER_INVITE_CODE was deleted in Netlify, so organizer-signup.js
-           refuses EVERY organiser signup (google-auth.js did too, until it went)
-           while it is absent. Leaving the option would have offered a choice
-           that can only ever fail, answered by a wrong-code message that reads
-           as "you typed it wrong" — the worst kind of dead end, because the
-           person retypes a code that was never going to work. Age-group
-           manager is now the only kind of account you can create here, so the
-           picker, its blurb and the organiser/admin label switching all went
-           with it. Organiser accounts are made in the back office:
-           /organizer -> Accounts -> Create a login. -->
-      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>
-      <input id="f--label-style-font-si" value="{{ signupName }}" onInput="{{ onSignupName }}" style="width:100%;margin:6px 0 16px;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 14px;color:var(--ink);font-size:15px">
-      <div style="background:#FFFFFF;border:1px solid rgba(245,197,24,0.35);border-radius:9px;padding:12px 14px;margin:2px 0 16px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase">Your login username will be</div>
-        <div style="font-size:22px;font-weight:800;color:#8F6400;margin-top:2px">{{ signupUserPreview }}</div>
-      </div>
-      <label for="f-new-password" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">PASSWORD</label>
-      <div style="position:relative;margin:6px 0 16px">
-        <input id="f-new-password" name="new-password" autocomplete="new-password" type="{{ signupPassType }}" value="{{ signupPass }}" onInput="{{ onSignupPass }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleSignupPass }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupPassToggleLabel }}</button>
-      </div>
-      <label for="f-invite-code" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block">{{ signupCodeLabel }}</label>
-      <div style="position:relative;margin:6px 0 16px">
-        <input id="f-invite-code" name="invite-code" autocomplete="off" type="{{ signupCodeType }}" value="{{ signupCode }}" onInput="{{ onSignupCode }}" onKeyDown="{{ onSignupKey }}" style="width:100%;margin:0;background:var(--surface-sunk);border:1px solid var(--line-strong);border-radius:9px;padding:12px 52px 12px 14px;color:var(--ink);font-size:15px;box-sizing:border-box">
-        <button type="button" onClick="{{ onToggleSignupCode }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--ink-faint);font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;padding:4px 6px">{{ signupCodeToggleLabel }}</button>
-      </div>
-      <sc-if value="{{ signupError }}" hint-placeholder-val=""><div style="color:var(--danger-ink);font-size:14px;font-weight:600;margin-bottom:14px">{{ signupError }}</div></sc-if>
-      <button onClick="{{ onSignup }}" disabled="{{ signupBusy }}" style="width:100%;background:var(--accent-mid);color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px;padding:13px;border:none;border-radius:10px;cursor:pointer;text-transform:uppercase">{{ signupLabel }}</button>
-      <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--ink-faint)">Already have an account? <a onClick="{{ onShowLogin }}" style="color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline">Sign in</a></div>
-    </sc-if>
+    <!-- The "Create an account" form (a manager self-signup gated by a per-age-
+         group invite code) lived here until 12 Sep 2026 (JRT-30). Managers now
+         arrive through the Quins Club Hub and are given a role by an organiser
+         at approval; the desk mints break-glass logins in the back office. The
+         page therefore offers NO self-serve account creation — see the card
+         claude/decisions/2026-09-08-organiser-password-break-glass.md. -->
 
 
     <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
@@ -212,24 +189,13 @@
 class Component extends DCLogic {
   state = {
     api: null,
-    authMode: 'login',
     loginUser: '', loginPass: '', loginError: '', loginBusy: false,
-    showLoginPass: false, showSignupPass: false, showSignupCode: false,
-    /* Which KIND of account a signup creates. Sign-IN never asks — the
-       account's stored role decides where you land. */
-    /* ⚠️ ALWAYS 'manager', and no longer settable. Kept as state rather than
-       inlined so the two signup call sites keep the exact payload shape they
-       had. What went is the PICKER: with ORGANIZER_INVITE_CODE deleted from
-       Netlify, an organiser signup can only ever be refused. */
-    signupRole: 'manager',
-    /* signupTitle stays as state but is no longer editable and
-       are always ''. Their inputs were organiser-only and went with the role
-       picker; the field is still SENT so both signup payloads keep the exact
-       shape they had (a manager signup already sent an empty title, because
-       the input was gated). Nothing renders them, so their bindings are gone
-       — a binding with no markup is dead code, and on a public repo whose root
-       IS the deployed site, dead code is still published. */
-    signupName: '', signupTitle: '', signupPass: '', signupCode: '', signupError: '', signupBusy: false,
+    showLoginPass: false,
+    /* The pending panel's state. Set ONLY by finishHubSignIn now — JRT-30
+       (12 Sep 2026) retired the manager invite-code form that used to share
+       this panel. It marks a Club Hub sign-in that worked but has no role yet,
+       waiting on an organiser. signupPendingTitle is set at runtime alongside
+       the message, so it is not seeded here. */
     signupPending: false, signupPendingMessage: '',
     hubBusy: false, hubError: '',
   };
@@ -307,7 +273,7 @@ class Component extends DCLogic {
     this.setState({ hubBusy: true, hubError: '', loginError: '' });
     const res = await api.hubAuth(hubToken);
     if (res.ok) { this.setState({ hubBusy: false }); this.redirect(this.destFor(res.session)); return; }
-    if (res.pending) { this.setState({ hubBusy: false, authMode: 'signup', signupPending: true, signupPendingTitle: 'Nearly there', signupPendingMessage: res.message }); return; }
+    if (res.pending) { this.setState({ hubBusy: false, signupPending: true, signupPendingTitle: 'Nearly there', signupPendingMessage: res.message }); return; }
     this.setState({ hubBusy: false, hubError: res.error || 'Could not sign in with the Club Hub.' });
   }
 
@@ -328,44 +294,18 @@ class Component extends DCLogic {
     this.redirect(this.destFor(r.session));
   }
 
-  usernameFromName(name) {
-    const parts = (name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s'-]/g, '').trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) return '';
-    if (parts.length === 1) return parts[0];
-    return parts[0] + '.' + parts[parts.length - 1];
-  }
-
-  /* Same dedupe-retry-on-409 shape the old pages used — one collision
-     strategy, not two. */
-  async doSignup() {
-    const { api, signupRole, signupName, signupTitle, signupPass, signupCode } = this.state;
-    const base = this.usernameFromName(signupName);
-    if (!base) { this.setState({ signupError: 'Please enter your name.' }); return; }
-    this.setState({ signupBusy: true, signupError: '' });
-    let username = base, attempt = 0, res;
-    while (attempt < 30) {
-      res = await api.signup({ role: signupRole, name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });
-      if (res.ok || res.error !== 'That username is already taken.') break;
-      attempt += 1;
-      username = base + (attempt + 1);
-    }
-    if (res.ok && res.pending) {
-      this.setState({ signupBusy: false, signupPending: true, signupPendingTitle: 'Account created', signupPendingMessage: res.message, signupPass: '', signupCode: '' });
-    } else if (res.ok) {
-      this.setState({ signupBusy: false, signupPass: '', signupCode: '' });
-      this.redirect(this.destFor(res.session));
-    } else {
-      this.setState({ signupError: res.error || 'Could not create account.', signupBusy: false });
-    }
-  }
-
+  /* usernameFromName() and doSignup() were removed on 12 Sep 2026 (JRT-30)
+     with the manager self-signup form: the page derived a username from the
+     typed name and posted it, with a per-age-group invite code, to
+     manager-signup.js (now deleted). Managers arrive through the Club Hub and
+     are given a role by an organiser; the desk mints break-glass logins in the
+     back office. Nothing on this page creates an account any more. */
 
   renderVals() {
     const s = this.state;
     return {
-      isLoginMode: s.authMode === 'login',
-      isSignupPendingView: s.authMode === 'signup' && s.signupPending,
-      isSignupFormView: s.authMode === 'signup' && !s.signupPending,
+      isLoginMode: !s.signupPending,
+      isSignupPendingView: s.signupPending,
 
       loginUser: s.loginUser, loginPass: s.loginPass, loginError: s.loginError,
       loginBusy: s.loginBusy, loginLabel: s.loginBusy ? 'Signing in…' : 'Sign in',
@@ -381,29 +321,12 @@ class Component extends DCLogic {
       loginPassToggleLabel: s.showLoginPass ? 'HIDE' : 'SHOW',
       onToggleLoginPass: () => this.setState((st) => ({ showLoginPass: !st.showLoginPass })),
 
-      onShowSignup: () => this.setState({ authMode: 'signup', loginError: '', signupPending: false }),
-      onShowLogin: () => this.setState({ authMode: 'login', signupError: '', signupPending: false }),
-
-      signupCodeLabel: 'AGE GROUP INVITE CODE',
-
-      signupName: s.signupName,
-      signupUserPreview: this.usernameFromName(s.signupName) || '—',
-      signupPass: s.signupPass, signupCode: s.signupCode,
-      signupError: s.signupError, signupBusy: s.signupBusy,
-      signupLabel: s.signupBusy ? 'Creating…' : 'Create account',
+      /* The pending panel — the Club Hub's "pending" answer. "Back to sign in"
+         clears it; nothing else sets it now that manager self-signup is gone
+         (JRT-30). isLoginMode is simply its inverse, so no authMode is kept. */
+      onShowLogin: () => this.setState({ signupPending: false, loginError: '' }),
       signupPendingMessage: s.signupPendingMessage,
-      signupPendingTitle: s.signupPendingTitle || 'Account created',
-      onSignupName: (e) => this.setState({ signupName: e.target.value }),
-      onSignupPass: (e) => this.setState({ signupPass: e.target.value }),
-      onSignupCode: (e) => this.setState({ signupCode: e.target.value }),
-      onSignupKey: (e) => { if (e.key === 'Enter') this.doSignup(); },
-      onSignup: () => this.doSignup(),
-      signupPassType: s.showSignupPass ? 'text' : 'password',
-      signupPassToggleLabel: s.showSignupPass ? 'HIDE' : 'SHOW',
-      onToggleSignupPass: () => this.setState((st) => ({ showSignupPass: !st.showSignupPass })),
-      signupCodeType: s.showSignupCode ? 'text' : 'password',
-      signupCodeToggleLabel: s.showSignupCode ? 'HIDE' : 'SHOW',
-      onToggleSignupCode: () => this.setState((st) => ({ showSignupCode: !st.showSignupCode })),
+      signupPendingTitle: s.signupPendingTitle || 'Nearly there',
 
     };
   }

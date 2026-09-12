@@ -2,15 +2,19 @@
    ------------------------------------------------------------------------
    THE INVITE CODES TOOK UNLIMITED GUESSES UNTIL 3 AUG 2026.
 
-   organizer-signup.js, manager-signup.js and google-auth.js's signup branch
-   each check an invite code with a plain string compare. None of them counted
-   attempts. An organiser account reads every registrant's name, date of birth
-   and medical notes, so an unmetered guessing surface in front of
-   ORGANIZER_INVITE_CODE is the most serious thing in this repo's history that
-   nothing was asserting. The site-wide Netlify password hid it; that comes off
-   about 20 days before the tournament.
+   organizer-signup.js checks an invite code with a plain string compare and
+   did not count attempts. An organiser account reads every registrant's name,
+   date of birth and medical notes, so an unmetered guessing surface in front
+   of ORGANIZER_INVITE_CODE is the most serious thing in this repo's history
+   that nothing was asserting. The site-wide Netlify password hid it; that came
+   off about 20 days before the tournament.
 
-   This file DRIVES the three real handlers against an in-memory blob store.
+   (manager-signup.js and google-auth.js's signup branch once shared this same
+   bucket; both were retired — manager self-signup on 12 Sep 2026, JRT-30 — so
+   organizer-signup.js is the only signup endpoint left. The bucket is still
+   endpoint-independent by design, asserted against signupBucket() below.)
+
+   This file DRIVES the real handler against an in-memory blob store.
    A text check that `checkSignupRate(` appears somewhere would pass on a call
    whose result is never read — the thing that has to be true is that the
    eleventh attempt is REFUSED, and that is only knowable by running it.
@@ -79,10 +83,8 @@ function installStubs() {
 const restore = installStubs();
 if (!process.env.SESSION_SECRET) process.env.SESSION_SECRET = 'test-not-a-real-secret';
 process.env.ORGANIZER_INVITE_CODE = 'org-code-not-real';
-process.env.MANAGER_INVITE_CODES = JSON.stringify({ u14b: 'mgr-code-not-real' });
 
 const orgSignup = require(FN('organizer-signup.js')).handler;
-const mgrSignup = require(FN('manager-signup.js')).handler;
 
 const ev = (body, ip) => ({
   httpMethod: 'POST',
@@ -95,18 +97,21 @@ const parse = (res) => ({ status: res.statusCode, ...(JSON.parse(res.body || '{}
    (401) until the limiter takes over (429) — so a 429 can never be confused
    with the endpoint simply working. */
 const orgGuess = (ip) => orgSignup(ev({ name: 'X', username: 'x' + Math.round(1), password: 'a-long-enough-password', inviteCode: 'wrong' }, ip));
-const mgrGuess = (ip) => mgrSignup(ev({ name: 'X', username: 'y', password: 'a-long-enough-password', inviteCode: 'wrong' }, ip));
 
 function reset() { blobData.clear(); }
 
 async function main() {
 
 /* ====================================================================== */
-section('Each signup endpoint refuses an eleventh attempt');
+section('The signup endpoint refuses an eleventh attempt');
+/* manager-signup.js was a second row here until it was deleted with manager
+   self-signup (JRT-30, 12 Sep 2026). organizer-signup.js — the dormant
+   recovery path — is the only signup endpoint left; the shared-bucket
+   invariant that kept them on one budget is asserted directly against
+   signupBucket() below, which is where it always had its real proof. */
 {
   for (const [label, guess, ip] of [
     ['organizer-signup.js', orgGuess, '198.51.100.11'],
-    ['manager-signup.js', mgrGuess, '198.51.100.12'],
   ]) {
     reset();
     let last = null;
@@ -120,21 +125,13 @@ section('Each signup endpoint refuses an eleventh attempt');
 }
 
 /* ====================================================================== */
-section('ONE bucket across all three — you cannot alternate to buy more guesses');
-{
-  reset();
-  const ip = '198.51.100.20';
-  /* Spend the budget across all three endpoints, four-ish each. If each kept
-     its own bucket, ten spread this way would leave every one of them with
-     room and the next call would be answered on its merits. */
-  const wheel = [orgGuess, mgrGuess];
-  let last = null;
-  for (let i = 0; i < 10; i++) last = parse(await wheel[i % 2](ip));
-  eq('the tenth attempt, spread across the three, still gets a real answer', last.status, 401);
-
-  eq('an eleventh at organizer-signup.js is refused', parse(await orgGuess(ip)).status, 429);
-  eq('…and at manager-signup.js, which never had ten of its own', parse(await mgrGuess(ip)).status, 429);
-}
+/* The cross-endpoint "you cannot alternate to buy more guesses" test was
+   removed on 12 Sep 2026 (JRT-30): with manager-signup.js and google-auth.js
+   gone, organizer-signup.js is the only signup endpoint, so there is nothing
+   to alternate WITH. The invariant that any signup endpoint shares one bucket
+   — keyed on the address alone, never on the endpoint — is asserted directly
+   against signupBucket() in the next section, which is where its real proof
+   always lived. */
 
 /* ====================================================================== */
 section('The bucket is keyed on Netlify\'s own header, and is its own budget');

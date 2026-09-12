@@ -166,6 +166,17 @@ exports.handler = async (event) => {
          session that got this far. Never emailed and never shown again: the
          organizer typed it and hands it over themselves. */
       if (action === 'password') {
+        /* ⚠️ NOT A CLUB HUB ACCOUNT (JRT-19). A hub login carries a hubSub, no
+           password, and signs in through the Quins Club Hub; minting one here
+           would hand it a standalone password path through login.js, against the
+           break-glass ruling (passwords are for organiser desk accounts, not hub
+           logins — 2026-09-08-organiser-password-break-glass). Reset CHANGES an
+           existing password, it does not CREATE one. Break-glass password
+           accounts (organisers, and the desk's manager logins) have a
+           passwordHash and no hubSub, so they still reset here. */
+        if (accounts[idx].hubSub) {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'This login signs in through the Quins Club Hub and has no password to reset.' }) };
+        }
         const pwErr = passwordProblem(payload.password || '');
         if (pwErr) return { statusCode: 400, body: JSON.stringify({ ok: false, error: pwErr }) };
         accounts[idx].passwordHash = await hashPassword(payload.password);

@@ -9819,6 +9819,16 @@ const FAULTS = [
       'return Array.isArray(account.manages) ? account.manages : [];'),
     expect: ['the client managedGroupsOf matches the server copy'],
   },
+  {
+    /* JRT-19: the password reset must refuse a Club Hub login — minting a
+       password on it opens a standalone login.js path, against the break-glass
+       ruling. Drop the guard and the source check catches it. */
+    name: 'the password reset stops refusing a Club Hub login, minting a password on it',
+    suite: 'test-accounts.js',
+    apply: () => patch(path.join('netlify', 'functions', 'accounts-admin.js'),
+      'if (accounts[idx].hubSub) {', 'if (false) {'),
+    expect: ['the password reset refuses a Club Hub login'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

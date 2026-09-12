@@ -1344,7 +1344,7 @@
                     <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--ink-muted);cursor:pointer">{{ a.username }}</td>
                     <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--ink-muted);cursor:pointer">{{ a.roleLabel }}</td>
                     <td onClick="{{ a.onOpen }}" style="padding:12px 14px;font-size:13px;color:var(--accent-ink);font-weight:700;cursor:pointer">Active</td>
-                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
+                    <td style="padding:12px 14px;text-align:right"><div style="display:flex;gap:8px;justify-content:flex-end"><sc-if value="{{ a.canReset }}" hint-placeholder-val="{{ true }}"><button onClick="{{ a.onResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Reset password</button></sc-if><button onClick="{{ a.onRevoke }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--danger-ink);font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">Revoke</button></div></td>
                   </tr>
                 </sc-for>
               </tbody>
@@ -1727,7 +1727,15 @@
               <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Organiser actions</div>
               <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 14px">Resetting a password does not ask for their old one - the point is that it is lost. Tell them the new one yourself; nothing is emailed.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button onClick="{{ onAcctResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reset password</button>
+                <!-- A Club Hub login has no password (JRT-19): reset would mint
+                     a standalone password path, against the break-glass ruling.
+                     The button is hidden and the server refuses it too. -->
+                <sc-if value="{{ acctCanResetPassword }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ onAcctResetPassword }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">Reset password</button>
+                </sc-if>
+                <sc-if value="{{ acctIsHubAccount }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:13px;color:var(--ink-faint);align-self:center">Signs in through the Quins Club Hub — no password to reset.</span>
+                </sc-if>
                 <sc-if value="{{ acctIsPending }}" hint-placeholder-val="{{ false }}">
                   <!-- A Club Hub account with no role yet is approved from the
                        Pending list, where the role picker is; the card only
@@ -4999,6 +5007,10 @@ class Component extends DCLogic {
       acctNewType: s.acctShowNew ? 'text' : 'password',
       acctNewToggleLabel: s.acctShowNew ? 'HIDE' : 'SHOW',
       acctMinPassword: MIN_PASSWORD_LENGTH,
+      /* A Club Hub login has no password (JRT-19): the Reset-password control is
+         hidden and the server refuses it. Password + Google accounts still reset. */
+      acctIsHubAccount: !!(s.acct && s.acct.signInMethod === 'Club Hub'),
+      acctCanResetPassword: !!(s.acctSubject && s.acct && s.acct.signInMethod !== 'Club Hub'),
       acctError: s.acctError, acctSuccess: s.acctSuccess,
       acctBusy: s.acctBusy, acctSaveLabel: s.acctBusy ? 'Saving…' : 'Save',
       onOpenMyAccount: () => this.openMyAccount(),
@@ -5174,6 +5186,7 @@ class Component extends DCLogic {
           + (a.autoApproved ? ' · from the Club Hub' : ''),
         onRevoke: () => this.doRevoke(a.username),
         onResetPassword: () => this.doResetPassword(a.username),
+        canReset: a.signInMethod !== 'Club Hub',   // JRT-19: hub logins have no password to reset
         onOpen: () => this.openOtherAccount(a.username),
       })),
       /* Managers by age group (JRT-37): who is the named manager of each group,

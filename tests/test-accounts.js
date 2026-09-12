@@ -257,8 +257,16 @@ section('Resetting a password, and changing your own');
   // Someone else's: the organiser session is the authority.
   check("'password' sets the hash, never a plain password", /accounts\[idx\]\.passwordHash = await hashPassword\(payload\.password\)/.test(admin));
   check('…and records who did it', /passwordChangedBy = session\.username/.test(admin));
-  check('…and refuses a short one', /if \(action === 'password'\) \{[\s\S]{0,200}passwordProblem/.test(admin));
+  check('…and refuses a short one', /passwordProblem\(payload\.password \|\| ''\)/.test(admin));
   check('…on an account that must exist', /Account not found/.test(admin));
+
+  /* JRT-19: a Club Hub login has no password; a reset must not MINT one, or it
+     creates a standalone password path through login.js, against the break-glass
+     ruling (2026-09-08-organiser-password-break-glass). Password + Google
+     accounts (a passwordHash / no hubSub) still reset. The guard sits BEFORE the
+     hash is written, so nothing is stored on a refused hub account. */
+  check('the password reset refuses a Club Hub login', /if \(accounts\[idx\]\.hubSub\) \{[\s\S]{0,200}has no password to reset/.test(admin));
+  check('…before it would mint a hash', /if \(accounts\[idx\]\.hubSub\)[\s\S]{0,450}passwordHash = await hashPassword\(payload\.password\)/.test(admin));
 
   /* ⚠️ CHANGING YOUR OWN PASSWORD LEFT THIS FILE ON 3 AUG 2026, with its
      subject. The whole 'changeMine' action moved to my-account.js so a MANAGER

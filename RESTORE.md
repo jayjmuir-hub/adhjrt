@@ -1278,11 +1278,13 @@ checks the resolved role). Its actions: `GET` listing; `create`; `approve`;
 `reject`; `revoke`; `drawRights` (manager targets only — an organiser target
 is a 400); and `password`.
 
-⚠️ **`action:'password'` resets ANY account's password — manager or
-organiser — with no role check on the target and no current password.** The
-authority is the organiser session. It stamps `passwordChangedAt/By` and
-`sessionsValidFrom`, because a reset that leaves old tokens alive is a second
-way in, not a recovery. There is no self-service path in this file; changing
+⚠️ **`action:'password'` resets a password account's password — organiser or
+break-glass manager — with no current password, but REFUSES a Club Hub login**
+(a `hubSub`, JRT-19): a hub account has no password, and minting one would open a
+standalone `login.js` path against the break-glass ruling. A reset CHANGES an
+existing password, it does not CREATE one. The authority is the organiser
+session. It stamps `passwordChangedAt/By` and `sessionsValidFrom`, because a
+reset that leaves old tokens alive is a second way in, not a recovery. There is no self-service path in this file; changing
 your own password is `my-account.js`. `/manager` reaches none of the
 accounts-admin actions, asserted by name.
 

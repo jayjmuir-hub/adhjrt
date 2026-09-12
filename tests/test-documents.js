@@ -253,6 +253,15 @@ section('documents.js — the door, and the split');
   check('⚠️ it never reads an age group off the request', !/body\.ageGroupId/.test(fn));
   check('⚠️ it never reads a role off the request', !/body\.(role|isOrganizer)/.test(fn));
 
+  /* JRT-39: organiser-ness comes from the LIVE role, not a dead `session.isOrganizer`
+     flag. sign() never puts isOrganizer on a token, so the old `!!session.isOrganizer ||`
+     disjunct was always undefined — a latent trap the day any path set it.
+     Anchored on comment-stripped source: the tombstone in the code names the
+     retired flag on purpose. */
+  const fnCode = fn.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  check('organiser-ness is the live role, with no dead session.isOrganizer disjunct',
+    /const isOrganizer = session\.role === 'organizer';/.test(fnCode) && !/session\.isOrganizer/.test(fnCode));
+
   /* ⚠️ A POSITION CHECK ON A STRING IS NOT A CHECK ON THE GUARD. The first
      version asserted that 'Please sign in.' appeared before the store was
      opened — which `if (!session && false) return …` satisfies perfectly,

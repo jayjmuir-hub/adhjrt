@@ -922,7 +922,10 @@ async function fetchOverrideState(agId, session) {
     published: !!schedule,
     publishedAt: null,
     publishedBy: null,
-    managerCanPublishNow: true,
+    /* Managers no longer publish (8 Sep 2026); the live get-schedule-override
+       returns false, so the offline fallback must too, or the preview offers a
+       button production refuses. (JRT-21) */
+    managerCanPublishNow: false,
     isDraft: false,
   };
 }

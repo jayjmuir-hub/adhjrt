@@ -11,7 +11,9 @@
 // POST -> { action: 'approve'|'reject'|'revoke', username }
 //      -> { action: 'create',   role, name, username, password, ageGroupId?, title? }
 //      -> { action: 'password', username, password }        reset someone else's
-//      -> { action: 'changeMine', currentPassword, password } change your own
+//      -> { action: 'managerGroups', username, manages: [] } an organiser's also-manages (JRT-37)
+//      -> { action: 'setRole', username, role, ageGroupId?, title? } promote/demote (JRT-37)
+//      ('changeMine' moved to my-account.js on 3 Aug 2026 — see the tombstone below.)
 //
 // 'create' mints a login directly — already approved, ready to sign in —
 // instead of the invite-code self-signup plus approval loop.

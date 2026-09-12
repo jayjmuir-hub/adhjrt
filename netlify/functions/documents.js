@@ -100,7 +100,10 @@ exports.handler = async (event) => {
     const auth = await resolveSession(event);
     if (!auth.ok) return sessionRefusal(auth);
     const session = auth.session;
-    const isOrganizer = !!session.isOrganizer || session.role === 'organizer';
+    /* Organiser-ness is the live role from resolveSession. `session.isOrganizer`
+       was a dead disjunct here (JRT-39): sign() never puts it on a token, so it
+       was always undefined — the effective test was always the role. */
+    const isOrganizer = session.role === 'organizer';
     /* ⚠️ THE AGE GROUP COMES FROM THE TOKEN AND NOWHERE ELSE. There is
        deliberately no line below that reads an age group, a role or a
        username off the request. */

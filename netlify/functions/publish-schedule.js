@@ -2,7 +2,8 @@
 //
 // Makes one age group's draft fixtures public, or withdraws them again.
 // Requires an Authorization: Bearer <token> header. Permission is decided by
-// _publish.js — organisers any time, managers only on the tournament days.
+// _publish.js — organisers only (managers stopped being able to publish on
+// 8 Sep 2026; see the tombstone in _publish.js's publishDenialReason).
 //
 // POST { ageGroupId, action: 'publish' }
 //   -> copies the draft into the published slot. The draft is left alone, so

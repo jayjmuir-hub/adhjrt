@@ -19,14 +19,14 @@
 // somebody else's login". There is deliberately no code path that reads a
 // username, id or role off the request.
 //
-// WHY LINKING EXISTS AT ALL: google-auth.js finds an existing account exactly
+// WHY LINKING EXISTED (removed 8 Sep 2026 with Google sign-in — see the
+// tombstone in the handler): google-auth.js found an existing account exactly
 // one way, `accounts.find((a) => a.googleSub === identity.sub)`, and nothing
-// sets googleSub except signing up THROUGH Google. So an account created in
+// set googleSub except signing up THROUGH Google. So an account created in
 // the back office — which, since ORGANIZER_INVITE_CODE was deleted on 3 Aug
 // 2026, is every new organiser — could never use the Google button. Linking
-// closes that by making the person prove BOTH halves: the account, by holding
+// closed that by making the person prove BOTH halves: the account, by holding
 // a session for it, and the Google identity, by producing a valid token.
-// google-auth.js still never attaches itself to anyone silently.
 
 const { loadAccounts, saveAccounts, hashPassword, verifyPassword, resolveSession, sessionRefusal, passwordProblem, signInMethodOf } = require('./_auth');
 const { readSignIn } = require('./_signins');

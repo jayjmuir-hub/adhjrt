@@ -36,7 +36,7 @@ const stubs = {
       list: async () => ({ blobs: [] }),
     }),
   },
-  'google-auth-library': { OAuth2Client: function () { return { verifyIdToken: async () => ({ getPayload: () => ({}) }) }; } },
+  /* google-auth-library stub retired with the package (JRT-33) — club-link.js does not require it. */
   bcryptjs: { hash: async (s) => 'h:' + s, compare: async () => false, hashSync: (s) => 'h:' + s, compareSync: () => false },
 };
 const realLoad = Module._load;

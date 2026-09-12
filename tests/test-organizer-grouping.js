@@ -59,8 +59,11 @@ function build() {
 function team(club, ageGroup, teamName, submittedAt) {
   return { club, ageGroup, teamName, submittedAt, preferredPool: '', headCoachName: '', headCoachEmail: '', headCoachMobile: '', managerName: '', managerEmail: '', managerMobile: '', numPlayers: '1', notes: '' };
 }
-function player(club, ageGroup, playerName, submittedAt) {
-  return { club, ageGroup, playerName, submittedAt, dob: '', parentName: '', parentEmail: '', parentMobile: '', emergencyContact: '', emergencyMobile: '', medicalNotes: '', consent: 'Yes', playUpConsent: 'No' };
+/* playUpConsent is the last argument and defaults to 'No', so every existing
+   caller is unchanged; the JRT-13 section passes 'Yes' (and a blank, for an
+   old row saved before the field existed) to drive the play-up flag. */
+function player(club, ageGroup, playerName, submittedAt, playUpConsent) {
+  return { club, ageGroup, playerName, submittedAt, dob: '', parentName: '', parentEmail: '', parentMobile: '', emergencyContact: '', emergencyMobile: '', medicalNotes: '', consent: 'Yes', playUpConsent: playUpConsent === undefined ? 'No' : playUpConsent };
 }
 
 async function main() {
@@ -369,6 +372,73 @@ section('Squad list — Teams table can show and expand a team\'s roster (added 
   c2.state.expandedTeam = '';
   vals3.teamRows.find((r) => r.teamName === 'Z1').onToggleRoster();
   eq('clicking a collapsed team\'s toggle opens it', c2.state.expandedTeam, 'Z1');
+}
+
+section('JRT-13 — the play-up flag on the Players squad list (the flag itself)');
+{
+  /* The flag is the parent's recorded consent, the same 'Yes'/'No' string the
+     confirmation email reads (_email.js: d['play-up-consent'] === 'Yes'). It is
+     NOT recomputed from date of birth — that age rule lives in _agegroups.js and
+     a third copy on this page would drift. So the fixture drives the STORED
+     value, including a blank one for a row saved before the field existed. */
+  const c = build();
+  c.state = {
+    ...c.state,
+    tab: 'players',
+    players: [
+      player('Antelope RFC', 'U12G QR', 'Up A1', '2026-01-01', 'Yes'),
+      player('Antelope RFC', 'U12G QR', 'Up A2', '2026-01-02', 'Yes'),
+      player('Antelope RFC', 'U12G QR', 'Not A3', '2026-01-03', 'No'),
+      player('Antelope RFC', 'U12G QR', 'Blank A4', '2026-01-04', ''), // an old row, field absent
+      player('Bison RFC', 'U12G QR', 'Up B1', '2026-01-05', 'Yes'),    // another club — the filter must exclude it below
+    ],
+    clubFilter: '', ageFilter: '',
+  };
+  const vals = c.renderVals();
+  const byName = Object.fromEntries(vals.playerRows.map((r) => [r.playerName, r]));
+
+  check('a player whose parent consented to playing up is flagged', byName['Up A1'].playingUp === true);
+  check('a player who is not playing up is not flagged', byName['Not A3'].playingUp === false);
+  /* Discriminates a loose check (!!r.playUpConsent, or r.playUpConsent !== 'No'):
+     a blank consent from a pre-field row must read as NOT playing up. */
+  check('⚠️ a blank/absent consent (an old row) is not flagged, not treated as playing up', byName['Blank A4'].playingUp === false);
+
+  /* Three of the five consented (A1, A2, B1); No and the blank row do not. */
+  eq('the play-up count is the number of flagged players in view', vals.playUpCount, 3);
+  check('hasPlayUps is true when at least one player in view is playing up', vals.hasPlayUps === true);
+
+  /* ⚠️ The count runs over the FILTERED rows. Filtering to Antelope must drop
+     Bison's play-up from the tally — a count built over the whole players list
+     would still say 3 here, so this is what discriminates the two. */
+  c.state.clubFilter = 'Antelope RFC';
+  const filtered = c.renderVals();
+  eq('⚠️ filtering to one club counts only that club\'s play-ups, not the tournament\'s', filtered.playUpCount, 2);
+
+  c.state.clubFilter = '';
+  c.state.players = [player('Antelope RFC', 'U12G QR', 'Nobody', '2026-01-01', 'No')];
+  const none = c.renderVals();
+  eq('with nobody playing up the count is zero', none.playUpCount, 0);
+  check('…and hasPlayUps is false, so the summary line stays hidden', none.hasPlayUps === false);
+}
+
+section('JRT-13 — the play-up column, badge and summary are in the Players table markup');
+{
+  const src = readRepo('Organizer.dc.html');
+  const vals = build().renderVals();
+
+  /* The squad list already exists; JRT-13 adds the play-up column the CSV
+     export has always carried, so the table and the CSV now match at 13. */
+  eq('playerHeaders carries a 13th column', vals.playerHeaders.length, 13);
+  check('…and it is named so an organiser recognises it', vals.playerHeaders.includes('Play Up'));
+
+  check('the players table renders a play-up badge bound to r.playingUp',
+    /<sc-if value="\{\{ r\.playingUp \}\}"[^>]*>[\s\S]{0,240}Playing up/.test(src));
+  /* The pink club divider must still span the whole row — a colspan left at 12
+     would leave the new column poking out past the header. */
+  check('the players club-header row spans all 13 columns',
+    /<sc-for list="\{\{ playerGroups \}\}"[\s\S]{0,220}colspan="13"/.test(src));
+  check('a play-up count summary is rendered, gated on hasPlayUps and bound to the count',
+    /<sc-if value="\{\{ hasPlayUps \}\}"[\s\S]{0,420}\{\{ playUpCount \}\}/.test(src));
 }
 
 summary('test-organizer-grouping.js');

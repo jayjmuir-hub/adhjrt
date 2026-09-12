@@ -1593,11 +1593,20 @@
            overflow-x scrollbar was unreachable at the bottom of the whole
            list. Bounded height + both-axis scroll + sticky header. -->
       <sc-if value="{{ isPlayers }}" hint-placeholder-val="{{ false }}">
+        <!-- JRT-13: a running count of how many of the players in view are
+             playing up. Bound to the same filtered rows as the table, and only
+             shown when there is at least one, so it stays quiet when there are none. -->
+        <sc-if value="{{ hasPlayUps }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:18px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-muted)">
+            <span style="display:inline-block;background:#FFF4CC;color:#7A5B00;border:1px solid #E6C200;font-weight:800;font-size:11px;letter-spacing:.4px;padding:3px 9px;border-radius:999px;text-transform:uppercase">Playing up</span>
+            <span><b>{{ playUpCount }}</b> of the players in view are playing up an age group.</span>
+          </div>
+        </sc-if>
         <div style="margin-top:18px;overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:14px">
           <table style="width:100%;min-width:1200px">
             <thead>
               <tr style="background:#FFFFFF">
-                <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="12">
+                <sc-for list="{{ playerHeaders }}" as="h" hint-placeholder-count="13">
                   <th style="position:sticky;top:0;background:var(--surface-sunk);text-align:left;padding:12px 14px;font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--ink-faint);text-transform:uppercase;white-space:nowrap;z-index:1">{{ h }}</th>
                 </sc-for>
               </tr>
@@ -1605,7 +1614,7 @@
             <tbody>
               <sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">
                 <tr>
-                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
+                  <td colspan="13" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>
                 </tr>
                 <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
                   <tr style="border-top:1px solid var(--line)">
@@ -1621,6 +1630,15 @@
                     <td style="padding:12px 14px;font-size:13px;color:var(--ink-muted);white-space:nowrap">{{ r.emergencyMobile }}</td>
                     <td style="padding:12px 14px;font-size:13px;color:{{ r.medicalColor }};max-width:220px;font-weight:{{ r.medicalWeight }}">{{ r.medicalDisplay }}</td>
                     <td style="padding:12px 14px;font-size:13px;text-align:center;color:{{ r.consentColor }};font-weight:700">{{ r.consent }}</td>
+                    <!-- JRT-13: the play-up flag. A gold pill (the same gold as the
+                         registration form's play-up checkbox) when the parent
+                         consented to playing up, a muted dash otherwise. -->
+                    <td style="padding:12px 14px;text-align:center;white-space:nowrap">
+                      <sc-if value="{{ r.playingUp }}" hint-placeholder-val="{{ true }}">
+                        <span style="display:inline-block;background:#FFF4CC;color:#7A5B00;border:1px solid #E6C200;font-weight:800;font-size:11px;letter-spacing:.4px;padding:3px 9px;border-radius:999px;text-transform:uppercase">Playing up</span>
+                      </sc-if>
+                      <sc-if value="{{ r.playingUp }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--ink-faint)">&mdash;</span></sc-if>
+                    </td>
                   </tr>
                 </sc-for>
               </sc-for>
@@ -4930,6 +4948,11 @@ class Component extends DCLogic {
       medicalColor: r.medicalNotes ? '#9A5B00' : 'var(--ink-faint)',
       medicalWeight: r.medicalNotes ? '700' : '400',
       consentColor: r.consent === 'Yes' ? 'var(--accent-ink)' : 'var(--danger-ink)',
+      /* JRT-13: the play-up flag is the parent's recorded consent, the same
+         'Yes'/'No' string _email.js reads (d['play-up-consent'] === 'Yes').
+         Not recomputed from DOB here — that rule lives in _agegroups.js and a
+         third copy would drift; the sheet already carries the decision. */
+      playingUp: r.playUpConsent === 'Yes',
     }));
 
     return {
@@ -5234,8 +5257,13 @@ class Component extends DCLogic {
 
       teamHeaders: ['Submitted', 'Club', 'Team Code', 'Age Group', 'Pool Req', 'Head Coach', 'Coach Email', 'Coach Mobile', 'Manager', 'Manager Mobile', '# Players', 'Notes'],
       teamRows, teamGroups: groupRowsByClub(teamRows), teamsEmpty: teamRows.length === 0,
-      playerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Age Group', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent'],
+      playerHeaders: ['Submitted', 'Player', 'DOB', 'Club', 'Age Group', 'Parent', 'Parent Email', 'Parent Mobile', 'Emergency Contact', 'Emergency Mobile', 'Medical Notes', 'Consent', 'Play Up'],
       playerRows, playerGroups: groupRowsByClub(playerRows), playersEmpty: playerRows.length === 0,
+      /* JRT-13: count runs over the FILTERED rows, so it tracks the club/age
+         filters the same way the table below does — an organiser filtering to
+         one club sees that club's play-up count, not the whole tournament's. */
+      playUpCount: playerRows.filter((x) => x.playingUp).length,
+      hasPlayUps: playerRows.some((x) => x.playingUp),
     };
   }
 }

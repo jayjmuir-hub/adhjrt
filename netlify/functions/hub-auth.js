@@ -74,7 +74,7 @@ const connectionBucket = (event) => `${clientIp(event)}:hub`;
 function sessionFor(account) {
   if (account.role === 'organizer') {
     return {
-      session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' },
+      session: { username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer', manages: account.manages || [] },
       token: sign({ username: account.username, role: 'organizer' }),
     };
   }

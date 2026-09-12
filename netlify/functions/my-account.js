@@ -45,6 +45,11 @@ function publicView(a) {
     role: a.role,
     title: a.title || '',
     ageGroupId: a.ageGroupId || '',
+    /* Dual-role (JRT-37): the groups this account is the named manager of.
+       IDENTITY ONLY (never an access field). The client reads it here to keep
+       the /manager default group live and to re-route a just-demoted organiser
+       without a sign-out. Coerced like resolveSession does. */
+    manages: Array.isArray(a.manages) ? a.manages.filter((id) => typeof id === 'string' && id && id !== '*') : [],
     approved: !!a.approved,
     createdAt: a.createdAt || '',
     passwordChangedAt: a.passwordChangedAt || '',

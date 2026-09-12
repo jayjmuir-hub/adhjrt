@@ -194,6 +194,32 @@ export async function setDrawRights(username, { drawPools, drawTimes }) {
   return { ok: false, error: 'Draw rights need the live site.' };
 }
 
+/* Also-manages (JRT-37): set the age groups an organiser is the named manager
+   of. IDENTITY ONLY; organiser-only on the server. Like draw rights, the change
+   is live-read on the account's next request with no sign-out. */
+export async function setManagerGroups(username, manages) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'managerGroups', username, manages: Array.isArray(manages) ? manages : [] }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Manager associations need the live site.' };
+}
+
+/* Change an existing account's role (JRT-37): promote a manager to organiser
+   (folding their group into `manages`) or demote. The ONE role-mutating path;
+   organiser-only, re-checked server-side. */
+export async function setAccountRole(username, { role, ageGroupId, title }) {
+  const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ action: 'setRole', username, role, ageGroupId, title }),
+  });
+  if (r.real) return r.json;
+  return { ok: false, error: 'Changing a role needs the live site.' };
+}
+
 export async function revokeAccount(username) {
   const session = currentSession();
   const r = await tryFetchJson('/.netlify/functions/accounts-admin', {
@@ -253,7 +279,25 @@ export async function resetAccountPassword(username, password) {
    the rule, re-exported rather than rewritten. /organizer has exactly the same
    blind spot /manager had — its boot calls are public or optional-session, so
    without this a revoked organiser's dashboard renders indefinitely. */
-export { myAccount, changeMyPassword, verifySession } from './scores-data.js';
+export { myAccount, changeMyPassword, verifySession, liveAccount, reshapeStoredSession } from './scores-data.js';
+
+/* IDENTITY ONLY — a browser mirror of `managedGroupsOf` in
+   netlify/functions/_auth.js, for the Accounts-tab "Managers by age group"
+   roster (JRT-37). "Manages U16B" has two homes: a plain manager's single
+   ageGroupId, and a dual organiser's `manages` list; this is the ONE place the
+   client unions them, so the roster cannot silently omit one kind. A drift test
+   (tests/test-dual-role.js) asserts this matches the server copy character for
+   character. NEVER an access decision. */
+export function managedGroupsOf(account) {
+  if (!account) return [];
+  if (account.role === 'manager') {
+    return account.ageGroupId && account.ageGroupId !== '*' ? [account.ageGroupId] : [];
+  }
+  if (account.role === 'organizer') {
+    return Array.isArray(account.manages) ? account.manages.filter((id) => id && id !== '*') : [];
+  }
+  return [];
+}
 
 /* googleClientId and linkGoogle were re-exported here until 8 Sep 2026;
    Google sign-in is gone (spec-club-hub-sign-in § 4). */

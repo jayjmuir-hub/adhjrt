@@ -38,7 +38,7 @@ section('Migration: an old organizer session moves across, wrapped for callers')
   store.set(OLD_ORG, JSON.stringify(ORG_SESSION));
   const s = api.currentSession();
   eq('the session survives the key change — organizer, all age groups', s,
-    { token: 'tok-org', username: 'orga', name: 'Orga Person', ageGroupId: '*', isOrganizer: true });
+    { token: 'tok-org', username: 'orga', name: 'Orga Person', ageGroupId: '*', isOrganizer: true, manages: [] });
   eq('the raw organizer session now lives under the ONE key', JSON.parse(store.get(V2)), ORG_SESSION);
   check('both old keys are gone', !store.has(OLD_ORG) && !store.has(OLD_MGR));
 }

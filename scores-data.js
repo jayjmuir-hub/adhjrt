@@ -1957,7 +1957,7 @@ export async function login(username, password) {
     return {
       ok: true,
       session: isOrganizerSession(session)
-        ? { token: session.token, username: session.username, name: session.name, ageGroupId: '*', isOrganizer: true }
+        ? { token: session.token, username: session.username, name: session.name, ageGroupId: '*', isOrganizer: true, manages: session.manages || [] }
         : session,
     };
   }
@@ -2034,7 +2034,7 @@ export function currentSession() {
   if (!s || !s.token) return null;
   // Organizer sessions are handed to manager-side callers in the wrapped
   // all-age-groups form, exactly as before unification.
-  if (isOrganizerSession(s)) return { token: s.token, username: s.username, name: s.name, ageGroupId: '*', isOrganizer: true };
+  if (isOrganizerSession(s)) return { token: s.token, username: s.username, name: s.name, ageGroupId: '*', isOrganizer: true, manages: Array.isArray(s.manages) ? s.manages : [] };
   return s;
 }
 /* Clears the old keys too — a stale pre-migration copy must never resurrect
@@ -2139,6 +2139,40 @@ export async function myAccount() {
   });
   if (r.real) return r.json;
   return { ok: false, error: 'Your account details need the deployed site (not available in local preview).' };
+}
+
+/* Dual-role (JRT-37): read the LIVE account (role, ageGroupId, manages) so a
+   page can keep its /manager default group current and re-route a person whose
+   role an organiser just changed — WITHOUT a sign-out. This is NOT the session-
+   validity check (that stays with noteSessionEnded / verifySession, which
+   nothing branches on): it only reflects a role/manages change. Returns the
+   account, or null on anything that is not a clean answer, so boot simply keeps
+   the cached session. */
+export async function liveAccount() {
+  try {
+    const r = await myAccount();
+    if (r && r.ok && r.account) return r.account;
+  } catch (e) { /* boot must survive anything */ }
+  return null;
+}
+
+/* Re-shape the STORED session to match a role the organiser just changed, so a
+   re-routed page treats the person by their NEW role with no re-login. NOT a
+   sign-out: the token is untouched and still valid; access is ALREADY correct
+   because resolveSession reads role from the account server-side — this fixes
+   only what the CLIENT shows. Pass an account from liveAccount(). */
+export function reshapeStoredSession(account) {
+  if (!account) return;
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return; }
+  if (!s || !s.token) return;
+  let next;
+  if (account.role === 'organizer') {
+    next = { token: s.token, username: s.username, name: s.name || account.name || '', role: account.title || 'Organizer', _role: 'organizer', manages: Array.isArray(account.manages) ? account.manages : [] };
+  } else if (account.role === 'manager') {
+    next = { token: s.token, username: s.username, name: s.name || account.name || '', ageGroupId: account.ageGroupId || '' };
+  } else { return; }
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(next)); } catch (e) {}
 }
 
 /* ===== CHECKING THE SESSION IS STILL GOOD, ONCE, AT BOOT =================

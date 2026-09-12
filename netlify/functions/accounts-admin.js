@@ -197,6 +197,80 @@ exports.handler = async (event) => {
         return { statusCode: 200, body: JSON.stringify({ ok: true, drawPools: accounts[idx].drawPools, drawTimes: accounts[idx].drawTimes }) };
       }
 
+      /* Also-manages (JRT-37): the age groups an ORGANISER is the named manager
+         of. IDENTITY ONLY — it grants nothing (an organiser already has every
+         group); it labels the account, feeds the per-group roster, and steers
+         the /manager default. The inverse of drawRights' guard: this applies to
+         organiser cards, never a manager (a manager's group IS its ageGroupId).
+         Validated strictly on write (coerced loosely on read in _auth.js). */
+      if (action === 'managerGroups') {
+        if (accounts[idx].role !== 'organizer') {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Manager associations apply to organiser logins; an age-group manager already has their group.' }) };
+        }
+        const list = Array.isArray(payload.manages) ? [...new Set(payload.manages.map((id) => String(id).trim()))] : [];
+        if (list.some((id) => id === '*' || !VALID_AGE_GROUP_IDS.has(id))) {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown age group.' }) };
+        }
+        accounts[idx].manages = list;
+        accounts[idx].managerGroupsChangedAt = new Date().toISOString();
+        accounts[idx].managerGroupsChangedBy = session.username;
+        await saveAccounts(accounts);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, manages: accounts[idx].manages }) };
+      }
+
+      /* Change an existing account's ROLE (JRT-37). The ONE place a role changes
+         after creation — `approve` deliberately never does. Promote a manager to
+         organiser (folding their age group into `manages` so they stay listed as
+         its manager), or demote an organiser back to a manager. Organiser-gated
+         by requireOrganizer above. NO sessionsValidFrom bump: resolveSession
+         reads role LIVE, so access changes on the next request with no sign-out
+         — the drawRights model, and a bump would sign the person out. */
+      if (action === 'setRole') {
+        const nextRole = (payload.role || '').trim();
+        if (nextRole !== 'manager' && nextRole !== 'organizer') {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Role must be manager or organiser.' }) };
+        }
+        if (nextRole === accounts[idx].role) {
+          return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'That login already has that role.' }) };
+        }
+        if (nextRole === 'organizer') {
+          /* Fold the manager's group into `manages` so they stay its named
+             manager, then drop the manager-only fields. */
+          const wasGroup = accounts[idx].ageGroupId;
+          accounts[idx].manages = wasGroup && wasGroup !== '*' ? [wasGroup] : [];
+          delete accounts[idx].ageGroupId;
+          delete accounts[idx].drawPools;
+          delete accounts[idx].drawTimes;
+          accounts[idx].title = (payload.title || '').trim() || accounts[idx].title || 'Organizer';
+          /* ⚠️ MUST clear the hub auto-approve markers, exactly as `approve`
+             does above (:236-239). An auto-approved hub manager promoted here
+             still carries `autoApproved`; on their next hub sign-in hub-auth.js's
+             § 4.6 re-check (:154) fires on that flag with the now-deleted
+             ageGroupId and AUTO-REVOKES them — dropped to pending, signed out.
+             Leaving these in is the one bug the JRT-37 design review caught;
+             test-dual-role.js has a fault that reproduces it. */
+          delete accounts[idx].autoApproved;
+          delete accounts[idx].autoRevoked;
+          delete accounts[idx].suggestedAgeGroupIds;
+          delete accounts[idx].suggestedFrom;
+        } else {
+          /* Demote to manager: needs a valid age group. Take an explicit one,
+             else the first group they managed. */
+          const ageGroupId = (payload.ageGroupId || (accounts[idx].manages || [])[0] || '').trim();
+          if (!ageGroupId || !VALID_AGE_GROUP_IDS.has(ageGroupId)) {
+            return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'A manager login needs a valid age group.' }) };
+          }
+          accounts[idx].ageGroupId = ageGroupId;
+          delete accounts[idx].manages;
+          delete accounts[idx].title;
+        }
+        accounts[idx].role = nextRole;
+        accounts[idx].roleChangedAt = new Date().toISOString();
+        accounts[idx].roleChangedBy = session.username;
+        await saveAccounts(accounts);
+        return { statusCode: 200, body: JSON.stringify({ ok: true, role: nextRole, ageGroupId: accounts[idx].ageGroupId || null, manages: accounts[idx].manages || [] }) };
+      }
+
       if (action === 'approve') {
         /* A club hub account arrives with NO role (hub-auth.js, Sep 2026) —
            nothing about a club hub login says whether this person runs an

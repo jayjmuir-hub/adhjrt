@@ -1351,6 +1351,29 @@
             </table>
             <sc-if value="{{ accountsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:var(--ink-faint)">No approved accounts yet.</div></sc-if>
           </div>
+
+          <!-- Managers by age group (JRT-37). The named manager(s) of each group
+               — a plain manager by their ageGroupId, and a dual organiser by
+               their "also manages" list, unioned by managedGroupsOf so neither
+               kind is missed. Identity only: it lists who runs a group. -->
+          <div style="margin-top:28px">
+            <div style="font-family:'Anton';font-size:18px;text-transform:uppercase;margin-bottom:12px">Managers by age group</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+              <sc-for list="{{ managersByGroup }}" as="grp" hint-placeholder-count="4">
+                <div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px">
+                  <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-faint)">{{ grp.name }}</div>
+                  <sc-if value="{{ grp.hasManagers }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ grp.managers }}" as="mgr" hint-placeholder-count="2">
+                      <div onClick="{{ mgr.onOpen }}" style="font-size:14px;font-weight:700;margin-top:6px;cursor:pointer">{{ mgr.label }}</div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ grp.noManagers }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:13px;color:var(--ink-faint);margin-top:6px">No manager yet</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
         </div>
       </sc-if>
 
@@ -1736,6 +1759,39 @@
                     <input type="checkbox" checked="{{ acctDrawTimes }}" onChange="{{ onToggleDrawTimes }}" disabled="{{ acctRightsBusy }}" aria-label="Edit kickoff times and pitches"> Edit kickoff times and pitches
                   </label>
                   <sc-if value="{{ acctRightsMsg }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:600;margin-top:10px;color:var(--danger-ink)">{{ acctRightsMsg }}</div></sc-if>
+                </div>
+              </sc-if>
+
+              <!-- Also-manages (JRT-37). An ORGANISER who is also the named
+                   manager of one or more age groups. IDENTITY ONLY: it grants
+                   nothing (organisers already run every group); it lists them
+                   as the group's manager and defaults their /manager view to
+                   it. Shown on organiser cards only — a manager's group is
+                   their fixed ageGroupId. -->
+              <sc-if value="{{ acctIsOrganiserAcct }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+                  <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Also manages</div>
+                  <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">Tick the age groups this organiser is also the named manager of. This does not change what they can do — organisers already run every group — it lists them as the group’s manager and opens that group in their manager view.</p>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px 18px">
+                    <sc-for list="{{ acctManagesChips }}" as="mg" hint-placeholder-count="4">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+                        <input type="checkbox" checked="{{ mg.checked }}" onChange="{{ mg.toggle }}" disabled="{{ acctRightsBusy }}" aria-label="{{ mg.name }}"> {{ mg.name }}
+                      </label>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ acctManagesMsg }}" hint-placeholder-val=""><div style="font-size:13px;font-weight:600;margin-top:10px;color:var(--danger-ink)">{{ acctManagesMsg }}</div></sc-if>
+                </div>
+              </sc-if>
+
+              <!-- Change role (JRT-37). The one place a role changes after
+                   creation. Promote a manager to organiser (they keep managing
+                   their group, which moves into "also manages"), or demote an
+                   organiser back to a manager of a group they manage. -->
+              <sc-if value="{{ acctShowRoleChange }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+                  <div style="font-family:'Anton';font-size:15px;text-transform:uppercase;letter-spacing:.4px">Role</div>
+                  <p style="color:var(--ink-faint);font-size:13px;line-height:1.5;margin:8px 0 12px">{{ acctRoleChangeBlurb }}</p>
+                  <button onClick="{{ onAcctChangeRole }}" disabled="{{ acctRightsBusy }}" style="background:transparent;border:1px solid var(--line-strong);color:var(--ink);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer">{{ acctRoleChangeLabel }}</button>
                 </div>
               </sc-if>
             </div>
@@ -2263,7 +2319,7 @@ class Component extends DCLogic {
     api.verifySession();
 
     this.setState({ api, session });
-    if (session) this.loadData(api);
+    if (session) { this.loadData(api); this.rerouteIfDemoted(api); }
     else this.redirect('/signin?next=/organizer');
 
     /* Escape closes the open confirm/prompt modal — standard dialog manners
@@ -2285,6 +2341,22 @@ class Component extends DCLogic {
     this._regClock = setInterval(() => {
       if (this.state.tab === 'registration') this.setState({ regNow: Date.now() });
     }, 5000);
+  }
+
+  /* Dual-role (JRT-37): if an organiser was DEMOTED to a manager, their cached
+     session still reads as organiser here, so the back office would render and
+     every call would 403. Read the LIVE account and, if the role is no longer
+     organiser, re-shape the stored session and hand them to /manager. This is a
+     role-change re-route, NOT a sign-out — the token is still valid and the
+     server already enforces the new role; signing out stays with sessionEnded. */
+  async rerouteIfDemoted(api) {
+    if (!api || !api.liveAccount || !api.reshapeStoredSession) return;
+    let acct = null;
+    try { acct = await api.liveAccount(); } catch (e) { return; }
+    if (acct && acct.role && acct.role !== 'organizer') {
+      api.reshapeStoredSession(acct);
+      this.redirect('/manager');
+    }
   }
 
   redirect(url) {
@@ -4433,6 +4505,47 @@ class Component extends DCLogic {
     this.setState((p) => ({ acctRightsBusy: false, acct: apply(p.acct), accounts: (p.accounts || []).map(apply) }));
   }
 
+  /* Also-manages (JRT-37): toggle one age group on an organiser's identity
+     list. Recompute the FULL array (never drop the untoggled ones) and apply
+     the server's echoed list — the doSetDrawRights shape above. */
+  async doToggleManages(username, groupid, checked) {
+    const acct = (this.state.accounts || []).find((a) => a.username === username) || this.state.acct || {};
+    const current = Array.isArray(acct.manages) ? acct.manages.slice() : [];
+    const next = checked
+      ? (current.indexOf(groupid) >= 0 ? current : current.concat([groupid]))
+      : current.filter((id) => id !== groupid);
+    this.setState({ acctRightsBusy: true, acctManagesMsg: '' });
+    const r = await this.state.api.setManagerGroups(username, next);
+    if (!r || r.ok === false) { this.setState({ acctRightsBusy: false, acctManagesMsg: (r && r.error) || 'Could not change manager groups.' }); return; }
+    const apply = (a) => (a && a.username === username ? { ...a, manages: Array.isArray(r.manages) ? r.manages : [] } : a);
+    this.setState((p) => ({ acctRightsBusy: false, acct: apply(p.acct), accounts: (p.accounts || []).map(apply) }));
+  }
+
+  /* Change an existing account's role (JRT-37). Promote a manager to organiser,
+     or demote an organiser to a manager of the first group they manage. A
+     confirm guards it — a role change is not a routine toggle. */
+  confirmRoleChange(acct, to) {
+    const who = (acct && (acct.name || acct.username)) || 'this login';
+    const msg = to === 'organizer'
+      ? 'Make ' + who + ' an organiser? They keep managing their age group and gain the full back office.'
+      : 'Make ' + who + ' an age-group manager? They lose organiser access on their next action.';
+    try { return window.confirm(msg); } catch (e) { return true; }
+  }
+  async doChangeRole(username) {
+    const acct = (this.state.accounts || []).find((a) => a.username === username) || this.state.acct || {};
+    const to = acct.role === 'manager' ? 'organizer' : 'manager';
+    if (!this.confirmRoleChange(acct, to)) return;
+    const body = to === 'organizer'
+      ? { role: 'organizer' }
+      : { role: 'manager', ageGroupId: (Array.isArray(acct.manages) ? acct.manages[0] : '') || '' };
+    this.setState({ acctRightsBusy: true, acctManagesMsg: '' });
+    const r = await this.state.api.setAccountRole(username, body);
+    if (!r || r.ok === false) { this.setState({ acctRightsBusy: false, acctManagesMsg: (r && r.error) || 'Could not change the role.' }); return; }
+    this.setState({ acctRightsBusy: false });
+    this.refreshAccounts();
+    this.closeAccount();
+  }
+
   /* Approve. For a Club Hub account (no role yet) the row's picker supplies
      the role and, for a manager, the age group; the server validates both
      and refuses with a sentence, which is shown above the list rather than
@@ -4835,7 +4948,8 @@ class Component extends DCLogic {
       /* Role in WORDS, and a manager's age group by its real NAME - an id like
          'u14b' is not what anybody calls it. */
       acctRoleLabel: !s.acct ? '' : (s.acct.role === 'organizer'
-        ? ('Organiser' + (s.acct.title ? ' · ' + s.acct.title : ''))
+        ? ('Organiser' + (s.acct.title ? ' · ' + s.acct.title : '')
+           + (Array.isArray(s.acct.manages) && s.acct.manages.length ? ' · also manages ' + s.acct.manages.map((id) => this.ageGroupName(id) || id).join(', ') : ''))
         : ('Age-group manager · ' + (this.ageGroupName(s.acct.ageGroupId) || s.acct.ageGroupId || ''))),
       acctSignInMethod: !s.acct ? '' : (s.acct.signInMethod === 'Both'
         ? 'Password and Google'
@@ -4861,6 +4975,24 @@ class Component extends DCLogic {
       acctRightsMsg: s.acctRightsMsg || '',
       onToggleDrawPools: (e) => this.doSetDrawRights(s.acctSubject, { drawPools: !!(e && e.target && e.target.checked) }),
       onToggleDrawTimes: (e) => this.doSetDrawRights(s.acctSubject, { drawTimes: !!(e && e.target && e.target.checked) }),
+      /* Also-manages + role change (JRT-37): shown on ANOTHER person's card.
+         "Also manages" is organiser-only (a manager's group is their ageGroupId);
+         each chip carries its own toggle, the docTagChips pattern. Role change
+         promotes a manager or demotes an organiser who manages a group. */
+      acctIsOrganiserAcct: !!(s.acctSubject && s.acct && s.acct.role === 'organizer'),
+      acctManagesChips: MANAGER_AGE_GROUPS.map((g) => ({
+        id: g.id, name: g.name,
+        checked: !!(s.acct && Array.isArray(s.acct.manages) && s.acct.manages.indexOf(g.id) >= 0),
+        toggle: (e) => this.doToggleManages(s.acctSubject, g.id, !!(e && e.target && e.target.checked)),
+      })),
+      acctManagesMsg: s.acctManagesMsg || '',
+      acctShowRoleChange: !!(s.acctSubject && s.acct && (s.acct.role === 'manager'
+        || (s.acct.role === 'organizer' && Array.isArray(s.acct.manages) && s.acct.manages.length > 0))),
+      acctRoleChangeLabel: !s.acct ? '' : (s.acct.role === 'manager' ? 'Make organiser' : 'Make age-group manager'),
+      acctRoleChangeBlurb: !s.acct ? '' : (s.acct.role === 'manager'
+        ? 'Promote this manager to an organiser. They keep being listed as their age group’s manager — it moves to “also manages” above — and gain the full back office.'
+        : 'Demote this organiser to a manager of the first group they manage. They lose the back office on their next action; no sign-out needed.'),
+      onAcctChangeRole: () => this.doChangeRole(s.acctSubject),
       acctCurrent: s.acctCurrent, acctNew: s.acctNew,
       acctCurrentType: s.acctShowCurrent ? 'text' : 'password',
       acctCurrentToggleLabel: s.acctShowCurrent ? 'HIDE' : 'SHOW',
@@ -5038,11 +5170,21 @@ class Component extends DCLogic {
         /* "from the Club Hub" tells a hand-approved and an auto-approved
            manager apart at a glance (spec-hub-auto-approve § 5). */
         roleLabel: (a.role === 'organizer' ? ('Organizer · ' + (a.title || 'Organizer')) : ('Manager · ' + a.ageGroupId))
+          + (a.role === 'organizer' && Array.isArray(a.manages) && a.manages.length ? ' · also manages ' + a.manages.map((id) => this.ageGroupName(id) || id).join(', ') : '')
           + (a.autoApproved ? ' · from the Club Hub' : ''),
         onRevoke: () => this.doRevoke(a.username),
         onResetPassword: () => this.doResetPassword(a.username),
         onOpen: () => this.openOtherAccount(a.username),
       })),
+      /* Managers by age group (JRT-37): who is the named manager of each group,
+         a plain manager by ageGroupId and a dual organiser by `manages`, unioned
+         through api.managedGroupsOf (the one client copy, drift-tested) so
+         neither kind is missed. Identity only — grants nothing. */
+      managersByGroup: MANAGER_AGE_GROUPS.map((g) => {
+        const mgrs = (s.accounts || []).filter((a) => a.approved && s.api && s.api.managedGroupsOf && s.api.managedGroupsOf(a).indexOf(g.id) >= 0)
+          .map((a) => ({ username: a.username, label: (a.name || a.username) + (a.role === 'organizer' ? ' (organiser)' : ''), onOpen: () => this.openOtherAccount(a.username) }));
+        return { id: g.id, name: g.name, managers: mgrs, hasManagers: mgrs.length > 0, noManagers: mgrs.length === 0 };
+      }),
       hasPending: s.accounts.some((a) => (!a.approved && !a.revokedAt) || (a.approved && !a.role)),
       pendingCount: s.accounts.filter((a) => !a.approved && !a.revokedAt).length,
       hasRevoked: s.accounts.some((a) => !a.approved && a.revokedAt),

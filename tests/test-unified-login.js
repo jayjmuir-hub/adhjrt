@@ -110,7 +110,7 @@ section('One endpoint signs in BOTH roles — driven through the real handler');
   const r = parse(await post({ username: 'orga', password: 'pw-orga' }));
   eq('an organizer signs in', r.status, 200);
   eq('…with the organizer session shape', r.session,
-    { username: 'orga', name: 'Orga Person', role: 'Registrar', _role: 'organizer' });
+    { username: 'orga', name: 'Orga Person', role: 'Registrar', _role: 'organizer', manages: [] });
   const tok = verify(r.token);
   check('…and a token the backend verifies as organizer', !!tok && tok.role === 'organizer' && tok.username === 'orga',
     JSON.stringify(tok));
@@ -210,7 +210,7 @@ section('The shapes are pinned by literal, and the retired endpoints stay gone')
 {
   const uni = readRepo(path.join('netlify', 'functions', 'login.js'));
 
-  const ORG_SESSION = "{ username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer' }";
+  const ORG_SESSION = "{ username: account.username, name: account.name, role: account.title || 'Organizer', _role: 'organizer', manages: account.manages || [] }";
   const MGR_SESSION = "{ username: account.username, name: account.name, ageGroupId: account.ageGroupId }";
   const ORG_TOKEN = "sign({ username: account.username, role: 'organizer' })";
   const MGR_TOKEN = "sign({ username: account.username, role: 'manager', ageGroupId: account.ageGroupId })";

@@ -3122,6 +3122,66 @@ const FAULTS = [
       "  const aAge = String(a.ageGroup || ''), bAge = String(b.ageGroup || '');\n  if (aAge !== bAge) return aAge < bAge ? -1 : 1;"),
     expect: ['age groups are grouped in real youngest-to-oldest order, not alphabetically'],
   },
+
+  /* ---- JRT-13: the play-up flag on the Players squad list ---------------
+     The flag is the parent's recorded 'Yes'/'No' consent, not a recomputed
+     age rule. Two faults probe the predicate from both sides — too strict and
+     too loose — then the count's filter-awareness, the hasPlayUps gate, and
+     the three markup anchors (header, badge binding, colspan) and the summary. */
+  {
+    name: 'the play-up predicate is case-broken, so a consented player is never flagged',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, "playingUp: r.playUpConsent === 'Yes'", "playingUp: r.playUpConsent === 'yes'"),
+    expect: ['a player whose parent consented to playing up is flagged'],
+  },
+  {
+    /* ⚠️ The discrimination the blank-row fixture exists for: a loose predicate
+       (!== 'No') flags an old row whose consent was never recorded. */
+    name: 'the play-up predicate is loosened to !== No, so a blank old row reads as playing up',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, "playingUp: r.playUpConsent === 'Yes'", "playingUp: r.playUpConsent !== 'No'"),
+    expect: ['a blank/absent consent (an old row) is not flagged'],
+  },
+  {
+    /* The count must run over the FILTERED rows; built over the whole list it
+       ignores the club/age filters the table itself honours. */
+    name: 'the play-up count is computed over ALL players, ignoring the active filter',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, 'playUpCount: playerRows.filter((x) => x.playingUp).length',
+      "playUpCount: s.players.filter((x) => x.playUpConsent === 'Yes').length"),
+    expect: ['filtering to one club counts only'],
+  },
+  {
+    name: 'hasPlayUps is nailed false, so the summary line never shows',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, 'hasPlayUps: playerRows.some((x) => x.playingUp)', 'hasPlayUps: false'),
+    expect: ['hasPlayUps is true when at least one player'],
+  },
+  {
+    name: 'the Play Up header is dropped, so the column count falls back to 12',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, ", 'Play Up'],", '],'),
+    expect: ['playerHeaders carries a 13th column'],
+  },
+  {
+    name: 'the badge is bound to a field that does not exist, so it never renders',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, 'value="{{ r.playingUp }}"', 'value="{{ r.playsUp }}"'),
+    expect: ['renders a play-up badge bound to r.playingUp'],
+  },
+  {
+    name: 'the players club-header colspan is left at 12, so the new column pokes out',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, 'colspan="13"', 'colspan="12"'),
+    expect: ['spans all 13 columns'],
+  },
+  {
+    name: 'the play-up count binding is dropped from the summary line',
+    suite: 'test-organizer-grouping.js',
+    apply: () => patch(ORG, '<b>{{ playUpCount }}</b>', '<b>0</b>'),
+    expect: ['a play-up count summary is rendered'],
+  },
+
   /* ---- the Tournament tab (test-organizer-tournament.js) ----------------
      The bulk publish moved here from the old /scores Manager area. The
      dangerous regressions are the quiet ones: a loop that stops early, a
@@ -3308,9 +3368,12 @@ const FAULTS = [
   {
     name: 'the players table template stops showing the count next to the club name in its header row',
     suite: 'test-organizer-grouping.js',
+    /* colspan widened 12 → 13 by JRT-13 (the play-up column) — this anchor was
+       repointed to follow it, per the rule that a fault that stops injecting has
+       a rotted anchor to fix, never to delete. */
     apply: () => patch('Organizer.dc.html',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
-      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="12" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }}</td>'),
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="13" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }} ({{ g.count }})</td>',
+      '<sc-for list="{{ playerGroups }}" as="g" hint-placeholder-count="2">\n                <tr>\n                  <td colspan="13" style="padding:10px 14px;background:rgba(200,16,46,0.08);border-top:1px solid var(--line);font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--danger-ink);text-transform:uppercase">{{ g.club }}</td>'),
     expect: ['the players table template actually renders a club header row per group'],
   },
   {

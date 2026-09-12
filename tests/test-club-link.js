@@ -227,7 +227,7 @@ section('⚠️ Organiser-only on BOTH methods — this one holds a secret');
        a secret, and fetching it on every /organizer load would put the club key
        on the wire for organisers who never open this tab. */
     check('⚠️ it loads when the tab is opened, not on every page load',
-      /showClubs: \(\) => \{ this\.setState\(\{ tab: 'clubs' \}\); this\.loadClubLink\(\); \}/.test(ORGP));
+      /showClubs: \(\) => \{ this\.setState\(\{ tab: 'clubs' \}\); this\.loadClubLink\(\);/.test(ORGP));
     check('the input has an accessible name', /aria-label="Club invite link"/.test(ORGP));
     /* Every {{ X }} the card uses must come back from renderVals, or it
        resolves silently to empty — the binding trap already recorded. */

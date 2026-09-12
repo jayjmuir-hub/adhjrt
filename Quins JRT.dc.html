@@ -3127,11 +3127,7 @@
                     <sc-for list="{{ clubOptions }}" as="c" hint-placeholder-count="9">
                       <option value="{{ c }}">{{ c }}</option>
                     </sc-for>
-                    <option value="__other__">Other &mdash; my club isn't listed</option>
                   </select>
-                  <sc-if value="{{ teamClubIsOther }}" hint-placeholder-val="{{ false }}">
-                    <input value="{{ teamClubOtherVal }}" aria-label="Your club's full name" onInput="{{ onTeamClubOther }}" placeholder="Type your club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-                  </sc-if>
                 </div>
                 <div>
                   <label for="f--label-style-font-si-3" style="font-size:12px;font-weight:700;color:#7f8794;letter-spacing:.5px">AGE GROUP ENTERING</label>
@@ -3351,11 +3347,7 @@
                   <sc-for list="{{ playerClubOptions }}" as="c" hint-placeholder-count="9">
                     <option value="{{ c }}">{{ c }}</option>
                   </sc-for>
-                  <option value="__other__">Other &mdash; club not listed</option>
                 </select>
-                <sc-if value="{{ playerClubIsOther }}" hint-placeholder-val="{{ false }}">
-                  <input value="{{ playerClubOtherVal }}" aria-label="The club's full name" onInput="{{ onPlayerClubOther }}" placeholder="Type the club's full name" style="width:100%;margin-top:8px;background:#0C0C0E;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:12px 14px;color:#fff;font-size:15px">
-                </sc-if>
               </div>
 
               <div>
@@ -3468,12 +3460,19 @@
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#E11B22&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#E11B22&quot;,&quot;#17A34A&quot;,&quot;#0C0C0E&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;showCountdown&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Content&quot;}}">
 const AGE_GROUP_NAMES = ['U6 Tag', 'U7 Tag', 'U8 Tag', 'U9 Mixed Contact', 'U10 Mixed Contact', 'U11 Mixed Contact', 'U12 Mixed Contact', 'U12G QR', 'U13 Mixed Contact', 'U14B Contact', 'U14G QR', 'U16B Contact', 'U16G Contact', 'U18B Contact', 'U18G Contact'];
 
-// Same club list used for pools/fixtures in scores-data.js.
+// The sign-up dropdown's FALLBACK club list (JRT-7). The live list now comes
+// from registered-clubs.js — the organiser's official names for registered
+// clubs — fetched into state.clubs; this bundled copy shows only until that
+// lands, or if it cannot be reached, so the dropdown is never empty and never
+// blocks sign-ups. NOT shared with scores-data.js (that keys teams by code, a
+// different shape): do not delete it, or the outage path renders an empty list.
 const CLUB_NAMES = ['Abu Dhabi Harlequins', 'Dubai Exiles', 'Dubai Sharks', 'Dubai Hurricanes', 'Barrelhouse', 'Al Ain Amblers', 'Dubai Dragons', 'Dubai Tigers', 'Abu Dhabi Small Blacks'];
-// When a coach/parent picks "Other" in the club dropdown, the real club name
-// comes from the free-text `clubOther` field instead. effClub() returns the
-// effective club name for validation and submission.
-const effClub = (f) => (f.club === '__other__' ? (f.clubOther || '').trim() : f.club);
+// effClub() returns the club name for validation and submission. It once
+// unwrapped a free-text "Other" option (clubOther); that escape hatch was
+// removed with JRT-7 — the dropdown is a closed list of organiser-named
+// registered clubs now, so f.club is always a real chosen club. Tombstone kept
+// so nobody re-adds a free-text club that would drift from the named list.
+const effClub = (f) => f.club;
 
 // Age bands per group at the UAERF cut-off (31 Aug 2026). U16 and U18 are
 // "double" age groups spanning two cut-off ages each (there's no separate
@@ -3729,7 +3728,7 @@ class SubmitError extends Error {
 const POOL_OPTIONS = ['A', 'B', 'C'];
 
 const emptyTeamForm = () => ({
-  club: '', clubOther: '', preferredPool: '', ageGroup: '',
+  club: '', preferredPool: '', ageGroup: '',
   headCoachName: '', headCoachEmail: '', headCoachPhone: '',
   managerName: '', managerEmail: '', managerPhone: '',
   numPlayers: '', notes: '', players: [],
@@ -3767,7 +3766,7 @@ function fmtDobLong(dobStr) {
 }
 
 const emptyPlayerForm = () => ({
-  playerFirstName: '', playerLastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '', club: '', clubOther: '', ageGroup: '',
+  playerFirstName: '', playerLastName: '', dob: '', dobDay: '', dobMonth: '', dobYear: '', club: '', ageGroup: '',
   parentFirstName: '', parentLastName: '', parentEmail: '', parentPhone: '',
   emergencySame: false, emergencyFirstName: '', emergencyLastName: '', emergencyPhone: '',
   medicalNotes: '', consent: false, playUpConsent: false,
@@ -3805,6 +3804,7 @@ class Component extends DCLogic {
        navOpen: one is the phone panel, the other the desktop dropdown, and
        CSS breakpoints decide which of the two controls is even visible. */
     menuOpen: false,
+    clubs: CLUB_NAMES, // sign-up dropdown list (JRT-7): refreshed from registered-clubs.js, falls back to this bundled list so it is never empty
     teamModalOpen: false, teamForm: emptyTeamForm(), teamSubmitting: false, teamSubmitted: false, teamError: '', teamCode: '',
     playerModalOpen: false, playerForm: emptyPlayerForm(), playerSubmitting: false, playerSubmitted: false, playerError: '',
     /* True only when a send FAILED, as opposed to a field being invalid. The
@@ -3887,6 +3887,11 @@ class Component extends DCLogic {
     } catch (e) {
       console.warn('could not read the registration window; registration stays closed:', e && e.message);
     }
+
+    /* Then the club list for the sign-up dropdowns (JRT-7). refreshClubs() falls
+       back to the bundled CLUB_NAMES (already in state.clubs) whenever the fetch
+       fails or the list is not built yet, so the dropdown is never empty. */
+    this.refreshClubs();
 
     /* Then the PITCHES stat, on its own. loadVenue() already falls back to the
        layout built into scores-data.js when the endpoint cannot be reached, so
@@ -4062,12 +4067,23 @@ class Component extends DCLogic {
   }
 
   onClickRegisterTeam() {
-    if (this.regState().open) this.openTeamModal();
+    if (this.regState().open) { this.refreshClubs(); this.openTeamModal(); }
     else this.flashToast(this.closedToast('team'));
   }
   onClickRegisterPlayer() {
-    if (this.regState().open) this.openPlayerModal();
+    if (this.regState().open) { this.refreshClubs(); this.openPlayerModal(); }
     else this.flashToast(this.closedToast('player'));
+  }
+
+  /* A best-effort refresh of the sign-up club list (JRT-7). loadClubs() caches a
+     good answer, so this is cheap after the first success and only re-fetches
+     while the list is still unknown; a failure leaves state.clubs on its bundled
+     fallback. Called on page load and again when a Register button is pressed,
+     to catch a first-paint miss at the moment the list is actually needed. */
+  refreshClubs() {
+    const api = this.state.fxApi;
+    if (!api || !api.loadClubs) return;
+    api.loadClubs().then((c) => { if (Array.isArray(c) && c.length) this.setState({ clubs: c }); }).catch(() => {});
   }
 
   setTeamField(field, val) { this.setState((s) => ({ teamForm: { ...s.teamForm, [field]: val } })); }
@@ -4724,7 +4740,7 @@ class Component extends DCLogic {
       teamHasCode: !!this.state.teamCode,
       teamShowForm: !this.state.teamSubmitted,
       teamForm: this.state.teamForm,
-      clubOptions: CLUB_NAMES,
+      clubOptions: (this.state.clubs && this.state.clubs.length) ? this.state.clubs : CLUB_NAMES,
       poolOptions: POOL_OPTIONS,
       teamAgeGroupOptions,
       teamPlayerRows,
@@ -4743,9 +4759,6 @@ class Component extends DCLogic {
       onBackdropTeam: () => this.closeTeamModal(),
       stopProp: (e) => e.stopPropagation(),
       onTeamClub: (e) => this.setTeamField('club', e.target.value),
-      teamClubIsOther: this.state.teamForm.club === '__other__',
-      teamClubOtherVal: this.state.teamForm.clubOther,
-      onTeamClubOther: (e) => this.setTeamField('clubOther', e.target.value),
       onPreferredPool: (e) => this.setTeamField('preferredPool', e.target.value),
       onTeamAgeGroup: (e) => this.setTeamField('ageGroup', e.target.value),
       onHeadCoachName: (e) => this.setTeamField('headCoachName', e.target.value),
@@ -4800,10 +4813,7 @@ class Component extends DCLogic {
       playerDobImpossible: !!(this.state.playerForm.dobDay && this.state.playerForm.dobMonth
         && this.state.playerForm.dobYear && !this.state.playerForm.dob),
       onPlayerClub: (e) => this.setPlayerField('club', e.target.value),
-      playerClubIsOther: this.state.playerForm.club === '__other__',
-      playerClubOtherVal: this.state.playerForm.clubOther,
-      onPlayerClubOther: (e) => this.setPlayerField('clubOther', e.target.value),
-      playerClubOptions: CLUB_NAMES,
+      playerClubOptions: (this.state.clubs && this.state.clubs.length) ? this.state.clubs : CLUB_NAMES,
       onPlayerAgeGroup: (e) => this.setPlayerField('ageGroup', e.target.value),
       onPlayerParentFirstName: (e) => this.setPlayerField('parentFirstName', e.target.value),
       onPlayerParentLastName: (e) => this.setPlayerField('parentLastName', e.target.value),

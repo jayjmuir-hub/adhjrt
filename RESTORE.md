@@ -237,6 +237,8 @@ the same table. Do not move that logic server-side without a good reason.
 | `get-my-registrations.js` | manager: own age group only (medical notes included); organiser or `*` manager: all groups. The group always comes from the signed token |
 | `snapshot-registrations.js` / `_snapshot.js` | scheduled (`@hourly` in `netlify.toml`); emails registration snapshots to `MAIL_FROM` |
 | `club-link.js` | the club invite link box on `/organizer`. GET is organiser-only because the link carries `CLUB_FORM_KEY`; the key itself is never returned |
+| `registered-clubs.js` | **public** GET; the sign-up dropdown's club list — the official names of clubs that have registered AND been named by an organiser. Names only, no PII; fails soft to an empty list. See § The sign-up club dropdown |
+| `save-club-names.js` | organiser-only; stores the declared-name → official-name map that gates the dropdown (JRT-7). Clear is its own action; an optimistic `rev` guard |
 | ~~`_sheets.js`~~ | **Tombstone.** The Google Sheets client, deleted when the registration store replaced the sheets (JRT-2) |
 | `_teams.js` | club prefixes and team-code generation |
 | `_email.js` | email via Microsoft Graph |
@@ -254,6 +256,24 @@ their own store. Auth is bcrypt accounts in Blobs, not Netlify Identity.
 Permissions are always re-checked server-side from the signed token. Never trust
 an age group or role sent by the browser (`submit-result.js` derives the age
 group from the match id itself; preserve that pattern).
+
+## The sign-up club dropdown (JRT-7)
+
+The club a coach or parent picks on the team/player registration forms comes
+from the clubs that have completed the club form **and** been given an official
+name by an organiser — not a hardcoded list. A club appears in the dropdown
+only once an organiser types its official name on the **Clubs tab** (a
+_Hidden — not named yet_ badge marks the ones that have not); unnamed clubs,
+rehearsals and superseded declarations never appear. `registered-clubs.js`
+serves that list publicly (names only), joining the registration store against
+the `club-names` map through `publicClubNames()` in `_regstore.js`. The forms
+fall back to the bundled `CLUB_NAMES` if the fetch fails, so the dropdown is
+never empty — do not delete `CLUB_NAMES`. The free-text "Other" option is gone
+(closed list). The club-name key is the shared `normaliseClubName` (one copy in
+`Organizer.dc.html`, one in `_regstore.js`, drift-tested), so the Clubs tab, the
+naming and the dropdown treat `Dubai Sharks` and `Dubai Sharks RFC` as one club.
+Team registration is opened only after every club is named — an operational
+choice, not a system gate. Ruling: `claude/decisions/2026-09-12-club-dropdown-from-registered-clubs.md`.
 
 ---
 

@@ -17,7 +17,7 @@
 // list({prefix}) → {blobs:[{key}]}, delete(key).
 
 const crypto = require('crypto');
-const { TEAM_COLUMNS } = require('./_intake');
+const { TEAM_COLUMNS, CLUB_COLUMNS } = require('./_intake');
 
 const STORE_NAME = 'registrations';
 
@@ -146,8 +146,53 @@ function shapeForReaders(entries, mappers) {
   };
 }
 
+/* ⚠️ CLUB-NAME NORMALISATION — a copy of the browser function in
+   Organizer.dc.html (the reconcileClubs helper, JRT-7). Both MUST agree, or the
+   organiser's Clubs tab would GROUP two spellings as one club while the public
+   dropdown KEYED them as two. test-club-name-drift.js runs a battery against
+   both copies and fails if they diverge; if that anchor rots, repoint it, never
+   delete (CLAUDE.md rule 6). Never "tidy" one copy alone. */
+const CLUB_SUFFIX_RE = /\s+(rugby football club|rugby club|rufc|rfc|rc|fc)$/;
+function normaliseClubName(raw) {
+  let v = String(raw == null ? '' : raw).toLowerCase();
+  try { v = v.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (e) { /* older engine: skip */ }
+  v = v.replace(/['’]/g, '');
+  v = v.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+  v = v.replace(CLUB_SUFFIX_RE, '').trim();
+  return v;
+}
+
+const CLUB_COLUMNS_CLUB_INDEX = CLUB_COLUMNS.indexOf('club');
+
+/* ⚠️ THE PUBLIC DROPDOWN JOIN AND THE HIDDEN-UNTIL-NAMED GATE (JRT-7).
+   Given the live club-registration records and the organiser's official-name
+   map ({ <normalised declared name>: "<official name>" }), returns the distinct
+   OFFICIAL names of clubs that are BOTH registered AND named — and nothing else.
+   A club with no official name, a rehearsal, or a superseded record is HIDDEN
+   (listRecords already drops superseded; the rehearsal flag is checked BEFORE
+   the name lookup so a stray map entry for a rehearsal is still excluded).
+   ⚠️ NAMES ONLY: the declared name is a lookup key and is DISCARDED; no contact
+   field, team count or note is ever read, so none can leak to the public page.
+   Pure (no store) so a test drives it directly. */
+function publicClubNames(clubRecords, namesMap) {
+  const names = (namesMap && typeof namesMap === 'object') ? namesMap : {};
+  const seen = new Map();
+  for (const e of (Array.isArray(clubRecords) ? clubRecords : [])) {
+    if (!e || !e.record || e.record.rehearsal === true) continue;
+    const declared = (e.record.row || [])[CLUB_COLUMNS_CLUB_INDEX];
+    const official = names[normaliseClubName(declared)];
+    if (typeof official !== 'string') continue;
+    const trimmed = official.trim();
+    if (!trimmed) continue;
+    const k = trimmed.toLowerCase();
+    if (!seen.has(k)) seen.set(k, trimmed);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+
 module.exports = {
   STORE_NAME, PREFIX, TEAM_COLUMNS_CLUB_INDEX: TEAM_COLUMNS.indexOf('club'),
   isRehearsal, makeKey, buildRecord, writeOnce, listRecords, listAll,
   teamRowsForNumbering, shapeForReaders,
+  normaliseClubName, CLUB_SUFFIX_RE, CLUB_COLUMNS_CLUB_INDEX, publicClubNames,
 };

@@ -29,7 +29,6 @@ const RESULTS_KEY = 'adhjrt_local_results';
 const SCHEDULES_KEY = 'adhjrt_local_schedules';
 
 const ORGANIZER_CODE = 'test-organizer';
-const MANAGER_AGE_IDS = ['u6', 'u7', 'u8', 'u9', 'u10', 'u11', 'u12', 'u12g', 'u13', 'u14b', 'u14g', 'u16b', 'u16g', 'u18b', 'u18g'];
 
 function readJson(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; }
@@ -53,12 +52,6 @@ function hasAgeGroupAccess(session, ageGroupId) {
   if (session.role === 'organizer') return true;
   if (session.role === 'manager') return session.ageGroupId === '*' || session.ageGroupId === ageGroupId;
   return false;
-}
-
-function managerCodeToAgeGroup(code) {
-  if (code === 'test-admin') return '*';
-  const m = MANAGER_AGE_IDS.find((id) => `test-${id}` === code);
-  return m || null;
 }
 
 /* -------- Organizer -------- */
@@ -88,19 +81,11 @@ export function organizerLogin({ username, password }) {
 }
 
 
-/* -------- Manager -------- */
-export function managerSignup({ name, username, password, inviteCode }) {
-  if (!name || !username || !password || !inviteCode) return { ok: false, error: 'All fields are required.' };
-  if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
-  const ageGroupId = managerCodeToAgeGroup(inviteCode);
-  if (!ageGroupId) return { ok: false, error: `Incorrect invite code. (Local test mode — try "test-u16b" or "test-admin".)` };
-  const uname = username.trim().toLowerCase();
-  const accounts = loadAccounts();
-  if (accounts.some((a) => a.username === uname)) return { ok: false, error: 'That username is already taken.' };
-  accounts.push({ username: uname, password, name, role: 'manager', ageGroupId, approved: false, createdAt: new Date().toISOString() });
-  saveAccounts(accounts);
-  return { ok: true, pending: true, message: 'Account created (local test mode). A tournament organizer needs to approve you before you can sign in.' };
-}
+/* -------- Manager --------
+   Manager self-signup was retired on 12 Sep 2026 (JRT-30): managers arrive
+   through the club hub, and the desk mints break-glass logins in the back
+   office. managerLogin stays — an existing manager password account (created
+   by an organiser) still signs in here in local test mode. */
 export function managerLogin({ username, password }) {
   const uname = (username || '').trim().toLowerCase();
   const accounts = loadAccounts();

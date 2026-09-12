@@ -216,8 +216,7 @@ the same table. Do not move that logic server-side without a good reason.
 | `_auth.js` | shared helpers — Blobs store, bcrypt hashing, HMAC session tokens, `resolveSession()`, `hasAgeGroupAccess` (a manager whose `ageGroupId` is `'*'` acts on every group) |
 | `login.js` | the only password sign-in endpoint. Both roles; account looked up by username; session minted from the account's stored role. `${ip}:login` rate bucket |
 | `hub-auth.js` / `_hubAuth.js` | Sign in with Quins Club Hub — verifies a hub access token against the hub's public key (ES256, JWKS), matches on `hubSub`, mints the same session as `login.js`. A first-time person becomes a pending account with no role. See § Sign in with Quins Club Hub |
-| `manager-signup.js` | per-age-group invite code decides the age group; account starts pending |
-| `organizer-signup.js` | shared invite code; the first organiser account is auto-approved. Closed while `ORGANIZER_INVITE_CODE` is unset (see Environment variables) |
+| `organizer-signup.js` | shared invite code; the first organiser account is auto-approved. Closed while `ORGANIZER_INVITE_CODE` is unset (see Environment variables). The dormant recovery path — `manager-signup.js` was the same shape and was **deleted** on 12 Sep 2026 (JRT-30) when manager self-signup was retired |
 | `accounts-admin.js` | organiser-only: list / approve / reject / revoke; create a manager or organiser login (`create`); reset a password (`password`); change your own (`changeMine`); draw rights (`drawRights`) |
 | `_password.js` | `MIN_PASSWORD_LENGTH` and `passwordProblem()`; dependency-free on purpose |
 | `my-account.js` | the My account card — read own account, change own password |
@@ -1028,12 +1027,12 @@ approved immediately and records `createdBy`. It is a **password** account.
 - An **organiser** needs none and takes an optional title (default
   `Organizer`).
 
-**Three other doors make accounts:**
+**Two other doors make accounts** (manager self-signup was a third until JRT-30
+retired it — see the tombstone below):
 
 | Door | Makes | Approved? |
 |---|---|---|
 | `hub-auth.js` (Club Hub sign-in) | a hub account, no password | pending, or auto-approved as a manager — see below |
-| `manager-signup.js` (invite code on `/signin`) | a **password** manager account | pending until an organiser approves |
 | `organizer-signup.js` | a password organiser account | refuses everything while `ORGANIZER_INVITE_CODE` is unset |
 
 ⚠️ **`ORGANIZER_INVITE_CODE` is unset in Netlify, and that is what keeps
@@ -1048,16 +1047,16 @@ accounts blob were ever lost.
 account were lost: set `ORGANIZER_INVITE_CODE` in Netlify, deploy, sign up
 (the first organiser auto-approves), then unset it and deploy again.
 
-**`MANAGER_INVITE_CODES` stays.** It is a JSON map of age-group id → code, one
-per group. A code yields only a PENDING account an organiser must approve,
-where a password is a working credential the moment it exists.
-
-⚠️ **A master code's key must be `"*"`, a literal asterisk — not `"admin"`.**
-`manager-signup.js` stores the matching KEY NAME as the account's
-`ageGroupId`, and the all-groups test in `_auth.js` is
-`session.ageGroupId === '*'`. Any other key name, including a typo, mints a
-manager scoped to a group that does not exist: it signs in and sees nothing,
-with no error anywhere. It fails closed. Nothing validates the key names.
+⚠️ **Manager self-signup was retired on 12 Sep 2026 (JRT-30).**
+`manager-signup.js` — the `/signin` invite-code form that made a pending
+**password** manager account — is **deleted**, and `MANAGER_INVITE_CODES` is
+dead (remove it from Netlify). Managers now arrive through the Club Hub and are
+given a role by an organiser at approval; the desk still mints break-glass
+manager logins in the back office (`accounts-admin` `create`). The master `"*"`
+code that granted a manager every age group went with it — an all-access
+person is an organiser now, though the `'*'` test in `_auth.js` stays for any
+restored legacy account. See
+`claude/decisions/2026-09-08-organiser-password-break-glass.md`.
 
 ### Sign in with Quins Club Hub
 
@@ -1122,9 +1121,9 @@ Ruling: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`.
   share a budget a correct sign-in spends.
 - **Organiser password logins stay as break-glass** for the desk if the hub
   is unreachable. Sessions already minted do not call the hub again. Ruling:
-  `claude/decisions/2026-09-08-organiser-password-break-glass.md`. (That card
-  says managers get no passwords; the code still lets `manager-signup.js` and
-  the back office create password manager accounts.)
+  `claude/decisions/2026-09-08-organiser-password-break-glass.md`. Manager
+  self-signup was retired on 12 Sep 2026 (JRT-30); the back office `create`
+  still mints a manager password login, which IS the break-glass.
 - `tests/test-hub-auth.js` drives this with a throwaway P-256 key per run and
   a stubbed JWKS.
 
@@ -1132,8 +1131,9 @@ Ruling: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`.
 
 Ruling: `claude/decisions/2026-08-02-one-login-one-session.md`.
 
-**Sign-in lives at `/signin`.** `Signin.dc.html` carries the Club Hub button,
-password sign-in, and the invite-code manager signup. After sign-in it routes
+**Sign-in lives at `/signin`.** `Signin.dc.html` carries the Club Hub button
+and password sign-in for organiser desk accounts. (It carried an invite-code
+manager signup form until JRT-30 retired it on 12 Sep 2026.) After sign-in it routes
 by the account's role — organiser → `/organizer`, manager → `/manager`;
 `?next=` is honoured only from an allow-list of exactly those two paths and
 only when the role permits it. Signed-out `/organizer` and `/manager` redirect
@@ -1863,9 +1863,9 @@ Every manager at the venue shares one connection address, so counting correct si
 
 ### Signup attempts are rate limited too
 
-`SIGNUP_RATE_OPTS` / `checkSignupRate()` / `tooManyResponse()` in `_ratelimit.js`. **Ten attempts per address per 15 minutes, in ONE `${ip}:signup` bucket shared by `organizer-signup.js` and `manager-signup.js`.** Both check an invite code with a plain string comparison, so without a limit the codes could be guessed endlessly.
+`SIGNUP_RATE_OPTS` / `checkSignupRate()` / `tooManyResponse()` in `_ratelimit.js`. **Ten attempts per address per 15 minutes, in ONE `${ip}:signup` bucket.** `organizer-signup.js` checks its invite code with a plain string comparison, so without a limit the code could be guessed endlessly. (`manager-signup.js` shared this bucket until JRT-30 deleted it on 12 Sep 2026; the bucket is still keyed on the address alone, never the endpoint, so any signup endpoint shares one budget.)
 
-- One bucket for both endpoints: two budgets for guessing the same secrets would just double the guesses. It is kept separate from `:login` and from the registration bucket.
+- One bucket, endpoint-independent by design: two budgets for guessing the same secrets would just double the guesses. It is kept separate from `:login` and from the registration bucket.
 - Fails **OPEN**, like every use of this module. Anyone who gets through still lands PENDING. `organizer-signup.js` approves an account automatically only when no organiser exists yet (`isFirstOrganizer`), and `login.js` refuses a pending account with a 403.
 - `tooManyResponse()` holds the only copy of the 429 message; `login.js` uses it too.
 - `tests/test-signup-ratelimit.js` drives both handlers.

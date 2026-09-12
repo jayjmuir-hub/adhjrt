@@ -77,8 +77,10 @@ PAGES.forEach((page) => {
   const a = audit(page);
 
   /* ⚠️ THE FLOOR. A regex that stopped matching would report zero fields and
-     zero unnamed ones, i.e. a clean pass on a page it never looked at. */
-  check(`${page}: the scan found controls (${a.fields.length})`, a.fields.length >= 3,
+     zero unnamed ones, i.e. a clean pass on a page it never looked at. Floor is
+     2, not 3, since 12 Sep 2026 (JRT-30): /signin lost its manager self-signup
+     form and now carries just the organiser-desk username and password. */
+  check(`${page}: the scan found controls (${a.fields.length})`, a.fields.length >= 2,
     `found ${a.fields.length}`);
 
   eq(`${page}: ⚠️ controls with no accessible name`, a.unnamed.length, 0);

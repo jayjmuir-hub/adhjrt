@@ -84,13 +84,18 @@ invite paths. Why: `claude/decisions/2026-09-08-club-hub-is-the-identity.md`,
 
 1. **Check first:** in `/organizer` → Accounts tab, every organiser has a
    hub-linked account. If any does not, stop.
-2. **In the code, on `dev`:** remove `manager-signup.js`, `organizer-signup.js`,
-   the `MANAGER_INVITE_CODES` handling, `accounts-admin`'s `create` for
-   **managers** (it stays for organiser break-glass accounts), and
-   `tests/test-signup-ratelimit.js`. Delete each test in the same commit as the
-   code it tests, repoint any `_prove-registration.js` anchor on it, and add a
-   tombstone in `RESTORE.md`. This change is big enough to need a spec first
-   (`CLAUDE.md` rule 9).
+2. **In the code, on `dev`:** ⚠️ **Partly done and partly superseded.**
+   `manager-signup.js`, its `/signin` form, and the `MANAGER_INVITE_CODES`
+   handling were removed on 12 Sep 2026 (JRT-30). The break-glass ruling
+   (`claude/decisions/2026-09-08-organiser-password-break-glass.md`) then
+   changed the rest of this step: `organizer-signup.js` **stays** as the
+   dormant recovery path, `accounts-admin`'s `create` **stays** for both
+   organiser and **manager** break-glass logins, and `test-signup-ratelimit.js`
+   **stays** (its organiser arm). So nothing else here is to be removed unless a
+   later decision revisits the break-glass card. When a test does go, delete it
+   in the same commit as the code it tests, repoint any `_prove-registration.js`
+   anchor on it, and add a tombstone in `RESTORE.md`. A change this size needs a
+   spec first (`CLAUDE.md` rule 9).
 3. **Land it** through `runbook-merge-dev-to-main.md`, and check it live.
 4. **In Netlify** (the maintainer), **only after** step 3 is verified live:
    delete `MANAGER_INVITE_CODES` and `GOOGLE_CLIENT_ID`.

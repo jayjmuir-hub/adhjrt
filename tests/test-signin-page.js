@@ -105,38 +105,7 @@ section('Password sign-in: one call, then the role decides the landing page');
 }
 
 /* ====================================================================== */
-section('Signup: the role picker decides which invite-code gate is called');
-{
-  const calls = [];
-  const c = build();
-  const gone = spy(c);
-  c._next = '';
-  c.state = { ...c.state, api: { signup: async (args) => { calls.push(args); return { ok: true, session: MGR_SESSION }; } } };
-  c.setState({ authMode: 'signup', signupRole: 'manager', signupName: 'Pat Tester', signupPass: 'longpassword1', signupCode: 'CODE-U14B' });
-  await c.doSignup();
-  eq('a manager signup posts role manager with the derived username',
-    [calls[0].role, calls[0].username, calls[0].name], ['manager', 'pat.tester', 'Pat Tester']);
-  eq('…and an immediately-approved account is routed by its role', gone, ['/manager']);
-}
-{
-  /* ⚠️ REPOINTED, Aug 2026. This used to set signupRole:'organizer' by hand
-     and assert the payload carried it — an assertion the shipped page can no
-     longer reach, because ORGANIZER_INVITE_CODE was deleted from Netlify and
-     the role picker went with it. A check driving a state the UI cannot
-     produce proves nothing about what anyone can actually do, so what is
-     asserted now is the CLOSURE itself. The pending-view behaviour it also
-     covered is kept, driven through the manager path that still exists. */
-  const calls = [];
-  const c = build();
-  spy(c);
-  c.state = { ...c.state, api: { signup: async (args) => { calls.push(args); return { ok: true, pending: true, message: 'Needs approval.' }; } } };
-  c.setState({ authMode: 'signup', signupName: 'Sam Helper', signupPass: 'longpassword1', signupCode: 'CODE-U9' });
-  await c.doSignup();
-  eq('signup can only ever ask for a manager account now', calls[0].role, 'manager');
-  check('a pending signup shows the Account created view, not a redirect',
-    c.state.signupPending === true && c.renderVals().isSignupPendingView === true);
-  eq('…headed "Account created" — the invite-code form really did create it', c.renderVals().signupPendingTitle, 'Account created');
-}
+section('Self-signup is retired — managers arrive through the Club Hub (JRT-30)');
 {
   /* The Club Hub door's pending answer (9 Sep 2026). Jay: after two people
      used it, "it sends them back to the login page which doesn't look any
@@ -160,33 +129,24 @@ section('Signup: the role picker decides which invite-code gate is called');
   check('the template reads the heading from state rather than hard-coding it', /\{\{ signupPendingTitle \}\}/.test(tpl) && !/>Account created</.test(tpl));
 }
 {
-  /* The closure, asserted on the page source rather than on state — this is
-     what a person can actually click. */
+  /* THE CLOSURE, asserted on the page source — what a person can actually
+     reach. Manager self-signup (the form, its handler, the derived-username
+     preview and the invite-code field) was removed with manager-signup.js on
+     12 Sep 2026 (JRT-30); managers arrive through the club hub and are given a
+     role by an organiser. Comments and block-comments are stripped first: the
+     tombstones explain at length WHY self-signup is gone and must name it. */
   const src = readRepo('Signin.dc.html');
   const code = src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  check('no role picker survives on either signup view',
-    !/onRoleOrganizer/.test(code) && !/onRoleManager/.test(code) && !/roleOrganizerStyle/.test(code));
-  check('…nor the role blurb that switched with it', !/roleBlurb/.test(code));
-  check('…nor the organiser-only title inputs', !/onSignupTitle/.test(code) && !/onGoogleTitle/.test(code));
-  check('the invite-code label no longer switches — it is always the age-group one',
-    /signupCodeLabel: 'AGE GROUP INVITE CODE'/.test(code) && !/ADMIN INVITE CODE/.test(code));
-  check('signupRole is fixed at manager and has no setter',
-    /signupRole: 'manager'/.test(code) && !/signupRole: 'organizer'/.test(code));
-  /* The word must not creep back into what the page offers. Checked on the
-     code with comments stripped, because the comments explain at length WHY
-     organiser signup is closed and must be free to say so. */
+  check('no self-signup form or handler survives',
+    !/doSignup/.test(code) && !/onSignup\b/.test(code) && !/isSignupFormView/.test(code) && !/signupCode/.test(code));
+  check('the page offers no "Create an account" affordance',
+    !/Create an account/.test(code) && !/onShowSignup/.test(code));
+  check('no role picker survives, and signupRole is gone',
+    !/onRoleOrganizer/.test(code) && !/onRoleManager/.test(code) && !/signupRole/.test(code));
+  /* The word must not creep back into what the page offers, checked on the
+     code with comments stripped. */
   check('the page never offers "Organiser" as something to sign up as',
     !/>Organiser</.test(code));
-}
-{
-  /* The dedupe-retry: same 409 loop the old pages used. */
-  let n = 0;
-  const c = build();
-  spy(c);
-  c.state = { ...c.state, api: { signup: async (args) => { n++; return n < 3 ? { ok: false, error: 'That username is already taken.' } : { ok: true, session: MGR_SESSION, username: args.username }; } } };
-  c.setState({ authMode: 'signup', signupRole: 'manager', signupName: 'Pat Tester', signupPass: 'x', signupCode: 'c' });
-  await c.doSignup();
-  eq('a taken username retries with a numbered variant until it lands', n, 3);
 }
 
 /* ====================================================================== */

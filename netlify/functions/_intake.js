@@ -147,7 +147,7 @@ const MAX_TEAMS_PER_GROUP = 10;
    site-wide Netlify password used to be a second layer and is now OFF.
 
    So the real gate is a secret that is NOT in the repo: an environment
-   variable, the same shape as MANAGER_INVITE_CODES. The page carries it in
+   variable, set only in Netlify. The page carries it in
    the query string, hands it back with the submission, and THIS check is what
    decides — because a page that hides itself in JavaScript is fully visible
    in view-source, and a client-side restriction is not a restriction.

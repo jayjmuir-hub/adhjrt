@@ -211,7 +211,10 @@ const NEEDED = [
   path.join('netlify', 'functions', '_signins.js'),
   path.join('netlify', 'functions', 'accounts-admin.js'),
   path.join('netlify', 'functions', 'organizer-signup.js'),
-  path.join('netlify', 'functions', 'manager-signup.js'),
+  /* manager-signup.js was here until it was deleted with manager self-signup
+     (JRT-30, 12 Sep 2026). Do not add it back to satisfy a check: no suite
+     requires or reads it any more, and the checks that assert self-signup is
+     GONE are satisfied by its absence. */
   path.join('netlify', 'functions', 'login.js'),
   path.join('netlify', 'functions', 'my-account.js'),
   /* organizer-login.js and manager-login.js were here until they were retired
@@ -3615,38 +3618,41 @@ const FAULTS = [
       '[[redirects]]\n  from = "/signin"\n  to = "/Signin.dc.html"\n  status = 200\n', ''),
     expect: ['netlify.toml serves /signin'],
   },
-  /* ⚠️ REPOINTED Aug 2026. This used to prove that the ROLE PICKER's choice
-     reached the payload. The picker is gone — ORGANIZER_INVITE_CODE was
-     deleted from Netlify, so an organiser signup can only ever be refused —
-     and the rule that replaced it is that signup can ONLY ask for a manager.
-     A fault whose subject is deleted must be repointed if the rule it guarded
-     is still alive somewhere; here it moved rather than died. */
+  /* ⚠️ REPOINTED 12 Sep 2026 (JRT-30). These three used to guard the manager
+     self-signup FORM: that it posted role 'manager', that no Organiser option
+     returned to a role picker, and that the invite-code label stopped
+     switching. The form, its handler and manager-signup.js are gone now, so
+     each fault is repointed to the rule that replaced them — the page offers
+     NO self-serve account creation at all — caught by the closure checks in
+     test-signin-page.js. Repointed, not deleted: the concern is very much
+     alive, it just moved from "signup only asks for a manager" to "there is no
+     signup". */
   {
-    name: 'the signup stops sending a role at all',
+    name: 'a self-signup handler (onSignup/doSignup) is re-added to /signin',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      "      res = await api.signup({ role: signupRole, name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });",
-      "      res = await api.signup({ name: signupName, title: signupTitle, username, password: signupPass, inviteCode: signupCode });"),
-    expect: ['signup can only ever ask for a manager account now'],
+      "      onShowLogin: () => this.setState({ signupPending: false, loginError: '' }),",
+      "      onShowLogin: () => this.setState({ signupPending: false, loginError: '' }),\n      onSignup: () => this.doSignup(),"),
+    expect: ['no self-signup form or handler survives'],
   },
   {
-    name: 'the Organiser option creeps back onto the signup role picker',
+    name: 'a role picker with an Organiser button is re-added to /signin',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      '      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>',
-      '      <div style="display:flex;gap:8px"><button onClick="{{ onRoleManager }}">Age-group manager</button><button onClick="{{ onRoleOrganizer }}">Organiser</button></div>\n      <label for="f--label-style-font-si" style="font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.5px;display:block;margin-top:18px">YOUR NAME</label>'),
-    expect: ['no role picker survives on either signup view', 'the page never offers "Organiser" as something to sign up as'],
+      '>{{ loginLabel }}</button>',
+      '>{{ loginLabel }}</button>\n      <button onClick="{{ onRoleOrganizer }}">Organiser</button>'),
+    expect: ['no role picker survives, and signupRole is gone', 'the page never offers "Organiser" as something to sign up as'],
   },
   {
-    name: 'the invite-code label goes back to switching between admin and age group',
+    name: 'a "Create an account" self-signup link is re-added to /signin',
     suite: 'test-signin-page.js',
     apply: () => patch('Signin.dc.html',
-      "      signupCodeLabel: 'AGE GROUP INVITE CODE',",
-      "      signupCodeLabel: s.signupRole === 'organizer' ? 'ADMIN INVITE CODE' : 'AGE GROUP INVITE CODE',"),
-    expect: ['the invite-code label no longer switches'],
+      '>{{ loginLabel }}</button>',
+      '>{{ loginLabel }}</button>\n      <a onClick="{{ onShowSignup }}">Create an account</a>'),
+    expect: ['the page offers no "Create an account" affordance'],
   },
 
-  /* ---- the silent club link (test-intake.js) ---------------------------- */
+    /* ---- the silent club link (test-intake.js) ---------------------------- */
   {
     /* ⚠️ THE ONE THAT MATTERS. Without the gate the unlisted page is the only
        thing standing between a public endpoint and anyone who read the repo —
@@ -4132,41 +4138,27 @@ const FAULTS = [
 
 
 
-  /* ---- the invite codes are rate limited now (3 Aug 2026) ---------------
+  /* ---- the invite code is rate limited now (3 Aug 2026) ----------------
      Until this shipped, ORGANIZER_INVITE_CODE took unlimited guesses from an
      anonymous POST, and an organiser account reads every registrant's DOB and
-     medical notes. Each of the three ways to guess gets its own fault, plus
-     the two mistakes that would leave the guard looking present while doing
-     nothing: a per-endpoint bucket (alternate and the budget triples) and a
-     caller-supplied address header (pick your own bucket). */
+     medical notes. The remaining faults are the limit firing at all, plus the
+     two mistakes that would leave the guard looking present while doing
+     nothing: a caller-supplied address header (pick your own bucket) and a
+     widened budget.
+
+     ⚠️ Two faults were REMOVED here on 12 Sep 2026 (JRT-30): "manager-signup.js
+     loses its rate limit" and "manager-signup.js takes its own rate bucket".
+     Both patched manager-signup.js, which is deleted — the rule they guarded
+     (a second signup endpoint sharing one budget) died with the second
+     endpoint. The bucket is still endpoint-independent by design; that
+     invariant is proven by the x-forwarded-for and budget faults below,
+     against signupBucket() directly. */
   {
     name: 'organizer-signup.js loses its rate limit, so ORGANIZER_INVITE_CODE takes unlimited guesses again',
     suite: 'test-signup-ratelimit.js',
     apply: () => patch(path.join('netlify', 'functions', 'organizer-signup.js'),
       "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
     expect: ['organizer-signup.js: the eleventh is refused'],
-  },
-  {
-    name: 'manager-signup.js loses its rate limit',
-    suite: 'test-signup-ratelimit.js',
-    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
-      "    const rate = await checkSignupRate(blobStore('config'), event, Date.now());\n    if (!rate.ok) return tooManyResponse(rate);\n", ''),
-    expect: ['manager-signup.js: the eleventh is refused'],
-  },
-
-  {
-    /* The guard still reads as present at every call site — this is the shape
-       that looks fixed in review and is not. */
-    name: 'manager-signup.js takes its own rate bucket, so alternating endpoints buys a fresh budget',
-    suite: 'test-signup-ratelimit.js',
-    apply: () => {
-      const f = path.join('netlify', 'functions', 'manager-signup.js');
-      patch(f, "const { checkSignupRate, tooManyResponse } = require('./_ratelimit');",
-        "const { checkSignupRate, checkRate, tooManyResponse } = require('./_ratelimit');");
-      patch(f, "const rate = await checkSignupRate(blobStore('config'), event, Date.now());",
-        "const rate = await checkRate(blobStore('config'), ((event.headers || {})['x-nf-client-connection-ip'] || '') + ':signup-manager', Date.now(), { max: 10, windowMs: 900000 });");
-    },
-    expect: ['and at manager-signup.js, which never had ten of its own'],
   },
 
   {
@@ -6355,35 +6347,23 @@ const FAULTS = [
     expect: ['it returns 404'],
   },
 
-  /* ---- the master manager code's key name (test-accounts.js, 5 Aug 2026) ----
+  /* ---- the all-groups sentinel in _auth.js (test-accounts.js, 5 Aug 2026) ----
 
-     A documentation bug that failed CLOSED and so could never announce itself:
-     both setup instructions said to call the master key "admin", while the
-     all-groups test in _auth.js is `ageGroupId === '*'`. Following the docs
-     minted a manager scoped to a group that does not exist. */
+     Originally three faults guarded the agreement between the master MANAGER
+     CODE and the all-groups auth test. Two of them — "the setup comment goes
+     back to offering admin" and "the age group stops being derived from the
+     matched key name" — patched manager-signup.js, which was DELETED with
+     manager self-signup on 12 Sep 2026 (JRT-30); the master-code mechanism
+     died with it, so those faults were removed (their subject no longer
+     exists, and an all-access person is an organiser now). What remains is the
+     sentinel itself: the `*` test in _auth.js still governs any restored
+     legacy all-groups account, so moving it must not pass unnoticed. */
   {
-    name: 'the setup comment goes back to offering "admin" as the master key',
-    suite: 'test-accounts.js',
-    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
-      '..., "*":"quins-master-2026"}', '..., "admin":"quins-master-2026"}'),
-    expect: ['no longer offers "admin"'],
-  },
-  {
-    /* The other direction: the sentinel moves and the instruction does not. */
     name: 'the all-groups sentinel in _auth.js stops being an asterisk',
     suite: 'test-accounts.js',
     apply: () => patch(path.join('netlify', 'functions', '_auth.js'),
       "session.ageGroupId === '*'", "session.ageGroupId === 'admin'"),
     expect: ['sentinel in _auth.js is a literal asterisk'],
-  },
-  {
-    /* And the anchor that makes the two above mean anything. */
-    name: 'the age group stops being derived from the matched key name',
-    suite: 'test-accounts.js',
-    apply: () => patch(path.join('netlify', 'functions', 'manager-signup.js'),
-      'const ageGroupId = Object.keys(codes).find((id) => codes[id] === inviteCode);',
-      'const ageGroupId = (event.headers && event.headers["x-age-group"]) || null;'),
-    expect: ['derives the age group from the matched KEY NAME'],
   },
 
   /* ---- doc claims that give instructions (test-doc-claims.js) ------------
@@ -7534,17 +7514,19 @@ const FAULTS = [
     expect: ['buttons get the 44px floor'],
   },
   {
-    /* ⚠️ THE COUNT FAULT. Deletes one of the six inputs. The rule still covers
-       whatever remains, so nothing about the FIX breaks — but the docs recorded
-       this page as having two inputs when it has six, and a count nothing
-       asserts is what let that stand. This proves the number is pinned. */
-    name: 'a /signin input is removed, so the pinned count of six no longer holds',
+    /* ⚠️ THE COUNT FAULT. Deletes one of the two inputs. The font-size rule
+       still covers whatever remains, so nothing about the FIX breaks — but a
+       count nothing asserts is what lets the docs drift from the page. This
+       proves the number is pinned. */
+    name: 'a /signin input is removed, so the pinned count of two no longer holds',
     suite: 'test-design-polish.js',
     apply: () => patch('Signin.dc.html',
       '<input id="f-username" name="username" autocomplete="username"',
       '<span data-was-an-input name="username" autocomplete="username"'),
-    /* Repointed 8 Sep 2026: the Google invite-code input it used to remove is gone; the sign-in username input goes instead. */
-    expect: ['the page still has five inputs'],
+    /* Repointed 12 Sep 2026 (JRT-30): the manager self-signup form's three
+       inputs went with the form; the sign-in username input is what goes now.
+       (Was five inputs before this; repointed 8 Sep 2026 before that.) */
+    expect: ['the page still has two inputs'],
   },
 
   /* ---- the two defects found by reviewing the above (8 Aug 2026) ----

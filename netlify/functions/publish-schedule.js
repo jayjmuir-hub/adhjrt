@@ -15,18 +15,24 @@
 //      auto-generated draw. Anyone who had already seen the fixtures will find
 //      them gone, so the UI should warn before calling this.
 
-const { optionalSession, blobStore } = require('./_auth');
+const { resolveSession, sessionRefusal, blobStore } = require('./_auth');
 const { draftKey, publishedKey, publishDenialReason } = require('./_publish');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   try {
-    /* optionalSession, not resolveSession, because publishDenialReason() below
-       owns the whole refusal — it takes a null session and produces the right
-       message for it. A revoked token now arrives here as null and is refused
-       by that one path, exactly as a missing token always was. */
-    const session = await optionalSession(event);
+    /* resolveSession + sessionRefusal, not optionalSession (JRT-20). A revoked
+       or deleted token used to collapse to null here and get a bare 401/403 with
+       no sessionEnded marker, so the client never signed the person out — this
+       was the one endpoint that refused a session without the shared builder.
+       Now a finished session is signed out like everywhere else, while a store
+       blip (503, no marker) and the wrong-role refusal below both keep the
+       person signed in. */
+    const auth = await resolveSession(event);
+    if (!auth.ok) return sessionRefusal(auth);
+    const session = auth.session;
+
     const { ageGroupId, action } = JSON.parse(event.body || '{}');
 
     if (!ageGroupId) {
@@ -36,12 +42,11 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Unknown action.' }) };
     }
 
+    /* A valid session that simply may not publish (a manager — organisers only
+       since 8 Sep 2026) is a 403 that STAYS signed in, not a session refusal. */
     const denied = publishDenialReason(session, ageGroupId);
     if (denied) {
-      return {
-        statusCode: session ? 403 : 401,
-        body: JSON.stringify({ ok: false, error: denied }),
-      };
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: denied }) };
     }
 
     const store = blobStore('schedules');

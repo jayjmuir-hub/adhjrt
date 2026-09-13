@@ -159,7 +159,7 @@ section('The server marks a finished session, and only a finished session');
        registration rules each went wrong. A missed copy here fails SILENTLY:
        that endpoint alone never signs anybody out and nothing looks wrong. */
     const FILES = ['accounts-admin.js', 'documents.js', 'get-my-registrations.js',
-      'get-registrations.js', 'my-account.js', 'registration-window.js',
+      'get-registrations.js', 'my-account.js', 'publish-schedule.js', 'registration-window.js',
       'save-schedule-override.js', 'scoring-rules.js', 'submit-result.js',
       'venue-layout.js'];
 

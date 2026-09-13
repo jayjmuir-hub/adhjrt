@@ -239,6 +239,28 @@ const resetStores = () => { stores.clear(); };
     r = await parse(await call(publish.handler, 'orga', { ageGroupId: DAY2_GROUP, action: 'publish' }));
     eq('…while an organiser publishes', r.status, 200);
 
+    /* JRT-20: a REVOKED user and a WRONG-ROLE manager can both be 403 here; the
+       only thing that tells them apart is the sessionEnded marker. A revoked
+       token used to arrive as null (optionalSession) and get a bare 403 that
+       never signed anyone out — publish-schedule was the one endpoint that
+       refused a session without the shared builder. */
+    accountsList[1].approved = false; // the manager's account is now revoked
+    r = await parse(await call(publish.handler, 'mgr', { ageGroupId: DAY2_GROUP, action: 'publish' }));
+    check('⚠️ a REVOKED user is refused AND signed out (sessionEnded)',
+      (r.status === 401 || r.status === 403) && r.sessionEnded === true, JSON.stringify(r));
+    accountsList[1].approved = true; // back to a valid manager
+
+    /* ⚠️ THE DISCRIMINATOR: a valid manager refused for the wrong role is the
+       SAME 403 but must STAY signed in — no marker. */
+    r = await parse(await call(publish.handler, 'mgr', { ageGroupId: DAY2_GROUP, action: 'publish' }));
+    eq('a wrong-role manager is still 403', r.status, 403);
+    check('⚠️ …but is NOT signed out (no sessionEnded)', r.sessionEnded === undefined);
+
+    /* A missing token is a finished session too. */
+    r = await parse(await publish.handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify({ ageGroupId: DAY2_GROUP, action: 'publish' }) }));
+    check('a missing token is refused and signed out',
+      (r.status === 401 || r.status === 403) && r.sessionEnded === true, JSON.stringify(r));
+
     /* ⚠️ UNDER A TOURNAMENT-DAY CLOCK, or this check cannot discriminate:
        today's clock is outside the window, so the OLD rule
        (isTournamentWindow()) answers false too and restoring it would pass. */

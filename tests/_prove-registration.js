@@ -10044,6 +10044,18 @@ const FAULTS = [
       'localStorage.setItem(SESSION_KEY, JSON.stringify(session));'),
     expect: ['a blocked save does not throw out of the call'],
   },
+
+  /* ---- JRT-20: publish-schedule refuses a finished session through the shared
+     builder. Dropping the resolveSession refusal is the pre-fix regression: a
+     revoked user gets a bare 403 with no sessionEnded and is never signed out. */
+  {
+    name: 'publish-schedule stops signing out a revoked user',
+    suite: 'test-draw-rights.js',
+    apply: () => patch(path.join('netlify', 'functions', 'publish-schedule.js'),
+      'if (!auth.ok) return sessionRefusal(auth);',
+      'if (false) return sessionRefusal(auth);'),
+    expect: ['a REVOKED user is refused AND signed out'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

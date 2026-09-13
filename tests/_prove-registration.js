@@ -10032,6 +10032,18 @@ const FAULTS = [
     apply: () => patch(ORG, 'officialDraft: draft,', 'officialDraft: undefined,'),
     expect: ['its input shows the saved official name'],
   },
+
+  /* ---- JRT-8: a blocked session save must fail loudly, not throw. Reverting
+     the guard to a raw setItem is the exact pre-fix regression: a blocked write
+     (Private Browsing on iPad) throws out of the sign-in call. */
+  {
+    name: 'the session save loses its storage guard, so a blocked write throws',
+    suite: 'test-signin-storage.js',
+    apply: () => patch('scores-data.js',
+      'if (!persistSession(session)) return { ok: false, error: STORAGE_BLOCKED_MSG };',
+      'localStorage.setItem(SESSION_KEY, JSON.stringify(session));'),
+    expect: ['a blocked save does not throw out of the call'],
+  },
 ];
 
 /* ------------------------------------------------------------------------ */

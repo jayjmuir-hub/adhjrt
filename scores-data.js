@@ -36,6 +36,24 @@ const SESSION_KEY = 'adhjrt_session_v2';
 const OLD_MANAGER_SESSION_KEY = 'adhjrt_session_v1';        // pre-Aug-2026: the scores/manager pages' key
 const OLD_ORG_SESSION_KEY = 'adhjrt_organizer_session';     // pre-Aug-2026: organizer-data.js's key
 
+/* ⚠️ A SESSION SAVE THAT IS BLOCKED IS A SIGN-IN FAILURE, NOT A SILENT SUCCESS
+   (JRT-8). The session must survive to the next page load; swallowing a failed
+   write would leave the person "signed in" on this page and signed out on the
+   next, with no clue why. The commonest cause is Private Browsing on iPad, where
+   localStorage.setItem throws — so every sign-in entry point (login, signup,
+   hubAuth) reports it with an actionable message rather than throwing out of the
+   click handler and leaving the button stuck on "Signing in…". The session
+   READS already fail soft; this is the matching guard on the WRITES. */
+const STORAGE_BLOCKED_MSG = 'Your browser is blocking sign-in on this device. This usually means Private Browsing is switched on (common on iPad) — turn it off, or use your normal browser, and try again.';
+function persistSession(session) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 /* -------- Tournament configuration (pools & teams) --------
    "Build it flexible": age groups, pools, teams and how many
    advance are all data. Fill these in with the real draw later.
@@ -1971,7 +1989,7 @@ export async function login(username, password) {
   }
   if (json.ok) {
     const session = { ...json.session, token: json.token };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (!persistSession(session)) return { ok: false, error: STORAGE_BLOCKED_MSG };
     // Hand organizer sessions back in the same wrapped shape callers have
     // always received from this function.
     return {
@@ -2000,7 +2018,7 @@ export async function signup({ name, title, username, password, inviteCode }) {
   if (json.ok && json.pending) return { ok: true, pending: true, message: json.message };
   if (json.ok) {
     const session = { ...json.session, token: json.token };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (!persistSession(session)) return { ok: false, error: STORAGE_BLOCKED_MSG };
     return { ok: true, session };
   }
   return { ok: false, error: json.error || 'Could not create account.' };
@@ -2099,7 +2117,7 @@ export async function hubAuth(hubToken) {
   const json = r.json;
   if (json.ok) {
     const session = { ...json.session, token: json.token };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (!persistSession(session)) return { ok: false, error: STORAGE_BLOCKED_MSG };
     return { ok: true, session };
   }
   if (json.pending) return { ok: false, pending: true, message: json.error };
